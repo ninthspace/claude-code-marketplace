@@ -4,29 +4,6 @@ A comprehensive Claude Code plugin providing 30+ commands for story-driven agile
 
 All commands are implemented as prompts that Claude Code executes directly. No additional setup or programming languages required.
 
-## Installation
-
-### From Local Directory
-```bash
-# From within your project or anywhere
-claude install plugin /path/to/ssd
-```
-
-For example, if the plugin is in your current directory:
-```bash
-claude install plugin ./ssd
-```
-
-### From Git Repository (once published)
-```bash
-claude install plugin https://github.com/yourusername/story-driven-development
-```
-
-### Verify Installation
-```bash
-claude list plugins
-```
-
 ## Quick Start
 
 After installation, try these commands:

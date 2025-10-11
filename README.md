@@ -12,17 +12,7 @@ This marketplace contains plugins that enable complete story-driven development 
 
 ```bash
 # Install the entire marketplace (all plugins)
-claude install marketplace /path/to/story-marketplace
-
-# Or from GitHub (once published)
-claude install marketplace https://github.com/yourusername/story-marketplace
-```
-
-### Install Individual Plugin
-
-```bash
-# Install just the story-driven-development plugin
-claude install plugin https://github.com/yourusername/story-marketplace/plugins/story-driven-development
+claude install marketplace ninthspace/marketplace
 ```
 
 ## Available Plugins
@@ -72,24 +62,6 @@ A comprehensive plugin providing:
 
 [View full documentation](./plugins/story-driven-development/README.md)
 
-## Marketplace Structure
-
-```
-story-marketplace/
-├── .claude-plugin/
-│   └── marketplace.json     # Marketplace manifest
-├── plugins/
-│   └── story-driven-development/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── commands/        # 30+ command files
-│       ├── README.md
-│       ├── LICENSE
-│       └── CHANGELOG.md
-├── README.md                # This file
-└── LICENSE
-```
-
 ## Using the Plugins
 
 ### Core Workflow
@@ -137,26 +109,6 @@ The plugins will automatically read these files and adapt their behavior to matc
 - **Context-Aware**: Reads project configuration when available
 - **Independent**: Each command works standalone
 - **Full Lifecycle**: From idea to production deployment
-
-## Publishing Plugins
-
-To contribute a new plugin to this marketplace:
-
-1. Create your plugin following the [plugin structure](https://docs.claude.com/en/docs/claude-code/plugins)
-2. Place it in `plugins/your-plugin-name/`
-3. Update `marketplace.json` to include your plugin
-4. Submit a pull request with documentation
-
-## Future Plugins
-
-This marketplace is designed to grow. Future plugin categories may include:
-
-- **Testing Tools** - Advanced test generation and coverage
-- **Documentation Generators** - Automated documentation creation
-- **Code Quality** - Linting, formatting, and analysis
-- **CI/CD Integration** - Pipeline automation and deployment
-- **Team Collaboration** - PR templates, review workflows
-- **Performance Monitoring** - Benchmarking and profiling
 
 ## License
 
