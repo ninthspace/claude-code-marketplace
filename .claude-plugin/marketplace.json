@@ -1,0 +1,30 @@
+{
+  "name": "ninthspace-marketplace",
+  "description": "A comprehensive marketplace for my development tools",
+  "version": "1.0.0",
+  "owner": {
+    "name": "Chris Aves",
+    "email": "chris@chrisaves.com"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./sdd",
+      "description": "Comprehensive story-driven development workflow with 30+ commands for agile development, from ideation to production",
+      "version": "1.0.0",
+      "keywords": [
+        "story",
+        "agile",
+        "workflow",
+        "development",
+        "project-management",
+        "git",
+        "testing",
+        "qa",
+        "deployment",
+        "laravel",
+        "tall-stack"
+      ]
+    }
+  ]
+}
