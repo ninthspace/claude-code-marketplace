@@ -5,6 +5,23 @@ All notable changes to the Story-Driven Development plugin will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-10-11
+
+### Changed
+- **BREAKING**: All commands now use `/sdd:` namespace prefix
+  - Commands like `/story-new` are now `/sdd:story-new`
+  - Commands like `/project-init` are now `/sdd:project-init`
+  - This change prevents naming conflicts with other plugins in the marketplace
+- Updated all command cross-references to use `/sdd:` prefix
+- Updated README files with new command syntax
+- Directory paths (e.g., `/project-context/`) remain unchanged
+
+### Migration Guide
+Users upgrading from 1.0.0 should update their command usage:
+- Replace `/story-*` with `/sdd:story-*`
+- Replace `/project-*` with `/sdd:project-*`
+- Replace `/command-*` with `/sdd:command-*`
+
 ## [1.0.0] - 2025-10-11
 
 ### Added
@@ -35,4 +52,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quality checks and validation
 - Deployment automation
 
+[1.0.1]: https://github.com/yourusername/story-driven-development/releases/tag/v1.0.1
 [1.0.0]: https://github.com/yourusername/story-driven-development/releases/tag/v1.0.0
