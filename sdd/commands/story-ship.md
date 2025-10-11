@@ -1,4 +1,4 @@
-# /story-ship
+# /sdd:story-ship
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Deploy a QA-validated story to production by merging to main branch, creating releases, deploying to production environment, performing post-deployment validation, and completing story archival.
 
-**Syntax**: `/story-ship <story_id> [--skip-tests] [--dry-run]`
+**Syntax**: `/sdd:story-ship <story_id> [--skip-tests] [--dry-run]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -32,7 +32,7 @@
 1. **VERIFY** story location:
    - CHECK story is in `/stories/qa/` directory
    - IF NOT in qa:
-     - CHECK `/stories/review/` - suggest running `/story-qa` first
+     - CHECK `/stories/review/` - suggest running `/sdd:story-qa` first
      - CHECK `/stories/development/` - suggest completing review and QA
      - EXIT with appropriate guidance
 
@@ -414,7 +414,7 @@
      1. Monitor application for 24 hours
      2. Watch for user feedback and issues
      3. Review metrics and performance
-     4. Run /story-complete [story-id] to archive with learnings
+     4. Run /sdd:story-complete [story-id] to archive with learnings
      5. Celebrate the successful deployment! 🎉
 
      SUGGESTED MONITORING PERIOD:
@@ -443,7 +443,7 @@
      • Story: Kept in QA directory
 
      RECOMMENDED ACTION:
-     /story-rollback [story-id]
+     /sdd:story-rollback [story-id]
 
      This will:
      1. Revert the merge commit
@@ -454,7 +454,7 @@
      Do you want to rollback now? (y/n)
      ```
    - **IF** user confirms rollback:
-     - EXECUTE `/story-rollback` command
+     - EXECUTE `/sdd:story-rollback` command
      - EXIT with rollback results
    - **IF** user declines:
      - KEEP story in QA
@@ -490,7 +490,7 @@
 ### Example 1: Successful Deployment
 ```bash
 INPUT:
-/story-ship STORY-2025-001
+/sdd:story-ship STORY-2025-001
 
 PROCESS:
 → Pre-flight checks...
@@ -554,7 +554,7 @@ NEXT STEPS:
 1. Monitor application for 24 hours
 2. Watch for user feedback and issues
 3. Review metrics and performance
-4. Run /story-complete STORY-2025-001 to archive
+4. Run /sdd:story-complete STORY-2025-001 to archive
 5. Celebrate the successful deployment! 🎉
 
 📦 RELEASE NOTES
@@ -582,7 +582,7 @@ See /stories/completed/STORY-2025-001.md
 ### Example 2: Deployment with Manual Steps
 ```bash
 INPUT:
-/story-ship STORY-2025-002
+/sdd:story-ship STORY-2025-002
 
 PROCESS:
 → Pre-flight checks... ✅
@@ -622,7 +622,7 @@ Have you completed all deployment steps? (y/n)
 ### Example 3: Deployment Failure with Rollback
 ```bash
 INPUT:
-/story-ship STORY-2025-003
+/sdd:story-ship STORY-2025-003
 
 PROCESS:
 → Pre-flight checks... ✅
@@ -651,7 +651,7 @@ CURRENT STATE:
 • Story: Kept in QA directory
 
 RECOMMENDED ACTION:
-/story-rollback STORY-2025-003
+/sdd:story-rollback STORY-2025-003
 
 This will:
 1. Revert the merge commit
@@ -669,7 +669,7 @@ Do you want to rollback now? (y/n)
 ### Example 4: Dry Run
 ```bash
 INPUT:
-/story-ship STORY-2025-004 --dry-run
+/sdd:story-ship STORY-2025-004 --dry-run
 
 PROCESS:
 → DRY RUN MODE - No changes will be made
@@ -749,7 +749,7 @@ Run without --dry-run to execute deployment.
 - CONTINUE with story-based releases
 
 ## Error Handling
-- **Story ID missing**: Return "Error: Story ID required. Usage: /story-ship <story_id>"
+- **Story ID missing**: Return "Error: Story ID required. Usage: /sdd:story-ship <story_id>"
 - **Invalid story ID format**: Return "Error: Invalid story ID format. Expected: STORY-YYYY-NNN"
 - **Story not in QA**: Report current location and suggest appropriate next step
 - **Uncommitted changes**: Display files and offer to commit or exit
@@ -768,11 +768,11 @@ Run without --dry-run to execute deployment.
 - Cleanup branches in background after success
 
 ## Related Commands
-- `/story-qa` - Move story to QA before shipping
-- `/story-rollback` - Rollback failed deployment
-- `/story-complete` - Archive story after successful deployment
-- `/story-validate` - Run final validation before shipping
-- `/project-status` - View all project stories
+- `/sdd:story-qa` - Move story to QA before shipping
+- `/sdd:story-rollback` - Rollback failed deployment
+- `/sdd:story-complete` - Archive story after successful deployment
+- `/sdd:story-validate` - Run final validation before shipping
+- `/sdd:project-status` - View all project stories
 
 ## Constraints
 - ✅ MUST verify story in QA directory

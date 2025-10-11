@@ -1,4 +1,4 @@
-# /story-refactor
+# /sdd:story-refactor
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Analyze codebase against project standards and create a prioritized refactoring story with specific, actionable requirements.
 
-**Syntax**: `/story-refactor [objective]`
+**Syntax**: `/sdd:story-refactor [objective]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -29,7 +29,7 @@
 #### Phase 1: Project Context Loading
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project context from:
    - `/project-context/coding-standards.md` - Code quality rules and thresholds
@@ -159,8 +159,8 @@
    ```
    💡 NEXT STEPS:
    1. Review story in /stories/backlog/[story-id].md
-   2. /story-start [story-id]      # Move to development when ready
-   3. /project-status               # View all stories
+   2. /sdd:story-start [story-id]      # Move to development when ready
+   3. /sdd:project-status               # View all stories
    ```
 
 ### OUTPUTS
@@ -291,7 +291,7 @@
 ### Example 1: Comprehensive Refactoring
 ```bash
 INPUT:
-/story-refactor
+/sdd:story-refactor
 
 OUTPUT:
 → Checking project context...
@@ -319,14 +319,14 @@ Estimated Complexity: High
 
 💡 NEXT STEPS:
 1. Review story in /stories/backlog/STORY-2025-012.md
-2. /story-start STORY-2025-012      # Move to development when ready
-3. /project-status                   # View all stories
+2. /sdd:story-start STORY-2025-012      # Move to development when ready
+3. /sdd:project-status                   # View all stories
 ```
 
 ### Example 2: Performance-Focused Refactoring
 ```bash
 INPUT:
-/story-refactor improve performance
+/sdd:story-refactor improve performance
 
 OUTPUT:
 → Checking project context...
@@ -358,14 +358,14 @@ Estimated Complexity: Medium
 
 💡 NEXT STEPS:
 1. Review story in /stories/backlog/STORY-2025-013.md
-2. /story-start STORY-2025-013      # Move to development when ready
-3. /project-status                   # View all stories
+2. /sdd:story-start STORY-2025-013      # Move to development when ready
+3. /sdd:project-status                   # View all stories
 ```
 
 ### Example 3: Accessibility Refactoring
 ```bash
 INPUT:
-/story-refactor improve accessibility
+/sdd:story-refactor improve accessibility
 
 OUTPUT:
 → Checking project context...
@@ -395,15 +395,15 @@ Estimated Complexity: Medium
 
 💡 NEXT STEPS:
 1. Review story in /stories/backlog/STORY-2025-014.md
-2. /story-start STORY-2025-014      # Move to development when ready
-3. /project-status                   # View all stories
+2. /sdd:story-start STORY-2025-014      # Move to development when ready
+3. /sdd:project-status                   # View all stories
 ```
 
 ## Edge Cases
 
 ### No Project Context
 - DETECT missing `/project-context/` directory
-- SUGGEST running `/project-init`
+- SUGGEST running `/sdd:project-init`
 - CANNOT proceed without coding standards
 - EXIT with clear guidance
 
@@ -426,7 +426,7 @@ Estimated Complexity: Medium
 - DOCUMENT decision in story
 
 ## Error Handling
-- **Missing /project-context/**: Exit with suggestion to run `/project-init`
+- **Missing /project-context/**: Exit with suggestion to run `/sdd:project-init`
 - **No coding-standards.md**: Cannot analyze - critical file missing
 - **Analysis errors**: Log specific files causing issues, continue with others
 - **Invalid objective**: Interpret broadly or ask user for clarification
@@ -438,11 +438,11 @@ Estimated Complexity: Medium
 - Analyze only relevant files based on objective
 
 ## Related Commands
-- `/project-init` - Initialize project structure with standards
-- `/project-brief` - Define project goals and constraints
-- `/story-new` - Create feature story
-- `/story-start [id]` - Begin refactoring work
-- `/project-status` - View all stories
+- `/sdd:project-init` - Initialize project structure with standards
+- `/sdd:project-brief` - Define project goals and constraints
+- `/sdd:story-new` - Create feature story
+- `/sdd:story-start [id]` - Begin refactoring work
+- `/sdd:project-status` - View all stories
 
 ## Constraints
 - ✅ MUST use DISCOVERED standards (no assumptions)

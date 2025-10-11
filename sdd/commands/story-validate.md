@@ -1,4 +1,4 @@
-# /story-validate
+# /sdd:story-validate
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Execute comprehensive final validation to ensure all acceptance criteria are met, all tests pass, and story is production-ready.
 
-**Syntax**: `/story-validate [story_id]`
+**Syntax**: `/sdd:story-validate [story_id]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -30,7 +30,7 @@
 #### Phase 1: Project Context Loading
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project-specific validation requirements from:
    - `/project-context/technical-stack.md` - Testing tools and validation methods
@@ -305,7 +305,7 @@ Low Risk: CSS changes may affect custom themes
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ SHIP CHECKLIST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. /story-ship [story-id]             # Deploy to production
+1. /sdd:story-ship [story-id]             # Deploy to production
 2. Monitor application after deployment
 3. Be ready to execute rollback plan if needed
 4. Document lessons learned after ship
@@ -356,7 +356,7 @@ Low Risk: CSS changes may affect custom themes
    [IF READY TO SHIP:]
    ✅ Story validated and ready for production
 
-   1. /story-ship [story-id]             # Deploy to production
+   1. /sdd:story-ship [story-id]             # Deploy to production
       - Creates PR (if not created)
       - Merges to main branch
       - Moves story to completed
@@ -371,13 +371,13 @@ Low Risk: CSS changes may affect custom themes
    [IF NEEDS WORK:]
    ⚠️ X critical issues prevent shipping
 
-   1. /story-refactor [story-id]         # Return to development
+   1. /sdd:story-refactor [story-id]         # Return to development
    2. Address blocking issues:
       - [Issue 1]
       - [Issue 2]
-   3. /story-review [story-id]           # Re-run review
-   4. /story-qa [story-id]               # Re-run QA
-   5. /story-validate [story-id]         # Re-validate
+   3. /sdd:story-review [story-id]           # Re-run review
+   4. /sdd:story-qa [story-id]               # Re-run QA
+   5. /sdd:story-validate [story-id]         # Re-validate
 
    [MONITORING COMMANDS:]
    # Laravel:
@@ -414,7 +414,7 @@ Low Risk: CSS changes may affect custom themes
 ### Example 1: Validation Ready to Ship
 ```bash
 INPUT:
-/story-validate STORY-2025-003
+/sdd:story-validate STORY-2025-003
 
 OUTPUT:
 → Loading project context...
@@ -476,7 +476,7 @@ CONFIDENCE LEVEL: ✅ HIGH
 ════════════════════════════════════════════════
 ✅ Story validated and ready for production
 
-1. /story-ship STORY-2025-003             # Deploy to production
+1. /sdd:story-ship STORY-2025-003             # Deploy to production
 2. Monitor application after deployment
 3. Be ready to execute rollback if needed
 ```
@@ -484,7 +484,7 @@ CONFIDENCE LEVEL: ✅ HIGH
 ### Example 2: Validation with Blocking Issues
 ```bash
 INPUT:
-/story-validate STORY-2025-004
+/sdd:story-validate STORY-2025-004
 
 OUTPUT:
 → Loading project context...
@@ -535,21 +535,21 @@ Test Coverage: 78% (below 80% target)
 ════════════════════════════════════════════════
 ⚠️ 4 critical issues prevent shipping
 
-1. /story-refactor STORY-2025-004         # Return to development
+1. /sdd:story-refactor STORY-2025-004         # Return to development
 2. Address blocking issues:
    - Add browser test for session persistence
    - Add browser test for email notifications
    - Document rollback plan
    - Increase test coverage to 80%+
-3. /story-review STORY-2025-004           # Re-run review
-4. /story-qa STORY-2025-004               # Re-run QA
-5. /story-validate STORY-2025-004         # Re-validate
+3. /sdd:story-review STORY-2025-004           # Re-run review
+4. /sdd:story-qa STORY-2025-004               # Re-run QA
+5. /sdd:story-validate STORY-2025-004         # Re-validate
 ```
 
 ### Example 3: Validation with Warnings (Still Ship-Ready)
 ```bash
 INPUT:
-/story-validate
+/sdd:story-validate
 
 OUTPUT:
 → Detecting story from current branch...
@@ -592,7 +592,7 @@ CONFIDENCE LEVEL: ⚠️ MEDIUM
 ════════════════════════════════════════════════
 ✅ Story validated - Ready to ship with awareness
 
-1. /story-ship STORY-2025-005             # Deploy to production
+1. /sdd:story-ship STORY-2025-005             # Deploy to production
 2. Backup database before deployment
 3. Monitor performance after deployment
 ```
@@ -601,7 +601,7 @@ CONFIDENCE LEVEL: ⚠️ MEDIUM
 
 ### No Project Context
 - DETECT missing `/project-context/` directory
-- SUGGEST running `/project-init`
+- SUGGEST running `/sdd:project-init`
 - OFFER to validate with basic checks
 - WARN that validation will be incomplete
 
@@ -636,7 +636,7 @@ CONFIDENCE LEVEL: ⚠️ MEDIUM
 - SUGGEST coordinating with dependency owners
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/project-init`, offer basic validation
+- **Missing /project-context/**: Suggest `/sdd:project-init`, offer basic validation
 - **Story not in QA**: Provide clear workflow, suggest correct command
 - **Missing tests**: Block validation, provide test creation guidance
 - **Git errors**: Validate git state, suggest resolution
@@ -649,10 +649,10 @@ CONFIDENCE LEVEL: ⚠️ MEDIUM
 - Cache story file contents for session
 
 ## Related Commands
-- `/story-qa [id]` - Must complete before validation
-- `/story-ship [id]` - Run after validation passes
-- `/story-refactor [id]` - Return to development if validation fails
-- `/story-status [id]` - Check current story state
+- `/sdd:story-qa [id]` - Must complete before validation
+- `/sdd:story-ship [id]` - Run after validation passes
+- `/sdd:story-refactor [id]` - Return to development if validation fails
+- `/sdd:story-status [id]` - Check current story state
 
 ## Constraints
 - ✅ MUST load project context for validation standards

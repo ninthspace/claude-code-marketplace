@@ -1,4 +1,4 @@
-# /story-today
+# /sdd:story-today
 
 Shows current story, stage, and next actions for today's work.
 
@@ -62,10 +62,10 @@ Remaining:
 🚀 NEXT ACTIONS
 --------------
 1. [Specific next task]
-   Command: /story-[appropriate]
+   Command: /sdd:story-[appropriate]
 
 2. [Second priority task]
-   Command: /story-[appropriate]
+   Command: /sdd:story-[appropriate]
 
 3. [Third task if applicable]
 ```
@@ -93,7 +93,7 @@ Suggested for today:
 
 Estimated to complete: [X hours]
 
-Consider: /story-timebox 2
+Consider: /sdd:story-timebox 2
 ```
 
 #### Context Reminders
@@ -126,10 +126,10 @@ If no active story:
 -----------------
 
 Options:
-1. Continue previous: /story-continue
-2. Start new: /story-new
-3. Review backlog: /story-next
-4. Fix tech debt: /story-tech-debt
+1. Continue previous: /sdd:story-continue
+2. Start new: /sdd:story-new
+3. Review backlog: /sdd:story-next
+4. Fix tech debt: /sdd:story-tech-debt
 ```
 
 #### Standup Summary

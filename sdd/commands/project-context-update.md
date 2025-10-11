@@ -1,4 +1,4 @@
-# /project-context-update
+# /sdd:project-context-update
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Update technical stack, development process, coding standards, or project glossary documents while maintaining consistency across all project context files.
 
-**Syntax**: `/project-context-update [document_type]`
+**Syntax**: `/sdd:project-context-update [document_type]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -29,13 +29,13 @@
 #### Phase 1: Environment Verification
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **VERIFY** which context documents exist:
    - `/project-context/technical-stack.md` - Technology choices
    - `/project-context/coding-standards.md` - Quality rules
    - `/project-context/development-process.md` - Workflow definitions
-   - `/project-context/project-glossary.md` - Domain vocabulary
+   - `/project-context/sdd:project-glossary.md` - Domain vocabulary
    - `/project-context/project-brief.md` - Project overview
 
 #### Phase 2: Document Selection
@@ -172,8 +172,8 @@
    - NOTE `/stories/qa/` stories requiring test updates
 
 2. **SUGGEST** actions for affected stories:
-   - Re-run `/story-review` for stories with new standards
-   - Re-run `/story-qa` for stories with new test requirements
+   - Re-run `/sdd:story-review` for stories with new standards
+   - Re-run `/sdd:story-qa` for stories with new test requirements
    - Update story documentation with new references
 
 #### Phase 10: Completion Summary
@@ -227,7 +227,7 @@
 ### Example 1: Add New Testing Framework
 ```bash
 INPUT:
-/project-context-update technical-stack
+/sdd:project-context-update technical-stack
 
 INTERACTION:
 → Shows current technical-stack.md content
@@ -263,7 +263,7 @@ Would you like to apply cascading updates now? [y/n]
 ### Example 2: Migrate Technology
 ```bash
 INPUT:
-/project-context-update technical-stack
+/sdd:project-context-update technical-stack
 
 INTERACTION:
 → Asks: "What would you like to update?"
@@ -305,7 +305,7 @@ Cascading Updates Required:
 - Consider creating migration guide story
 
 Recommended Actions:
-1. Update all context documents (run /project-context-update)
+1. Update all context documents (run /sdd:project-context-update)
 2. Create STORY-MIGRATION: Jest to Vitest migration guide
 3. Re-run tests for all in-progress stories
 4. Update test templates in /stories/templates/
@@ -314,7 +314,7 @@ Recommended Actions:
 ### Example 3: Update Coding Standards
 ```bash
 INPUT:
-/project-context-update coding-standards
+/sdd:project-context-update coding-standards
 
 INTERACTION:
 → Shows current coding-standards.md
@@ -355,7 +355,7 @@ Recommended Actions:
 ### Example 4: No Project Context
 ```bash
 INPUT:
-/project-context-update
+/sdd:project-context-update
 
 OUTPUT:
 ⚠️  PROJECT CONTEXT NOT FOUND
@@ -363,7 +363,7 @@ OUTPUT:
 The /project-context/ directory does not exist.
 
 To set up the story-driven development system, run:
-→ /project-init
+→ /sdd:project-init
 
 This will create:
 - Project context directory
@@ -377,7 +377,7 @@ This will create:
 - DETECT missing document
 - OFFER to create it with standard template
 - IF user confirms, create document and continue
-- ELSE suggest running `/project-init`
+- ELSE suggest running `/sdd:project-init`
 
 ### No Changes Specified
 - IF user can't specify changes clearly
@@ -398,7 +398,7 @@ This will create:
 - PROVIDE option to review impact before applying
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/project-init` with clear instructions
+- **Missing /project-context/**: Suggest `/sdd:project-init` with clear instructions
 - **Document not found**: Offer to create with template or abort
 - **Backup creation fails**: MUST NOT proceed with updates, report error
 - **Permission errors**: Report specific file with access issue
@@ -417,11 +417,11 @@ This will create:
 - Don't expose sensitive configuration data
 
 ## Related Commands
-- `/project-init` - Initialize project structure if missing
-- `/project-brief` - Update high-level project documentation
-- `/story-review` - Re-review stories with new standards
-- `/story-qa` - Re-test stories with new requirements
-- `/project-status` - View current project state
+- `/sdd:project-init` - Initialize project structure if missing
+- `/sdd:project-brief` - Update high-level project documentation
+- `/sdd:story-review` - Re-review stories with new standards
+- `/sdd:story-qa` - Re-test stories with new requirements
+- `/sdd:project-status` - View current project state
 
 ## Constraints
 - ⚠️ MUST create backup before any modification

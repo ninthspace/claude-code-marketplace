@@ -1,4 +1,4 @@
-# /project-brief
+# /sdd:project-brief
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Generate comprehensive project briefs that intelligently break down complex features into multiple related stories, building upon existing project context when available.
 
-**Syntax**: `/project-brief [project_title]`
+**Syntax**: `/sdd:project-brief [project_title]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -142,8 +142,8 @@
    ```
 
 2. SUGGEST next steps:
-   - Run `/project-init` to set up development environment
-   - Use `/story-new` to start with core stories
+   - Run `/sdd:project-init` to set up development environment
+   - Use `/sdd:story-new` to start with core stories
    - Follow suggested implementation order from story-relationships.md
 
 ### OUTPUTS
@@ -338,7 +338,7 @@ STORY-XXX-005 (Core, independent)
 
 ### Example 1: New Project Brief
 ```bash
-/project-brief
+/sdd:project-brief
 
 → Prompts for project title
 → Gathers requirements interactively
@@ -355,7 +355,7 @@ Stories Identified: 5
 
 ### Example 2: Updating Existing Brief
 ```bash
-/project-brief "Enhanced Checkout"
+/sdd:project-brief "Enhanced Checkout"
 
 → Finds existing /project-context/project-brief.md
 → Creates backup: /project-context/versions/project-brief-v1-20250101-143000.md
@@ -372,7 +372,7 @@ Updated stories: 2
 
 ### Example 3: With Title Provided
 ```bash
-/project-brief "Mobile App Dashboard"
+/sdd:project-brief "Mobile App Dashboard"
 
 → Uses provided title
 → Gathers requirements
@@ -387,6 +387,6 @@ Updated stories: 2
 - Story dependency analysis scales with story count
 
 ## Related Commands
-- `/project-init` - Initialize development environment after brief creation
-- `/story-new` - Create individual story from brief
-- `/story-qa` - Quality assurance for completed stories
+- `/sdd:project-init` - Initialize development environment after brief creation
+- `/sdd:story-new` - Create individual story from brief
+- `/sdd:story-qa` - Quality assurance for completed stories

@@ -11,7 +11,7 @@
       "name": "sdd",
       "source": "./sdd",
       "description": "Comprehensive story-driven development workflow with 30+ commands for agile development, from ideation to production",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "keywords": [
         "story",
         "agile",

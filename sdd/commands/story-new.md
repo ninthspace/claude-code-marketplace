@@ -1,4 +1,4 @@
-# /story-new
+# /sdd:story-new
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Create a new story using project context and place it in the backlog folder for future development.
 
-**Syntax**: `/story-new [story_id_number]`
+**Syntax**: `/sdd:story-new [story_id_number]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -28,7 +28,7 @@
 #### Phase 1: Project Context Loading
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project context from:
    - `/project-context/project-brief.md` - Existing story definitions, goals
@@ -136,9 +136,9 @@
 2. **SUGGEST** next steps:
    ```
    💡 NEXT STEPS:
-   1. /story-start [story-id]     # Move to development and create branch
-   2. /story-implement [story-id]  # Generate implementation code
-   3. /project-status              # View all project stories
+   1. /sdd:story-start [story-id]     # Move to development and create branch
+   2. /sdd:story-implement [story-id]  # Generate implementation code
+   3. /sdd:project-status              # View all project stories
    ```
 
 ### OUTPUTS
@@ -216,7 +216,7 @@
 ### Example 1: Create from Project Brief
 ```bash
 INPUT:
-/story-new
+/sdd:story-new
 
 OUTPUT:
 → Checking project context...
@@ -237,15 +237,15 @@ Source: Extracted from project brief
 - Dependencies: None
 
 💡 NEXT STEPS:
-1. /story-start STORY-2025-001     # Move to development and create branch
-2. /story-implement STORY-2025-001  # Generate implementation code
-3. /project-status                  # View all project stories
+1. /sdd:story-start STORY-2025-001     # Move to development and create branch
+2. /sdd:story-implement STORY-2025-001  # Generate implementation code
+3. /sdd:project-status                  # View all project stories
 ```
 
 ### Example 2: Create with Specific ID
 ```bash
 INPUT:
-/story-new 10
+/sdd:story-new 10
 
 OUTPUT:
 → Checking project context...
@@ -276,15 +276,15 @@ Source: User-provided details
 - Ready for refinement before development
 
 💡 NEXT STEPS:
-1. /story-start STORY-2025-010      # Move to development and create branch
-2. /story-implement STORY-2025-010   # Generate implementation code
-3. /project-status                   # View all project stories
+1. /sdd:story-start STORY-2025-010      # Move to development and create branch
+2. /sdd:story-implement STORY-2025-010   # Generate implementation code
+3. /sdd:project-status                   # View all project stories
 ```
 
 ### Example 3: Auto-Increment ID
 ```bash
 INPUT:
-/story-new
+/sdd:story-new
 
 OUTPUT:
 → Checking project context...
@@ -307,7 +307,7 @@ Status: backlog
 
 ### No Project Context
 - DETECT missing `/project-context/` directory
-- SUGGEST running `/project-init`
+- SUGGEST running `/sdd:project-init`
 - OFFER to create story with minimal template
 - WARN that template won't be auto-populated
 
@@ -330,7 +330,7 @@ Status: backlog
 - CONTINUE with story creation
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/project-init` with guidance
+- **Missing /project-context/**: Suggest `/sdd:project-init` with guidance
 - **Permission errors**: Report specific file/directory with access issue
 - **Invalid story ID**: Sanitize and suggest corrected version
 - **User cancels**: Clean up partial creation, exit gracefully
@@ -342,11 +342,11 @@ Status: backlog
 - Interactive prompts allow user to control pace
 
 ## Related Commands
-- `/project-init` - Initialize project structure first
-- `/project-brief` - Create/update project documentation with stories
-- `/story-start [id]` - Begin development on story
-- `/story-implement [id]` - Generate implementation code
-- `/project-status` - View all project stories
+- `/sdd:project-init` - Initialize project structure first
+- `/sdd:project-brief` - Create/update project documentation with stories
+- `/sdd:story-start [id]` - Begin development on story
+- `/sdd:story-implement [id]` - Generate implementation code
+- `/sdd:project-status` - View all project stories
 
 ## Constraints
 - ✅ MUST generate unique story ID

@@ -1,4 +1,4 @@
-# /story-blocked
+# /sdd:story-blocked
 
 Marks story as blocked and logs the reason.
 
@@ -10,7 +10,7 @@ Marks story as blocked and logs the reason.
 
 ### Input Parameters
 ```
-/story-blocked [STORY-ID] [reason]
+/sdd:story-blocked [STORY-ID] [reason]
 ```
 - `STORY-ID` (optional): Defaults to current active story
 - `reason` (optional): Prompted if not provided
@@ -193,7 +193,7 @@ Impact:
 
 For future reference:
 
-When running `/story-continue` or `/story-unblock`:
+When running `/sdd:story-continue` or `/sdd:story-unblock`:
 ```
 ✅ UNBLOCKED!
 ============

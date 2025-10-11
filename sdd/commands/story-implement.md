@@ -1,4 +1,4 @@
-# /story-implement
+# /sdd:story-implement
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Generate complete implementation including production code, unit tests, integration tests, and browser tests using the project's actual technical stack and coding standards.
 
-**Syntax**: `/story-implement [story_id]`
+**Syntax**: `/sdd:story-implement [story_id]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -30,7 +30,7 @@
 #### Phase 1: Project Context Loading
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - HALT execution with clear guidance
    - EXIT with initialization instructions
 3. **LOAD** and **PARSE** project context:
@@ -61,7 +61,7 @@
    - IF story_id parameter provided: USE it
    - ELSE: EXTRACT from current git branch name
    - ELSE: FIND most recent story in `/stories/development/`
-   - IF NOT FOUND: HALT with error and suggest `/story-start`
+   - IF NOT FOUND: HALT with error and suggest `/sdd:story-start`
 
 2. **READ** story file at `/stories/development/[story-id].md`
 3. **EXTRACT** story requirements:
@@ -76,7 +76,7 @@
    - Security considerations
 
 4. **VALIDATE** story is in development status:
-   - IF in "backlog": SUGGEST running `/story-start` first
+   - IF in "backlog": SUGGEST running `/sdd:story-start` first
    - IF in "review" or "qa": WARN about overwriting reviewed code
    - IF in "completed": HALT with error
 
@@ -302,8 +302,8 @@
    - [Decision 2]
 
    Next Steps:
-   1. /story-save to commit implementation
-   2. /story-review to move to code review
+   1. /sdd:story-save to commit implementation
+   2. /sdd:story-review to move to code review
    3. Manual testing in browser at [URL]
    ```
 
@@ -333,7 +333,7 @@
 ### Example 1: Laravel + Livewire Implementation
 ```bash
 INPUT:
-/story-implement STORY-AUTH-001
+/sdd:story-implement STORY-AUTH-001
 
 PROCESS:
 → Loading project context from /project-context/
@@ -386,15 +386,15 @@ Key Implementation Decisions:
 - Used Livewire validation attributes for clean code
 
 Next Steps:
-1. /story-save to commit implementation
-2. /story-review to move to code review
+1. /sdd:story-save to commit implementation
+2. /sdd:story-review to move to code review
 3. Manual testing in browser at https://ccs-todo.test/login
 ```
 
 ### Example 2: React + TypeScript Implementation
 ```bash
 INPUT:
-/story-implement STORY-PROFILE-002
+/sdd:story-implement STORY-PROFILE-002
 
 PROCESS:
 → Loading project context
@@ -452,15 +452,15 @@ Key Implementation Decisions:
 - Implemented form validation with Zod schema
 
 Next Steps:
-1. /story-save to commit implementation
-2. /story-review to move to code review
+1. /sdd:story-save to commit implementation
+2. /sdd:story-review to move to code review
 3. Manual testing in browser at http://localhost:5173/profile
 ```
 
 ### Example 3: Implementation with Missing Context
 ```bash
 INPUT:
-/story-implement STORY-API-003
+/sdd:story-implement STORY-API-003
 
 PROCESS:
 → Checking for /project-context/ directory
@@ -476,20 +476,20 @@ The /project-context/ directory does not exist.
 This directory defines your technical stack and coding standards,
 which determines what code to generate.
 
-Please run: /project-init
+Please run: /sdd:project-init
 
 This will create:
 - /project-context/technical-stack.md (defines your stack)
 - /project-context/coding-standards.md (defines your standards)
 - /project-context/development-process.md (defines your workflow)
 
-After initialization, run /story-implement again.
+After initialization, run /sdd:story-implement again.
 ```
 
 ### Example 4: Implementation with Failing Tests
 ```bash
 INPUT:
-/story-implement STORY-CART-004
+/sdd:story-implement STORY-CART-004
 
 PROCESS:
 → Loading project context
@@ -550,8 +550,8 @@ Issues Fixed During Implementation:
 - Missing CSRF token in HTMX request
 
 Next Steps:
-1. /story-save to commit implementation
-2. /story-review to move to code review
+1. /sdd:story-save to commit implementation
+2. /sdd:story-review to move to code review
 3. Manual testing in browser at http://localhost:8000/cart
 ```
 
@@ -560,7 +560,7 @@ Next Steps:
 ### Story Not in Development
 ```
 IF story found in /stories/backlog/:
-- SUGGEST running /story-start first
+- SUGGEST running /sdd:story-start first
 - EXPLAIN that story must be moved to development
 - OFFER to start story automatically
 ```
@@ -603,9 +603,9 @@ IF files already exist at generation paths:
 ```
 
 ## Error Handling
-- **Story ID missing and not on feature branch**: Return "Error: Story ID required. Usage: /story-implement <story_id>"
+- **Story ID missing and not on feature branch**: Return "Error: Story ID required. Usage: /sdd:story-implement <story_id>"
 - **Invalid story ID format**: Return "Error: Invalid story ID format. Expected: STORY-XXX-NNN"
-- **Project context missing**: Halt and suggest /project-init with detailed guidance
+- **Project context missing**: Halt and suggest /sdd:project-init with detailed guidance
 - **Story not found**: Return "Error: Story not found. Ensure it exists in /stories/development/"
 - **Context files corrupted**: Show specific parsing errors and suggest manual review
 - **Test execution fails**: Show error output and offer troubleshooting steps
@@ -620,11 +620,11 @@ IF files already exist at generation paths:
 - Use incremental builds for DISCOVERED build tools
 
 ## Related Commands
-- `/story-start` - Begin development before implementing
-- `/story-save` - Commit implementation after completion
-- `/story-review` - Move to code review after implementation
-- `/story-continue` - Resume implementation if interrupted
-- `/project-init` - Initialize project context first
+- `/sdd:story-start` - Begin development before implementing
+- `/sdd:story-save` - Commit implementation after completion
+- `/sdd:story-review` - Move to code review after implementation
+- `/sdd:story-continue` - Resume implementation if interrupted
+- `/sdd:project-init` - Initialize project context first
 
 ## Constraints
 - ✅ MUST load project context before any code generation

@@ -1,4 +1,4 @@
-# /story-full-check
+# /sdd:story-full-check
 
 Comprehensive 5-minute validation suite for production-ready quality assurance.
 
@@ -13,9 +13,9 @@ Comprehensive 5-minute validation suite for production-ready quality assurance.
 **Destructive**: No (read-only analysis)
 
 **Related Commands**:
-- `/story-quick-check` - Fast 30s validation (run first)
-- `/story-test-integration` - Integration + E2E tests only
-- `/story-validate` - Final story validation before ship
+- `/sdd:story-quick-check` - Fast 30s validation (run first)
+- `/sdd:story-test-integration` - Integration + E2E tests only
+- `/sdd:story-validate` - Final story validation before ship
 
 **Context Requirements**:
 - `/project-context/technical-stack.md` (validation tools)
@@ -29,7 +29,7 @@ Comprehensive 5-minute validation suite for production-ready quality assurance.
 **Validation Scope**:
 ```bash
 # Full comprehensive check (default)
-/story-full-check
+/sdd:story-full-check
 
 # Scoped validation
 --scope=tests|quality|security|performance|all  # Default: all
@@ -48,10 +48,10 @@ Comprehensive 5-minute validation suite for production-ready quality assurance.
 
 **Examples**:
 ```bash
-/story-full-check                                # Full 5min check
-/story-full-check --export                       # Save detailed report
-/story-full-check --scope=tests --coverage       # Tests + coverage only
-/story-full-check --compare=abc123 --strict      # Compare + strict mode
+/sdd:story-full-check                                # Full 5min check
+/sdd:story-full-check --export                       # Save detailed report
+/sdd:story-full-check --scope=tests --coverage       # Tests + coverage only
+/sdd:story-full-check --compare=abc123 --strict      # Compare + strict mode
 ```
 
 ---
@@ -519,7 +519,7 @@ STATUS: ✅ READY FOR PRODUCTION
 
 🎯 NEXT STEPS:
   1. (Optional) Fix Priority 2 warnings
-  2. Run /story-validate for final sign-off
+  2. Run /sdd:story-validate for final sign-off
   3. Move to /stories/qa/ for final QA
   4. Ship to production
 
@@ -569,7 +569,7 @@ Share with: git add reports/ && git commit -m "Add validation report"
 ### Example 1: Perfect Score
 
 ```bash
-$ /story-full-check
+$ /sdd:story-full-check
 
 [... full validation ...]
 
@@ -583,7 +583,7 @@ STATUS: ✅ PRODUCTION READY
 ❌ 0 failures
 
 🎯 NEXT STEPS:
-  Run /story-validate → Ship to production
+  Run /sdd:story-validate → Ship to production
 
 VALIDATION CONFIDENCE: VERY HIGH (98%)
 ```
@@ -591,7 +591,7 @@ VALIDATION CONFIDENCE: VERY HIGH (98%)
 ### Example 2: Warnings Present
 
 ```bash
-$ /story-full-check
+$ /sdd:story-full-check
 
 [... full validation ...]
 
@@ -604,8 +604,8 @@ STATUS: ⚠️  READY WITH WARNINGS
 
 🎯 RECOMMENDED ACTIONS:
   1. Fix 4 medium-priority warnings (est. 45 min)
-  2. Re-run /story-full-check
-  3. Then proceed to /story-validate
+  2. Re-run /sdd:story-full-check
+  3. Then proceed to /sdd:story-validate
 
 Accept warnings and ship? [y/n]:
 ```
@@ -613,7 +613,7 @@ Accept warnings and ship? [y/n]:
 ### Example 3: Comparison Mode
 
 ```bash
-$ /story-full-check --compare=abc123
+$ /sdd:story-full-check --compare=abc123
 
 [... full validation ...]
 
@@ -633,7 +633,7 @@ Net change: +8 points (improvement)
 ### Example 4: Export Report
 
 ```bash
-$ /story-full-check --export
+$ /sdd:story-full-check --export
 
 [... full validation ...]
 
@@ -651,7 +651,7 @@ Share report:
 ### Example 5: Scoped Check (Tests Only)
 
 ```bash
-$ /story-full-check --scope=tests --coverage
+$ /sdd:story-full-check --scope=tests --coverage
 
 🧪 COMPREHENSIVE TESTING
 ========================
@@ -662,7 +662,7 @@ Coverage Report: /tests/coverage/index.html
 OVERALL: ✅ ALL TESTS PASSING
 Skipping: quality, security, performance, docs
 
-Run full check: /story-full-check (no --scope)
+Run full check: /sdd:story-full-check (no --scope)
 ```
 
 ---
@@ -712,7 +712,7 @@ Run full check: /story-full-check (no --scope)
 - **Actionable**: Prioritized action items with fix time estimates
 
 **Best Practices**:
-1. Run `/story-quick-check` before this (catch obvious issues fast)
+1. Run `/sdd:story-quick-check` before this (catch obvious issues fast)
 2. Run before moving story to `/stories/review/`
 3. Use `--export` for documentation trail
 4. Use `--compare` to track quality improvements
@@ -720,21 +720,21 @@ Run full check: /story-full-check (no --scope)
 
 **When to Use**:
 - ✅ Before code review (move to `/stories/review/`)
-- ✅ Before final validation (`/story-validate`)
+- ✅ Before final validation (`/sdd:story-validate`)
 - ✅ After major refactoring
 - ✅ Before production deployment
 - ✅ Weekly quality check for long-running stories
 
 **When NOT to Use**:
-- ❌ During active development (use `/story-quick-check`)
-- ❌ For quick validation (use `/story-quick-check`)
+- ❌ During active development (use `/sdd:story-quick-check`)
+- ❌ For quick validation (use `/sdd:story-quick-check`)
 - ❌ Multiple times per day (too slow)
 
 **Next Steps After Success**:
 ```bash
-A+ (95-100%) → /story-validate → Ship
-A  (90-94%)  → /story-validate → Ship (minor improvements optional)
-B  (80-89%)  → Fix P2 warnings → Re-run → /story-validate
+A+ (95-100%) → /sdd:story-validate → Ship
+A  (90-94%)  → /sdd:story-validate → Ship (minor improvements optional)
+B  (80-89%)  → Fix P2 warnings → Re-run → /sdd:story-validate
 C  (70-79%)  → Fix P1+P2 issues → Re-run
 D-F (<70%)   → Fix critical issues → Re-run entire workflow
 ```
@@ -742,11 +742,11 @@ D-F (<70%)   → Fix critical issues → Re-run entire workflow
 **Quick Reference**:
 ```bash
 # Fast check first (30s)
-/story-quick-check
+/sdd:story-quick-check
 
 # Then comprehensive validation (5min)
-/story-full-check
+/sdd:story-full-check
 
 # Fix issues, then final validation
-/story-validate
+/sdd:story-validate
 ```

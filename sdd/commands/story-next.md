@@ -1,4 +1,4 @@
-# /story-next
+# /sdd:story-next
 
 Suggests what to work on next based on priorities and status.
 
@@ -51,7 +51,7 @@ Reason: [Why this is most important]
 Estimated effort: [X days]
 Business value: [High/Medium/Low]
 
-Command: /story-start [STORY-ID]
+Command: /sdd:story-start [STORY-ID]
 
 🥈 SECOND OPTION
 ---------------
@@ -170,7 +170,7 @@ Productive alternatives:
 4. Refactor complex functions
 5. Learn new tool/technique
 
-Create new story: /story-new
+Create new story: /sdd:story-new
 ```
 
 ### Action Plan

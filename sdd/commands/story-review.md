@@ -1,4 +1,4 @@
-# /story-review
+# /sdd:story-review
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Execute comprehensive code review with project-specific quality gates, linting, testing, security checks, and standards compliance before QA.
 
-**Syntax**: `/story-review [story_id]`
+**Syntax**: `/sdd:story-review [story_id]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -29,7 +29,7 @@
 #### Phase 1: Project Context Loading
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project-specific review standards from:
    - `/project-context/technical-stack.md` - Technology stack and tools
@@ -331,9 +331,9 @@ Complexity Score:    X (average cyclomatic complexity)
 
 #### Phase 7: Next Actions
 1. **DETERMINE** review outcome:
-   - IF all critical checks PASS → Ready for `/story-qa`
-   - IF any failures → Requires `/story-refactor`
-   - IF documentation needed → Run `/story-document`
+   - IF all critical checks PASS → Ready for `/sdd:story-qa`
+   - IF any failures → Requires `/sdd:story-refactor`
+   - IF documentation needed → Run `/sdd:story-document`
 
 2. **DISPLAY** next steps:
    ```
@@ -342,24 +342,24 @@ Complexity Score:    X (average cyclomatic complexity)
 
    [IF PASSED:]
    ✅ All quality gates passed
-   1. /story-qa [story-id]           # Move to QA and run test suite
+   1. /sdd:story-qa [story-id]           # Move to QA and run test suite
 
    [IF FAILED:]
    ⚠️ X critical issues must be fixed
-   1. /story-refactor [story-id]     # Return to development
+   1. /sdd:story-refactor [story-id]     # Return to development
    2. Fix identified issues:
       - [Issue 1]
       - [Issue 2]
-   3. /story-review [story-id]       # Re-run review after fixes
+   3. /sdd:story-review [story-id]       # Re-run review after fixes
 
    [IF WARNINGS:]
    ⚠️ X warnings (non-blocking)
-   1. /story-qa [story-id]           # Proceed to QA (warnings won't block)
+   1. /sdd:story-qa [story-id]           # Proceed to QA (warnings won't block)
    2. Consider addressing warnings in future iteration
 
    [AVAILABLE COMMANDS:]
-   - /story-document [story-id]      # Add/update documentation
-   - /story-status [story-id]        # View detailed story status
+   - /sdd:story-document [story-id]      # Add/update documentation
+   - /sdd:story-status [story-id]        # View detailed story status
    ```
 
 3. **SHOW** relevant debugging commands for discovered stack:
@@ -398,7 +398,7 @@ Complexity Score:    X (average cyclomatic complexity)
 ### Example 1: Review with All Checks Passing
 ```bash
 INPUT:
-/story-review STORY-2025-001
+/sdd:story-review STORY-2025-001
 
 OUTPUT:
 → Loading project context...
@@ -445,13 +445,13 @@ Performance Score:   94/100
 💡 NEXT STEPS:
 ════════════════════════════════════════════════
 ✅ All quality gates passed
-1. /story-qa STORY-2025-001          # Move to QA and run test suite
+1. /sdd:story-qa STORY-2025-001          # Move to QA and run test suite
 ```
 
 ### Example 2: Review with Failures
 ```bash
 INPUT:
-/story-review
+/sdd:story-review
 
 OUTPUT:
 → Detecting story from current branch...
@@ -495,12 +495,12 @@ Reviewed: 2025-10-01 15:45:12
 💡 NEXT STEPS:
 ════════════════════════════════════════════════
 ⚠️ 3 critical issues must be fixed
-1. /story-refactor STORY-2025-003     # Return to development
+1. /sdd:story-refactor STORY-2025-003     # Return to development
 2. Fix identified issues:
    - Add tests for DarkModeService.applyTheme()
    - Fix failing feature test
    - Update Laravel framework to v12.1.5
-3. /story-review STORY-2025-003       # Re-run review after fixes
+3. /sdd:story-review STORY-2025-003       # Re-run review after fixes
 
 [DEBUGGING COMMANDS:]
 vendor/bin/pest --filter=DarkMode      # Run specific test
@@ -510,7 +510,7 @@ composer update laravel/framework      # Update vulnerable package
 ### Example 3: Re-review Already in Review
 ```bash
 INPUT:
-/story-review STORY-2025-002
+/sdd:story-review STORY-2025-002
 
 OUTPUT:
 → Loading project context...
@@ -536,14 +536,14 @@ Reviewed: 2025-10-01 16:12:33 (2nd review)
 
 ### No Project Context
 - DETECT missing `/project-context/` directory
-- SUGGEST running `/project-init`
+- SUGGEST running `/sdd:project-init`
 - OFFER to run basic checks without discovered standards
 - WARN that review will be incomplete
 
 ### Story Not in Development
 - CHECK if story in `/stories/review/`
 - IF found: ASK user if they want to re-review
-- IF in `/stories/qa/`: ERROR and suggest `/story-refactor` first
+- IF in `/stories/qa/`: ERROR and suggest `/sdd:story-refactor` first
 - IF in `/stories/completed/`: ERROR "Story already shipped"
 
 ### Missing Test Framework
@@ -571,7 +571,7 @@ Reviewed: 2025-10-01 16:12:33 (2nd review)
 - SUGGEST manual verification
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/project-init`, offer basic review
+- **Missing /project-context/**: Suggest `/sdd:project-init`, offer basic review
 - **Story file not found**: Check all directories, provide helpful guidance
 - **Tool not installed**: Provide installation commands for stack
 - **Permission errors**: Report specific file/directory access issue
@@ -585,11 +585,11 @@ Reviewed: 2025-10-01 16:12:33 (2nd review)
 - Limit coverage analysis to changed files when possible
 
 ## Related Commands
-- `/story-refactor [id]` - Return to development to fix issues
-- `/story-qa [id]` - Proceed to QA after passing review
-- `/story-document [id]` - Add documentation before QA
-- `/story-status [id]` - Check current story state
-- `/project-context` - Update project standards
+- `/sdd:story-refactor [id]` - Return to development to fix issues
+- `/sdd:story-qa [id]` - Proceed to QA after passing review
+- `/sdd:story-document [id]` - Add documentation before QA
+- `/sdd:story-status [id]` - Check current story state
+- `/sdd:project-context` - Update project standards
 
 ## Constraints
 - ✅ MUST load project context before any checks

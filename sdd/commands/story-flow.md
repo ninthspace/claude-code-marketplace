@@ -1,4 +1,4 @@
-# /story-flow
+# /sdd:story-flow
 
 ## Meta
 - Version: 1.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Execute the complete story development workflow in sequence, automating the progression through all stages from story creation to production deployment.
 
-**Syntax**: `/story-flow <prompt|story_id> [--start-at=step] [--stop-at=step] [--auto]`
+**Syntax**: `/sdd:story-flow <prompt|story_id> [--start-at=step] [--stop-at=step] [--auto]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -56,7 +56,7 @@
 
 #### Phase 2: Sequential Execution
 
-**STEP 1: /story-new** (IF start-at is "new")
+**STEP 1: /sdd:story-new** (IF start-at is "new")
 1. **DETECT** if input is existing story ID:
    - CHECK pattern: `STORY-[A-Z0-9]+-\d+`
    - SEARCH for story file in all story directories:
@@ -71,7 +71,7 @@
    - USE found story_id
    - PROCEED to next step
 3. ELSE (new story):
-   - EXECUTE: `/story-new` with prompt as story title
+   - EXECUTE: `/sdd:story-new` with prompt as story title
    - CAPTURE: Generated story ID
    - IF --auto flag NOT set:
      - SHOW: Story creation summary
@@ -79,8 +79,8 @@
      - IF no: EXIT workflow
    - UPDATE: Current story_id variable
 
-**STEP 2: /story-start** (IF in range)
-1. EXECUTE: `/story-start [story_id]`
+**STEP 2: /sdd:story-start** (IF in range)
+1. EXECUTE: `/sdd:story-start [story_id]`
 2. VERIFY: Branch created and checked out
 3. IF --auto flag NOT set:
    - SHOW: Branch and environment status
@@ -91,20 +91,20 @@
    - OFFER: Skip this step, retry, or abort
    - PROCEED based on user choice
 
-**STEP 3: /story-implement** (IF in range)
-1. EXECUTE: `/story-implement [story_id]`
+**STEP 3: /sdd:story-implement** (IF in range)
+1. EXECUTE: `/sdd:story-implement [story_id]`
 2. VERIFY: Code generated successfully
 3. IF --auto flag NOT set:
    - SHOW: Files created/modified summary
    - ASK: "Continue to review? (y/n)"
-   - IF no: EXIT with suggestion to run `/story-save`
+   - IF no: EXIT with suggestion to run `/sdd:story-save`
 4. IF error:
    - SHOW: Implementation issues
    - OFFER: Retry implementation or manual fix
    - WAIT for user decision
 
-**STEP 4: /story-review** (IF in range)
-1. EXECUTE: `/story-review [story_id]`
+**STEP 4: /sdd:story-review** (IF in range)
+1. EXECUTE: `/sdd:story-review [story_id]`
 2. VERIFY: Code quality checks passed
 3. IF --auto flag NOT set:
    - SHOW: Review results
@@ -115,8 +115,8 @@
    - IF --auto: CONTINUE anyway with warning
    - ELSE: OFFER to fix before continuing
 
-**STEP 5: /story-qa** (IF in range)
-1. EXECUTE: `/story-qa [story_id]`
+**STEP 5: /sdd:story-qa** (IF in range)
+1. EXECUTE: `/sdd:story-qa [story_id]`
 2. VERIFY: All tests passed
 3. IF --auto flag NOT set:
    - SHOW: Test results summary
@@ -125,11 +125,11 @@
 4. IF tests fail:
    - DISPLAY: Failed tests
    - HALT workflow (QA must pass)
-   - SUGGEST: Fix tests and run `/story-flow [story_id] --start-at=qa`
+   - SUGGEST: Fix tests and run `/sdd:story-flow [story_id] --start-at=qa`
    - EXIT
 
-**STEP 6: /story-validate** (IF in range)
-1. EXECUTE: `/story-validate [story_id]`
+**STEP 6: /sdd:story-validate** (IF in range)
+1. EXECUTE: `/sdd:story-validate [story_id]`
 2. VERIFY: All acceptance criteria met
 3. IF --auto flag NOT set:
    - SHOW: Validation checklist
@@ -141,8 +141,8 @@
    - SUGGEST: Address issues and retry
    - EXIT
 
-**STEP 7: /story-save** (IF in range)
-1. EXECUTE: `/story-save` with auto-generated commit message
+**STEP 7: /sdd:story-save** (IF in range)
+1. EXECUTE: `/sdd:story-save` with auto-generated commit message
 2. VERIFY: Changes committed successfully
 3. IF --auto flag NOT set:
    - SHOW: Commit summary
@@ -153,14 +153,14 @@
    - OFFER: Resolve conflicts or abort
    - WAIT for resolution
 
-**STEP 8: /story-ship** (IF in range AND is stop-at)
-1. EXECUTE: `/story-ship [story_id]`
+**STEP 8: /sdd:story-ship** (IF in range AND is stop-at)
+1. EXECUTE: `/sdd:story-ship [story_id]`
 2. VERIFY: Merged and deployed successfully
 3. SHOW: Final completion summary
 4. IF error:
    - HALT before deployment
    - SHOW: Deployment errors
-   - SUGGEST: `/story-rollback [story_id]` if needed
+   - SUGGEST: `/sdd:story-rollback [story_id]` if needed
    - MANUAL intervention required
 
 #### Phase 3: Completion Summary
@@ -184,7 +184,7 @@ Completed Steps:
 
 [IF stopped before ship:]
 ⏸️ Workflow Paused
-Next Step: /story-flow [story_id] --start-at=[next-step]
+Next Step: /sdd:story-flow [story_id] --start-at=[next-step]
 
 [IF any warnings:]
 ⚠️ Warnings:
@@ -216,7 +216,7 @@ Next Actions:
 ### Example 1: Full Workflow from New Story
 ```bash
 INPUT:
-/story-flow "Add user registration form with email verification"
+/sdd:story-flow "Add user registration form with email verification"
 
 PROCESS:
 → Step 1/8: Creating story...
@@ -263,7 +263,7 @@ Total Duration: 12 minutes
 ### Example 2: Resume from Existing Story (Year-based ID)
 ```bash
 INPUT:
-/story-flow STORY-2025-010 --start-at=qa --auto
+/sdd:story-flow STORY-2025-010 --start-at=qa --auto
 
 PROCESS:
 → Loading story: STORY-2025-010
@@ -292,7 +292,7 @@ Duration: 3 minutes
 ### Example 2b: Phase-based Story ID
 ```bash
 INPUT:
-/story-flow STORY-DUE-001 --start-at=start
+/sdd:story-flow STORY-DUE-001 --start-at=start
 
 PROCESS:
 → Detected phase-based story: STORY-DUE-001
@@ -320,7 +320,7 @@ Duration: 8 minutes
 ### Example 3: Partial Workflow
 ```bash
 INPUT:
-/story-flow "Fix login page responsive layout" --stop-at=review
+/sdd:story-flow "Fix login page responsive layout" --stop-at=review
 
 PROCESS:
 → Step 1/4: Creating story...
@@ -342,16 +342,16 @@ Story: STORY-2025-016 - Fix login page layout
 Status: in-review
 
 Completed: new → start → implement → review
-Next: /story-flow STORY-2025-016 --start-at=qa
+Next: /sdd:story-flow STORY-2025-016 --start-at=qa
 
 To resume full workflow:
-/story-flow STORY-2025-016 --start-at=qa --auto
+/sdd:story-flow STORY-2025-016 --start-at=qa --auto
 ```
 
 ### Example 4: QA Failure Handling
 ```bash
 INPUT:
-/story-flow STORY-2025-012 --start-at=qa --auto
+/sdd:story-flow STORY-2025-012 --start-at=qa --auto
 
 PROCESS:
 → Step 1/4: Running QA tests...
@@ -372,7 +372,7 @@ Next Actions:
 1. Review test failures above
 2. Fix implementation issues
 3. Run tests: vendor/bin/pest --filter=TaskCompletion
-4. Resume workflow: /story-flow STORY-2025-012 --start-at=qa
+4. Resume workflow: /sdd:story-flow STORY-2025-012 --start-at=qa
 ```
 
 ## Edge Cases
@@ -382,7 +382,7 @@ Next Actions:
 IF story_id found in /stories/completed/:
 - SHOW: Story already completed
 - OFFER: View story details or create new version
-- SUGGEST: /story-new for related feature
+- SUGGEST: /sdd:story-new for related feature
 - EXIT workflow
 ```
 
@@ -406,7 +406,7 @@ IF starting mid-workflow and previous steps incomplete:
 
 ## Error Handling
 - **Invalid step name**: Show valid step names and exit
-- **Story not found**: Search all story locations (backlog, development, review, qa, completed, phases), suggest `/story-new` or check story ID
+- **Story not found**: Search all story locations (backlog, development, review, qa, completed, phases), suggest `/sdd:story-new` or check story ID
 - **Ambiguous story ID**: If multiple stories found with similar IDs, list them and ask user to specify
 - **Step prerequisites missing**: Show missing requirements and suggest order
 - **Git conflicts**: Halt workflow, show conflict files, require manual resolution
@@ -420,15 +420,15 @@ IF starting mid-workflow and previous steps incomplete:
 - Can pause/resume at any step without data loss
 
 ## Related Commands
-- `/story-new` - Create individual story (Step 1)
-- `/story-start` - Start development (Step 2)
-- `/story-implement` - Generate code (Step 3)
-- `/story-review` - Code review (Step 4)
-- `/story-qa` - Run tests (Step 5)
-- `/story-validate` - Final validation (Step 6)
-- `/story-save` - Commit changes (Step 7)
-- `/story-ship` - Deploy to production (Step 8)
-- `/story-rollback` - Rollback if issues arise
+- `/sdd:story-new` - Create individual story (Step 1)
+- `/sdd:story-start` - Start development (Step 2)
+- `/sdd:story-implement` - Generate code (Step 3)
+- `/sdd:story-review` - Code review (Step 4)
+- `/sdd:story-qa` - Run tests (Step 5)
+- `/sdd:story-validate` - Final validation (Step 6)
+- `/sdd:story-save` - Commit changes (Step 7)
+- `/sdd:story-ship` - Deploy to production (Step 8)
+- `/sdd:story-rollback` - Rollback if issues arise
 
 ## Constraints
 - ✅ MUST execute steps in correct order

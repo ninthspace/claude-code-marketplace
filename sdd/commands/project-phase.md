@@ -1,4 +1,4 @@
-# /project-phase
+# /sdd:project-phase
 
 ## Meta
 - Version: 1.2
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Interactively plan the next development phase by gathering user input on desired features and improvements, with optional completion analysis of previous work.
 
-**Syntax**: `/project-phase [phase_name] [--analyze-only]`
+**Syntax**: `/sdd:project-phase [phase_name] [--analyze-only]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -198,7 +198,7 @@
      [How to measure phase completion and success]
      ```
 
-   - **CREATE** story queue at `/project-context/phases/[phase_name]/story-queue.md`:
+   - **CREATE** story queue at `/project-context/phases/[phase_name]/sdd:story-queue.md`:
      ```markdown
      # Story Queue: [phase_name]
 
@@ -255,7 +255,7 @@
 
 ### OUTPUTS
 - `/project-context/phases/[phase_name]/phase-brief.md`: Focused phase documentation
-- `/project-context/phases/[phase_name]/story-queue.md`: Prioritized story backlog
+- `/project-context/phases/[phase_name]/sdd:story-queue.md`: Prioritized story backlog
 - Updated `/project-context/project-brief.md`: Phase completion summary
 - Console summary: Completion analysis and phase planning results
 
@@ -272,7 +272,7 @@
 - **SHOULD** provide realistic effort estimates based on user constraints
 
 ### ERROR HANDLING
-- **Missing project brief**: Error and suggest running `/project-brief` first
+- **Missing project brief**: Error and suggest running `/sdd:project-brief` first
 - **Insufficient user input**: Ask clarifying questions to gather requirements
 - **File system errors**: Report specific error and suggest manual intervention
 - **Invalid phase name**: Sanitize and suggest corrected version
@@ -289,15 +289,15 @@
 
 ### INTEGRATION WITH EXISTING WORKFLOW
 - **Before**: Must have existing project brief
-- **After**: Use `/story-new` to create individual stories from queue
-- **Complements**: Works with `/project-brief` for major updates
+- **After**: Use `/sdd:story-new` to create individual stories from queue
+- **Complements**: Works with `/sdd:project-brief` for major updates
 - **Feeds into**: Standard story development workflow
 
 ### RELATED COMMANDS
-- `/project-brief`: Update main project documentation
-- `/story-new`: Create individual stories from phase queue
-- `/project-status`: View current development state
-- `/story-relationships`: Manage dependencies between stories
+- `/sdd:project-brief`: Update main project documentation
+- `/sdd:story-new`: Create individual stories from phase queue
+- `/sdd:project-status`: View current development state
+- `/sdd:story-relationships`: Manage dependencies between stories
 
 ### VERSION HISTORY
 - **v1.0**: Initial implementation with completion analysis and phase planning

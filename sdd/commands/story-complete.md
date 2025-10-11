@@ -1,4 +1,4 @@
-# /story-complete
+# /sdd:story-complete
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Archive a shipped story, capture comprehensive lessons learned, extract reusable components, and update project metrics for continuous improvement.
 
-**Syntax**: `/story-complete <story_id>`
+**Syntax**: `/sdd:story-complete <story_id>`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -28,7 +28,7 @@
 #### Phase 1: Verification
 1. **VERIFY** story is in `/stories/completed/` directory
 2. IF NOT in completed:
-   - CHECK `/stories/qa/` - suggest running `/story-ship` first
+   - CHECK `/stories/qa/` - suggest running `/sdd:story-ship` first
    - CHECK `/stories/review/` - suggest completing QA and shipping
    - EXIT with appropriate guidance
 3. **READ** story file and extract:
@@ -220,7 +220,7 @@
    - Update cycle time averages
    - Calculate success rate
 
-2. **CREATE OR UPDATE** `/project-context/project-metrics.md`:
+2. **CREATE OR UPDATE** `/project-context/sdd:project-metrics.md`:
    - Total stories completed
    - Average cycle time
    - Average time per stage
@@ -288,13 +288,13 @@
    1. Review follow-up items for backlog
    2. Share learnings with team
    3. Update related documentation
-   4. /project-status to view remaining stories
-   5. /story-new to begin next story
+   4. /sdd:project-status to view remaining stories
+   5. /sdd:story-new to begin next story
    ```
 
 ### OUTPUTS
 - `/stories/completed/[ARCHIVED]-[story-id].md` - Archived story with metrics and learnings
-- `/project-context/project-metrics.md` - Updated project metrics (created or updated)
+- `/project-context/sdd:project-metrics.md` - Updated project metrics (created or updated)
 - Updated documentation files (as needed)
 - Completion report (displayed to user)
 
@@ -315,7 +315,7 @@
 ### Example 1: Complete Story with Full Metrics
 ```bash
 INPUT:
-/story-complete STORY-2025-001
+/sdd:story-complete STORY-2025-001
 
 PROCESS:
 → Verifying story location...
@@ -447,17 +447,17 @@ For Next Time:
 1. Review follow-up items for backlog
 2. Share learnings with team
 3. Update authentication documentation
-4. /project-status to view remaining stories
-5. /story-new to begin next story
+4. /sdd:project-status to view remaining stories
+5. /sdd:story-new to begin next story
 
 → Story archived: /stories/completed/[ARCHIVED]-STORY-2025-001.md
-→ Project metrics updated: /project-context/project-metrics.md
+→ Project metrics updated: /project-context/sdd:project-metrics.md
 ```
 
 ### Example 2: Story Not Ready for Archival
 ```bash
 INPUT:
-/story-complete STORY-2025-002
+/sdd:story-complete STORY-2025-002
 
 PROCESS:
 → Searching for STORY-2025-002...
@@ -476,8 +476,8 @@ Current Status: qa
 Required Status: complete (in /stories/completed/)
 
 NEXT STEPS:
-1. /story-ship STORY-2025-002    # Ship to production
-2. /story-complete STORY-2025-002  # Archive after shipping
+1. /sdd:story-ship STORY-2025-002    # Ship to production
+2. /sdd:story-complete STORY-2025-002  # Archive after shipping
 
 Note: Stories must be shipped before archival to ensure
 all deployment data and production metrics are captured.
@@ -486,7 +486,7 @@ all deployment data and production metrics are captured.
 ### Example 3: Story Missing Lessons Learned
 ```bash
 INPUT:
-/story-complete STORY-2025-003
+/sdd:story-complete STORY-2025-003
 
 PROCESS:
 → Verifying story location...
@@ -540,13 +540,13 @@ OUTPUT:
 - ENCOURAGE documenting lessons during development
 
 ### Project Metrics File Doesn't Exist
-- CREATE `/project-context/project-metrics.md` with initial structure
+- CREATE `/project-context/sdd:project-metrics.md` with initial structure
 - INITIALIZE with current story as first entry
 - SET baseline metrics
 - CONTINUE with normal completion
 
 ## Error Handling
-- **Story ID missing**: Return "Error: Story ID required. Usage: /story-complete <story_id>"
+- **Story ID missing**: Return "Error: Story ID required. Usage: /sdd:story-complete <story_id>"
 - **Invalid story ID format**: Return "Error: Invalid story ID format. Expected: STORY-YYYY-NNN"
 - **Story not found**: Search all directories and report current location
 - **Story not shipped**: Suggest completing QA and shipping before archival
@@ -560,10 +560,10 @@ OUTPUT:
 - Compress artifacts in background after report generation
 
 ## Related Commands
-- `/story-ship` - Ship story to production before archival
-- `/story-metrics` - View project-wide metrics and trends
-- `/project-status` - View all project stories and progress
-- `/story-new` - Create next story to work on
+- `/sdd:story-ship` - Ship story to production before archival
+- `/sdd:story-metrics` - View project-wide metrics and trends
+- `/sdd:project-status` - View all project stories and progress
+- `/sdd:story-new` - Create next story to work on
 
 ## Constraints
 - ✅ MUST verify story is shipped before archival

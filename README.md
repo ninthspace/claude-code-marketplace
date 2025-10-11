@@ -51,17 +51,17 @@ A comprehensive plugin providing:
 **Quick Start:**
 ```bash
 # Automated workflow (single command for entire lifecycle)
-/story-flow "Add user authentication"
+/sdd:story-flow "Add user authentication"
 
 # Or use individual commands for more control
-/story-new "Add user authentication"
-/story-start STORY-2025-001
-/story-implement STORY-2025-001
-/story-save "Implement user authentication"
-/story-review STORY-2025-001
-/story-qa STORY-2025-001
-/story-validate STORY-2025-001
-/story-ship STORY-2025-001
+/sdd:story-new "Add user authentication"
+/sdd:story-start STORY-2025-001
+/sdd:story-implement STORY-2025-001
+/sdd:story-save "Implement user authentication"
+/sdd:story-review STORY-2025-001
+/sdd:story-qa STORY-2025-001
+/sdd:story-validate STORY-2025-001
+/sdd:story-ship STORY-2025-001
 ```
 
 [View full documentation](./plugins/story-driven-development/README.md)
@@ -79,9 +79,9 @@ A comprehensive plugin providing:
 7. **Validate**: Final checks before shipping
 8. **Ship**: Deploy to production
 
-### Workflow Automation with /story-flow
+### Workflow Automation with /sdd:story-flow
 
-The `/story-flow` command automates the entire story lifecycle, executing all 8 steps sequentially with a single command. This provides:
+The `/sdd:story-flow` command automates the entire story lifecycle, executing all 8 steps sequentially with a single command. This provides:
 
 - **Time Savings**: Run the complete workflow (new → start → implement → review → qa → validate → save → ship) with one command
 - **Consistency**: Ensures all quality gates are executed in the correct order
@@ -93,20 +93,20 @@ The `/story-flow` command automates the entire story lifecycle, executing all 8 
 **Examples:**
 ```bash
 # Full automated workflow from new story
-/story-flow "Add user authentication"
+/sdd:story-flow "Add user authentication"
 
 # Resume existing story from QA step in auto mode
-/story-flow STORY-2025-001 --start-at=qa --auto
+/sdd:story-flow STORY-2025-001 --start-at=qa --auto
 
 # Partial workflow (stop before shipping)
-/story-flow "Fix responsive layout" --stop-at=review
+/sdd:story-flow "Fix responsive layout" --stop-at=review
 ```
 
 ### Command Categories
 
 - **📦 Project Setup** - Initialize projects and manage context
 - **📝 Story Management** - Create, track, and manage stories
-- **🔄 Workflow Automation** - Automate complete lifecycle with `/story-flow`
+- **🔄 Workflow Automation** - Automate complete lifecycle with `/sdd:story-flow`
 - **🛠️ Development** - Start, implement, and save work
 - **🔍 Review** - Quality checks and refactoring
 - **✅ QA & Testing** - Automated testing and validation

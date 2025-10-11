@@ -1,4 +1,4 @@
-# /project-init
+# /sdd:project-init
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Create the complete folder structure and template documents required for story-driven development workflow.
 
-**Syntax**: `/project-init`
+**Syntax**: `/sdd:project-init`
 
 ## Parameters
 None
@@ -125,7 +125,7 @@ None
    - OUTLINE git workflow
 
 #### Phase 5: Project Glossary
-1. **CREATE** `/project-context/project-glossary.md`:
+1. **CREATE** `/project-context/sdd:project-glossary.md`:
    - PROVIDE template for domain-specific terminology
    - INCLUDE sections for:
      * Domain Terms (business-specific vocabulary)
@@ -144,7 +144,7 @@ None
    - PROMPT user to fill with actual project details
 
 #### Phase 7: Story Template Creation
-1. **CREATE** `/stories/templates/story-template.md`:
+1. **CREATE** `/stories/templates/sdd:story-template.md`:
    - COMPREHENSIVE story template with sections:
      * Story Header (ID, title, status, priority)
      * Description and Context
@@ -177,9 +177,9 @@ None
    - /project-context/technical-stack.md
    - /project-context/development-process.md
    - /project-context/coding-standards.md
-   - /project-context/project-glossary.md
+   - /project-context/sdd:project-glossary.md
    - /project-context/project-brief.md
-   - /stories/templates/story-template.md
+   - /stories/templates/sdd:story-template.md
 
    🔧 Configuration Status:
    - Technical stack: Configured with [user's stack]
@@ -192,8 +192,8 @@ None
    - Customize `coding-standards.md` with team-specific patterns
    - Update `development-process.md` with workflow preferences
    - Populate `project-glossary.md` with domain terms
-   - Create first story: `/story-new`
-   - Begin development: `/story-start`
+   - Create first story: `/sdd:story-new`
+   - Begin development: `/sdd:story-start`
 
 3. **PROVIDE** quick start guide:
    - How to create a story
@@ -215,9 +215,9 @@ None
 - `/project-context/technical-stack.md` - Technology choices
 - `/project-context/development-process.md` - Workflow definitions
 - `/project-context/coding-standards.md` - Quality standards
-- `/project-context/project-glossary.md` - Terminology reference
+- `/project-context/sdd:project-glossary.md` - Terminology reference
 - `/project-context/project-brief.md` - Project overview
-- `/stories/templates/story-template.md` - Story template
+- `/stories/templates/sdd:story-template.md` - Story template
 
 ### RULES
 - MUST create all directories before creating files
@@ -260,7 +260,7 @@ None
 ### Example 1: First-Time Setup
 ```bash
 INPUT:
-/project-init
+/sdd:project-init
 
 INTERACTION:
 → Asks about frontend framework
@@ -286,9 +286,9 @@ OUTPUT:
 - /project-context/technical-stack.md (Laravel TALL stack)
 - /project-context/development-process.md
 - /project-context/coding-standards.md
-- /project-context/project-glossary.md
+- /project-context/sdd:project-glossary.md
 - /project-context/project-brief.md
-- /stories/templates/story-template.md
+- /stories/templates/sdd:story-template.md
 
 🔧 Configuration Status:
 - Technical stack: Laravel 12, Livewire 3, Alpine.js, Tailwind CSS
@@ -297,21 +297,21 @@ OUTPUT:
 
 💡 NEXT STEPS:
 1. Fill out /project-context/project-brief.md with your project details
-2. Run /project-brief to create comprehensive project plan
-3. Create your first story with /story-new
-4. Begin development with /story-start
+2. Run /sdd:project-brief to create comprehensive project plan
+3. Create your first story with /sdd:story-new
+4. Begin development with /sdd:story-start
 
 📚 QUICK START:
-- Create story: /story-new
-- View status: /project-status
-- Start work: /story-start [id]
+- Create story: /sdd:story-new
+- View status: /sdd:project-status
+- Start work: /sdd:story-start [id]
 - Documentation: See /project-context/ directory
 ```
 
 ### Example 2: Already Initialized
 ```bash
 INPUT:
-/project-init
+/sdd:project-init
 
 OUTPUT:
 ⚠️  Project Already Initialized
@@ -332,7 +332,7 @@ Choose an option [1-4]:
 ### Example 3: Partial Initialization
 ```bash
 INPUT:
-/project-init
+/sdd:project-init
 
 DETECTION:
 → Found /project-context/ but missing /stories/
@@ -359,8 +359,8 @@ Creating missing directories...
 Existing configuration preserved.
 
 💡 NEXT STEPS:
-- Create first story: /story-new
-- View project status: /project-status
+- Create first story: /sdd:story-new
+- View project status: /sdd:project-status
 ```
 
 ## Edge Cases
@@ -411,10 +411,10 @@ Existing configuration preserved.
 - Don't overwrite without explicit confirmation
 
 ## Related Commands
-- `/project-brief` - Create comprehensive project plan after init
-- `/story-new` - Create first story after initialization
-- `/project-status` - View current project state
-- `/project-context-update` - Update context documents later
+- `/sdd:project-brief` - Create comprehensive project plan after init
+- `/sdd:story-new` - Create first story after initialization
+- `/sdd:project-status` - View current project state
+- `/sdd:project-context-update` - Update context documents later
 
 ## Constraints
 - ⚠️ MUST NOT overwrite existing files without confirmation

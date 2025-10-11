@@ -1,4 +1,4 @@
-# /story-test-integration
+# /sdd:story-test-integration
 
 Execute comprehensive integration and end-to-end tests for story validation.
 
@@ -13,9 +13,9 @@ Execute comprehensive integration and end-to-end tests for story validation.
 **Destructive**: No (read-only with test execution)
 
 **Related Commands**:
-- `/story-quick-check` - Fast validation before integration tests
-- `/story-full-check` - Comprehensive validation suite (includes this + more)
-- `/story-validate` - Final story validation (runs after this)
+- `/sdd:story-quick-check` - Fast validation before integration tests
+- `/sdd:story-full-check` - Comprehensive validation suite (includes this + more)
+- `/sdd:story-validate` - Final story validation (runs after this)
 
 **Context Requirements**:
 - `/project-context/technical-stack.md` (testing tools, frameworks, database)
@@ -52,7 +52,7 @@ Execute comprehensive integration and end-to-end tests for story validation.
 ```bash
 # Verify project context exists
 if ! [ -d /project-context/ ]; then
-  echo "⚠️  Missing /project-context/ - run /project-init first"
+  echo "⚠️  Missing /project-context/ - run /sdd:project-init first"
   exit 1
 fi
 
@@ -276,7 +276,7 @@ OVERALL: 🟡 PASSING WITH WARNINGS
   1. Fix: Add default order value in migration
   2. Fix: Debug mobile touch gesture handling
   3. Re-run: php artisan test --filter="failed"
-  4. Then run: /story-validate
+  4. Then run: /sdd:story-validate
 ```
 
 ---
@@ -361,7 +361,7 @@ cat >> /stories/development/STORY-XXX-NNN.md <<EOF
 ### Next Actions
 - Fix remaining mobile touch issue
 - Re-run tests
-- Proceed to /story-validate
+- Proceed to /sdd:story-validate
 
 EOF
 ```
@@ -382,7 +382,7 @@ Timestamp: 2025-10-01 14:37:27
 ### Example 1: All Tests Pass
 
 ```bash
-$ /story-test-integration
+$ /sdd:story-test-integration
 
 🎯 Integration Test Scope: STORY-DUE-002
    API + Database + E2E + Performance
@@ -397,13 +397,13 @@ Total: 15 tests passed (0 failed)
 Coverage: 92%
 Duration: 4m 38s
 
-✅ Ready for /story-validate
+✅ Ready for /sdd:story-validate
 ```
 
 ### Example 2: Failures with Auto-Fix
 
 ```bash
-$ /story-test-integration
+$ /sdd:story-test-integration
 
 [... test execution ...]
 
@@ -423,7 +423,7 @@ Re-running failed tests...
 ### Example 3: Scoped to API Only
 
 ```bash
-$ /story-test-integration --scope=api
+$ /sdd:story-test-integration --scope=api
 
 🎯 Integration Test Scope: API only
 
@@ -438,7 +438,7 @@ Duration: 1m 12s
 ### Example 4: Performance Profiling
 
 ```bash
-$ /story-test-integration --performance
+$ /sdd:story-test-integration --performance
 
 [... test execution ...]
 
@@ -496,15 +496,15 @@ Would you like me to implement optimizations? [y/n]:
 - **Browser Choice**: Defaults to Chrome, supports Firefox/Safari
 
 **Best Practices**:
-1. Run `/story-quick-check` first for fast validation
+1. Run `/sdd:story-quick-check` first for fast validation
 2. Fix obvious issues before integration tests
 3. Use `--scope` to test specific areas during development
-4. Run full suite before moving to `/story-validate`
+4. Run full suite before moving to `/sdd:story-validate`
 5. Review performance metrics for critical paths
 
 **Next Steps After Success**:
 ```bash
-✅ Integration tests passing → /story-validate
-⚠️  Minor warnings → Fix, re-run, then /story-validate
+✅ Integration tests passing → /sdd:story-validate
+⚠️  Minor warnings → Fix, re-run, then /sdd:story-validate
 ❌ Critical failures → Fix issues, re-run this command
 ```

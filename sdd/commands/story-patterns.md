@@ -1,4 +1,4 @@
-# /story-patterns
+# /sdd:story-patterns
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Analyze completed stories to discover technical patterns, common problems, success strategies, code reusability opportunities, and anti-patterns.
 
-**Syntax**: `/story-patterns [category]`
+**Syntax**: `/sdd:story-patterns [category]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -528,7 +528,7 @@
 ### Example 1: All Patterns
 ```bash
 INPUT:
-/story-patterns
+/sdd:story-patterns
 
 OUTPUT:
 → Scanning completed stories...
@@ -562,7 +562,7 @@ CREATE TEMPLATES FOR:
 ### Example 2: Technical Patterns Only
 ```bash
 INPUT:
-/story-patterns technical
+/sdd:story-patterns technical
 
 OUTPUT:
 → Scanning completed stories...
@@ -588,7 +588,7 @@ Pattern: Livewire Component with Alpine.js Enhancement
 ### Example 3: No Patterns Found
 ```bash
 INPUT:
-/story-patterns
+/sdd:story-patterns
 
 OUTPUT:
 → Scanning completed stories...
@@ -606,7 +606,7 @@ Minimum recommended: 10
 
 Suggestions:
 - Complete more stories to build pattern data
-- Run /story-metrics to see development progress
+- Run /sdd:story-metrics to see development progress
 - Check if stories are in /stories/completed/
 ```
 
@@ -651,10 +651,10 @@ Suggestions:
 - Typical completion time: < 3 seconds for 50 stories
 
 ## Related Commands
-- `/story-metrics` - Calculate velocity and quality metrics
-- `/story-tech-debt` - Analyze technical debt
-- `/project-status` - View current story statuses
-- `/story-list` - List and filter stories
+- `/sdd:story-metrics` - Calculate velocity and quality metrics
+- `/sdd:story-tech-debt` - Analyze technical debt
+- `/sdd:project-status` - View current story statuses
+- `/sdd:story-list` - List and filter stories
 
 ## Constraints
 - ✅ MUST be read-only (no story modifications)

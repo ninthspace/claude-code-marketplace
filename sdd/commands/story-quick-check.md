@@ -1,4 +1,4 @@
-# /story-quick-check
+# /sdd:story-quick-check
 
 Lightning-fast 30-second health check for current work in progress.
 
@@ -13,9 +13,9 @@ Lightning-fast 30-second health check for current work in progress.
 **Destructive**: No (100% read-only)
 
 **Related Commands**:
-- `/story-test-integration` - Comprehensive integration tests (3-8 min)
-- `/story-full-check` - Full validation suite (5 min)
-- `/story-save` - Save progress with git commit
+- `/sdd:story-test-integration` - Comprehensive integration tests (3-8 min)
+- `/sdd:story-full-check` - Full validation suite (5 min)
+- `/sdd:story-save` - Save progress with git commit
 
 **Context Requirements**:
 - None (uses project defaults)
@@ -27,7 +27,7 @@ Lightning-fast 30-second health check for current work in progress.
 **Check Scope** (optional):
 ```bash
 # Run all checks (default)
-/story-quick-check
+/sdd:story-quick-check
 
 # Scope to specific checks
 --checks=syntax|tests|lint|git|all   # Default: all
@@ -37,9 +37,9 @@ Lightning-fast 30-second health check for current work in progress.
 
 **Examples**:
 ```bash
-/story-quick-check                    # Full 30s check
-/story-quick-check --checks=tests     # Only run tests (~10s)
-/story-quick-check --fix              # Auto-fix lint/format issues
+/sdd:story-quick-check                    # Full 30s check
+/sdd:story-quick-check --checks=tests     # Only run tests (~10s)
+/sdd:story-quick-check --fix              # Auto-fix lint/format issues
 ```
 
 ---
@@ -212,7 +212,7 @@ OVERALL: 🟡 YELLOW - Minor issues
 
 🔧 QUICK FIXES:
   1. Add test: php artisan make:test TaskManagerTest
-  2. Commit: /story-save "Add due date feature"
+  2. Commit: /sdd:story-save "Add due date feature"
 
 Estimated fix time: 5 minutes
 ```
@@ -224,7 +224,7 @@ Estimated fix time: 5 minutes
 **Automatic Fixes**:
 ```bash
 # If --fix flag provided
-/story-quick-check --fix
+/sdd:story-quick-check --fix
 
 # Auto-fixes:
 ✓ Run Pint to format code
@@ -252,7 +252,7 @@ Updated status: 🟢 GREEN (after fixes)
 ### Example 1: All Clear
 
 ```bash
-$ /story-quick-check
+$ /sdd:story-quick-check
 
 ⚡ QUICK CHECK RESULTS
 =====================
@@ -271,7 +271,7 @@ OVERALL: 🟢 GREEN - All clear!
 ### Example 2: Minor Issues (Yellow)
 
 ```bash
-$ /story-quick-check
+$ /sdd:story-quick-check
 
 ⚡ QUICK CHECK RESULTS
 =====================
@@ -285,7 +285,7 @@ OVERALL: 🟡 YELLOW - Minor issues
 
 🔧 Quick fixes:
   vendor/bin/pint --dirty
-  /story-save "Add feature"
+  /sdd:story-save "Add feature"
 
 Estimated fix: 2 minutes
 ```
@@ -293,7 +293,7 @@ Estimated fix: 2 minutes
 ### Example 3: Critical Issues (Red)
 
 ```bash
-$ /story-quick-check
+$ /sdd:story-quick-check
 
 ⚡ QUICK CHECK RESULTS
 =====================
@@ -319,7 +319,7 @@ Do NOT proceed until resolved.
 ### Example 4: Auto-Fix Applied
 
 ```bash
-$ /story-quick-check --fix
+$ /sdd:story-quick-check --fix
 
 ⚡ QUICK CHECK RESULTS
 =====================
@@ -333,7 +333,7 @@ OVERALL: 🟢 GREEN - All issues resolved!
 
 Remaining manual actions:
   - Consider adding tests for new code
-  - Run /story-save to commit changes
+  - Run /sdd:story-save to commit changes
 
 ✅ Safe to proceed
 ```
@@ -341,7 +341,7 @@ Remaining manual actions:
 ### Example 5: Tests Only
 
 ```bash
-$ /story-quick-check --checks=tests
+$ /sdd:story-quick-check --checks=tests
 
 🧪 TEST CHECK (9s)
 ==================
@@ -400,32 +400,32 @@ Next recommended action
 - **Auto-Fix**: With `--fix` flag, automatically resolves formatting issues
 
 **Best Practices**:
-1. Run before every `/story-save` commit
+1. Run before every `/sdd:story-save` commit
 2. Run after making changes to verify stability
 3. Use `--fix` to quickly resolve formatting issues
 4. Use `--checks=tests` for rapid test validation
 5. If RED, fix immediately before continuing work
 
 **When to Use**:
-- ✅ Before committing code (`/story-save`)
+- ✅ Before committing code (`/sdd:story-save`)
 - ✅ After implementing a feature
 - ✅ Before switching tasks
 - ✅ Multiple times per hour during active development
 
 **When NOT to Use**:
-- ❌ Instead of comprehensive testing (use `/story-test-integration`)
-- ❌ For deployment validation (use `/story-full-check`)
-- ❌ For final story validation (use `/story-validate`)
+- ❌ Instead of comprehensive testing (use `/sdd:story-test-integration`)
+- ❌ For deployment validation (use `/sdd:story-full-check`)
+- ❌ For final story validation (use `/sdd:story-validate`)
 
 **Next Steps**:
 ```bash
-🟢 GREEN → Continue work or /story-save
-🟡 YELLOW → Fix issues, re-check, then /story-save
+🟢 GREEN → Continue work or /sdd:story-save
+🟡 YELLOW → Fix issues, re-check, then /sdd:story-save
 🔴 RED → Fix critical issues immediately
 ```
 
 **For Deeper Validation**:
 ```bash
-/story-test-integration  # Integration + E2E tests (3-8 min)
-/story-full-check        # Complete validation suite (5 min)
+/sdd:story-test-integration  # Integration + E2E tests (3-8 min)
+/sdd:story-full-check        # Complete validation suite (5 min)
 ```

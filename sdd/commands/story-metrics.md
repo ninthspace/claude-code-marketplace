@@ -1,4 +1,4 @@
-# /story-metrics
+# /sdd:story-metrics
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Analyze completed and in-progress stories to understand development patterns, velocity trends, bottlenecks, and generate actionable insights.
 
-**Syntax**: `/story-metrics [period]`
+**Syntax**: `/sdd:story-metrics [period]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -444,7 +444,7 @@ Quick Wins:
 ### Example 1: All-Time Metrics
 ```bash
 INPUT:
-/story-metrics
+/sdd:story-metrics
 
 OUTPUT:
 → Scanning story directories...
@@ -479,7 +479,7 @@ Status: ↗ Trending up (12%)
 ### Example 2: Monthly Metrics
 ```bash
 INPUT:
-/story-metrics month
+/sdd:story-metrics month
 
 OUTPUT:
 → Scanning story directories...
@@ -506,7 +506,7 @@ Status: ↗ Trending up (18% vs August)
 ### Example 3: No Stories Found
 ```bash
 INPUT:
-/story-metrics week
+/sdd:story-metrics week
 
 OUTPUT:
 → Scanning story directories...
@@ -517,7 +517,7 @@ OUTPUT:
 No completed stories found in the specified period.
 
 Suggestions:
-- Try a longer period: /story-metrics month
+- Try a longer period: /sdd:story-metrics month
 - Check if stories are marked as completed
 - Verify story dates are set correctly
 
@@ -554,7 +554,7 @@ Current WIP:
 - CONTINUE with best-effort analysis
 
 ## Error Handling
-- **No story directories**: Report missing directories, suggest `/project-init`
+- **No story directories**: Report missing directories, suggest `/sdd:project-init`
 - **Permission errors**: Report specific access issues
 - **Malformed story files**: Skip problematic files, log warnings
 - **Invalid period parameter**: Show valid options, use default
@@ -568,10 +568,10 @@ Current WIP:
 - Typical completion time: < 2 seconds for 100 stories
 
 ## Related Commands
-- `/story-patterns` - Identify recurring patterns in stories
-- `/story-tech-debt` - Analyze technical debt from stories
-- `/project-status` - View current story statuses
-- `/story-list` - List stories with filters
+- `/sdd:story-patterns` - Identify recurring patterns in stories
+- `/sdd:story-tech-debt` - Analyze technical debt from stories
+- `/sdd:project-status` - View current story statuses
+- `/sdd:story-list` - List stories with filters
 
 ## Constraints
 - ✅ MUST be read-only (no file modifications)

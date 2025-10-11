@@ -1,4 +1,4 @@
-# /story-qa
+# /sdd:story-qa
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Execute comprehensive automated QA test suite including unit, integration, browser, and performance tests before final validation.
 
-**Syntax**: `/story-qa [story_id]`
+**Syntax**: `/sdd:story-qa [story_id]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -30,7 +30,7 @@
 #### Phase 1: Project Context Loading
 1. **CHECK** if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project-specific QA requirements from:
    - `/project-context/technical-stack.md` - Testing tools and frameworks
@@ -50,7 +50,7 @@
      - INFORM user and ask to proceed with re-QA
    - IF in development:
      - ERROR: "Story must pass review first"
-     - SUGGEST: `/story-review [story-id]`
+     - SUGGEST: `/sdd:story-review [story-id]`
    - IF NOT found anywhere:
      - ERROR: "Story [story-id] not found"
      - EXIT with guidance
@@ -152,7 +152,7 @@
    vendor/bin/pest --filter=Browser
 
    # Example for Playwright (Node.js):
-   npx playwright test tests/e2e/story-2025-001
+   npx playwright test tests/e2e/sdd:story-2025-001
 
    # Example for Python Playwright:
    pytest tests/browser/test_story_2025_001.py --headed
@@ -187,7 +187,7 @@
    ab -n 1000 -c 10 http://localhost:8000/api/endpoint
 
    # Example for Node.js k6:
-   k6 run performance/story-2025-001.js
+   k6 run performance/sdd:story-2025-001.js
    ```
 
 4. **VALIDATE** performance targets:
@@ -251,8 +251,8 @@ QA Executed: [Timestamp]
    ✓ Keyboard shortcut works → tests/Browser/DarkModeTest.php::line 112
    ✓ Preference syncs across tabs → tests/Browser/DarkModeTest.php::line 134
 
-📸 Screenshots: /storage/screenshots/story-2025-003/
-🎥 Videos: /storage/videos/story-2025-003/ (if applicable)
+📸 Screenshots: /storage/screenshots/sdd:story-2025-003/
+🎥 Videos: /storage/videos/sdd:story-2025-003/ (if applicable)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 UNIT TESTING
@@ -379,8 +379,8 @@ Security: No vulnerabilities
 
 #### Phase 8: Next Steps
 1. **DETERMINE** QA outcome:
-   - IF all tests PASS → Ready for `/story-validate`
-   - IF any critical failures → Requires `/story-refactor`
+   - IF all tests PASS → Ready for `/sdd:story-validate`
+   - IF any critical failures → Requires `/sdd:story-refactor`
    - IF performance issues → Optimize and re-run QA
 
 2. **DISPLAY** next actions:
@@ -390,17 +390,17 @@ Security: No vulnerabilities
 
    [IF ALL PASSED:]
    ✅ All QA tests passed - Ready for validation
-   1. /story-validate [story-id]     # Final validation before ship
-   2. /story-ship [story-id]         # Deploy to production (after validation)
+   1. /sdd:story-validate [story-id]     # Final validation before ship
+   2. /sdd:story-ship [story-id]         # Deploy to production (after validation)
 
    [IF FAILURES:]
    ⚠️ X test(s) failed
-   1. /story-refactor [story-id]     # Return to development
+   1. /sdd:story-refactor [story-id]     # Return to development
    2. Fix failing tests:
       - [Test 1 that failed]
       - [Test 2 that failed]
-   3. /story-review [story-id]       # Re-run review
-   4. /story-qa [story-id]           # Re-run QA after fixes
+   3. /sdd:story-review [story-id]       # Re-run review
+   4. /sdd:story-qa [story-id]           # Re-run QA after fixes
 
    [ARTIFACT LOCATIONS:]
    📸 Screenshots: /storage/screenshots/[story-id]/
@@ -453,7 +453,7 @@ Security: No vulnerabilities
 ### Example 1: QA with All Tests Passing
 ```bash
 INPUT:
-/story-qa STORY-2025-003
+/sdd:story-qa STORY-2025-003
 
 OUTPUT:
 → Loading project context...
@@ -500,14 +500,14 @@ Security: No vulnerabilities
 💡 NEXT STEPS:
 ════════════════════════════════════════════════
 ✅ All QA tests passed - Ready for validation
-1. /story-validate STORY-2025-003     # Final validation before ship
-2. /story-ship STORY-2025-003         # Deploy to production (after validation)
+1. /sdd:story-validate STORY-2025-003     # Final validation before ship
+2. /sdd:story-ship STORY-2025-003         # Deploy to production (after validation)
 ```
 
 ### Example 2: QA with Browser Test Failures
 ```bash
 INPUT:
-/story-qa
+/sdd:story-qa
 
 OUTPUT:
 → Detecting story from current branch...
@@ -562,13 +562,13 @@ Browser Tests:
 💡 NEXT STEPS:
 ════════════════════════════════════════════════
 ⚠️ 3 browser tests failed
-1. /story-refactor STORY-2025-004     # Return to development
+1. /sdd:story-refactor STORY-2025-004     # Return to development
 2. Fix failing browser tests:
    - Verify notification component is rendered
    - Check Livewire component IDs are correct
    - Ensure dismiss button is visible
-3. /story-review STORY-2025-004       # Re-run review
-4. /story-qa STORY-2025-004           # Re-run QA after fixes
+3. /sdd:story-review STORY-2025-004       # Re-run review
+4. /sdd:story-qa STORY-2025-004           # Re-run QA after fixes
 
 [DEBUGGING COMMANDS:]
 vendor/bin/pest --filter=Browser::NotificationTest  # Run specific test
@@ -579,7 +579,7 @@ php artisan serve                                    # Start server for manual t
 ### Example 3: QA with Performance Issues
 ```bash
 INPUT:
-/story-qa STORY-2025-005
+/sdd:story-qa STORY-2025-005
 
 OUTPUT:
 → Loading project context...
@@ -621,23 +621,23 @@ Performance:
 
 💡 NEXT STEPS:
 ════════════════════════════════════════════════
-1. /story-refactor STORY-2025-005     # Optimize performance
+1. /sdd:story-refactor STORY-2025-005     # Optimize performance
 2. Add eager loading and indexes
-3. /story-qa STORY-2025-005           # Re-run QA with optimizations
+3. /sdd:story-qa STORY-2025-005           # Re-run QA with optimizations
 ```
 
 ## Edge Cases
 
 ### No Project Context
 - DETECT missing `/project-context/` directory
-- SUGGEST running `/project-init`
+- SUGGEST running `/sdd:project-init`
 - ERROR: Cannot determine testing tools without context
 - EXIT with guidance
 
 ### Story Not in Review
 - CHECK if story in `/stories/development/`
 - IF found: ERROR "Story must pass review first"
-- SUGGEST: `/story-review [story-id]` first
+- SUGGEST: `/sdd:story-review [story-id]` first
 - IF in `/stories/qa/`: ASK if user wants to re-run QA
 
 ### No Browser Tests Found
@@ -672,7 +672,7 @@ Performance:
 - SUGGEST: Investigate timing/race conditions
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/project-init`, exit gracefully
+- **Missing /project-context/**: Suggest `/sdd:project-init`, exit gracefully
 - **Story not in review**: Provide clear workflow guidance
 - **Test framework errors**: Capture full error, suggest fixes
 - **Browser test timeouts**: Increase timeout, suggest element inspection
@@ -687,11 +687,11 @@ Performance:
 - Limit performance benchmarks to changed endpoints
 
 ## Related Commands
-- `/story-review [id]` - Must pass before QA
-- `/story-validate [id]` - Run after QA passes
-- `/story-refactor [id]` - Return to development if QA fails
-- `/story-ship [id]` - Deploy after validation
-- `/story-status [id]` - Check current state
+- `/sdd:story-review [id]` - Must pass before QA
+- `/sdd:story-validate [id]` - Run after QA passes
+- `/sdd:story-refactor [id]` - Return to development if QA fails
+- `/sdd:story-ship [id]` - Deploy after validation
+- `/sdd:story-status [id]` - Check current state
 
 ## Constraints
 - ✅ MUST load project context before tests

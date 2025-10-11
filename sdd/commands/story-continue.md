@@ -1,4 +1,4 @@
-# /story-continue
+# /sdd:story-continue
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Resume development on the most recently modified story by displaying current status, git branch information, and suggesting appropriate next actions based on story stage.
 
-**Syntax**: `/story-continue`
+**Syntax**: `/sdd:story-continue`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -81,7 +81,7 @@
      * COUNT untracked files
      * SHOW: "⚠️ You have uncommitted changes"
      * LIST: Modified and untracked files
-     * SUGGEST: `/story-save` to commit progress
+     * SUGGEST: `/sdd:story-save` to commit progress
    - IF working tree clean:
      * SHOW: "✅ Working tree clean"
 
@@ -132,9 +132,9 @@
 1. **SUGGEST** development actions:
    ```
    💡 NEXT STEPS:
-   1. /story-implement [story-id] - Continue implementation
-   2. /story-save - Commit current progress
-   3. /story-review - Move to code review when complete
+   1. /sdd:story-implement [story-id] - Continue implementation
+   2. /sdd:story-save - Commit current progress
+   3. /sdd:story-review - Move to code review when complete
 
    Development Commands:
    - Run server: [detected from project context]
@@ -158,22 +158,22 @@
 
    Actions:
    1. Fix identified issues in code
-   2. /story-save - Commit fixes
-   3. /story-qa - Move to QA when review passes
+   2. /sdd:story-save - Commit fixes
+   3. /sdd:story-qa - Move to QA when review passes
 
    [If no issues:]
    Review Status: ✅ All checks passed
-   1. /story-qa - Move to quality assurance
-   2. /story-refactor - Optional improvements
+   1. /sdd:story-qa - Move to quality assurance
+   2. /sdd:story-refactor - Optional improvements
    ```
 
 **IF status is "qa":**
 1. **SUGGEST** QA actions:
    ```
    💡 NEXT STEPS:
-   1. /story-test-integration - Run integration tests
-   2. /story-validate - Perform final validation checks
-   3. /story-ship - Deploy when QA complete
+   1. /sdd:story-test-integration - Run integration tests
+   2. /sdd:story-validate - Perform final validation checks
+   3. /sdd:story-ship - Deploy when QA complete
 
    QA Checklist:
    - [ ] Manual testing across browsers
@@ -189,8 +189,8 @@
    💡 NEXT STEPS:
    This story is still in backlog.
 
-   1. /story-start [story-id] - Begin development
-   2. /story-start [story-id] --boilerplate - Start with boilerplate
+   1. /sdd:story-start [story-id] - Begin development
+   2. /sdd:story-start [story-id] --boilerplate - Start with boilerplate
    ```
 
 #### Phase 6: No Active Stories Found
@@ -208,9 +208,9 @@
      [List last 3 completed stories with titles]
 
      💡 NEXT STEPS:
-     1. /story-new - Create a new story
-     2. /story-start [story-id] - Start a backlog story
-     3. /project-status - View full project status
+     1. /sdd:story-new - Create a new story
+     2. /sdd:story-start [story-id] - Start a backlog story
+     3. /sdd:project-status - View full project status
 
      Backlog Stories Available:
      [List backlog stories if any exist]
@@ -241,7 +241,7 @@
 ### Example 1: Resume Development Story
 ```bash
 INPUT:
-/story-continue
+/sdd:story-continue
 
 PROCESS:
 → Searching for active stories...
@@ -289,9 +289,9 @@ Files:
   M stories/development/STORY-AUTH-001.md
 
 💡 NEXT STEPS:
-1. /story-implement STORY-AUTH-001 - Continue implementation
-2. /story-save - Commit current progress
-3. /story-review - Move to code review when complete
+1. /sdd:story-implement STORY-AUTH-001 - Continue implementation
+2. /sdd:story-save - Commit current progress
+3. /sdd:story-review - Move to code review when complete
 
 Development Commands:
 - Run server: composer dev
@@ -302,7 +302,7 @@ Development Commands:
 ### Example 2: Resume Review Story
 ```bash
 INPUT:
-/story-continue
+/sdd:story-continue
 
 PROCESS:
 → Searching for active stories...
@@ -353,8 +353,8 @@ Issues to Address:
 Actions:
 1. Switch to feature/profile-002-settings branch
 2. Fix identified issues in code
-3. /story-save - Commit fixes
-4. /story-qa - Move to QA when review passes
+3. /sdd:story-save - Commit fixes
+4. /sdd:story-qa - Move to QA when review passes
 
 Switch to story branch now? [y/n]
 ```
@@ -362,7 +362,7 @@ Switch to story branch now? [y/n]
 ### Example 3: Resume QA Story
 ```bash
 INPUT:
-/story-continue
+/sdd:story-continue
 
 PROCESS:
 → Searching for active stories...
@@ -408,8 +408,8 @@ QA Checklist:
 💡 NEXT STEPS:
 1. Complete accessibility testing
 2. Verify documentation is up to date
-3. /story-validate - Perform final validation checks
-4. /story-ship - Deploy when QA complete
+3. /sdd:story-validate - Perform final validation checks
+4. /sdd:story-ship - Deploy when QA complete
 
 QA Commands:
 - Run accessibility audit: npm run a11y
@@ -420,7 +420,7 @@ QA Commands:
 ### Example 4: No Active Stories
 ```bash
 INPUT:
-/story-continue
+/sdd:story-continue
 
 PROCESS:
 → Searching for active stories...
@@ -443,9 +443,9 @@ Recently completed:
 - STORY-CART-003: Shopping Cart (completed 2025-09-26)
 
 💡 NEXT STEPS:
-1. /story-new - Create a new story
-2. /story-start [story-id] - Start a backlog story
-3. /project-status - View full project status
+1. /sdd:story-new - Create a new story
+2. /sdd:story-start [story-id] - Start a backlog story
+3. /sdd:project-status - View full project status
 
 Backlog Stories Available:
 - STORY-SEARCH-004: Search Functionality
@@ -456,7 +456,7 @@ Backlog Stories Available:
 ### Example 5: Branch Diverged
 ```bash
 INPUT:
-/story-continue
+/sdd:story-continue
 
 PROCESS:
 → Searching for active stories...
@@ -512,8 +512,8 @@ Action required: Rebase or merge
    git merge origin/feature/api-004-endpoints
 
 After resolving:
-3. /story-implement STORY-API-004 - Continue implementation
-4. /story-save - Commit progress
+3. /sdd:story-implement STORY-API-004 - Continue implementation
+4. /sdd:story-save - Commit progress
 ```
 
 ## Edge Cases
@@ -562,7 +562,7 @@ IF cwd not in project root:
 ```
 
 ## Error Handling
-- **No story directories exist**: Return "Error: No story directories found. Run /project-init first"
+- **No story directories exist**: Return "Error: No story directories found. Run /sdd:project-init first"
 - **Story file read error**: Show "Error reading story file: [error]" and try next story
 - **Invalid story format**: Warn and show what could be parsed
 - **Git command fails**: Show git error and continue with story info only
@@ -577,12 +577,12 @@ IF cwd not in project root:
 - Cache git status results within command execution
 
 ## Related Commands
-- `/story-start [id]` - Start new story development
-- `/story-implement [id]` - Continue implementation
-- `/story-save` - Commit current progress
-- `/story-review` - Move story to code review
-- `/story-qa` - Move story to quality assurance
-- `/project-status` - View all project stories
+- `/sdd:story-start [id]` - Start new story development
+- `/sdd:story-implement [id]` - Continue implementation
+- `/sdd:story-save` - Commit current progress
+- `/sdd:story-review` - Move story to code review
+- `/sdd:story-qa` - Move story to quality assurance
+- `/sdd:project-status` - View all project stories
 
 ## Constraints
 - ✅ MUST find most recently modified story

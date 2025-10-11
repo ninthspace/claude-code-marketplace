@@ -1,4 +1,4 @@
-# /story-save
+# /sdd:story-save
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Save current progress by creating a properly formatted git commit with automatic commit type detection, story context integration, and story file progress logging.
 
-**Syntax**: `/story-save [message]`
+**Syntax**: `/sdd:story-save [message]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -32,7 +32,7 @@
    - RUN: `git status --porcelain`
    - IF no changes exist:
      * SHOW: "✅ Working tree clean - nothing to commit"
-     * SUGGEST: Continue working or use /story-review
+     * SUGGEST: Continue working or use /sdd:story-review
      * EXIT gracefully
 
 2. **CATEGORIZE** changes:
@@ -242,8 +242,8 @@
    Lines Removed: [count]
 
    💡 NEXT STEPS:
-   1. /story-implement [story-id] - Continue development
-   2. /story-review - Move to code review when ready
+   1. /sdd:story-implement [story-id] - Continue development
+   2. /sdd:story-review - Move to code review when ready
    3. git push - Push to remote when ready to share
    ```
 
@@ -271,7 +271,7 @@
 ### Example 1: Feature Implementation Commit
 ```bash
 INPUT:
-/story-save
+/sdd:story-save
 
 PROCESS:
 → Checking git status...
@@ -313,15 +313,15 @@ Lines Added: 409
 Lines Removed: 1
 
 💡 NEXT STEPS:
-1. /story-implement STORY-AUTH-001 - Continue development
-2. /story-review - Move to code review when ready
+1. /sdd:story-implement STORY-AUTH-001 - Continue development
+2. /sdd:story-review - Move to code review when ready
 3. git push - Push to remote when ready to share
 ```
 
 ### Example 2: Custom Commit Message
 ```bash
 INPUT:
-/story-save "add rate limiting to login endpoint"
+/sdd:story-save "add rate limiting to login endpoint"
 
 PROCESS:
 → Checking git status...
@@ -360,15 +360,15 @@ Lines Added: 40
 Lines Removed: 3
 
 💡 NEXT STEPS:
-1. /story-implement STORY-AUTH-001 - Continue development
-2. /story-review - Move to code review when ready
+1. /sdd:story-implement STORY-AUTH-001 - Continue development
+2. /sdd:story-review - Move to code review when ready
 3. git push - Push to remote when ready to share
 ```
 
 ### Example 3: Test Addition Commit
 ```bash
 INPUT:
-/story-save
+/sdd:story-save
 
 PROCESS:
 → Checking git status...
@@ -407,15 +407,15 @@ Lines Added: 229
 Lines Removed: 3
 
 💡 NEXT STEPS:
-1. /story-implement STORY-PROFILE-002 - Continue development
-2. /story-review - Move to code review when ready
+1. /sdd:story-implement STORY-PROFILE-002 - Continue development
+2. /sdd:story-review - Move to code review when ready
 3. git push - Push to remote when ready to share
 ```
 
 ### Example 4: No Changes to Commit
 ```bash
 INPUT:
-/story-save
+/sdd:story-save
 
 PROCESS:
 → Checking git status...
@@ -433,15 +433,15 @@ Story: STORY-AUTH-001 - Implement Login Form
 Last Commit: abc1234 (2 hours ago)
 
 💡 NEXT STEPS:
-1. /story-implement STORY-AUTH-001 - Continue implementation
-2. /story-review - Move to code review if complete
-3. /story-continue - Resume work on story
+1. /sdd:story-implement STORY-AUTH-001 - Continue implementation
+2. /sdd:story-review - Move to code review if complete
+3. /sdd:story-continue - Resume work on story
 ```
 
 ### Example 5: Warning About Large Files
 ```bash
 INPUT:
-/story-save
+/sdd:story-save
 
 PROCESS:
 → Checking git status...
@@ -476,13 +476,13 @@ Commit cancelled.
 1. Move large files to external storage
 2. Add to .gitignore if not needed in repository
 3. Use Git LFS for large binary files
-4. /story-save (retry after removing large files)
+4. /sdd:story-save (retry after removing large files)
 ```
 
 ### Example 6: Fix Commit with Auto-Detection
 ```bash
 INPUT:
-/story-save
+/sdd:story-save
 
 PROCESS:
 → Checking git status...
@@ -519,8 +519,8 @@ Lines Added: 23
 Lines Removed: 6
 
 💡 NEXT STEPS:
-1. /story-implement STORY-CART-003 - Continue development
-2. /story-review - Move to code review when ready
+1. /sdd:story-implement STORY-CART-003 - Continue development
+2. /sdd:story-review - Move to code review when ready
 3. git push - Push to remote when ready to share
 ```
 
@@ -595,11 +595,11 @@ IF merge conflicts detected:
 - Use `git diff --stat` instead of full diff for summary
 
 ## Related Commands
-- `/story-implement` - Generate implementation before saving
-- `/story-continue` - Resume work before saving
-- `/story-review` - Move to review after saving
-- `/story-start` - Begin development before implementation
-- `/project-status` - View all stories and their status
+- `/sdd:story-implement` - Generate implementation before saving
+- `/sdd:story-continue` - Resume work before saving
+- `/sdd:story-review` - Move to review after saving
+- `/sdd:story-start` - Begin development before implementation
+- `/sdd:project-status` - View all stories and their status
 
 ## Constraints
 - ✅ MUST check for uncommitted changes

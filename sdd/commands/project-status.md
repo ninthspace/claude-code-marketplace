@@ -1,4 +1,4 @@
-# /project-status
+# /sdd:project-status
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Show current project status including story breakdown, progress metrics, and actionable next steps.
 
-**Syntax**: `/project-status`
+**Syntax**: `/sdd:project-status`
 
 ## Parameters
 None
@@ -19,7 +19,7 @@ None
 ### Step 1: Project Context Loading
 1. CHECK if `/project-context/` directory exists
 2. IF missing:
-   - SUGGEST running `/project-init` first
+   - SUGGEST running `/sdd:project-init` first
    - EXIT with guidance message
 3. LOAD project-specific requirements from:
    - `/project-context/project-brief.md` (project title, timeline, objectives)
@@ -34,7 +34,7 @@ None
    - Target completion date (if specified)
    - Total planned stories count
 3. IF no project brief exists:
-   - SUGGEST using `/project-brief` to create one
+   - SUGGEST using `/sdd:project-brief` to create one
    - PROCEED with simplified view (Step 7)
 
 ### Step 3: Story Collection and Analysis
@@ -122,9 +122,9 @@ GENERATE comprehensive status report:
 3. Review completed stories in /qa
 
 🔗 USEFUL COMMANDS
-1. /story-continue     # Resume current work
-2. /story-next         # Get next recommended story
-3. /story-status       # See all individual story details
+1. /sdd:story-continue     # Resume current work
+2. /sdd:story-next         # Get next recommended story
+3. /sdd:story-status       # See all individual story details
 ```
 
 ### Step 7: Simplified View (No Project Brief)
@@ -143,25 +143,25 @@ IF no project brief exists, DISPLAY simplified metrics:
 
 💡 RECOMMENDATION
 Create a project brief for better organization and tracking:
-→ /project-brief
+→ /sdd:project-brief
 
 Available commands:
-1. /story-new      # Create new story
-2. /story-status   # View story details
-3. /project-brief  # Create project structure
+1. /sdd:story-new      # Create new story
+2. /sdd:story-status   # View story details
+3. /sdd:project-brief  # Create project structure
 ```
 
 ### Step 8: Command Suggestions
 SUGGEST relevant commands based on current state:
 
 IF stories ready to start:
-- `/story-implement [id]` for ready stories
+- `/sdd:story-implement [id]` for ready stories
 
 IF work in progress:
-- `/story-continue` for resuming work
+- `/sdd:story-continue` for resuming work
 
 IF no project structure:
-- `/project-brief` to create organization
+- `/sdd:project-brief` to create organization
 
 ## Output Format
 
@@ -184,7 +184,7 @@ Basic metrics when project brief is missing:
 ### Example 1: Active Project with Full Brief
 ```bash
 INPUT:
-/project-status
+/sdd:project-status
 
 OUTPUT:
 📊 PROJECT STATUS
@@ -223,15 +223,15 @@ OUTPUT:
 3. Review completed STORY-CHK-004 in /qa
 
 🔗 USEFUL COMMANDS
-1. /story-continue     # Resume current work
-2. /story-next         # Get next recommended story
-3. /story-status       # See all individual story details
+1. /sdd:story-continue     # Resume current work
+2. /sdd:story-next         # Get next recommended story
+3. /sdd:story-status       # See all individual story details
 ```
 
 ### Example 2: Project Without Brief
 ```bash
 INPUT:
-/project-status
+/sdd:project-status
 
 OUTPUT:
 📊 PROJECT STATUS (SIMPLIFIED)
@@ -246,18 +246,18 @@ OUTPUT:
 
 💡 RECOMMENDATION
 Create a project brief for better organization and tracking:
-→ /project-brief
+→ /sdd:project-brief
 
 Available commands:
-1. /story-new      # Create new story
-2. /story-status   # View story details
-3. /project-brief  # Create project structure
+1. /sdd:story-new      # Create new story
+2. /sdd:story-status   # View story details
+3. /sdd:project-brief  # Create project structure
 ```
 
 ### Example 3: No Project Context
 ```bash
 INPUT:
-/project-status
+/sdd:project-status
 
 OUTPUT:
 ⚠️  PROJECT CONTEXT NOT FOUND
@@ -265,7 +265,7 @@ OUTPUT:
 The /project-context/ directory does not exist.
 
 To set up the story-driven development system, run:
-→ /project-init
+→ /sdd:project-init
 
 This will create:
 - Project context files
@@ -278,8 +278,8 @@ This will create:
 ### No Stories Found
 IF no stories exist in any directory:
 - DISPLAY message about empty project
-- SUGGEST creating first story with `/story-new`
-- PROVIDE link to `/project-brief` for planning
+- SUGGEST creating first story with `/sdd:story-new`
+- PROVIDE link to `/sdd:project-brief` for planning
 
 ### Blocked Stories Only
 IF all pending stories are blocked:
@@ -290,11 +290,11 @@ IF all pending stories are blocked:
 ### All Stories Complete
 IF all stories are completed:
 - CONGRATULATE on project completion
-- SUGGEST running `/project-phase` for next phase
+- SUGGEST running `/sdd:project-phase` for next phase
 - PROVIDE option to archive or start new phase
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/project-init` with clear instructions
+- **Missing /project-context/**: Suggest `/sdd:project-init` with clear instructions
 - **Unreadable project brief**: Continue with simplified view, warn user
 - **Corrupted story files**: Skip corrupted files, log warning, continue
 - **Permission errors**: Report specific file/directory with permission issue
@@ -306,12 +306,12 @@ IF all stories are completed:
 - Timeline calculations cached during single invocation
 
 ## Related Commands
-- `/project-brief` - Create or update project documentation
-- `/project-stories` - Detailed story list with dependencies
-- `/project-phase` - Plan new development phase
-- `/story-status` - Individual story details
-- `/story-continue` - Resume active work
-- `/story-next` - Get next recommended story
+- `/sdd:project-brief` - Create or update project documentation
+- `/sdd:project-stories` - Detailed story list with dependencies
+- `/sdd:project-phase` - Plan new development phase
+- `/sdd:story-status` - Individual story details
+- `/sdd:story-continue` - Resume active work
+- `/sdd:story-next` - Get next recommended story
 
 ## Constraints
 - ✅ MUST handle missing project context gracefully

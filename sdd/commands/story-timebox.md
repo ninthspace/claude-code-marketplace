@@ -1,4 +1,4 @@
-# /story-timebox
+# /sdd:story-timebox
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Start a time-boxed work session with automatic progress checkpoints, metrics tracking, and session logging for story development.
 
-**Syntax**: `/story-timebox [duration] [mode]`
+**Syntax**: `/sdd:story-timebox [duration] [mode]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -37,7 +37,7 @@
 2. **FIND** active story:
    - SCAN `/stories/development/` for active story
    - IF multiple stories: ASK user which story to focus on
-   - IF no active story: SUGGEST using `/story-start [id]` first
+   - IF no active story: SUGGEST using `/sdd:story-start [id]` first
 
 3. **ASK** user for session goal:
    - "What do you want to accomplish in this session?"
@@ -245,8 +245,8 @@ IF user returns:
    - [Estimated time needed]
 
    NEXT STEPS:
-   1. /story-save           # Save progress to story
-   2. /story-quick-check    # Verify everything works
+   1. /sdd:story-save           # Save progress to story
+   2. /sdd:story-quick-check    # Verify everything works
    3. Take a break! 🎉
    ```
 
@@ -343,7 +343,7 @@ IF mode = pomodoro:
 ### Example 1: Standard 2-Hour Session
 ```bash
 INPUT:
-/story-timebox
+/sdd:story-timebox
 
 OUTPUT:
 → Finding active story...
@@ -397,7 +397,7 @@ Quarter 4 (75-100%): Cleanup & Documentation
 ### Example 2: Pomodoro Mode
 ```bash
 INPUT:
-/story-timebox 2 pomodoro
+/sdd:story-timebox 2 pomodoro
 
 OUTPUT:
 → Finding active story...
@@ -443,7 +443,7 @@ Next: 🍅 Pomodoro 2 - Continue refactoring
 ### Example 3: Short 30-Minute Session
 ```bash
 INPUT:
-/story-timebox 0.5
+/sdd:story-timebox 0.5
 
 OUTPUT:
 → Finding active story...
@@ -486,7 +486,7 @@ Second Half (50-100%): Testing & Wrap-up
 
 ### No Active Story
 - DETECT no story in `/stories/development/`
-- SUGGEST using `/story-start [id]` to begin a story
+- SUGGEST using `/sdd:story-start [id]` to begin a story
 - OFFER to start session without story tracking
 - EXIT if user declines
 
@@ -508,7 +508,7 @@ Second Half (50-100%): Testing & Wrap-up
 - Session tracking continues regardless
 
 ## Error Handling
-- **No active story**: Suggest `/story-start [id]` or allow storyless session
+- **No active story**: Suggest `/sdd:story-start [id]` or allow storyless session
 - **Invalid duration**: Suggest valid range (0.5-8 hours)
 - **Invalid mode**: Suggest "standard" or "pomodoro"
 - **Session file write error**: Log warning, continue without persistent tracking
@@ -520,10 +520,10 @@ Second Half (50-100%): Testing & Wrap-up
 - History files archived monthly to maintain performance
 
 ## Related Commands
-- `/story-start [id]` - Begin story before timeboxing
-- `/story-save` - Save progress after session
-- `/story-quick-check` - Verify work after session
-- `/project-status` - View velocity metrics from past sessions
+- `/sdd:story-start [id]` - Begin story before timeboxing
+- `/sdd:story-save` - Save progress after session
+- `/sdd:story-quick-check` - Verify work after session
+- `/sdd:project-status` - View velocity metrics from past sessions
 
 ## Constraints
 - ✅ MUST find or create active story context

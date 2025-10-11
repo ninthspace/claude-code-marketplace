@@ -1,4 +1,4 @@
-# /command-optimise
+# /sdd:command-optimise
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Transform slash command documentation into LLM-optimised format by analysing the command's content to determine optimal formatting, then replaces the original command file with the optimised version.
 
-**Syntax**: `/command-optimise <command_ref> [format_style] [strictness] [--dry-run]`
+**Syntax**: `/sdd:command-optimise <command_ref> [format_style] [strictness] [--dry-run]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -27,7 +27,7 @@ ON INVOCATION:
      IF command_ref starts with "/" AND has no spaces/newlines:
        // This is a command name reference
        SEARCH for command documentation:
-         - Look in project's /commands directory
+         - Look in project's /sdd:commands directory
          - Check registered command definitions
          - Search documentation files
          - Query command registry
@@ -42,7 +42,7 @@ ON INVOCATION:
        SET command_text = command_ref
   
   2. PARSE command documentation:
-     - Extract command name (look for /command patterns)
+     - Extract command name (look for /sdd:command patterns)
      - Identify any existing parameters/arguments
      - Find usage examples if present
      - Detect implicit behavior from description
@@ -300,7 +300,7 @@ ON INVOCATION:
 ### Example 1: Replace Command File
 ```bash
 INPUT:
-/command-optimise /deploy
+/sdd:command-optimise /deploy
 
 PROCESS:
 → Retrieved documentation from /commands/deploy.md
@@ -332,7 +332,7 @@ To revert: mv /commands/deploy.md.backup-20250127-143022 /commands/deploy.md
 ### Example 2: Dry Run Preview
 ```bash
 INPUT:
-/command-optimise /api-call json comprehensive --dry-run
+/sdd:command-optimise /api-call json comprehensive --dry-run
 
 PROCESS:
 → Retrieved documentation from /commands/api-call.md
@@ -356,13 +356,13 @@ Preview of changes:
 [Shows preview of optimised content]
 
 To apply changes, run without --dry-run:
-/command-optimise /api-call json comprehensive
+/sdd:command-optimise /api-call json comprehensive
 ```
 
 ### Example 3: Create New File from Text
 ```bash
 INPUT:
-/command-optimise "
+/sdd:command-optimise "
 /process-data - handles user data
 Takes input file, transforms it, and saves the results to the database.
 Can update existing records or create new ones.
@@ -380,7 +380,7 @@ ANALYSIS:
 ### Example 4: Command Not Found
 ```bash
 INPUT:
-/command-optimise /unknown-command
+/sdd:command-optimise /unknown-command
 
 PROCESS:
 → Detected command name reference: "/unknown-command"
@@ -394,7 +394,7 @@ Error: Command '/unknown-command' not found. Please provide the full command tex
 ### Example 5: Auto-Detects State Modification in Retrieved Command
 ```bash
 INPUT:
-/command-optimise /migrate-db
+/sdd:command-optimise /migrate-db
 
 PROCESS:
 → Retrieved from: /commands/migrate-db.md
@@ -751,7 +751,7 @@ The command analyzes the CONTENT of your existing command documentation to deter
 
 ## Error Handling
 - If command_text is empty: Return "Error: No command text provided"
-- If no command name detected: Return "Error: Could not identify command name (expected /command format)"
+- If no command name detected: Return "Error: Could not identify command name (expected /sdd:command format)"
 - If format_style invalid: Return "Error: Unknown format style. Use: auto, structured, xml, json, imperative, or contract"
 - If parsing fails: Return partial optimization with warnings about unparseable sections
 
@@ -760,16 +760,16 @@ The command analyzes the CONTENT of your existing command documentation to deter
 ### Quick Command Reference
 ```bash
 # Optimise a command by name only
-/command-optimise /deploy
+/sdd:command-optimise /deploy
 
 # Optimise with specific format
-/command-optimise /api-call json
+/sdd:command-optimise /api-call json
 
 # Optimise with format and strictness
-/command-optimise /security-scan imperative comprehensive
+/sdd:command-optimise /security-scan imperative comprehensive
 
 # Provide full text when command isn't in registry
-/command-optimise "
+/sdd:command-optimise "
 /custom-command - does something special
 Parameters: input, output, options
 Behavior: processes input and produces output

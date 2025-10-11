@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Provides an interactive environment for exploring, understanding, modifying, and creating commands within the `.claude/commands/` directory. Enables comprehensive command ecosystem management with guided workflows.
 
-**Syntax**: `/commands-explorer [query]`
+**Syntax**: `/sdd:commands-explorer [query]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -24,9 +24,9 @@ The Commands Explorer provides five primary capabilities:
 **Purpose**: Inspect and analyze existing command documentation
 
 **Example Queries**:
-- "Show me the details of `/story-new`"
-- "What does `/project-status` actually do?"
-- "Compare `/story-review` and `/story-qa`"
+- "Show me the details of `/sdd:story-new`"
+- "What does `/sdd:project-status` actually do?"
+- "Compare `/sdd:story-review` and `/sdd:story-qa`"
 
 **Process**:
 1. LOCATE the requested command file(s)
@@ -39,9 +39,9 @@ The Commands Explorer provides five primary capabilities:
 **Purpose**: Update and enhance existing command functionality
 
 **Example Queries**:
-- "Update `/story-implement` to include automated testing"
-- "Add error handling to `/story-ship`"
-- "Enhance `/project-status` with git branch info"
+- "Update `/sdd:story-implement` to include automated testing"
+- "Add error handling to `/sdd:story-ship`"
+- "Enhance `/sdd:project-status` with git branch info"
 
 **Process**:
 1. READ existing command documentation
@@ -55,9 +55,9 @@ The Commands Explorer provides five primary capabilities:
 **Purpose**: Generate new commands following project conventions
 
 **Example Queries**:
-- "Create a `/story-debug` command for troubleshooting"
-- "Add a `/story-backup` command to save work in progress"
-- "Build a `/project-cleanup` command for maintenance"
+- "Create a `/sdd:story-debug` command for troubleshooting"
+- "Add a `/sdd:story-backup` command to save work in progress"
+- "Build a `/sdd:project-cleanup` command for maintenance"
 
 **Process**:
 1. GATHER requirements from user query
@@ -154,17 +154,17 @@ The system automatically categorizes commands into logical groups:
 
 ### Starting New Work
 ```
-/story-new → /story-start → /story-implement
+/sdd:story-new → /sdd:story-start → /sdd:story-implement
 ```
 
 ### Review & Ship
 ```
-/story-review → /story-qa → /story-ship → /story-complete
+/sdd:story-review → /sdd:story-qa → /sdd:story-ship → /sdd:story-complete
 ```
 
 ### Project Management
 ```
-/project-status → /project-stories → /story-next
+/sdd:project-status → /sdd:project-stories → /sdd:story-next
 ```
 
 ## Command Modification Guidelines
@@ -238,13 +238,13 @@ When Commands Explorer is invoked, it establishes:
 
 ### Example 1: Examine a Command
 ```
-User: "Show me how /story-new works"
+User: "Show me how /sdd:story-new works"
 
 Response:
 [Reads story-new.md]
 [Presents structured analysis]
 ━━━━━━━━━━━━━━━━━━━━━━━━
-Command: /story-new
+Command: /sdd:story-new
 Category: Story Workflow
 Purpose: Create new story in development workflow
 [... detailed breakdown ...]
@@ -252,15 +252,15 @@ Purpose: Create new story in development workflow
 
 ### Example 2: Create New Command
 ```
-User: "Create a /story-debug command for troubleshooting"
+User: "Create a /sdd:story-debug command for troubleshooting"
 
 Response:
 [Gathers requirements]
 [Generates command structure]
 [Creates story-debug.md with proper format]
-✅ Created: /story-debug
+✅ Created: /sdd:story-debug
 Category: Development Support
-Location: .claude/commands/story-debug.md
+Location: .claude/commands/sdd:story-debug.md
 ```
 
 ### Example 3: Analyze Dependencies
@@ -270,19 +270,19 @@ User: "Which commands modify the filesystem?"
 Response:
 Commands that modify the filesystem:
 ━━━━━━━━━━━━━━━━━━━━━━━━
-1. /story-new - Creates story files
-2. /story-save - Writes progress snapshots
-3. /story-ship - Moves files between directories
-4. /project-init - Creates project structure
+1. /sdd:story-new - Creates story files
+2. /sdd:story-save - Writes progress snapshots
+3. /sdd:story-ship - Moves files between directories
+4. /sdd:project-init - Creates project structure
 [... complete analysis ...]
 ```
 
 ## Getting Started
 
 **Quick Start Queries**:
-- "Show me how `/story-new` works"
+- "Show me how `/sdd:story-new` works"
 - "Create a new command for X"
-- "Modify `/story-implement` to do Y"
+- "Modify `/sdd:story-implement` to do Y"
 - "What's the difference between review and QA commands?"
 - "List all commands that create files"
 
@@ -295,6 +295,6 @@ Commands that modify the filesystem:
 - Command modifications follow existing project conventions
 
 ## Related Commands
-- `/command-optimise` - Optimize command documentation format
-- `/project-status` - View overall project and command status
-- `/story-patterns` - Understand coding patterns (similar to command patterns)
+- `/sdd:command-optimise` - Optimize command documentation format
+- `/sdd:project-status` - View overall project and command status
+- `/sdd:story-patterns` - Understand coding patterns (similar to command patterns)

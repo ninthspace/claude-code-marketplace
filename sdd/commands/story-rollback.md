@@ -1,4 +1,4 @@
-# /story-rollback
+# /sdd:story-rollback
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Execute comprehensive rollback procedure for a deployed story experiencing critical issues in production. Revert code changes, database migrations, configuration, and restore system stability.
 
-**Syntax**: `/story-rollback <story_id> [--severity=critical|high|medium] [--rollback-type=full|code|database|config]`
+**Syntax**: `/sdd:story-rollback <story_id> [--severity=critical|high|medium] [--rollback-type=full|code|database|config]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -460,7 +460,7 @@
    - [ ] [Process update 1]
 
    FOLLOW-UP STORY:
-   Create fix story: /story-new [story-id-for-fix]
+   Create fix story: /sdd:story-new [story-id-for-fix]
    Link to incident: INC-[YYYY-MM-DD]-[number]
    ```
 
@@ -530,9 +530,9 @@
    Next steps:
    1. Review incident report
    2. Investigate root cause
-   3. /story-start [fix-story-id]
+   3. /sdd:story-start [fix-story-id]
    4. Implement fix with additional testing
-   5. /story-ship [fix-story-id] (with caution)
+   5. /sdd:story-ship [fix-story-id] (with caution)
    ```
 
 #### Phase 13: Final Summary
@@ -576,7 +576,7 @@
    1. Continue monitoring for 24 hours
    2. Review incident report with team
    3. Implement action items
-   4. Start work on fix story: /story-start [fix-story-id]
+   4. Start work on fix story: /sdd:story-start [fix-story-id]
    5. Add additional testing to prevent recurrence
    6. Update rollback procedures if needed
 
@@ -617,7 +617,7 @@
 ### Example 1: Critical Full Rollback
 ```bash
 INPUT:
-/story-rollback STORY-2025-003 --severity=critical
+/sdd:story-rollback STORY-2025-003 --severity=critical
 
 PROCESS:
 → Locating story STORY-2025-003...
@@ -730,13 +730,13 @@ NEXT STEPS:
 2. Investigate API credential issue
 3. Add payment integration tests
 4. Implement with better validation
-5. /story-start STORY-2025-003 when ready
+5. /sdd:story-start STORY-2025-003 when ready
 ```
 
 ### Example 2: Code-Only Rollback
 ```bash
 INPUT:
-/story-rollback STORY-2025-004 --rollback-type=code
+/sdd:story-rollback STORY-2025-004 --rollback-type=code
 
 PROCESS:
 → Locating story...
@@ -776,7 +776,7 @@ as they are compatible with previous code.
 ### Example 3: Story Not Found
 ```bash
 INPUT:
-/story-rollback STORY-2025-999
+/sdd:story-rollback STORY-2025-999
 
 PROCESS:
 → Searching for STORY-2025-999...
@@ -800,7 +800,7 @@ The story file was not found in any directory:
 
 Please verify the story ID and try again.
 
-To see all stories: /project-status
+To see all stories: /sdd:project-status
 ```
 
 ## Edge Cases
@@ -842,7 +842,7 @@ To see all stories: /project-status
 - SUGGEST selective rollback instead
 
 ## Error Handling
-- **Story ID missing**: Return "Error: Story ID required. Usage: /story-rollback <story_id>"
+- **Story ID missing**: Return "Error: Story ID required. Usage: /sdd:story-rollback <story_id>"
 - **Invalid story ID format**: Return "Error: Invalid story ID format. Expected: STORY-YYYY-NNN"
 - **Story not found**: Search all directories and report not found
 - **Rollback failure**: Capture error, provide manual rollback steps, alert for help
@@ -857,10 +857,10 @@ To see all stories: /project-status
 - Generate incident report asynchronously after rollback
 
 ## Related Commands
-- `/story-ship` - Ship story (the opposite of rollback)
-- `/story-qa` - Return story to QA for fixes
-- `/story-new` - Create fix story for addressing issues
-- `/project-status` - View all project stories
+- `/sdd:story-ship` - Ship story (the opposite of rollback)
+- `/sdd:story-qa` - Return story to QA for fixes
+- `/sdd:story-new` - Create fix story for addressing issues
+- `/sdd:project-status` - View all project stories
 
 ## Constraints
 - ✅ MUST locate story file before proceeding

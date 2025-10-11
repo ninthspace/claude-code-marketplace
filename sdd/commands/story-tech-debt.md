@@ -1,4 +1,4 @@
-# /story-tech-debt
+# /sdd:story-tech-debt
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Scan all stories for technical debt indicators, categorize by severity and type, calculate impact metrics, and generate actionable debt reduction plan.
 
-**Syntax**: `/story-tech-debt [priority]`
+**Syntax**: `/sdd:story-tech-debt [priority]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -541,7 +541,7 @@
    5. Track debt velocity monthly
 
    💡 QUICK START:
-   /story-start DEBT-STORY-001  # Begin security sprint
+   /sdd:story-start DEBT-STORY-001  # Begin security sprint
    ```
 
 ### OUTPUTS
@@ -591,7 +591,7 @@
 ### Example 1: All Debt
 ```bash
 INPUT:
-/story-tech-debt
+/sdd:story-tech-debt
 
 OUTPUT:
 → Scanning all story directories...
@@ -625,7 +625,7 @@ Create 3 debt stories in backlog? (y/n)
 ### Example 2: Critical Debt Only
 ```bash
 INPUT:
-/story-tech-debt critical
+/sdd:story-tech-debt critical
 
 OUTPUT:
 → Scanning for critical debt only...
@@ -663,7 +663,7 @@ Create emergency debt story? (y/n)
 ### Example 3: No Debt Found
 ```bash
 INPUT:
-/story-tech-debt
+/sdd:story-tech-debt
 
 OUTPUT:
 → Scanning all story directories...
@@ -687,7 +687,7 @@ Continue following best practices:
 - Performance monitoring
 - Security checks
 
-Run /story-metrics to see quality metrics.
+Run /sdd:story-metrics to see quality metrics.
 ```
 
 ## Edge Cases
@@ -717,7 +717,7 @@ Run /story-metrics to see quality metrics.
 - SUGGEST process intervention
 
 ## Error Handling
-- **No story directories**: Report missing structure, suggest `/project-init`
+- **No story directories**: Report missing structure, suggest `/sdd:project-init`
 - **Permission errors**: Report specific file access issues
 - **Malformed story files**: Skip problematic files, log warnings
 - **Invalid priority parameter**: Show valid options, use default
@@ -731,10 +731,10 @@ Run /story-metrics to see quality metrics.
 - Typical completion time: < 3 seconds for 50 stories
 
 ## Related Commands
-- `/story-metrics` - Development velocity and quality metrics
-- `/story-patterns` - Identify recurring patterns
-- `/project-status` - Current project state
-- `/story-new [id]` - Create debt reduction story
+- `/sdd:story-metrics` - Development velocity and quality metrics
+- `/sdd:story-patterns` - Identify recurring patterns
+- `/sdd:project-status` - Current project state
+- `/sdd:story-new [id]` - Create debt reduction story
 
 ## Constraints
 - ✅ MUST be read-only (no story modifications)

@@ -1,4 +1,4 @@
-# /story-document
+# /sdd:story-document
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Analyze story implementation and generate user, technical, and testing documentation with examples and inline code comments.
 
-**Syntax**: `/story-document [story_id]`
+**Syntax**: `/sdd:story-document [story_id]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -36,7 +36,7 @@
    - CHECK `/stories/qa/[story-id].md`
 3. IF story not found:
    - EXIT with error message
-   - SUGGEST using `/project-status` to find valid story IDs
+   - SUGGEST using `/sdd:project-status` to find valid story IDs
 
 #### Phase 2: Story Analysis
 1. **READ** story file to extract:
@@ -200,7 +200,7 @@
    💡 NEXT STEPS:
    1. Review generated documentation for accuracy
    2. Add screenshots/diagrams if noted
-   3. /story-review [story-id]    # Move to code review
+   3. /sdd:story-review [story-id]    # Move to code review
    4. Share docs with team for feedback
    ```
 
@@ -453,7 +453,7 @@
 ### Example 1: Document Current Active Story
 ```bash
 INPUT:
-/story-document
+/sdd:story-document
 
 OUTPUT:
 → Finding active story...
@@ -491,14 +491,14 @@ Story Updated: Documentation section added
 💡 NEXT STEPS:
 1. Review generated documentation for accuracy
 2. Add screenshots to user guide
-3. /story-review STORY-2025-003    # Move to code review
+3. /sdd:story-review STORY-2025-003    # Move to code review
 4. Share docs with team for feedback
 ```
 
 ### Example 2: Document Specific Story
 ```bash
 INPUT:
-/story-document STORY-2025-005
+/sdd:story-document STORY-2025-005
 
 OUTPUT:
 → Locating story: STORY-2025-005...
@@ -532,13 +532,13 @@ Story Updated: Documentation section added
 
 💡 NEXT STEPS:
 1. Review security documentation carefully
-2. /story-review STORY-2025-005    # Continue review process
+2. /sdd:story-review STORY-2025-005    # Continue review process
 ```
 
 ### Example 3: API Documentation
 ```bash
 INPUT:
-/story-document STORY-2025-007
+/sdd:story-document STORY-2025-007
 
 OUTPUT:
 → Locating story: STORY-2025-007...
@@ -574,20 +574,20 @@ Story Updated: Documentation section added
 💡 NEXT STEPS:
 1. Test with Postman collection
 2. Share OpenAPI spec with frontend team
-3. /story-review STORY-2025-007
+3. /sdd:story-review STORY-2025-007
 ```
 
 ## Edge Cases
 
 ### Story Not Found
 - DETECT invalid story ID
-- SUGGEST using `/project-status` to list valid stories
+- SUGGEST using `/sdd:project-status` to list valid stories
 - EXIT with helpful error message
 
 ### Story Has No Implementation Yet
 - DETECT story in backlog with no code
 - WARN that documentation requires implemented code
-- SUGGEST using `/story-implement [id]` first
+- SUGGEST using `/sdd:story-implement [id]` first
 - EXIT gracefully
 
 ### No User-Facing Changes
@@ -611,7 +611,7 @@ Story Updated: Documentation section added
 - PROVIDE Postman/Insomnia collections
 
 ## Error Handling
-- **Story not found**: Show available stories from `/project-status`
+- **Story not found**: Show available stories from `/sdd:project-status`
 - **No implementation found**: Guide user to implement first
 - **Permission errors**: Report specific file/directory issue
 - **Documentation write errors**: Log error, continue with other docs
@@ -623,10 +623,10 @@ Story Updated: Documentation section added
 - Cache story analysis for session
 
 ## Related Commands
-- `/story-implement [id]` - Generate implementation first
-- `/story-review [id]` - Move to code review after documentation
-- `/story-test [id]` - Verify tests before documenting
-- `/project-status` - Find stories to document
+- `/sdd:story-implement [id]` - Generate implementation first
+- `/sdd:story-review [id]` - Move to code review after documentation
+- `/sdd:story-test [id]` - Verify tests before documenting
+- `/sdd:project-status` - Find stories to document
 
 ## Constraints
 - ✅ MUST analyze story to understand implementation

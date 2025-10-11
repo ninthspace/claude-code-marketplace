@@ -1,4 +1,4 @@
-# /story-start
+# /sdd:story-start
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: Start development on a specified story by creating a feature branch, loading project context, optionally generating boilerplate, and preparing the development environment.
 
-**Syntax**: `/story-start <story_id> [--boilerplate]`
+**Syntax**: `/sdd:story-start <story_id> [--boilerplate]`
 
 ## Parameters
 | Parameter | Type | Required | Default | Description | Validation |
@@ -30,7 +30,7 @@ PROCESS:
 Phase 1: Project Context Loading
 1. CHECK if /project-context/ directory exists
 2. IF missing:
-   - SUGGEST running /project-init first
+   - SUGGEST running /sdd:project-init first
    - HALT execution
 3. ELSE:
    - LOAD /project-context/technical-stack.md
@@ -47,7 +47,7 @@ Phase 2: Story File Discovery
 1. SEARCH for story file in order:
    - CHECK /stories/development/[story_id].md
    - IF NOT FOUND: CHECK /stories/backlog/[story_id].md
-   - IF NOT FOUND: OFFER to create with /story-new
+   - IF NOT FOUND: OFFER to create with /sdd:story-new
 2. READ story file and extract:
    - Branch name (or generate from story ID)
    - Success criteria
@@ -140,9 +140,9 @@ Phase 5: Story File Update
 Phase 6: Next Steps Display
 1. SHOW next steps in numbered format:
    1. Review success criteria
-   2. Use /story-implement to generate code for DISCOVERED stack
-   3. Use /story-save to commit progress
-   4. Use /story-review when ready
+   2. Use /sdd:story-implement to generate code for DISCOVERED stack
+   3. Use /sdd:story-save to commit progress
+   4. Use /sdd:story-review when ready
 2. MENTION relevant development commands for DISCOVERED stack:
    - npm run dev / composer dev / python manage.py runserver / etc.
    - Test commands for DISCOVERED framework
@@ -168,9 +168,9 @@ Generated Files:
 
 Next Steps:
 1. Review success criteria
-2. /story-implement to generate implementation
-3. /story-save to commit progress
-4. /story-review when ready for review
+2. /sdd:story-implement to generate implementation
+3. /sdd:story-save to commit progress
+4. /sdd:story-review when ready for review
 
 Development Commands:
 - Server: [DISCOVERED dev server command]
@@ -193,7 +193,7 @@ RULES:
 ### Example 1: Start Story Without Boilerplate
 ```bash
 INPUT:
-/story-start STORY-AUTH-001
+/sdd:story-start STORY-AUTH-001
 
 PROCESS:
 → Loading project context from /project-context/
@@ -217,9 +217,9 @@ Project Context Loaded:
 
 Next Steps:
 1. Review success criteria in story file
-2. /story-implement to generate Livewire component
-3. /story-save to commit progress
-4. /story-review when ready for code review
+2. /sdd:story-implement to generate Livewire component
+3. /sdd:story-save to commit progress
+4. /sdd:story-review when ready for code review
 
 Development Commands:
 - Server: composer dev (or php artisan serve)
@@ -230,7 +230,7 @@ Development Commands:
 ### Example 2: Start Story With Boilerplate
 ```bash
 INPUT:
-/story-start STORY-PROFILE-002 --boilerplate
+/sdd:story-start STORY-PROFILE-002 --boilerplate
 
 PROCESS:
 → Loading project context
@@ -261,9 +261,9 @@ Generated Files:
 
 Next Steps:
 1. Review success criteria in story file
-2. /story-implement to add implementation logic
-3. /story-save to commit boilerplate
-4. /story-review when feature complete
+2. /sdd:story-implement to add implementation logic
+3. /sdd:story-save to commit boilerplate
+4. /sdd:story-review when feature complete
 
 Development Commands:
 - Server: npm run dev
@@ -274,7 +274,7 @@ Development Commands:
 ### Example 3: Story Not Found
 ```bash
 INPUT:
-/story-start STORY-UNKNOWN-999
+/sdd:story-start STORY-UNKNOWN-999
 
 PROCESS:
 → Loading project context
@@ -293,13 +293,13 @@ The story file was not found in:
 - /stories/backlog/
 
 Would you like to create this story?
-→ Use: /story-new "Story title and description"
+→ Use: /sdd:story-new "Story title and description"
 ```
 
 ### Example 4: Missing Project Context
 ```bash
 INPUT:
-/story-start STORY-API-003
+/sdd:story-start STORY-API-003
 
 PROCESS:
 → Checking for /project-context/ directory
@@ -314,14 +314,14 @@ Cannot start story without project context.
 The /project-context/ directory does not exist.
 This directory defines your technical stack and coding standards.
 
-Please run: /project-init
+Please run: /sdd:project-init
 
 This will create:
 - /project-context/technical-stack.md
 - /project-context/coding-standards.md
 - /project-context/development-process.md
 
-After initialization, run /story-start again.
+After initialization, run /sdd:story-start again.
 ```
 
 ## Edge Cases
@@ -332,7 +332,7 @@ IF story found in /stories/development/:
 - SWITCH to story branch
 - SHOW: "Story already in development"
 - DISPLAY: Current progress
-- SUGGEST: /story-continue to resume
+- SUGGEST: /sdd:story-continue to resume
 ```
 
 ### Branch Exists But Diverged
@@ -355,9 +355,9 @@ IF --boilerplate flag AND files already exist:
 ```
 
 ## Error Handling
-- **Story ID missing**: Return "Error: Story ID required. Usage: /story-start <story_id>"
+- **Story ID missing**: Return "Error: Story ID required. Usage: /sdd:story-start <story_id>"
 - **Invalid story ID format**: Return "Error: Invalid story ID format. Expected: STORY-XXX-NNN"
-- **Project context missing**: Halt and suggest /project-init
+- **Project context missing**: Halt and suggest /sdd:project-init
 - **Context files corrupted**: Show error and suggest manual review
 - **Git branch error**: Show git error and suggest manual resolution
 - **File generation error**: Show which files failed and suggest manual creation
@@ -369,11 +369,11 @@ IF --boilerplate flag AND files already exist:
 - Skip dependency installation if package.json/composer.json unchanged
 
 ## Related Commands
-- `/story-new` - Create a new story before starting
-- `/story-continue` - Resume work on existing story
-- `/story-implement` - Generate implementation code
-- `/story-save` - Commit progress
-- `/project-init` - Initialize project context
+- `/sdd:story-new` - Create a new story before starting
+- `/sdd:story-continue` - Resume work on existing story
+- `/sdd:story-implement` - Generate implementation code
+- `/sdd:story-save` - Commit progress
+- `/sdd:project-init` - Initialize project context
 
 ## Notes
 - Project context is mandatory for story development

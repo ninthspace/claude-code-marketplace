@@ -1,4 +1,4 @@
-# /project-stories
+# /sdd:project-stories
 
 ## Meta
 - Version: 2.0
@@ -9,7 +9,7 @@
 ## Definition
 **Purpose**: List all stories for the current project with comprehensive dependency analysis, status tracking, and implementation recommendations.
 
-**Syntax**: `/project-stories`
+**Syntax**: `/sdd:project-stories`
 
 ## Parameters
 None
@@ -19,7 +19,7 @@ None
 ### Step 1: Project Brief Verification
 1. CHECK for project brief at `/project-context/project-brief.md`
 2. IF no project brief exists:
-   - SUGGEST using `/project-brief` to create one
+   - SUGGEST using `/sdd:project-brief` to create one
    - EXIT with guidance message
 
 ### Step 2: Project Context Loading
@@ -122,9 +122,9 @@ STORY-007 (✅) ← STORY-002 (✅)
 3. ⏸️  Blocked: STORY-005, STORY-006, STORY-008 - Wait for STORY-003
 
 💡 COMMANDS TO USE
-1. /story-implement STORY-004  # Start ready story
-2. /story-continue STORY-003   # Resume current work
-3. /story-status               # Check individual story details
+1. /sdd:story-implement STORY-004  # Start ready story
+2. /sdd:story-continue STORY-003   # Resume current work
+3. /sdd:story-status               # Check individual story details
 ```
 
 ### Step 6: Opportunity Identification
@@ -191,7 +191,7 @@ IF no project brief exists, DISPLAY simplified listing:
 
 💡 RECOMMENDATION
 Create a project brief for better organization:
-→ /project-brief
+→ /sdd:project-brief
 
 This will enable:
 - Story prioritization
@@ -222,7 +222,7 @@ Basic story listing when project brief is missing:
 ### Example 1: E-commerce Checkout Project
 ```bash
 INPUT:
-/project-stories
+/sdd:project-stories
 
 OUTPUT:
 🏗️  PROJECT: E-commerce Checkout Flow
@@ -272,15 +272,15 @@ STORY-CHK-007 (✅) ← STORY-CHK-002 (✅)
 3. ⏸️  Blocked: STORY-CHK-005, STORY-CHK-006, STORY-CHK-008 - Waiting for STORY-CHK-003
 
 💡 COMMANDS TO USE
-1. /story-implement STORY-CHK-004  # Start ready story
-2. /story-continue STORY-CHK-003   # Resume current work
-3. /story-status                   # Check individual story details
+1. /sdd:story-implement STORY-CHK-004  # Start ready story
+2. /sdd:story-continue STORY-CHK-003   # Resume current work
+3. /sdd:story-status                   # Check individual story details
 ```
 
 ### Example 2: Project Without Brief
 ```bash
 INPUT:
-/project-stories
+/sdd:project-stories
 
 OUTPUT:
 📊 STORY OVERVIEW (SIMPLIFIED)
@@ -304,7 +304,7 @@ Stories:
 
 💡 RECOMMENDATION
 Create a project brief for better organization:
-→ /project-brief
+→ /sdd:project-brief
 
 This will enable:
 - Story prioritization (Core/Enhancement/Future)
@@ -316,7 +316,7 @@ This will enable:
 ### Example 3: All Stories Blocked
 ```bash
 INPUT:
-/project-stories
+/sdd:project-stories
 
 OUTPUT:
 🏗️  PROJECT: Mobile App Dashboard
@@ -358,17 +358,17 @@ STORY-001 (✅) → STORY-002 (🔄) → STORY-003 (⚠️)
 3. 📋 Review STORY-002 progress and identify any blockers
 
 💡 COMMANDS TO USE
-1. /story-continue STORY-002   # Focus on unblocking work
-2. /story-status STORY-002     # Check detailed progress
-3. /project-status             # Overall project health check
+1. /sdd:story-continue STORY-002   # Focus on unblocking work
+2. /sdd:story-status STORY-002     # Check detailed progress
+3. /sdd:project-status             # Overall project health check
 ```
 
 ## Edge Cases
 
 ### No Stories Found
 - DISPLAY message about empty project
-- SUGGEST creating first story with `/story-new`
-- RECOMMEND running `/project-brief` for planning
+- SUGGEST creating first story with `/sdd:story-new`
+- RECOMMEND running `/sdd:project-brief` for planning
 
 ### Circular Dependencies
 - DETECT circular dependency loops
@@ -379,17 +379,17 @@ STORY-001 (✅) → STORY-002 (🔄) → STORY-003 (⚠️)
 ### All Stories Complete
 - CONGRATULATE on completion
 - SHOW final statistics and velocity
-- SUGGEST next phase planning with `/project-phase`
+- SUGGEST next phase planning with `/sdd:project-phase`
 - RECOMMEND project retrospective
 
 ### Large Number of Stories
 - GROUP stories by phase/sprint if available
 - PROVIDE filtering options
 - SUMMARIZE rather than showing full tables
-- SUGGEST using `/story-status` for individual details
+- SUGGEST using `/sdd:story-status` for individual details
 
 ## Error Handling
-- **Missing project brief**: Suggest `/project-brief`, continue with simplified view
+- **Missing project brief**: Suggest `/sdd:project-brief`, continue with simplified view
 - **Corrupted story files**: Skip corrupted files, log warnings, continue processing
 - **Missing dependencies**: Highlight unresolved dependencies, suggest fixes
 - **Permission errors**: Report specific files with access issues
@@ -401,12 +401,12 @@ STORY-001 (✅) → STORY-002 (🔄) → STORY-003 (⚠️)
 - Table formatting optimizes for terminal width
 
 ## Related Commands
-- `/project-brief` - Create or update project documentation
-- `/project-status` - High-level project progress view
-- `/project-phase` - Plan next development phase
-- `/story-status` - Individual story detailed view
-- `/story-implement [id]` - Start working on a ready story
-- `/story-continue` - Resume active work
+- `/sdd:project-brief` - Create or update project documentation
+- `/sdd:project-status` - High-level project progress view
+- `/sdd:project-phase` - Plan next development phase
+- `/sdd:story-status` - Individual story detailed view
+- `/sdd:story-implement [id]` - Start working on a ready story
+- `/sdd:story-continue` - Resume active work
 
 ## Constraints
 - ✅ MUST group stories by priority category

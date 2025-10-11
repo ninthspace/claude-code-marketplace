@@ -1,4 +1,4 @@
-# /story-status
+# /sdd:story-status
 
 Shows all stories and their current stages.
 
@@ -63,8 +63,8 @@ If no stories exist:
 💡 NO STORIES FOUND
 
 Get started:
-1. Create your first story with /story-new
-2. Set up full structure with /project-init
+1. Create your first story with /sdd:story-new
+2. Set up full structure with /sdd:project-init
 ```
 
 ### Notes
