@@ -35,7 +35,7 @@
    - `/project-context/technical-stack.md` - Technology choices
    - `/project-context/coding-standards.md` - Quality rules
    - `/project-context/development-process.md` - Workflow definitions
-   - `/project-context/sdd:project-glossary.md` - Domain vocabulary
+   - `/project-context/project-glossary.md` - Domain vocabulary
    - `/project-context/project-brief.md` - Project overview
 
 #### Phase 2: Document Selection

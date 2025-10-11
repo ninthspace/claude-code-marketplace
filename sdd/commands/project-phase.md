@@ -198,7 +198,7 @@
      [How to measure phase completion and success]
      ```
 
-   - **CREATE** story queue at `/project-context/phases/[phase_name]/sdd:story-queue.md`:
+   - **CREATE** story queue at `/project-context/phases/[phase_name]/story-queue.md`:
      ```markdown
      # Story Queue: [phase_name]
 
@@ -255,7 +255,7 @@
 
 ### OUTPUTS
 - `/project-context/phases/[phase_name]/phase-brief.md`: Focused phase documentation
-- `/project-context/phases/[phase_name]/sdd:story-queue.md`: Prioritized story backlog
+- `/project-context/phases/[phase_name]/story-queue.md`: Prioritized story backlog
 - Updated `/project-context/project-brief.md`: Phase completion summary
 - Console summary: Completion analysis and phase planning results
 

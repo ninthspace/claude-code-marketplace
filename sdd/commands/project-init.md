@@ -125,7 +125,7 @@ None
    - OUTLINE git workflow
 
 #### Phase 5: Project Glossary
-1. **CREATE** `/project-context/sdd:project-glossary.md`:
+1. **CREATE** `/project-context/project-glossary.md`:
    - PROVIDE template for domain-specific terminology
    - INCLUDE sections for:
      * Domain Terms (business-specific vocabulary)
@@ -144,7 +144,7 @@ None
    - PROMPT user to fill with actual project details
 
 #### Phase 7: Story Template Creation
-1. **CREATE** `/stories/templates/sdd:story-template.md`:
+1. **CREATE** `/stories/templates/story-template.md`:
    - COMPREHENSIVE story template with sections:
      * Story Header (ID, title, status, priority)
      * Description and Context
@@ -177,9 +177,9 @@ None
    - /project-context/technical-stack.md
    - /project-context/development-process.md
    - /project-context/coding-standards.md
-   - /project-context/sdd:project-glossary.md
+   - /project-context/project-glossary.md
    - /project-context/project-brief.md
-   - /stories/templates/sdd:story-template.md
+   - /stories/templates/story-template.md
 
    🔧 Configuration Status:
    - Technical stack: Configured with [user's stack]
@@ -215,9 +215,9 @@ None
 - `/project-context/technical-stack.md` - Technology choices
 - `/project-context/development-process.md` - Workflow definitions
 - `/project-context/coding-standards.md` - Quality standards
-- `/project-context/sdd:project-glossary.md` - Terminology reference
+- `/project-context/project-glossary.md` - Terminology reference
 - `/project-context/project-brief.md` - Project overview
-- `/stories/templates/sdd:story-template.md` - Story template
+- `/stories/templates/story-template.md` - Story template
 
 ### RULES
 - MUST create all directories before creating files
@@ -286,9 +286,9 @@ OUTPUT:
 - /project-context/technical-stack.md (Laravel TALL stack)
 - /project-context/development-process.md
 - /project-context/coding-standards.md
-- /project-context/sdd:project-glossary.md
+- /project-context/project-glossary.md
 - /project-context/project-brief.md
-- /stories/templates/sdd:story-template.md
+- /stories/templates/story-template.md
 
 🔧 Configuration Status:
 - Technical stack: Laravel 12, Livewire 3, Alpine.js, Tailwind CSS
