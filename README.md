@@ -4,20 +4,23 @@ A Claude Code plugin marketplace providing comprehensive tools for story-driven 
 
 ## Overview
 
-This marketplace contains plugins that enable complete story-driven development workflows, from ideation through production deployment. All tools are designed to work seamlessly with Claude Code and can be installed individually or as a complete suite.
+This marketplace contains a plugin that enable complete story-driven development workflows, from ideation through production deployment. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
-### Install from Marketplace
+### Install from Marketplace (inside Claude Code)
 
 ```bash
-# Install the entire marketplace (all plugins)
-claude install marketplace ninthspace/marketplace
+# Install the marketplace
+/plugin marketplace add ninthspace/claude-code-marketplace
+
+# Then install this plugin
+/plugin install sdd@claude-code-marketplace
 ```
 
 ## Available Plugins
 
-### Story-Driven Development (v1.0.0)
+### Story-Driven Development (v1.0.1)
 
 **30+ commands for complete agile development workflow**
 
@@ -64,7 +67,7 @@ A comprehensive plugin providing:
 /sdd:story-ship STORY-2025-001
 ```
 
-[View full documentation](./plugins/story-driven-development/README.md)
+[View full documentation](./sdd/README.md)
 
 ## Using the Plugins
 
@@ -137,6 +140,16 @@ The plugins will automatically read these files and adapt their behavior to matc
 - **Context-Aware**: Reads project configuration when available
 - **Independent**: Each command works standalone
 - **Full Lifecycle**: From idea to production deployment
+
+## Removing the Plugin (when in Claude Code)
+
+```bash
+# Uninstall this plugin
+/plugin uninstall sdd@claude-code-marketplace
+
+# Remove the entire marketplace
+/plugin marketplace remove ninthspace-marketplace
+```
 
 ## License
 
