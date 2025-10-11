@@ -20,7 +20,7 @@ This marketplace contains a plugin that enable complete story-driven development
 
 ## Available Plugins
 
-### Story-Driven Development (v2.0.0)
+### Story-Driven Development (v2.0.1)
 
 **30+ commands for complete agile development workflow**
 
