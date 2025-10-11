@@ -9,29 +9,33 @@ All commands are implemented as prompts that Claude Code executes directly. No a
 After installation, try these commands:
 
 ```bash
+# OPTION 1: Automated workflow (single command for entire lifecycle)
+/story-flow "Add user authentication"
+
+# OPTION 2: Individual commands for more control
 # Create your first story
 /story-new "Add user authentication"
 
 # Start development
-/story-start STORY-2024-001
+/story-start STORY-2025-001
 
 # Generate implementation
-/story-implement STORY-2024-001
+/story-implement STORY-2025-001
 
 # Commit your changes
 /story-save "Implement user authentication"
 
 # Run quality checks
-/story-review STORY-2024-001
+/story-review STORY-2025-001
 
 # Run automated tests
-/story-qa STORY-2024-001
+/story-qa STORY-2025-001
 
 # Validate before shipping
-/story-validate STORY-2024-001
+/story-validate STORY-2025-001
 
 # Ship to production
-/story-ship STORY-2024-001
+/story-ship STORY-2025-001
 ```
 
 ## Core Workflow
@@ -43,6 +47,56 @@ After installation, try these commands:
 ```
 
 **Note:** `/story-save` is essential for git commits but can also be used anytime during development
+
+## Workflow Automation with /story-flow
+
+The `/story-flow` command is a powerful workflow automation tool that executes the complete story lifecycle with a single command, reducing 8 separate commands into 1.
+
+### Key Benefits
+
+- **Massive Time Savings**: Complete story from creation to production in 10-20 minutes vs. running 8 separate commands
+- **Consistency**: Guarantees all quality gates (review, QA, validation) are executed in correct order
+- **Flexibility**: Customize workflow scope with `--start-at` and `--stop-at` parameters
+- **Two Modes**:
+  - **Interactive** (default): Pause between steps for review and confirmation
+  - **Auto** (`--auto` flag): Run continuously, reducing interaction time by ~50%
+- **Resume Capability**: Pick up from any step after interruption or fixing issues
+- **Smart Error Handling**: Automatically halts on test failures or validation issues with clear recovery paths
+- **Quality Assurance**: Never skips critical QA or validation steps, ensuring production-ready code
+
+### Usage Examples
+
+```bash
+# Full workflow: Create new story and ship to production
+/story-flow "Add user registration with email verification"
+
+# Resume from specific step (e.g., after fixing issues)
+/story-flow STORY-2025-001 --start-at=qa
+
+# Automated mode (no prompts between steps)
+/story-flow STORY-2025-001 --start-at=qa --auto
+
+# Partial workflow (e.g., only implement and review)
+/story-flow "Fix responsive layout" --stop-at=review
+
+# Resume existing story with auto mode
+/story-flow STORY-2025-015 --start-at=validate --auto
+```
+
+### When to Use /story-flow vs Individual Commands
+
+**Use `/story-flow` when:**
+- Starting a new feature from scratch
+- You want automated progression through all steps
+- Working on straightforward implementations
+- Time efficiency is important
+- You want guaranteed quality gates
+
+**Use individual commands when:**
+- Need fine-grained control over each step
+- Working on complex features requiring multiple iterations
+- Want to experiment before committing
+- Need to run specific steps multiple times
 
 ## What's Included
 
@@ -70,6 +124,12 @@ This plugin adds a complete story-driven development workflow with:
 - `/story-new [title]` - **CORE:** Create new story with template
 - `/story-status` - Show all stories and their stages
 - `/story-continue` - Resume last worked on story
+
+### 🔄 Workflow Automation
+- `/story-flow [prompt|id]` - **POWER TOOL:** Automate complete workflow from creation to deployment
+  - Supports `--start-at=step` to resume from specific step
+  - Supports `--stop-at=step` to pause at specific step
+  - Supports `--auto` flag for continuous execution
 
 ### 🛠️ Development
 - `/story-start [id]` - **CORE:** Start development, create branch
@@ -122,25 +182,25 @@ This plugin adds a complete story-driven development workflow with:
 /story-new "Add user authentication"
 
 # 2. Start development
-/story-start STORY-2024-001
+/story-start STORY-2025-001
 
 # 3. Generate implementation with browser tests
-/story-implement STORY-2024-001
+/story-implement STORY-2025-001
 
 # 4. Commit changes
 /story-save "Implement user authentication feature"
 
 # 5. Code review and quality checks
-/story-review STORY-2024-001
+/story-review STORY-2025-001
 
 # 6. Automated testing and validation
-/story-qa STORY-2024-001
+/story-qa STORY-2025-001
 
 # 7. Final validation before shipping
-/story-validate STORY-2024-001
+/story-validate STORY-2025-001
 
 # 8. Ship to production
-/story-ship STORY-2024-001
+/story-ship STORY-2025-001
 ```
 
 **Optional commands can be used as needed:**

@@ -50,14 +50,18 @@ A comprehensive plugin providing:
 
 **Quick Start:**
 ```bash
+# Automated workflow (single command for entire lifecycle)
+/story-flow "Add user authentication"
+
+# Or use individual commands for more control
 /story-new "Add user authentication"
-/story-start STORY-2024-001
-/story-implement STORY-2024-001
+/story-start STORY-2025-001
+/story-implement STORY-2025-001
 /story-save "Implement user authentication"
-/story-review STORY-2024-001
-/story-qa STORY-2024-001
-/story-validate STORY-2024-001
-/story-ship STORY-2024-001
+/story-review STORY-2025-001
+/story-qa STORY-2025-001
+/story-validate STORY-2025-001
+/story-ship STORY-2025-001
 ```
 
 [View full documentation](./plugins/story-driven-development/README.md)
@@ -75,10 +79,34 @@ A comprehensive plugin providing:
 7. **Validate**: Final checks before shipping
 8. **Ship**: Deploy to production
 
+### Workflow Automation with /story-flow
+
+The `/story-flow` command automates the entire story lifecycle, executing all 8 steps sequentially with a single command. This provides:
+
+- **Time Savings**: Run the complete workflow (new → start → implement → review → qa → validate → save → ship) with one command
+- **Consistency**: Ensures all quality gates are executed in the correct order
+- **Flexibility**: Use `--start-at` and `--stop-at` to run specific portions of the workflow
+- **Control**: Interactive mode (default) pauses between steps; use `--auto` flag for full automation
+- **Resume Capability**: Resume from any step if interrupted or after fixing issues
+- **Error Handling**: Automatically halts on test or validation failures with clear recovery options
+
+**Examples:**
+```bash
+# Full automated workflow from new story
+/story-flow "Add user authentication"
+
+# Resume existing story from QA step in auto mode
+/story-flow STORY-2025-001 --start-at=qa --auto
+
+# Partial workflow (stop before shipping)
+/story-flow "Fix responsive layout" --stop-at=review
+```
+
 ### Command Categories
 
 - **📦 Project Setup** - Initialize projects and manage context
 - **📝 Story Management** - Create, track, and manage stories
+- **🔄 Workflow Automation** - Automate complete lifecycle with `/story-flow`
 - **🛠️ Development** - Start, implement, and save work
 - **🔍 Review** - Quality checks and refactoring
 - **✅ QA & Testing** - Automated testing and validation
