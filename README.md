@@ -65,6 +65,7 @@ A comprehensive plugin providing:
 /sdd:story-qa STORY-2025-001
 /sdd:story-validate STORY-2025-001
 /sdd:story-ship STORY-2025-001
+/sdd:story-complete STORY-2025-001
 ```
 
 [View full documentation](./sdd/README.md)

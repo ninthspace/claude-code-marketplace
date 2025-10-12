@@ -28,6 +28,7 @@ After installation, you have two approaches:
 /sdd:story-qa STORY-2025-001
 /sdd:story-validate STORY-2025-001
 /sdd:story-ship STORY-2025-001
+/sdd:story-complete STORY-2025-001
 
 # 4. OPTIONAL: Plan next development phase (iterative development)
 /sdd:project-phase "Phase 2"
@@ -63,6 +64,9 @@ After installation, you have two approaches:
 
 # Ship to production
 /sdd:story-ship STORY-2025-001
+
+# Archive and capture lessons
+/sdd:story-complete STORY-2025-001
 ```
 
 ## Core Workflow
