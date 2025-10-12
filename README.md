@@ -69,9 +69,46 @@ A comprehensive plugin providing:
 
 [View full documentation](./sdd/README.md)
 
-## Using the Plugins
+## Using the Plugin
 
-### Core Workflow
+### Complete Workflow
+
+#### Getting Started: Project Setup (Optional but Recommended)
+
+Before creating stories, establish your project foundation:
+
+1. **Initialize Project**: `/sdd:project-init`
+   - Creates directory structure (`/project-context/`, `/stories/`)
+   - Sets up context documents (technical stack, coding standards, development process)
+   - Customizes templates based on your tech stack
+
+2. **Create Project Brief**: `/sdd:project-brief [title]`
+   - Defines project objectives and scope
+   - Breaks down features into multiple related stories
+   - Documents story dependencies and implementation order
+   - Provides comprehensive story definitions with acceptance criteria
+
+**Note**: These setup commands are optional. You can jump straight to story creation with smart defaults, but project setup provides better context-aware behavior.
+
+#### Iterative Phase Planning (Optional)
+
+For ongoing projects with multiple development cycles:
+
+**Plan Development Phases**: `/sdd:project-phase [phase_name]`
+- Interactive planning for next development phase
+- Gathers user input on desired features and improvements
+- Analyzes completed work and current project state
+- Creates phase-specific documentation and story queues
+- Organizes features by iteration, extension, and foundation categories
+- Requires user approval before creating documentation
+
+**When to use phases:**
+- Planning next iteration after completing initial stories
+- Organizing multiple related features into cohesive releases
+- Managing long-term projects with distinct development cycles
+- Coordinating feature rollout with dependencies
+
+#### Story Development Workflow (8 Steps)
 
 1. **Create Story**: Define what you're building
 2. **Start Development**: Create branch and setup
@@ -107,9 +144,10 @@ The `/sdd:story-flow` command automates the entire story lifecycle, executing al
 
 ### Command Categories
 
-- **📦 Project Setup** - Initialize projects and manage context
-- **📝 Story Management** - Create, track, and manage stories
-- **🔄 Workflow Automation** - Automate complete lifecycle with `/sdd:story-flow`
+- **📦 Project Setup** - Initialize projects, create project briefs, and manage context (run first)
+- **🔄 Phase Planning** - Plan iterative development phases with user-driven requirements (optional)
+- **📝 Story Management** - Create, track, and manage individual stories
+- **⚡ Workflow Automation** - Automate complete lifecycle with `/sdd:story-flow`
 - **🛠️ Development** - Start, implement, and save work
 - **🔍 Review** - Quality checks and refactoring
 - **✅ QA & Testing** - Automated testing and validation
@@ -119,19 +157,35 @@ The `/sdd:story-flow` command automates the entire story lifecycle, executing al
 
 ## Requirements
 
-- **Claude Code CLI** - Required for all plugins
+- **Claude Code CLI** - Required for the plugin
 - **Git** - Required for version control commands
 - **Test Framework** - Required for QA commands (project-specific)
 
-## Optional Configuration
+## Project Context
 
-For best results, create a `/project-context/` directory in your project with:
+The plugin uses a `/project-context/` directory for context-aware behavior. You can create this automatically or manually:
 
-- `technical-stack.md` - Your technology choices and versions
-- `coding-standards.md` - Your coding standards and conventions
-- `development-process.md` - Your workflow stages and criteria
+**Automatic Setup (Recommended):**
+```bash
+# Initialize project structure with interactive setup
+/sdd:project-init
 
-The plugins will automatically read these files and adapt their behavior to match your project's needs.
+# Create comprehensive project brief
+/sdd:project-brief [title]
+```
+
+**Files Created:**
+- `technical-stack.md` - Technology choices and versions
+- `coding-standards.md` - Code quality standards
+- `development-process.md` - Workflow stages and quality gates
+- `project-glossary.md` - Domain terminology
+- `project-brief.md` - Project overview and story breakdown
+- `story-relationships.md` - Story dependencies (if applicable)
+- `phases/[phase_name]/` - Phase-specific documentation (created by `/sdd:project-phase`)
+  - `phase-brief.md` - Phase goals, features, and timeline
+  - `story-queue.md` - Prioritized story backlog for the phase
+
+The plugin automatically reads these files and adapts its behavior to match your project's needs.
 
 ## Key Principles
 

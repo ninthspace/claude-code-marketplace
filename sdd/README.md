@@ -6,7 +6,34 @@ All commands are implemented as prompts that Claude Code executes directly. No a
 
 ## Quick Start
 
-After installation, try these commands:
+After installation, you have two approaches:
+
+### Approach 1: Project Setup First (Recommended for new projects)
+
+```bash
+# 1. Initialize project structure and context
+/sdd:project-init
+
+# 2. Create comprehensive project brief with story breakdown
+/sdd:project-brief "E-commerce Platform"
+
+# 3. Start with automated workflow
+/sdd:story-flow STORY-2025-001
+
+# Or use individual commands for more control
+/sdd:story-start STORY-2025-001
+/sdd:story-implement STORY-2025-001
+/sdd:story-save "Implement user authentication"
+/sdd:story-review STORY-2025-001
+/sdd:story-qa STORY-2025-001
+/sdd:story-validate STORY-2025-001
+/sdd:story-ship STORY-2025-001
+
+# 4. OPTIONAL: Plan next development phase (iterative development)
+/sdd:project-phase "Phase 2"
+```
+
+### Approach 2: Jump Right In (Works with smart defaults)
 
 ```bash
 # OPTION 1: Automated workflow (single command for entire lifecycle)
@@ -98,12 +125,74 @@ The `/sdd:story-flow` command is a powerful workflow automation tool that execut
 - Want to experiment before committing
 - Need to run specific steps multiple times
 
+## Project Setup Workflow
+
+### Why Set Up Your Project First?
+
+While you can jump straight into story creation with smart defaults, initializing your project provides significant benefits:
+
+**Benefits of `/sdd:project-init`:**
+- Creates organized directory structure (`/project-context/`, `/stories/`)
+- Documents your technical stack (frameworks, testing tools, deployment)
+- Establishes coding standards and conventions
+- Defines development process and quality gates
+- Customizes all templates to match your tech stack
+
+**Benefits of `/sdd:project-brief`:**
+- Breaks down complex features into multiple related stories
+- Documents story dependencies and implementation order
+- Provides comprehensive acceptance criteria for each story
+- Establishes project objectives and success metrics
+- Creates version-controlled project documentation
+
+### When to Use Project Setup
+
+**Use project setup when:**
+- Starting a new project from scratch
+- Beginning a major feature set with multiple related stories
+- Want to establish team standards and conventions
+- Need to document technical decisions and rationale
+- Planning complex features with dependencies
+
+**Skip project setup when:**
+- Making quick fixes or single-story changes
+- Working in an established codebase with existing patterns
+- Prototyping or experimenting
+- Time constraints require immediate action
+
+### Phase-Based Development (Optional)
+
+For ongoing projects that evolve through multiple development cycles, use phase planning:
+
+**Benefits of `/sdd:project-phase`:**
+- Interactive planning for next development iteration
+- User-driven feature prioritization and requirements gathering
+- Analyzes completed work to inform next phase
+- Creates phase-specific documentation and story queues
+- Organizes features by: iteration (improve existing), extension (build new), foundation (technical improvements)
+- Requires explicit user approval before creating documentation
+
+**When to use phase planning:**
+- After completing initial project stories and planning next iteration
+- Managing multiple related features across development cycles
+- Coordinating feature releases with dependencies
+- Long-term projects with distinct phases (MVP → v2.0 → v3.0)
+- Need to analyze completed work before planning next steps
+
+**When to skip phase planning:**
+- First time setting up project (use `/sdd:project-brief` instead)
+- Working on single isolated feature
+- Continuing existing work without major direction changes
+- Small projects with linear development
+
 ## What's Included
 
 This plugin adds a complete story-driven development workflow with:
 
-- **Project Setup Commands** - Initialize projects and manage context
+- **Project Setup Commands** - Initialize project structure, create comprehensive project briefs, and manage context documents
+- **Phase Planning** - Interactive planning for iterative development cycles with user-driven requirements
 - **Story Management** - Create, track, and manage development stories
+- **Workflow Automation** - Single-command automation for entire story lifecycle
 - **Development Workflow** - Start, implement, and save work with git integration
 - **Code Review** - Automated quality checks and refactoring
 - **QA & Testing** - Automated test execution and validation
@@ -113,19 +202,27 @@ This plugin adds a complete story-driven development workflow with:
 
 ## Command Categories
 
-### 📦 Project Setup
-- `/sdd:project-init` - Create folder structure and context documents
+### 📦 Project Setup (Run First for New Projects)
+- `/sdd:project-init` - **FOUNDATION:** Initialize directory structure, create context documents, customize based on your tech stack
+- `/sdd:project-brief [title]` - **PLANNING:** Create comprehensive project brief with intelligent story breakdown and dependencies
 - `/sdd:project-context-update` - Update tech stack, standards, or process docs
-- `/sdd:project-brief [title]` - Create project brief and break into stories
 - `/sdd:project-status` - Show all projects and completion status
 - `/sdd:project-stories [id]` - List stories for a project with dependencies
+
+### 🔄 Phase Planning (Optional Iterative Development)
+- `/sdd:project-phase [phase_name]` - **ITERATIVE:** Interactively plan next development phase with user-driven requirements
+  - Analyzes completed work and current project state
+  - Gathers user input on desired features and improvements
+  - Creates phase-specific documentation and story queues
+  - Organizes features by iteration, extension, and foundation categories
+  - Supports `--analyze-only` flag for analysis without file creation
 
 ### 📝 Story Management
 - `/sdd:story-new [title]` - **CORE:** Create new story with template
 - `/sdd:story-status` - Show all stories and their stages
 - `/sdd:story-continue` - Resume last worked on story
 
-### 🔄 Workflow Automation
+### ⚡ Workflow Automation
 - `/sdd:story-flow [prompt|id]` - **POWER TOOL:** Automate complete workflow from creation to deployment
   - Supports `--start-at=step` to resume from specific step
   - Supports `--stop-at=step` to pause at specific step
@@ -176,9 +273,15 @@ This plugin adds a complete story-driven development workflow with:
 
 ## Example Workflow
 
-**Core Linear Process:**
+**Complete Workflow (with Project Setup):**
 ```bash
-# 1. Create story
+# 0a. Initialize project (one-time setup)
+/sdd:project-init
+
+# 0b. Create project brief with story breakdown (optional)
+/sdd:project-brief "E-commerce Platform"
+
+# 1. Create story (or use story from project brief)
 /sdd:story-new "Add user authentication"
 
 # 2. Start development
@@ -203,19 +306,59 @@ This plugin adds a complete story-driven development workflow with:
 /sdd:story-ship STORY-2025-001
 ```
 
+**Or use automated workflow:**
+```bash
+# After project setup, automate steps 1-8
+/sdd:story-flow "Add user authentication"
+```
+
+**Iterative Development Workflow (with Phase Planning):**
+```bash
+# After completing initial stories, plan next phase
+/sdd:project-phase "Phase 2"
+
+# Interactive prompts will ask:
+# - What features do you want to focus on?
+# - Any technical areas to address?
+# - What constraints should we consider?
+# - Approval to create phase documentation
+
+# Then work through phase stories
+/sdd:story-flow STORY-2025-005  # First story from Phase 2
+/sdd:story-flow STORY-2025-006  # Second story from Phase 2
+
+# Repeat for subsequent phases
+/sdd:project-phase "Phase 3"
+```
+
 **Optional commands can be used as needed:**
 - `/sdd:story-save` can also be used anytime during development for incremental commits
 - `/sdd:story-status` to check progress
 - `/sdd:story-rollback` if issues arise
+- `/sdd:project-phase --analyze-only` to analyze without creating phase documentation
 
-## Project Context (Optional)
+## Project Context
 
-For best results, create a `/project-context/` directory in your project with:
-- `technical-stack.md` - Your technology choices
-- `coding-standards.md` - Your coding standards
-- `development-process.md` - Your workflow stages
+The `/project-context/` directory stores project documentation that all commands use for context-aware behavior.
 
-The commands will read these files and adapt to your project's specific needs.
+**Created automatically by `/sdd:project-init`:**
+- `technical-stack.md` - Your technology choices and versions
+- `coding-standards.md` - Your coding standards and conventions
+- `development-process.md` - Your workflow stages and quality gates
+- `project-glossary.md` - Domain-specific terminology
+- `project-brief.md` - Project overview (empty template)
+
+**Created by `/sdd:project-brief`:**
+- `project-brief.md` - Comprehensive project brief with story breakdown
+- `story-relationships.md` - Story dependencies and implementation order
+- `versions/` - Version history of project documentation
+
+**Created by `/sdd:project-phase`:**
+- `phases/[phase_name]/` - Phase-specific documentation for iterative development
+  - `phase-brief.md` - Phase goals, feature categories, timeline, and success criteria
+  - `story-queue.md` - Prioritized story backlog with dependencies
+
+**All commands read these files and adapt to your project's specific needs.**
 
 ## Requirements
 
