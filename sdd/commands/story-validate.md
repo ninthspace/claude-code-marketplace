@@ -20,22 +20,22 @@
 
 ### INPUTS
 - story_id: Story identifier (auto-detected from branch if not provided)
-- Project context from `/project-context/` directory
-- Story file from `/stories/qa/[story-id].md`
+- Project context from `/docs/project-context/` directory
+- Story file from `/docs/stories/qa/[story-id].md`
 - Complete test suite results from QA
 - Acceptance criteria from story file
 
 ### PROCESS
 
 #### Phase 1: Project Context Loading
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project-specific validation requirements from:
-   - `/project-context/technical-stack.md` - Testing tools and validation methods
-   - `/project-context/coding-standards.md` - Quality thresholds and criteria
-   - `/project-context/development-process.md` - Validation stage requirements
+   - `/docs/project-context/technical-stack.md` - Testing tools and validation methods
+   - `/docs/project-context/coding-standards.md` - Quality thresholds and criteria
+   - `/docs/project-context/development-process.md` - Validation stage requirements
 
 #### Phase 2: Story Identification & Validation
 1. IF story_id NOT provided:
@@ -44,12 +44,12 @@
    - EXAMPLE: Branch `feature/STORY-2025-001-auth` → ID `STORY-2025-001`
 
 2. **VALIDATE** story exists and is ready:
-   - CHECK `/stories/qa/[story-id].md` exists
+   - CHECK `/docs/stories/qa/[story-id].md` exists
    - IF NOT found in QA:
-     - CHECK if in `/stories/development/` or `/stories/review/`
+     - CHECK if in `/docs/stories/development/` or `/docs/stories/review/`
      - ERROR: "Story must complete QA before validation"
      - SUGGEST appropriate command to progress
-   - IF in `/stories/completed/`:
+   - IF in `/docs/stories/completed/`:
      - ERROR: "Story already completed and shipped"
    - IF NOT found anywhere:
      - ERROR: "Story [story-id] not found"
@@ -389,7 +389,7 @@ Low Risk: CSS changes may affect custom themes
    ```
 
 ### OUTPUTS
-- Updated `/stories/qa/[story-id].md` with validation results
+- Updated `/docs/stories/qa/[story-id].md` with validation results
 - Validation summary report (displayed to user)
 - Updated Success Criteria with test evidence
 - Updated checklists with final validation status
@@ -600,13 +600,13 @@ CONFIDENCE LEVEL: ⚠️ MEDIUM
 ## Edge Cases
 
 ### No Project Context
-- DETECT missing `/project-context/` directory
+- DETECT missing `/docs/project-context/` directory
 - SUGGEST running `/sdd:project-init`
 - OFFER to validate with basic checks
 - WARN that validation will be incomplete
 
 ### Story Not in QA
-- CHECK if story in `/stories/development/` or `/stories/review/`
+- CHECK if story in `/docs/stories/development/` or `/docs/stories/review/`
 - ERROR: "Story must complete QA before validation"
 - PROVIDE workflow guidance to reach QA stage
 - SUGGEST appropriate command
@@ -636,7 +636,7 @@ CONFIDENCE LEVEL: ⚠️ MEDIUM
 - SUGGEST coordinating with dependency owners
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/sdd:project-init`, offer basic validation
+- **Missing /docs/project-context/**: Suggest `/sdd:project-init`, offer basic validation
 - **Story not in QA**: Provide clear workflow, suggest correct command
 - **Missing tests**: Block validation, provide test creation guidance
 - **Git errors**: Validate git state, suggest resolution

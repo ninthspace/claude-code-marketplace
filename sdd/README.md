@@ -70,18 +70,20 @@ After installation, you have two approaches:
 **Essential Commands (Linear Process):**
 ```
 /sdd:story-new → /sdd:story-start → /sdd:story-implement → /sdd:story-save →
-/sdd:story-review → /sdd:story-qa → /sdd:story-validate → /sdd:story-ship
+/sdd:story-review → /sdd:story-qa → /sdd:story-validate → /sdd:story-ship →
+/sdd:story-complete
 ```
 
 **Note:** `/sdd:story-save` is essential for git commits but can also be used anytime during development
 
 ## Workflow Automation with /sdd:story-flow
 
-The `/sdd:story-flow` command is a powerful workflow automation tool that executes the complete story lifecycle with a single command, reducing 8 separate commands into 1.
+The `/sdd:story-flow` command is a powerful workflow automation tool that executes the complete story lifecycle with a single command, reducing 9 separate commands into 1.
 
 ### Key Benefits
 
-- **Massive Time Savings**: Complete story from creation to production in 10-20 minutes vs. running 8 separate commands
+- **Massive Time Savings**: Complete story from creation to archived completion in 10-20 minutes vs. running 9 separate commands
+- **Complete Documentation**: Automatically captures retrospective, lessons learned, and metrics after deployment
 - **Consistency**: Guarantees all quality gates (review, QA, validation) are executed in correct order
 - **Flexibility**: Customize workflow scope with `--start-at` and `--stop-at` parameters
 - **Two Modes**:
@@ -132,7 +134,7 @@ The `/sdd:story-flow` command is a powerful workflow automation tool that execut
 While you can jump straight into story creation with smart defaults, initializing your project provides significant benefits:
 
 **Benefits of `/sdd:project-init`:**
-- Creates organized directory structure (`/project-context/`, `/stories/`)
+- Creates organized directory structure (`/docs/project-context/`, `/docs/stories/`)
 - Documents your technical stack (frameworks, testing tools, deployment)
 - Establishes coding standards and conventions
 - Defines development process and quality gates
@@ -263,7 +265,7 @@ This plugin adds a complete story-driven development workflow with:
 
 ## Features
 
-- **Context-Aware**: Commands read from `/project-context/` files if they exist
+- **Context-Aware**: Commands read from `/docs/project-context/` files if they exist
 - **Progressive Enhancement**: Works with defaults, better with configuration
 - **Independent**: Each command works standalone, no setup required
 - **Tech Stack Agnostic**: Understands your stack and generates appropriate code
@@ -304,11 +306,14 @@ This plugin adds a complete story-driven development workflow with:
 
 # 8. Ship to production
 /sdd:story-ship STORY-2025-001
+
+# 9. Complete and archive story with retrospective
+/sdd:story-complete STORY-2025-001
 ```
 
 **Or use automated workflow:**
 ```bash
-# After project setup, automate steps 1-8
+# After project setup, automate steps 1-9
 /sdd:story-flow "Add user authentication"
 ```
 
@@ -339,7 +344,7 @@ This plugin adds a complete story-driven development workflow with:
 
 ## Project Context
 
-The `/project-context/` directory stores project documentation that all commands use for context-aware behavior.
+The `/docs/project-context/` directory stores project documentation that all commands use for context-aware behavior.
 
 **Created automatically by `/sdd:project-init`:**
 - `technical-stack.md` - Your technology choices and versions

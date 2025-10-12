@@ -21,11 +21,11 @@
 ### INPUTS
 - period: Optional time period filter (defaults to all-time)
 - Story files from all directories:
-  - `/stories/backlog/` - Stories not started
-  - `/stories/development/` - Active stories
-  - `/stories/review/` - Stories in review
-  - `/stories/qa/` - Stories in testing
-  - `/stories/completed/` - Finished stories
+  - `/docs/stories/backlog/` - Stories not started
+  - `/docs/stories/development/` - Active stories
+  - `/docs/stories/review/` - Stories in review
+  - `/docs/stories/qa/` - Stories in testing
+  - `/docs/stories/completed/` - Finished stories
 
 ### PROCESS
 

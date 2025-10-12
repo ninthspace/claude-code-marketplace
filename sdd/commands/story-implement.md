@@ -20,21 +20,21 @@
 
 ### INPUTS
 - story_id: Optional story identifier (auto-detected from current branch if omitted)
-- Story file from `/stories/development/[story-id].md`
-- Project context from `/project-context/` directory
+- Story file from `/docs/stories/development/[story-id].md`
+- Project context from `/docs/project-context/` directory
 - Technical stack configuration
 - Coding standards and patterns
 
 ### PROCESS
 
 #### Phase 1: Project Context Loading
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - HALT execution with clear guidance
    - EXIT with initialization instructions
 3. **LOAD** and **PARSE** project context:
-   - `/project-context/technical-stack.md`:
+   - `/docs/project-context/technical-stack.md`:
      * IDENTIFY actual frontend framework (React/Vue/Svelte/Laravel Blade/etc.)
      * IDENTIFY actual state management (Redux/Vuex/Pinia/Livewire/Alpine.js/etc.)
      * IDENTIFY actual primary language (TypeScript/JavaScript/PHP/Python/Go/etc.)
@@ -44,14 +44,14 @@
      * IDENTIFY actual testing framework
      * IDENTIFY actual browser testing tools
      * IDENTIFY actual build tools and package manager
-   - `/project-context/coding-standards.md`:
+   - `/docs/project-context/coding-standards.md`:
      * EXTRACT file organization patterns
      * EXTRACT naming conventions
      * EXTRACT error handling approach
      * EXTRACT testing patterns
      * EXTRACT code formatting rules
      * EXTRACT comment and documentation standards
-   - `/project-context/development-process.md`:
+   - `/docs/project-context/development-process.md`:
      * EXTRACT stage requirements
      * EXTRACT quality gates
      * EXTRACT review criteria
@@ -60,10 +60,10 @@
 1. **DETERMINE** story ID:
    - IF story_id parameter provided: USE it
    - ELSE: EXTRACT from current git branch name
-   - ELSE: FIND most recent story in `/stories/development/`
+   - ELSE: FIND most recent story in `/docs/stories/development/`
    - IF NOT FOUND: HALT with error and suggest `/sdd:story-start`
 
-2. **READ** story file at `/stories/development/[story-id].md`
+2. **READ** story file at `/docs/stories/development/[story-id].md`
 3. **EXTRACT** story requirements:
    - Success criteria (acceptance criteria)
    - Technical approach and constraints
@@ -336,9 +336,9 @@ INPUT:
 /sdd:story-implement STORY-AUTH-001
 
 PROCESS:
-→ Loading project context from /project-context/
+→ Loading project context from /docs/project-context/
 → Detected stack: Laravel 12 + Livewire 3 + Tailwind CSS 4 + Pest 4
-→ Reading story: /stories/development/STORY-AUTH-001.md
+→ Reading story: /docs/stories/development/STORY-AUTH-001.md
 → Story: Implement Login Form
 → Generating Livewire component...
 → Generating unit tests...
@@ -399,7 +399,7 @@ INPUT:
 PROCESS:
 → Loading project context
 → Detected stack: React 18 + TypeScript + Vite + Jest + Playwright
-→ Reading story: /stories/development/STORY-PROFILE-002.md
+→ Reading story: /docs/stories/development/STORY-PROFILE-002.md
 → Story: User Profile Settings
 → Generating React components...
 → Generating custom hooks...
@@ -463,7 +463,7 @@ INPUT:
 /sdd:story-implement STORY-API-003
 
 PROCESS:
-→ Checking for /project-context/ directory
+→ Checking for /docs/project-context/ directory
 → Directory not found
 
 OUTPUT:
@@ -472,16 +472,16 @@ OUTPUT:
 
 Cannot generate implementation without project context.
 
-The /project-context/ directory does not exist.
+The /docs/project-context/ directory does not exist.
 This directory defines your technical stack and coding standards,
 which determines what code to generate.
 
 Please run: /sdd:project-init
 
 This will create:
-- /project-context/technical-stack.md (defines your stack)
-- /project-context/coding-standards.md (defines your standards)
-- /project-context/development-process.md (defines your workflow)
+- /docs/project-context/technical-stack.md (defines your stack)
+- /docs/project-context/coding-standards.md (defines your standards)
+- /docs/project-context/development-process.md (defines your workflow)
 
 After initialization, run /sdd:story-implement again.
 ```
@@ -494,7 +494,7 @@ INPUT:
 PROCESS:
 → Loading project context
 → Detected stack: Django 5 + HTMX + Tailwind CSS + Pytest
-→ Reading story: /stories/development/STORY-CART-004.md
+→ Reading story: /docs/stories/development/STORY-CART-004.md
 → Generating Django views...
 → Generating templates...
 → Generating unit tests...
@@ -559,7 +559,7 @@ Next Steps:
 
 ### Story Not in Development
 ```
-IF story found in /stories/backlog/:
+IF story found in /docs/stories/backlog/:
 - SUGGEST running /sdd:story-start first
 - EXPLAIN that story must be moved to development
 - OFFER to start story automatically
@@ -567,7 +567,7 @@ IF story found in /stories/backlog/:
 
 ### Story Already Reviewed
 ```
-IF story found in /stories/review/ or /stories/qa/:
+IF story found in /docs/stories/review/ or /docs/stories/qa/:
 - WARN about modifying reviewed code
 - ASK for confirmation to proceed
 - IF confirmed: Generate code
@@ -606,7 +606,7 @@ IF files already exist at generation paths:
 - **Story ID missing and not on feature branch**: Return "Error: Story ID required. Usage: /sdd:story-implement <story_id>"
 - **Invalid story ID format**: Return "Error: Invalid story ID format. Expected: STORY-XXX-NNN"
 - **Project context missing**: Halt and suggest /sdd:project-init with detailed guidance
-- **Story not found**: Return "Error: Story not found. Ensure it exists in /stories/development/"
+- **Story not found**: Return "Error: Story not found. Ensure it exists in /docs/stories/development/"
 - **Context files corrupted**: Show specific parsing errors and suggest manual review
 - **Test execution fails**: Show error output and offer troubleshooting steps
 - **Linter fails**: Show linting errors and auto-fix if possible

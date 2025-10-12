@@ -20,20 +20,20 @@
 
 ### INPUTS
 - story_id_number: Optional story number (auto-increments if not provided)
-- Project context from `/project-context/` directory
+- Project context from `/docs/project-context/` directory
 - User-provided story details (if not in project brief)
 
 ### PROCESS
 
 #### Phase 1: Project Context Loading
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project context from:
-   - `/project-context/project-brief.md` - Existing story definitions, goals
-   - `/project-context/technical-stack.md` - Technology implementation requirements
-   - `/project-context/coding-standards.md` - Testing and quality requirements
+   - `/docs/project-context/project-brief.md` - Existing story definitions, goals
+   - `/docs/project-context/technical-stack.md` - Technology implementation requirements
+   - `/docs/project-context/coding-standards.md` - Testing and quality requirements
 
 #### Phase 2: Story ID Generation
 1. **GENERATE** story ID in format `STORY-YYYY-NNN`:
@@ -45,19 +45,19 @@
    - EXAMPLE: Input "5" → "STORY-2025-005"
 
 3. **CHECK** for existing IDs across all directories:
-   - SCAN `/stories/backlog/`
-   - SCAN `/stories/development/`
-   - SCAN `/stories/review/`
-   - SCAN `/stories/qa/`
-   - SCAN `/stories/completed/`
-   - CHECK `/project-context/project-brief.md` for planned stories
+   - SCAN `/docs/stories/backlog/`
+   - SCAN `/docs/stories/development/`
+   - SCAN `/docs/stories/review/`
+   - SCAN `/docs/stories/qa/`
+   - SCAN `/docs/stories/completed/`
+   - CHECK `/docs/project-context/project-brief.md` for planned stories
 
 4. IF no specific number provided:
    - INCREMENT to next available number
    - ENSURE uniqueness across all locations
 
 #### Phase 3: Story Information Gathering
-1. **SEARCH** `/project-context/project-brief.md` for story with generated ID
+1. **SEARCH** `/docs/project-context/project-brief.md` for story with generated ID
 2. IF story exists in project brief:
    - EXTRACT comprehensive story details:
      * Story title and description
@@ -78,11 +78,11 @@
    - **ASK** user for dependencies (optional)
 
 #### Phase 4: Story File Creation
-1. **ENSURE** `/stories/backlog/` directory exists
+1. **ENSURE** `/docs/stories/backlog/` directory exists
    - CREATE directory if missing
    - ADD `.gitkeep` file if directory was created
 
-2. **CREATE** story file at `/stories/backlog/[story-id].md`
+2. **CREATE** story file at `/docs/stories/backlog/[story-id].md`
 
 3. **POPULATE** template with:
    - Story ID and title
@@ -119,7 +119,7 @@
 
    Story ID: [STORY-YYYY-NNN]
    Title: [Story Title]
-   Location: /stories/backlog/[story-id].md
+   Location: /docs/stories/backlog/[story-id].md
    Status: backlog
 
    [If from project brief:]
@@ -142,8 +142,8 @@
    ```
 
 ### OUTPUTS
-- `/stories/backlog/[story-id].md` - New story file with populated template
-- `.gitkeep` file in `/stories/backlog/` if directory was created
+- `/docs/stories/backlog/[story-id].md` - New story file with populated template
+- `.gitkeep` file in `/docs/stories/backlog/` if directory was created
 
 ### RULES
 - MUST generate unique story ID across all story directories
@@ -228,7 +228,7 @@ OUTPUT:
 
 Story ID: STORY-2025-001
 Title: User Authentication System
-Location: /stories/backlog/STORY-2025-001.md
+Location: /docs/stories/backlog/STORY-2025-001.md
 Status: backlog
 
 Source: Extracted from project brief
@@ -269,7 +269,7 @@ What are the acceptance criteria? (Enter each, then empty line when done)
 
 Story ID: STORY-2025-010
 Title: Add Dark Mode Toggle
-Location: /stories/backlog/STORY-2025-010.md
+Location: /docs/stories/backlog/STORY-2025-010.md
 Status: backlog
 
 Source: User-provided details
@@ -299,14 +299,14 @@ OUTPUT:
 
 Story ID: STORY-2025-006
 Title: Payment Processing Integration
-Location: /stories/backlog/STORY-2025-006.md
+Location: /docs/stories/backlog/STORY-2025-006.md
 Status: backlog
 ```
 
 ## Edge Cases
 
 ### No Project Context
-- DETECT missing `/project-context/` directory
+- DETECT missing `/docs/project-context/` directory
 - SUGGEST running `/sdd:project-init`
 - OFFER to create story with minimal template
 - WARN that template won't be auto-populated
@@ -330,7 +330,7 @@ Status: backlog
 - CONTINUE with story creation
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/sdd:project-init` with guidance
+- **Missing /docs/project-context/**: Suggest `/sdd:project-init` with guidance
 - **Permission errors**: Report specific file/directory with access issue
 - **Invalid story ID**: Sanitize and suggest corrected version
 - **User cancels**: Clean up partial creation, exit gracefully

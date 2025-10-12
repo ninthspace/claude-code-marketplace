@@ -4,10 +4,10 @@
 - Version: 1.0
 - Category: workflow-automation
 - Complexity: high
-- Purpose: Automate the complete story lifecycle from creation to deployment
+- Purpose: Automate the complete story lifecycle from creation to deployment and archival
 
 ## Definition
-**Purpose**: Execute the complete story development workflow in sequence, automating the progression through all stages from story creation to production deployment.
+**Purpose**: Execute the complete story development workflow in sequence, automating the progression through all stages from story creation to production deployment, retrospective completion, and archival.
 
 **Syntax**: `/sdd:story-flow <prompt|story_id> [--start-at=step] [--stop-at=step] [--auto]`
 
@@ -15,8 +15,8 @@
 | Parameter | Type | Required | Default | Description | Validation |
 |-----------|------|----------|---------|-------------|------------|
 | prompt\|story_id | string | Yes | - | Story prompt/title or existing story ID (e.g., STORY-2025-001, STORY-DUE-001) | Non-empty string |
-| --start-at | string | No | new | Start at specific step (new\|start\|implement\|review\|qa\|validate\|save\|ship) | Valid step name |
-| --stop-at | string | No | ship | Stop at specific step | Valid step name |
+| --start-at | string | No | new | Start at specific step (new\|start\|implement\|review\|qa\|validate\|save\|ship\|complete) | Valid step name |
+| --stop-at | string | No | complete | Stop at specific step | Valid step name |
 | --auto | flag | No | false | Skip confirmations between steps | Boolean flag |
 
 ## INSTRUCTION: Execute Story Workflow Sequence
@@ -24,7 +24,7 @@
 ### INPUTS
 - prompt\|story_id: Either a new story description or an existing story ID
 - --start-at: Optional step to begin from (default: new)
-- --stop-at: Optional step to end at (default: ship)
+- --stop-at: Optional step to end at (default: complete)
 - --auto: Optional flag to run all steps without confirmation
 
 ### PROCESS
@@ -39,7 +39,7 @@
 
 2. **VALIDATE** start-at and stop-at parameters:
    - ENSURE start-at comes before stop-at in sequence
-   - VALID SEQUENCE: new → start → implement → review → qa → validate → save → ship
+   - VALID SEQUENCE: new → start → implement → review → qa → validate → save → ship → complete
    - IF invalid: SHOW error and exit
 
 3. **DISPLAY** workflow plan:
@@ -60,12 +60,12 @@
 1. **DETECT** if input is existing story ID:
    - CHECK pattern: `STORY-[A-Z0-9]+-\d+`
    - SEARCH for story file in all story directories:
-     * /stories/backlog/
-     * /stories/development/
-     * /stories/review/
-     * /stories/qa/
-     * /stories/completed/
-     * /project-context/phases/*/
+     * /docs/stories/backlog/
+     * /docs/stories/development/
+     * /docs/stories/review/
+     * /docs/stories/qa/
+     * /docs/stories/completed/
+     * /docs/project-context/phases/*/
 2. IF story file found:
    - SKIP story creation
    - USE found story_id
@@ -153,15 +153,32 @@
    - OFFER: Resolve conflicts or abort
    - WAIT for resolution
 
-**STEP 8: /sdd:story-ship** (IF in range AND is stop-at)
+**STEP 8: /sdd:story-ship** (IF in range)
 1. EXECUTE: `/sdd:story-ship [story_id]`
 2. VERIFY: Merged and deployed successfully
-3. SHOW: Final completion summary
+3. IF --auto flag NOT set:
+   - SHOW: Deployment summary
+   - ASK: "Complete story and archive? (y/n)"
+   - IF no: EXIT with completion instructions
 4. IF error:
    - HALT before deployment
    - SHOW: Deployment errors
    - SUGGEST: `/sdd:story-rollback [story_id]` if needed
    - MANUAL intervention required
+
+**STEP 9: /sdd:story-complete** (IF in range AND is stop-at)
+1. EXECUTE: `/sdd:story-complete [story_id]`
+2. VERIFY: Story file fully populated with:
+   - Retrospective notes
+   - Lessons learned
+   - Performance metrics
+   - Final documentation
+3. VERIFY: Story archived to /docs/stories/completed/
+4. SHOW: Final completion summary
+5. IF error:
+   - SHOW: Archive errors
+   - SUGGEST: Manual completion via `/sdd:story-complete [story_id]`
+   - EXIT with partial completion status
 
 #### Phase 3: Completion Summary
 
@@ -181,8 +198,9 @@ Completed Steps:
 ✓ Validation successful
 ✓ Changes committed
 ✓ Deployed to production
+✓ Story completed and archived
 
-[IF stopped before ship:]
+[IF stopped before complete:]
 ⏸️ Workflow Paused
 Next Step: /sdd:story-flow [story_id] --start-at=[next-step]
 
@@ -210,6 +228,7 @@ Next Actions:
 - NEVER skip critical validation steps
 - ALWAYS save work before shipping
 - MUST update story file status at each stage
+- MUST complete story retrospective and archive after shipping
 
 ## Examples
 
@@ -219,45 +238,50 @@ INPUT:
 /sdd:story-flow "Add user registration form with email verification"
 
 PROCESS:
-→ Step 1/8: Creating story...
+→ Step 1/9: Creating story...
 ✅ Story created: STORY-2025-015
 → Prompt: Continue to start development? (y/n) y
 
-→ Step 2/8: Starting development...
+→ Step 2/9: Starting development...
 ✅ Branch created: feature/registration-015
 → Prompt: Continue to implementation? (y/n) y
 
-→ Step 3/8: Generating implementation...
+→ Step 3/9: Generating implementation...
 ✅ Files created: RegistrationForm.php, registration-form.blade.php, RegistrationTest.php
 → Prompt: Continue to review? (y/n) y
 
-→ Step 4/8: Running code review...
+→ Step 4/9: Running code review...
 ✅ Review passed: 0 issues found
 → Prompt: Continue to QA? (y/n) y
 
-→ Step 5/8: Running QA tests...
+→ Step 5/9: Running QA tests...
 ✅ All tests passed (Unit: 5, Feature: 3, Browser: 2)
 → Prompt: Continue to validation? (y/n) y
 
-→ Step 6/8: Validating story...
+→ Step 6/9: Validating story...
 ✅ All acceptance criteria met
 → Prompt: Ready to save and ship? (y/n) y
 
-→ Step 7/8: Committing changes...
+→ Step 7/9: Committing changes...
 ✅ Committed: "feat: add user registration form with email verification"
 → Prompt: Continue to ship? (y/n) y
 
-→ Step 8/8: Shipping to production...
+→ Step 8/9: Shipping to production...
 ✅ Merged to main, deployed successfully
+→ Prompt: Complete story and archive? (y/n) y
+
+→ Step 9/9: Completing and archiving story...
+✅ Story file updated with retrospective and metrics
+✅ Story archived to /docs/stories/completed/
 
 OUTPUT:
 ✅ STORY WORKFLOW COMPLETED
 ═══════════════════════════
 Story: STORY-2025-015 - Add user registration form
-Status: shipped
+Status: completed
 
 All steps completed successfully ✓
-Total Duration: 12 minutes
+Total Duration: 13 minutes
 ```
 
 ### Example 2: Resume from Existing Story (Year-based ID)
@@ -270,23 +294,26 @@ PROCESS:
 → Starting from: qa
 → Auto mode: enabled
 
-→ Step 1/4: Running QA tests...
+→ Step 1/5: Running QA tests...
 ✅ All tests passed
 
-→ Step 2/4: Validating story...
+→ Step 2/5: Validating story...
 ✅ Validation successful
 
-→ Step 3/4: Committing changes...
+→ Step 3/5: Committing changes...
 ✅ Changes committed
 
-→ Step 4/4: Shipping to production...
+→ Step 4/5: Shipping to production...
 ✅ Deployed successfully
+
+→ Step 5/5: Completing and archiving story...
+✅ Story completed and archived
 
 OUTPUT:
 ✅ STORY WORKFLOW COMPLETED
 Story: STORY-2025-010
-Executed: qa → validate → save → ship
-Duration: 3 minutes
+Executed: qa → validate → save → ship → complete
+Duration: 4 minutes
 ```
 
 ### Example 2b: Phase-based Story ID
@@ -296,7 +323,7 @@ INPUT:
 
 PROCESS:
 → Detected phase-based story: STORY-DUE-001
-→ Found in: /project-context/phases/phase-due-dates/
+→ Found in: /docs/project-context/phases/phase-due-dates/
 → Starting from: start
 → Skipping story creation (already exists)
 
@@ -379,7 +406,7 @@ Next Actions:
 
 ### Story Already Shipped
 ```
-IF story_id found in /stories/completed/:
+IF story_id found in /docs/stories/completed/:
 - SHOW: Story already completed
 - OFFER: View story details or create new version
 - SUGGEST: /sdd:story-new for related feature
@@ -428,6 +455,7 @@ IF starting mid-workflow and previous steps incomplete:
 - `/sdd:story-validate` - Final validation (Step 6)
 - `/sdd:story-save` - Commit changes (Step 7)
 - `/sdd:story-ship` - Deploy to production (Step 8)
+- `/sdd:story-complete` - Complete story with retrospective and archive (Step 9)
 - `/sdd:story-rollback` - Rollback if issues arise
 
 ## Constraints
@@ -441,6 +469,7 @@ IF starting mid-workflow and previous steps incomplete:
 - 🔧 SHOULD provide resume options on failure
 - 💾 MUST update story status at each step
 - 🚀 MUST verify deployment success before completion
+- 📚 MUST complete story retrospective and archive after shipping
 
 ## Notes
 - This command automates the entire story lifecycle

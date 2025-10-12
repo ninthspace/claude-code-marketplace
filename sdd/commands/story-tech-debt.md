@@ -21,10 +21,10 @@
 ### INPUTS
 - priority: Optional priority filter (defaults to all)
 - Story files from all directories:
-  - `/stories/development/` - Active stories
-  - `/stories/review/` - Stories in review
-  - `/stories/qa/` - Stories in testing
-  - `/stories/completed/` - Finished stories
+  - `/docs/stories/development/` - Active stories
+  - `/docs/stories/review/` - Stories in review
+  - `/docs/stories/qa/` - Stories in testing
+  - `/docs/stories/completed/` - Finished stories
 - Optional: Project codebase for TODO scanning
 
 ### PROCESS
@@ -509,7 +509,7 @@
       - Reduction plan
       - Prevention recommendations
 
-   2. Create debt stories in /stories/backlog/:
+   2. Create debt stories in /docs/stories/backlog/:
       - DEBT-STORY-001.md (Security sprint)
       - DEBT-STORY-002.md (Performance sprint)
       - DEBT-STORY-003.md (Code quality sprint)
@@ -529,9 +529,9 @@
    Files Created:
    ✓ /tech-debt/report-2025-10-01.md
    ✓ /tech-debt/dashboard.md
-   ✓ /stories/backlog/DEBT-STORY-001.md
-   ✓ /stories/backlog/DEBT-STORY-002.md
-   ✓ /stories/backlog/DEBT-STORY-003.md
+   ✓ /docs/stories/backlog/DEBT-STORY-001.md
+   ✓ /docs/stories/backlog/DEBT-STORY-002.md
+   ✓ /docs/stories/backlog/DEBT-STORY-003.md
 
    NEXT STEPS:
    1. Review and prioritize debt stories
@@ -548,7 +548,7 @@
 - Console display of complete debt analysis
 - Optional: `/tech-debt/report-[date].md` - Comprehensive debt report
 - Optional: `/tech-debt/dashboard.md` - Tracking dashboard
-- Optional: `/stories/backlog/DEBT-STORY-*.md` - Debt reduction stories
+- Optional: `/docs/stories/backlog/DEBT-STORY-*.md` - Debt reduction stories
 
 ### RULES
 - MUST scan all story directories (not just completed)

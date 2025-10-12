@@ -20,21 +20,21 @@
 
 ### INPUTS
 - story_id: Story identifier (auto-detected from branch if not provided)
-- Project context from `/project-context/` directory
-- Story file from `/stories/development/[story-id].md`
+- Project context from `/docs/project-context/` directory
+- Story file from `/docs/stories/development/[story-id].md`
 - Codebase changes since story started
 
 ### PROCESS
 
 #### Phase 1: Project Context Loading
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project-specific review standards from:
-   - `/project-context/technical-stack.md` - Technology stack and tools
-   - `/project-context/coding-standards.md` - Quality standards and thresholds
-   - `/project-context/development-process.md` - Review stage requirements
+   - `/docs/project-context/technical-stack.md` - Technology stack and tools
+   - `/docs/project-context/coding-standards.md` - Quality standards and thresholds
+   - `/docs/project-context/development-process.md` - Review stage requirements
 
 #### Phase 2: Story Identification & Validation
 1. IF story_id NOT provided:
@@ -43,9 +43,9 @@
    - EXAMPLE: Branch `feature/STORY-2025-001-auth` → ID `STORY-2025-001`
 
 2. **VALIDATE** story exists:
-   - CHECK `/stories/development/[story-id].md` exists
+   - CHECK `/docs/stories/development/[story-id].md` exists
    - IF NOT found in development:
-     - CHECK if already in `/stories/review/`
+     - CHECK if already in `/docs/stories/review/`
      - INFORM user and ask to proceed with re-review
    - IF NOT found anywhere:
      - ERROR: "Story [story-id] not found"
@@ -58,13 +58,13 @@
    - Technical approach
 
 #### Phase 3: Directory Preparation
-1. **ENSURE** `/stories/review/` directory exists
+1. **ENSURE** `/docs/stories/review/` directory exists
    - CREATE directory if missing
    - ADD `.gitkeep` file if directory was created
 
 2. **MOVE** story file:
-   - FROM: `/stories/development/[story-id].md`
-   - TO: `/stories/review/[story-id].md`
+   - FROM: `/docs/stories/development/[story-id].md`
+   - TO: `/docs/stories/review/[story-id].md`
    - PRESERVE all content and formatting
 
 3. **UPDATE** story metadata:
@@ -376,7 +376,7 @@ Complexity Score:    X (average cyclomatic complexity)
    ```
 
 ### OUTPUTS
-- `/stories/review/[story-id].md` - Updated story file with review results
+- `/docs/stories/review/[story-id].md` - Updated story file with review results
 - Code review report (displayed to user)
 - Updated Implementation Checklist with validation status
 - Progress log entry with review timestamp
@@ -407,7 +407,7 @@ OUTPUT:
   ✓ development-process.md: Review stage requirements
 
 → Moving story to review...
-  ✓ Moved STORY-2025-001.md to /stories/review/
+  ✓ Moved STORY-2025-001.md to /docs/stories/review/
 
 → Running quality gates...
   [Linting] Running Laravel Pint...
@@ -463,7 +463,7 @@ OUTPUT:
   ✓ coding-standards.md: 80% coverage target
 
 → Moving story to review...
-  ✓ Moved STORY-2025-003.md to /stories/review/
+  ✓ Moved STORY-2025-003.md to /docs/stories/review/
 
 → Running quality gates...
   [Testing] Running Pest...
@@ -535,16 +535,16 @@ Reviewed: 2025-10-01 16:12:33 (2nd review)
 ## Edge Cases
 
 ### No Project Context
-- DETECT missing `/project-context/` directory
+- DETECT missing `/docs/project-context/` directory
 - SUGGEST running `/sdd:project-init`
 - OFFER to run basic checks without discovered standards
 - WARN that review will be incomplete
 
 ### Story Not in Development
-- CHECK if story in `/stories/review/`
+- CHECK if story in `/docs/stories/review/`
 - IF found: ASK user if they want to re-review
-- IF in `/stories/qa/`: ERROR and suggest `/sdd:story-refactor` first
-- IF in `/stories/completed/`: ERROR "Story already shipped"
+- IF in `/docs/stories/qa/`: ERROR and suggest `/sdd:story-refactor` first
+- IF in `/docs/stories/completed/`: ERROR "Story already shipped"
 
 ### Missing Test Framework
 - DETECT if testing tool not installed
@@ -571,7 +571,7 @@ Reviewed: 2025-10-01 16:12:33 (2nd review)
 - SUGGEST manual verification
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/sdd:project-init`, offer basic review
+- **Missing /docs/project-context/**: Suggest `/sdd:project-init`, offer basic review
 - **Story file not found**: Check all directories, provide helpful guidance
 - **Tool not installed**: Provide installation commands for stack
 - **Permission errors**: Report specific file/directory access issue

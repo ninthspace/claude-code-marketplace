@@ -23,17 +23,17 @@ None
 ### PROCESS
 
 #### Phase 1: Directory Structure Creation
-1. **CREATE** `/project-context/` directory
+1. **CREATE** `/docs/project-context/` directory
    - Root directory for all project documentation
    - Contains technical specifications and standards
 
-2. **CREATE** `/stories/` directory with subdirectories:
-   - `/stories/development/` - Active implementation work
-   - `/stories/review/` - Code review stage
-   - `/stories/qa/` - Quality assurance testing
-   - `/stories/completed/` - Finished and shipped stories
-   - `/stories/backlog/` - Planned but not started
-   - `/stories/templates/` - Story and documentation templates
+2. **CREATE** `/docs/stories/` directory with subdirectories:
+   - `/docs/stories/development/` - Active implementation work
+   - `/docs/stories/review/` - Code review stage
+   - `/docs/stories/qa/` - Quality assurance testing
+   - `/docs/stories/completed/` - Finished and shipped stories
+   - `/docs/stories/backlog/` - Planned but not started
+   - `/docs/stories/templates/` - Story and documentation templates
 
 3. **ADD** `.gitkeep` file to each empty directory:
    - ENSURES directories are tracked in git
@@ -83,14 +83,14 @@ None
    - Validation: (Zod, Joi, Laravel Validation, Pydantic, etc.)
    - Other important libraries: [User provides list]
 
-2. **CREATE** `/project-context/technical-stack.md`:
+2. **CREATE** `/docs/project-context/technical-stack.md`:
    - POPULATE with user's technology choices
    - INCLUDE version numbers if available
    - ADD links to documentation
    - NOTE any specific configuration requirements
 
 #### Phase 3: Development Process Documentation
-1. **CREATE** `/project-context/development-process.md`:
+1. **CREATE** `/docs/project-context/development-process.md`:
    - DEFINE three-stage workflow (Development → Review → QA)
    - SPECIFY entry/exit criteria for each stage
    - DOCUMENT required activities per stage
@@ -116,7 +116,7 @@ None
    - Quality requirements
    - Git workflow conventions
 
-2. **CREATE** `/project-context/coding-standards.md`:
+2. **CREATE** `/docs/project-context/coding-standards.md`:
    - DOCUMENT language-specific standards
    - DEFINE framework-specific patterns
    - SPECIFY file organization rules
@@ -125,7 +125,7 @@ None
    - OUTLINE git workflow
 
 #### Phase 5: Project Glossary
-1. **CREATE** `/project-context/project-glossary.md`:
+1. **CREATE** `/docs/project-context/project-glossary.md`:
    - PROVIDE template for domain-specific terminology
    - INCLUDE sections for:
      * Domain Terms (business-specific vocabulary)
@@ -134,7 +134,7 @@ None
    - ENCOURAGE user to populate over time
 
 #### Phase 6: Project Brief Template
-1. **CREATE** `/project-context/project-brief.md`:
+1. **CREATE** `/docs/project-context/project-brief.md`:
    - PROVIDE comprehensive project overview template
    - INCLUDE sections:
      * Project Overview (name, description, objectives)
@@ -144,7 +144,7 @@ None
    - PROMPT user to fill with actual project details
 
 #### Phase 7: Story Template Creation
-1. **CREATE** `/stories/templates/story-template.md`:
+1. **CREATE** `/docs/stories/templates/story-template.md`:
    - COMPREHENSIVE story template with sections:
      * Story Header (ID, title, status, priority)
      * Description and Context
@@ -165,21 +165,21 @@ None
    ═══════════════════════════════════
 
    📁 Directories Created:
-   - /project-context/
-   - /stories/development/
-   - /stories/review/
-   - /stories/qa/
-   - /stories/completed/
-   - /stories/backlog/
-   - /stories/templates/
+   - /docs/project-context/
+   - /docs/stories/development/
+   - /docs/stories/review/
+   - /docs/stories/qa/
+   - /docs/stories/completed/
+   - /docs/stories/backlog/
+   - /docs/stories/templates/
 
    📄 Documents Created:
-   - /project-context/technical-stack.md
-   - /project-context/development-process.md
-   - /project-context/coding-standards.md
-   - /project-context/project-glossary.md
-   - /project-context/project-brief.md
-   - /stories/templates/story-template.md
+   - /docs/project-context/technical-stack.md
+   - /docs/project-context/development-process.md
+   - /docs/project-context/coding-standards.md
+   - /docs/project-context/project-glossary.md
+   - /docs/project-context/project-brief.md
+   - /docs/stories/templates/story-template.md
 
    🔧 Configuration Status:
    - Technical stack: Configured with [user's stack]
@@ -203,21 +203,21 @@ None
 
 ### OUTPUTS
 **Directories**:
-- `/project-context/` - Project documentation root
-- `/stories/development/` - Active stories
-- `/stories/review/` - Stories in review
-- `/stories/qa/` - Stories in QA
-- `/stories/completed/` - Finished stories
-- `/stories/backlog/` - Planned stories
-- `/stories/templates/` - Templates
+- `/docs/project-context/` - Project documentation root
+- `/docs/stories/development/` - Active stories
+- `/docs/stories/review/` - Stories in review
+- `/docs/stories/qa/` - Stories in QA
+- `/docs/stories/completed/` - Finished stories
+- `/docs/stories/backlog/` - Planned stories
+- `/docs/stories/templates/` - Templates
 
 **Files**:
-- `/project-context/technical-stack.md` - Technology choices
-- `/project-context/development-process.md` - Workflow definitions
-- `/project-context/coding-standards.md` - Quality standards
-- `/project-context/project-glossary.md` - Terminology reference
-- `/project-context/project-brief.md` - Project overview
-- `/stories/templates/story-template.md` - Story template
+- `/docs/project-context/technical-stack.md` - Technology choices
+- `/docs/project-context/development-process.md` - Workflow definitions
+- `/docs/project-context/coding-standards.md` - Quality standards
+- `/docs/project-context/project-glossary.md` - Terminology reference
+- `/docs/project-context/project-brief.md` - Project overview
+- `/docs/stories/templates/story-template.md` - Story template
 
 ### RULES
 - MUST create all directories before creating files
@@ -232,14 +232,14 @@ None
 
 ### Directory Hierarchy
 ```
-/project-context/
+/docs/project-context/
 ├── technical-stack.md              # Technology choices and versions
 ├── development-process.md           # Workflow and quality gates
 ├── coding-standards.md              # Code quality standards
 ├── project-glossary.md              # Domain terminology
 └── project-brief.md                 # Project overview and goals
 
-/stories/
+/docs/stories/
 ├── /development/                    # Active implementation
 │   └── .gitkeep
 ├── /review/                         # Code review stage
@@ -274,21 +274,21 @@ OUTPUT:
 ═══════════════════════════════════
 
 📁 Directories Created:
-- /project-context/
-- /stories/development/
-- /stories/review/
-- /stories/qa/
-- /stories/completed/
-- /stories/backlog/
-- /stories/templates/
+- /docs/project-context/
+- /docs/stories/development/
+- /docs/stories/review/
+- /docs/stories/qa/
+- /docs/stories/completed/
+- /docs/stories/backlog/
+- /docs/stories/templates/
 
 📄 Documents Created:
-- /project-context/technical-stack.md (Laravel TALL stack)
-- /project-context/development-process.md
-- /project-context/coding-standards.md
-- /project-context/project-glossary.md
-- /project-context/project-brief.md
-- /stories/templates/story-template.md
+- /docs/project-context/technical-stack.md (Laravel TALL stack)
+- /docs/project-context/development-process.md
+- /docs/project-context/coding-standards.md
+- /docs/project-context/project-glossary.md
+- /docs/project-context/project-brief.md
+- /docs/stories/templates/story-template.md
 
 🔧 Configuration Status:
 - Technical stack: Laravel 12, Livewire 3, Alpine.js, Tailwind CSS
@@ -296,7 +296,7 @@ OUTPUT:
 - Deployment: Laravel Herd (local), Forge (production)
 
 💡 NEXT STEPS:
-1. Fill out /project-context/project-brief.md with your project details
+1. Fill out /docs/project-context/project-brief.md with your project details
 2. Run /sdd:project-brief to create comprehensive project plan
 3. Create your first story with /sdd:story-new
 4. Begin development with /sdd:story-start
@@ -305,7 +305,7 @@ OUTPUT:
 - Create story: /sdd:story-new
 - View status: /sdd:project-status
 - Start work: /sdd:story-start [id]
-- Documentation: See /project-context/ directory
+- Documentation: See /docs/project-context/ directory
 ```
 
 ### Example 2: Already Initialized
@@ -317,8 +317,8 @@ OUTPUT:
 ⚠️  Project Already Initialized
 
 The following directories already exist:
-- /project-context/
-- /stories/
+- /docs/project-context/
+- /docs/stories/
 
 Would you like to:
 1. Skip initialization (directories exist)
@@ -335,13 +335,13 @@ INPUT:
 /sdd:project-init
 
 DETECTION:
-→ Found /project-context/ but missing /stories/
+→ Found /docs/project-context/ but missing /docs/stories/
 
 OUTPUT:
 ℹ️  Partial Project Structure Detected
 
-Found: /project-context/
-Missing: /stories/ and subdirectories
+Found: /docs/project-context/
+Missing: /docs/stories/ and subdirectories
 
 Creating missing directories...
 
@@ -349,12 +349,12 @@ Creating missing directories...
 ═══════════════════════════════════
 
 📁 Created:
-- /stories/development/
-- /stories/review/
-- /stories/qa/
-- /stories/completed/
-- /stories/backlog/
-- /stories/templates/
+- /docs/stories/development/
+- /docs/stories/review/
+- /docs/stories/qa/
+- /docs/stories/completed/
+- /docs/stories/backlog/
+- /docs/stories/templates/
 
 Existing configuration preserved.
 

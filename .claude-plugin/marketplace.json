@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -11,7 +11,7 @@
       "name": "sdd",
       "source": "./sdd",
       "description": "Comprehensive story-driven development workflow with 30+ commands for agile development, from ideation to production",
-      "version": "2.0.1",
+      "version": "3.1.0",
       "keywords": [
         "story",
         "agile",

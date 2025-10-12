@@ -20,20 +20,20 @@
 
 ### INPUTS
 - story_id: Story to document (defaults to current active story)
-- Story file from `/stories/development/` or `/stories/review/`
+- Story file from `/docs/stories/development/` or `/docs/stories/review/`
 - Implemented code files referenced in story
-- Project context from `/project-context/`
+- Project context from `/docs/project-context/`
 
 ### PROCESS
 
 #### Phase 1: Story Location and Validation
 1. **DETERMINE** which story to document:
    - IF story_id provided: USE specified story
-   - IF no story_id: FIND current active story in `/stories/development/`
+   - IF no story_id: FIND current active story in `/docs/stories/development/`
 2. **LOCATE** story file:
-   - CHECK `/stories/development/[story-id].md`
-   - CHECK `/stories/review/[story-id].md`
-   - CHECK `/stories/qa/[story-id].md`
+   - CHECK `/docs/stories/development/[story-id].md`
+   - CHECK `/docs/stories/review/[story-id].md`
+   - CHECK `/docs/stories/qa/[story-id].md`
 3. IF story not found:
    - EXIT with error message
    - SUGGEST using `/sdd:project-status` to find valid story IDs
@@ -55,9 +55,9 @@
    - NOTE configuration files affected
 
 3. **LOAD** project context:
-   - `/project-context/technical-stack.md` - Framework conventions
-   - `/project-context/coding-standards.md` - Documentation style
-   - `/project-context/development-process.md` - Doc requirements
+   - `/docs/project-context/technical-stack.md` - Framework conventions
+   - `/docs/project-context/coding-standards.md` - Documentation style
+   - `/docs/project-context/development-process.md` - Doc requirements
 
 #### Phase 3: Documentation Generation
 
@@ -457,7 +457,7 @@ INPUT:
 
 OUTPUT:
 → Finding active story...
-→ Located: STORY-2025-003 in /stories/development/
+→ Located: STORY-2025-003 in /docs/stories/development/
 → Analyzing implemented features...
 → Scanning codebase for TaskManager component...
 → Generating documentation...
@@ -502,7 +502,7 @@ INPUT:
 
 OUTPUT:
 → Locating story: STORY-2025-005...
-→ Found in /stories/review/
+→ Found in /docs/stories/review/
 → Analyzing authentication implementation...
 → Generating documentation...
 
@@ -542,7 +542,7 @@ INPUT:
 
 OUTPUT:
 → Locating story: STORY-2025-007...
-→ Found in /stories/development/
+→ Found in /docs/stories/development/
 → Analyzing REST API implementation...
 → Extracting API endpoints and schemas...
 → Generating OpenAPI specification...

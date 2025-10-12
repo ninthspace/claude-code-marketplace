@@ -21,19 +21,19 @@
 ## INSTRUCTION: Ship Story to Production
 
 ### INPUTS
-- story_id: Story identifier from /stories/qa/
+- story_id: Story identifier from /docs/stories/qa/
 - Story file with QA validation data
 - Git repository with feature branch
-- Project context from /project-context/
+- Project context from /docs/project-context/
 
 ### PROCESS
 
 #### Phase 1: Pre-Flight Checks
 1. **VERIFY** story location:
-   - CHECK story is in `/stories/qa/` directory
+   - CHECK story is in `/docs/stories/qa/` directory
    - IF NOT in qa:
-     - CHECK `/stories/review/` - suggest running `/sdd:story-qa` first
-     - CHECK `/stories/development/` - suggest completing review and QA
+     - CHECK `/docs/stories/review/` - suggest running `/sdd:story-qa` first
+     - CHECK `/docs/stories/development/` - suggest completing review and QA
      - EXIT with appropriate guidance
 
 2. **VALIDATE** story readiness:
@@ -86,7 +86,7 @@
 
 #### Phase 2: Branch Merge
 1. **LOAD** project context:
-   - READ `/project-context/development-process.md` for merge strategy
+   - READ `/docs/project-context/development-process.md` for merge strategy
    - IDENTIFY main branch name (main/master)
    - CHECK for branch protection rules
 
@@ -179,7 +179,7 @@
      * `.github/workflows/deploy.yml`
      * `composer deploy` / `npm run deploy`
      * `deployer.phar`
-   - READ `/project-context/technical-stack.md` for deployment method
+   - READ `/docs/project-context/technical-stack.md` for deployment method
 
 2. **EXECUTE** deployment (unless --dry-run):
    - IF automated deployment configured:
@@ -287,12 +287,12 @@
      * Final test coverage
 
 3. **ENSURE** completed directory exists:
-   - CREATE `/stories/completed/` if missing
+   - CREATE `/docs/stories/completed/` if missing
    - ADD `.gitkeep` if directory created
 
 4. **MOVE** story file:
-   - FROM: `/stories/qa/[story-id].md`
-   - TO: `/stories/completed/[story-id].md`
+   - FROM: `/docs/stories/qa/[story-id].md`
+   - TO: `/docs/stories/completed/[story-id].md`
    - VERIFY move successful
 
 5. **COMMIT** story completion:
@@ -408,7 +408,7 @@
 
      ROLLBACK PLAN:
      Available in story file at:
-     /stories/completed/[story-id].md
+     /docs/stories/completed/[story-id].md
 
      NEXT STEPS:
      1. Monitor application for 24 hours
@@ -462,7 +462,7 @@
      - EXIT with manual resolution guidance
 
 ### OUTPUTS
-- `/stories/completed/[story-id].md` - Completed story with deployment data
+- `/docs/stories/completed/[story-id].md` - Completed story with deployment data
 - Git merge commit on main branch
 - Git release tag (v[version] or [story-id])
 - Updated CHANGELOG.md (if exists)
@@ -471,12 +471,12 @@
 - Clean repository state
 
 ### RULES
-- MUST verify story is in `/stories/qa/` before proceeding
+- MUST verify story is in `/docs/stories/qa/` before proceeding
 - MUST validate all checklists complete (or prompt user)
 - MUST run tests on merged code (unless --skip-tests)
 - MUST create release tag for traceability
 - MUST perform post-deployment validation
-- MUST move story to `/stories/completed/` on success
+- MUST move story to `/docs/stories/completed/` on success
 - MUST cleanup feature branches after successful merge
 - SHOULD generate comprehensive release notes
 - SHOULD update relevant documentation
@@ -494,7 +494,7 @@ INPUT:
 
 PROCESS:
 → Pre-flight checks...
-→ Story: STORY-2025-001 in /stories/qa/
+→ Story: STORY-2025-001 in /docs/stories/qa/
 → Validating checklists... ✅
 → Checking git status... ✅
 → Running tests... ✅ (156 tests passed)
@@ -520,7 +520,7 @@ PROCESS:
 → Metrics: Normal ✅
 
 → Completing story...
-→ Moving to /stories/completed/STORY-2025-001.md
+→ Moving to /docs/stories/completed/STORY-2025-001.md
 → Cleaning up feature branch...
 → Generating release notes...
 
@@ -548,7 +548,7 @@ MONITORING:
 
 ROLLBACK PLAN:
 Available in story file at:
-/stories/completed/STORY-2025-001.md
+/docs/stories/completed/STORY-2025-001.md
 
 NEXT STEPS:
 1. Monitor application for 24 hours
@@ -576,7 +576,7 @@ TECHNICAL CHANGES:
 - Added password hashing with bcrypt
 
 ROLLBACK PLAN:
-See /stories/completed/STORY-2025-001.md
+See /docs/stories/completed/STORY-2025-001.md
 ```
 
 ### Example 2: Deployment with Manual Steps
@@ -691,7 +691,7 @@ SIMULATED ACTIONS:
 ✓ Create release tag v1.4.0
 ✓ Deploy to production
 ✓ Run smoke tests
-✓ Move to /stories/completed/
+✓ Move to /docs/stories/completed/
 ✓ Delete feature branch
 
 ESTIMATED DURATION: ~5 minutes

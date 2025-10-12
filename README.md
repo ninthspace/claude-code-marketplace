@@ -20,7 +20,7 @@ This marketplace contains a plugin that enable complete story-driven development
 
 ## Available Plugins
 
-### Story-Driven Development (v2.0.1)
+### Story-Driven Development (v3.1.0)
 
 **30+ commands for complete agile development workflow**
 
@@ -78,7 +78,7 @@ A comprehensive plugin providing:
 Before creating stories, establish your project foundation:
 
 1. **Initialize Project**: `/sdd:project-init`
-   - Creates directory structure (`/project-context/`, `/stories/`)
+   - Creates directory structure (`/docs/project-context/`, `/docs/stories/`)
    - Sets up context documents (technical stack, coding standards, development process)
    - Customizes templates based on your tech stack
 
@@ -108,7 +108,7 @@ For ongoing projects with multiple development cycles:
 - Managing long-term projects with distinct development cycles
 - Coordinating feature rollout with dependencies
 
-#### Story Development Workflow (8 Steps)
+#### Story Development Workflow (9 Steps)
 
 1. **Create Story**: Define what you're building
 2. **Start Development**: Create branch and setup
@@ -118,12 +118,14 @@ For ongoing projects with multiple development cycles:
 6. **QA**: Automated testing
 7. **Validate**: Final checks before shipping
 8. **Ship**: Deploy to production
+9. **Complete**: Archive story with retrospective and learnings
 
 ### Workflow Automation with /sdd:story-flow
 
-The `/sdd:story-flow` command automates the entire story lifecycle, executing all 8 steps sequentially with a single command. This provides:
+The `/sdd:story-flow` command automates the entire story lifecycle, executing all 9 steps sequentially with a single command. This provides:
 
-- **Time Savings**: Run the complete workflow (new → start → implement → review → qa → validate → save → ship) with one command
+- **Time Savings**: Run the complete workflow (new → start → implement → review → qa → validate → save → ship → complete) with one command
+- **Complete Documentation**: Automatically captures retrospective, lessons learned, and metrics after deployment
 - **Consistency**: Ensures all quality gates are executed in the correct order
 - **Flexibility**: Use `--start-at` and `--stop-at` to run specific portions of the workflow
 - **Control**: Interactive mode (default) pauses between steps; use `--auto` flag for full automation
@@ -163,7 +165,7 @@ The `/sdd:story-flow` command automates the entire story lifecycle, executing al
 
 ## Project Context
 
-The plugin uses a `/project-context/` directory for context-aware behavior. You can create this automatically or manually:
+The plugin uses a `/docs/project-context/` directory for context-aware behavior. You can create this automatically or manually:
 
 **Automatic Setup (Recommended):**
 ```bash

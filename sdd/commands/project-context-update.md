@@ -20,23 +20,23 @@
 
 ### INPUTS
 - document_type: Type of context document to update (optional, prompted if not provided)
-- Current context documents in `/project-context/`
+- Current context documents in `/docs/project-context/`
 - User-specified changes and updates
 - Related documents for consistency validation
 
 ### PROCESS
 
 #### Phase 1: Environment Verification
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **VERIFY** which context documents exist:
-   - `/project-context/technical-stack.md` - Technology choices
-   - `/project-context/coding-standards.md` - Quality rules
-   - `/project-context/development-process.md` - Workflow definitions
-   - `/project-context/project-glossary.md` - Domain vocabulary
-   - `/project-context/project-brief.md` - Project overview
+   - `/docs/project-context/technical-stack.md` - Technology choices
+   - `/docs/project-context/coding-standards.md` - Quality rules
+   - `/docs/project-context/development-process.md` - Workflow definitions
+   - `/docs/project-context/project-glossary.md` - Domain vocabulary
+   - `/docs/project-context/project-brief.md` - Project overview
 
 #### Phase 2: Document Selection
 1. IF document_type provided:
@@ -59,7 +59,7 @@
    - SET target_document based on selection
 
 #### Phase 3: Current State Analysis
-1. **READ** current content from `/project-context/[target_document].md`
+1. **READ** current content from `/docs/project-context/[target_document].md`
 2. **PARSE** existing structure:
    - Identify main sections
    - Extract current technology choices (if technical-stack)
@@ -124,7 +124,7 @@
 
 #### Phase 6: Change Application
 1. **CREATE** backup before modifications:
-   - COPY original file to `/project-context/versions/`
+   - COPY original file to `/docs/project-context/versions/`
    - USE format: `[document]-backup-[timestamp].md`
    - LOG backup location
 
@@ -167,9 +167,9 @@
 
 #### Phase 9: Story Impact Assessment
 1. **IDENTIFY** stories affected by context changes:
-   - SCAN `/stories/development/` for impacted stories
-   - CHECK `/stories/review/` for stories needing review updates
-   - NOTE `/stories/qa/` stories requiring test updates
+   - SCAN `/docs/stories/development/` for impacted stories
+   - CHECK `/docs/stories/review/` for stories needing review updates
+   - NOTE `/docs/stories/qa/` stories requiring test updates
 
 2. **SUGGEST** actions for affected stories:
    - Re-run `/sdd:story-review` for stories with new standards
@@ -183,7 +183,7 @@
    ═══════════════════════════════════
 
    Document: technical-stack.md
-   Backup: /project-context/versions/technical-stack-backup-20251001-104500.md
+   Backup: /docs/project-context/versions/technical-stack-backup-20251001-104500.md
 
    Changes Applied:
    - Added: Playwright for E2E testing
@@ -206,8 +206,8 @@
    - Timeline for completing related updates
 
 ### OUTPUTS
-- Updated `/project-context/[document].md` - Modified context document
-- Backup `/project-context/versions/[document]-backup-[timestamp].md` - Original version
+- Updated `/docs/project-context/[document].md` - Modified context document
+- Backup `/docs/project-context/versions/[document]-backup-[timestamp].md` - Original version
 - Updated related documents (if cascading updates approved)
 - Impact assessment report
 - Recommended actions list
@@ -247,7 +247,7 @@ OUTPUT:
 ═══════════════════════════════════
 
 Document: technical-stack.md
-Backup: /project-context/versions/technical-stack-backup-20251001-104500.md
+Backup: /docs/project-context/versions/technical-stack-backup-20251001-104500.md
 
 Changes Applied:
 - Added: Playwright 1.40 for E2E testing
@@ -288,7 +288,7 @@ OUTPUT:
 ═══════════════════════════════════
 
 Document: technical-stack.md
-Backup: /project-context/versions/technical-stack-backup-20251001-104530.md
+Backup: /docs/project-context/versions/technical-stack-backup-20251001-104530.md
 
 Changes Applied:
 - Removed: Jest (deprecated)
@@ -308,7 +308,7 @@ Recommended Actions:
 1. Update all context documents (run /sdd:project-context-update)
 2. Create STORY-MIGRATION: Jest to Vitest migration guide
 3. Re-run tests for all in-progress stories
-4. Update test templates in /stories/templates/
+4. Update test templates in /docs/stories/templates/
 ```
 
 ### Example 3: Update Coding Standards
@@ -333,7 +333,7 @@ OUTPUT:
 ═══════════════════════════════════
 
 Document: coding-standards.md
-Backup: /project-context/versions/coding-standards-backup-20251001-104600.md
+Backup: /docs/project-context/versions/coding-standards-backup-20251001-104600.md
 
 Changes Applied:
 - Updated: Line length limit 80 → 120 characters
@@ -360,7 +360,7 @@ INPUT:
 OUTPUT:
 ⚠️  PROJECT CONTEXT NOT FOUND
 
-The /project-context/ directory does not exist.
+The /docs/project-context/ directory does not exist.
 
 To set up the story-driven development system, run:
 → /sdd:project-init
@@ -398,7 +398,7 @@ This will create:
 - PROVIDE option to review impact before applying
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/sdd:project-init` with clear instructions
+- **Missing /docs/project-context/**: Suggest `/sdd:project-init` with clear instructions
 - **Document not found**: Offer to create with template or abort
 - **Backup creation fails**: MUST NOT proceed with updates, report error
 - **Permission errors**: Report specific file with access issue

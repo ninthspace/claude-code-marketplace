@@ -9,7 +9,7 @@ Comprehensive 5-minute validation suite for production-ready quality assurance.
 **Category**: Testing & Validation
 **Format**: Imperative (Comprehensive)
 **Execution Time**: 4-6 minutes
-**Prerequisites**: Story in `/stories/development/` or `/stories/review/`
+**Prerequisites**: Story in `/docs/stories/development/` or `/docs/stories/review/`
 **Destructive**: No (read-only analysis)
 
 **Related Commands**:
@@ -18,9 +18,9 @@ Comprehensive 5-minute validation suite for production-ready quality assurance.
 - `/sdd:story-validate` - Final story validation before ship
 
 **Context Requirements**:
-- `/project-context/technical-stack.md` (validation tools)
-- `/project-context/coding-standards.md` (compliance rules)
-- `/project-context/development-process.md` (quality gates)
+- `/docs/project-context/technical-stack.md` (validation tools)
+- `/docs/project-context/coding-standards.md` (compliance rules)
+- `/docs/project-context/development-process.md` (quality gates)
 
 ---
 
@@ -297,7 +297,7 @@ Security Score: A- (92/100)
 **Validate Against Project Standards**:
 ```bash
 # Load coding standards
-source /project-context/coding-standards.md
+source /docs/project-context/coding-standards.md
 
 # Check:
 ✓ TALL stack conventions
@@ -520,7 +520,7 @@ STATUS: ✅ READY FOR PRODUCTION
 🎯 NEXT STEPS:
   1. (Optional) Fix Priority 2 warnings
   2. Run /sdd:story-validate for final sign-off
-  3. Move to /stories/qa/ for final QA
+  3. Move to /docs/stories/qa/ for final QA
   4. Ship to production
 
 VALIDATION CONFIDENCE: HIGH (91%)
@@ -713,13 +713,13 @@ Run full check: /sdd:story-full-check (no --scope)
 
 **Best Practices**:
 1. Run `/sdd:story-quick-check` before this (catch obvious issues fast)
-2. Run before moving story to `/stories/review/`
+2. Run before moving story to `/docs/stories/review/`
 3. Use `--export` for documentation trail
 4. Use `--compare` to track quality improvements
 5. Address P1 (must fix) and P2 (should fix) items before ship
 
 **When to Use**:
-- ✅ Before code review (move to `/stories/review/`)
+- ✅ Before code review (move to `/docs/stories/review/`)
 - ✅ Before final validation (`/sdd:story-validate`)
 - ✅ After major refactoring
 - ✅ Before production deployment

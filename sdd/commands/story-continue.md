@@ -19,18 +19,18 @@
 ## INSTRUCTION: Continue Story Development
 
 ### INPUTS
-- Story files from `/stories/development/`, `/stories/review/`, `/stories/qa/`
+- Story files from `/docs/stories/development/`, `/docs/stories/review/`, `/docs/stories/qa/`
 - Current git branch and status
-- Project context from `/project-context/` (optional for enhanced guidance)
+- Project context from `/docs/project-context/` (optional for enhanced guidance)
 
 ### PROCESS
 
 #### Phase 1: Story Discovery
 1. **SEARCH** for most recently modified story in order:
-   - CHECK `/stories/development/` (highest priority)
-   - CHECK `/stories/review/` (if no development stories)
-   - CHECK `/stories/qa/` (if no review stories)
-   - CHECK `/stories/backlog/` (fallback if nothing active)
+   - CHECK `/docs/stories/development/` (highest priority)
+   - CHECK `/docs/stories/review/` (if no development stories)
+   - CHECK `/docs/stories/qa/` (if no review stories)
+   - CHECK `/docs/stories/backlog/` (fallback if nothing active)
 
 2. **IDENTIFY** most recent story by:
    - SORT by file modification time (most recent first)
@@ -245,7 +245,7 @@ INPUT:
 
 PROCESS:
 → Searching for active stories...
-→ Found: /stories/development/STORY-AUTH-001.md
+→ Found: /docs/stories/development/STORY-AUTH-001.md
 → Modified: 2 hours ago
 → Analyzing story status...
 → Checking git branch...
@@ -307,7 +307,7 @@ INPUT:
 PROCESS:
 → Searching for active stories...
 → No stories in development
-→ Found: /stories/review/STORY-PROFILE-002.md
+→ Found: /docs/stories/review/STORY-PROFILE-002.md
 → Modified: 1 day ago
 → Analyzing story status...
 → Checking git branch...
@@ -367,7 +367,7 @@ INPUT:
 PROCESS:
 → Searching for active stories...
 → No stories in development or review
-→ Found: /stories/qa/STORY-CART-003.md
+→ Found: /docs/stories/qa/STORY-CART-003.md
 → Modified: 3 hours ago
 → Analyzing story status...
 → Checking git branch...
@@ -460,7 +460,7 @@ INPUT:
 
 PROCESS:
 → Searching for active stories...
-→ Found: /stories/development/STORY-API-004.md
+→ Found: /docs/stories/development/STORY-API-004.md
 → Checking git status...
 → Branch has diverged from remote
 

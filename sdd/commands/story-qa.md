@@ -20,22 +20,22 @@
 
 ### INPUTS
 - story_id: Story identifier (auto-detected from branch if not provided)
-- Project context from `/project-context/` directory
-- Story file from `/stories/review/[story-id].md`
+- Project context from `/docs/project-context/` directory
+- Story file from `/docs/stories/review/[story-id].md`
 - Complete test suite (unit, feature, browser)
 - Performance benchmarks (if defined)
 
 ### PROCESS
 
 #### Phase 1: Project Context Loading
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project-specific QA requirements from:
-   - `/project-context/technical-stack.md` - Testing tools and frameworks
-   - `/project-context/coding-standards.md` - QA standards and thresholds
-   - `/project-context/development-process.md` - QA stage requirements
+   - `/docs/project-context/technical-stack.md` - Testing tools and frameworks
+   - `/docs/project-context/coding-standards.md` - QA standards and thresholds
+   - `/docs/project-context/development-process.md` - QA stage requirements
 
 #### Phase 2: Story Identification & Validation
 1. IF story_id NOT provided:
@@ -44,9 +44,9 @@
    - EXAMPLE: Branch `feature/STORY-2025-001-auth` → ID `STORY-2025-001`
 
 2. **VALIDATE** story exists:
-   - CHECK `/stories/review/[story-id].md` exists
+   - CHECK `/docs/stories/review/[story-id].md` exists
    - IF NOT found in review:
-     - CHECK if already in `/stories/qa/`
+     - CHECK if already in `/docs/stories/qa/`
      - INFORM user and ask to proceed with re-QA
    - IF in development:
      - ERROR: "Story must pass review first"
@@ -62,13 +62,13 @@
    - QA checklist requirements
 
 #### Phase 3: Directory Preparation
-1. **ENSURE** `/stories/qa/` directory exists
+1. **ENSURE** `/docs/stories/qa/` directory exists
    - CREATE directory if missing
    - ADD `.gitkeep` file if directory was created
 
 2. **MOVE** story file:
-   - FROM: `/stories/review/[story-id].md`
-   - TO: `/stories/qa/[story-id].md`
+   - FROM: `/docs/stories/review/[story-id].md`
+   - TO: `/docs/stories/qa/[story-id].md`
    - PRESERVE all content and formatting
 
 3. **UPDATE** story metadata:
@@ -427,7 +427,7 @@ Security: No vulnerabilities
    ```
 
 ### OUTPUTS
-- `/stories/qa/[story-id].md` - Updated story file with QA results
+- `/docs/stories/qa/[story-id].md` - Updated story file with QA results
 - Automated QA report (displayed to user)
 - Test artifacts (screenshots, videos, reports)
 - Updated QA Checklist with validation status
@@ -462,7 +462,7 @@ OUTPUT:
   ✓ development-process.md: QA requirements
 
 → Moving story to QA...
-  ✓ Moved STORY-2025-003.md to /stories/qa/
+  ✓ Moved STORY-2025-003.md to /docs/stories/qa/
 
 → Executing test suite...
   [Unit Tests] Running Pest...
@@ -518,7 +518,7 @@ OUTPUT:
   ✓ technical-stack.md loaded
 
 → Moving story to QA...
-  ✓ Moved STORY-2025-004.md to /stories/qa/
+  ✓ Moved STORY-2025-004.md to /docs/stories/qa/
 
 → Executing test suite...
   [Unit Tests] Running Pest...
@@ -586,7 +586,7 @@ OUTPUT:
   ✓ technical-stack.md: Laravel + Pest + k6
 
 → Moving story to QA...
-  ✓ Moved STORY-2025-005.md to /stories/qa/
+  ✓ Moved STORY-2025-005.md to /docs/stories/qa/
 
 → Executing test suite...
   [Unit Tests] ✓ 28/28 passed (85% coverage)
@@ -629,16 +629,16 @@ Performance:
 ## Edge Cases
 
 ### No Project Context
-- DETECT missing `/project-context/` directory
+- DETECT missing `/docs/project-context/` directory
 - SUGGEST running `/sdd:project-init`
 - ERROR: Cannot determine testing tools without context
 - EXIT with guidance
 
 ### Story Not in Review
-- CHECK if story in `/stories/development/`
+- CHECK if story in `/docs/stories/development/`
 - IF found: ERROR "Story must pass review first"
 - SUGGEST: `/sdd:story-review [story-id]` first
-- IF in `/stories/qa/`: ASK if user wants to re-run QA
+- IF in `/docs/stories/qa/`: ASK if user wants to re-run QA
 
 ### No Browser Tests Found
 - DETECT missing browser test files
@@ -672,7 +672,7 @@ Performance:
 - SUGGEST: Investigate timing/race conditions
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/sdd:project-init`, exit gracefully
+- **Missing /docs/project-context/**: Suggest `/sdd:project-init`, exit gracefully
 - **Story not in review**: Provide clear workflow guidance
 - **Test framework errors**: Capture full error, suggest fixes
 - **Browser test timeouts**: Increase timeout, suggest element inspection

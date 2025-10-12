@@ -22,20 +22,20 @@
 INSTRUCTION: Initialize story development environment with context-aware setup
 
 INPUTS:
-- story_id: Story identifier from /stories/development/ or /stories/backlog/
+- story_id: Story identifier from /docs/stories/development/ or /docs/stories/backlog/
 - --boilerplate: Optional flag to generate framework-specific starter files
 
 PROCESS:
 
 Phase 1: Project Context Loading
-1. CHECK if /project-context/ directory exists
+1. CHECK if /docs/project-context/ directory exists
 2. IF missing:
    - SUGGEST running /sdd:project-init first
    - HALT execution
 3. ELSE:
-   - LOAD /project-context/technical-stack.md
-   - LOAD /project-context/coding-standards.md
-   - LOAD /project-context/development-process.md
+   - LOAD /docs/project-context/technical-stack.md
+   - LOAD /docs/project-context/coding-standards.md
+   - LOAD /docs/project-context/development-process.md
 4. PARSE technical stack to identify:
    - ACTUAL frontend framework (React/Vue/Svelte/Laravel Blade/etc.)
    - ACTUAL backend framework and runtime
@@ -45,8 +45,8 @@ Phase 1: Project Context Loading
 
 Phase 2: Story File Discovery
 1. SEARCH for story file in order:
-   - CHECK /stories/development/[story_id].md
-   - IF NOT FOUND: CHECK /stories/backlog/[story_id].md
+   - CHECK /docs/stories/development/[story_id].md
+   - IF NOT FOUND: CHECK /docs/stories/backlog/[story_id].md
    - IF NOT FOUND: OFFER to create with /sdd:story-new
 2. READ story file and extract:
    - Branch name (or generate from story ID)
@@ -196,9 +196,9 @@ INPUT:
 /sdd:story-start STORY-AUTH-001
 
 PROCESS:
-→ Loading project context from /project-context/
+→ Loading project context from /docs/project-context/
 → Technical stack: Laravel + Livewire + Tailwind + Pest
-→ Found story: /stories/backlog/STORY-AUTH-001.md
+→ Found story: /docs/stories/backlog/STORY-AUTH-001.md
 → Creating branch: feature/auth-001-login-form
 → Switched to new branch
 
@@ -235,7 +235,7 @@ INPUT:
 PROCESS:
 → Loading project context
 → Technical stack: React + TypeScript + Vite + Jest
-→ Found story: /stories/development/STORY-PROFILE-002.md
+→ Found story: /docs/stories/development/STORY-PROFILE-002.md
 → Branch already exists: feature/profile-002-settings
 → Switched to existing branch
 → Generating React boilerplate...
@@ -279,8 +279,8 @@ INPUT:
 PROCESS:
 → Loading project context
 → Searching for STORY-UNKNOWN-999
-→ Not found in /stories/development/
-→ Not found in /stories/backlog/
+→ Not found in /docs/stories/development/
+→ Not found in /docs/stories/backlog/
 → Story does not exist
 
 OUTPUT:
@@ -289,8 +289,8 @@ OUTPUT:
 Story ID: STORY-UNKNOWN-999
 
 The story file was not found in:
-- /stories/development/
-- /stories/backlog/
+- /docs/stories/development/
+- /docs/stories/backlog/
 
 Would you like to create this story?
 → Use: /sdd:story-new "Story title and description"
@@ -302,7 +302,7 @@ INPUT:
 /sdd:story-start STORY-API-003
 
 PROCESS:
-→ Checking for /project-context/ directory
+→ Checking for /docs/project-context/ directory
 → Directory not found
 
 OUTPUT:
@@ -311,15 +311,15 @@ OUTPUT:
 
 Cannot start story without project context.
 
-The /project-context/ directory does not exist.
+The /docs/project-context/ directory does not exist.
 This directory defines your technical stack and coding standards.
 
 Please run: /sdd:project-init
 
 This will create:
-- /project-context/technical-stack.md
-- /project-context/coding-standards.md
-- /project-context/development-process.md
+- /docs/project-context/technical-stack.md
+- /docs/project-context/coding-standards.md
+- /docs/project-context/development-process.md
 
 After initialization, run /sdd:story-start again.
 ```
@@ -328,7 +328,7 @@ After initialization, run /sdd:story-start again.
 
 ### Story Already in Development
 ```
-IF story found in /stories/development/:
+IF story found in /docs/stories/development/:
 - SWITCH to story branch
 - SHOW: "Story already in development"
 - DISPLAY: Current progress

@@ -17,7 +17,7 @@ None
 ## Behavior
 
 ### Step 1: Project Brief Verification
-1. CHECK for project brief at `/project-context/project-brief.md`
+1. CHECK for project brief at `/docs/project-context/project-brief.md`
 2. IF no project brief exists:
    - SUGGEST using `/sdd:project-brief` to create one
    - EXIT with guidance message
@@ -29,7 +29,7 @@ None
    - Overall timeline and implementation phases
    - Project goals and success criteria
 
-2. READ story relationships file at `/project-context/story-relationships.md`:
+2. READ story relationships file at `/docs/project-context/story-relationships.md`:
    - Dependency mapping between stories
    - Priority matrix with effort estimates
    - Implementation phase groupings
@@ -39,11 +39,11 @@ None
 SCAN all story directories to collect all project stories:
 
 **Directories**:
-- `/stories/development/` - Active implementation
-- `/stories/review/` - Code review stage
-- `/stories/qa/` - Quality assurance testing
-- `/stories/completed/` - Finished and shipped
-- `/stories/backlog/` - Planned but not started (if exists)
+- `/docs/stories/development/` - Active implementation
+- `/docs/stories/review/` - Code review stage
+- `/docs/stories/qa/` - Quality assurance testing
+- `/docs/stories/completed/` - Finished and shipped
+- `/docs/stories/backlog/` - Planned but not started (if exists)
 
 FOR EACH story file:
 - EXTRACT story ID, title, status

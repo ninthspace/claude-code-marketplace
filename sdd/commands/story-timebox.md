@@ -22,7 +22,7 @@
 ### INPUTS
 - duration: Session length in hours (or use default)
 - mode: Timer mode (standard with checkpoints or pomodoro technique)
-- Current active story from `/stories/development/`
+- Current active story from `/docs/stories/development/`
 - Session goal from user
 
 ### PROCESS
@@ -35,7 +35,7 @@
    - IF no mode: DEFAULT to standard
 
 2. **FIND** active story:
-   - SCAN `/stories/development/` for active story
+   - SCAN `/docs/stories/development/` for active story
    - IF multiple stories: ASK user which story to focus on
    - IF no active story: SUGGEST using `/sdd:story-start [id]` first
 
@@ -485,7 +485,7 @@ Second Half (50-100%): Testing & Wrap-up
 ## Edge Cases
 
 ### No Active Story
-- DETECT no story in `/stories/development/`
+- DETECT no story in `/docs/stories/development/`
 - SUGGEST using `/sdd:story-start [id]` to begin a story
 - OFFER to start session without story tracking
 - EXIT if user declines

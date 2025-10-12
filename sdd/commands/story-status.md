@@ -10,11 +10,11 @@ Shows all stories and their current stages.
 
 ### Discovery
 1. List stories in each stage directory:
-   - `/stories/development/`
-   - `/stories/review/`
-   - `/stories/qa/`
-   - `/stories/completed/`
-   - `/stories/backlog/`
+   - `/docs/stories/development/`
+   - `/docs/stories/review/`
+   - `/docs/stories/qa/`
+   - `/docs/stories/completed/`
+   - `/docs/stories/backlog/`
 
 2. For each story file found:
    - Extract story ID from filename

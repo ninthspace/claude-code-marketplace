@@ -20,13 +20,13 @@
 
 ### INPUTS
 - category: Optional pattern category filter (defaults to all)
-- Completed story files from `/stories/completed/`
+- Completed story files from `/docs/stories/completed/`
 - Optional: Stories from other stages for trend analysis
 
 ### PROCESS
 
 #### Phase 1: Story Data Collection
-1. **SCAN** `/stories/completed/` directory for all `.md` files
+1. **SCAN** `/docs/stories/completed/` directory for all `.md` files
 2. **PARSE** each story file to extract:
    - Implementation approach (from Technical Notes)
    - Technologies used (from Stack)
@@ -477,7 +477,7 @@
 - Optional: Template files in `/templates/` directory
 
 ### RULES
-- MUST analyze only completed stories (read from `/stories/completed/`)
+- MUST analyze only completed stories (read from `/docs/stories/completed/`)
 - MUST identify patterns with 2+ occurrences (single instance not a pattern)
 - MUST calculate accurate frequency and success metrics
 - SHOULD provide specific story IDs as evidence
@@ -607,7 +607,7 @@ Minimum recommended: 10
 Suggestions:
 - Complete more stories to build pattern data
 - Run /sdd:story-metrics to see development progress
-- Check if stories are in /stories/completed/
+- Check if stories are in /docs/stories/completed/
 ```
 
 ## Edge Cases

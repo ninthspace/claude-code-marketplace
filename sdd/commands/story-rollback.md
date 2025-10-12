@@ -21,19 +21,19 @@
 ## INSTRUCTION: Execute Critical Rollback
 
 ### INPUTS
-- story_id: Story identifier (usually in /stories/completed/ or /stories/qa/)
+- story_id: Story identifier (usually in /docs/stories/completed/ or /docs/stories/qa/)
 - Issue severity and scope
 - Rollback plan from story file
-- Project context from /project-context/
+- Project context from /docs/project-context/
 
 ### PROCESS
 
 #### Phase 1: Story Location and Context
 1. **LOCATE** story file:
-   - SEARCH `/stories/completed/[story-id].md` first
-   - IF NOT FOUND: CHECK `/stories/qa/[story-id].md`
-   - IF NOT FOUND: CHECK `/stories/review/[story-id].md`
-   - IF NOT FOUND: CHECK `/stories/development/[story-id].md`
+   - SEARCH `/docs/stories/completed/[story-id].md` first
+   - IF NOT FOUND: CHECK `/docs/stories/qa/[story-id].md`
+   - IF NOT FOUND: CHECK `/docs/stories/review/[story-id].md`
+   - IF NOT FOUND: CHECK `/docs/stories/development/[story-id].md`
    - IF STORY NOT FOUND:
      - EXIT with error message
      - SUGGEST checking story ID
@@ -59,7 +59,7 @@
    ═══════════════════
 
    Story: [STORY-ID] - [Title]
-   Current Location: /stories/[directory]/
+   Current Location: /docs/stories/[directory]/
    Deployed Version: [version]
    Previous Version: [previous-version]
    Deployment Time: [timestamp]
@@ -305,7 +305,7 @@
 1. **DETECT** deployment system:
    - CHECK for deployment scripts
    - IDENTIFY deployment platform
-   - READ `/project-context/technical-stack.md`
+   - READ `/docs/project-context/technical-stack.md`
 
 2. **EXECUTE** deployment rollback:
    - IF automated deployment:
@@ -472,17 +472,17 @@
 
 #### Phase 11: Story Status Update
 1. **DETERMINE** story destination:
-   - IF issue needs code fixes: Move to `/stories/development/`
-   - IF issue needs testing: Move to `/stories/qa/`
-   - IF minor tweaks needed: Keep in `/stories/review/`
-   - IF investigation needed: Move to `/stories/development/`
+   - IF issue needs code fixes: Move to `/docs/stories/development/`
+   - IF issue needs testing: Move to `/docs/stories/qa/`
+   - IF minor tweaks needed: Keep in `/docs/stories/review/`
+   - IF investigation needed: Move to `/docs/stories/development/`
 
 2. **ENSURE** target directory exists:
    - CREATE directory if missing
    - ADD `.gitkeep` if directory created
 
 3. **MOVE** story file:
-   - FROM: Current location (usually `/stories/completed/`)
+   - FROM: Current location (usually `/docs/stories/completed/`)
    - TO: Appropriate stage directory
    - VERIFY move successful
 
@@ -521,7 +521,7 @@
    Story ID: [FIX-STORY-ID]
    Title: Fix [Original Story] - [Issue Description]
    Priority: HIGH
-   Location: /stories/backlog/[fix-story-id].md
+   Location: /docs/stories/backlog/[fix-story-id].md
 
    Linked to:
    - Original: [STORY-ID]
@@ -561,7 +561,7 @@
    • Health: ✅ All systems operational
    • Users: ✅ Full access restored
    • Monitoring: ✅ Normal metrics
-   • Story: Moved to /stories/[directory]/
+   • Story: Moved to /docs/stories/[directory]/
 
    INCIDENT REPORT:
    Created: INC-[YYYY-MM-DD]-[number]
@@ -570,7 +570,7 @@
    FIX STORY:
    Created: [FIX-STORY-ID] (if created)
    Priority: HIGH
-   Location: /stories/backlog/[fix-story-id].md
+   Location: /docs/stories/backlog/[fix-story-id].md
 
    NEXT STEPS:
    1. Continue monitoring for 24 hours
@@ -621,7 +621,7 @@ INPUT:
 
 PROCESS:
 → Locating story STORY-2025-003...
-→ Found in /stories/completed/STORY-2025-003.md
+→ Found in /docs/stories/completed/STORY-2025-003.md
 → Loading rollback plan...
 
 What issue are you experiencing?
@@ -697,7 +697,7 @@ Original Issue: ✅ RESOLVED
 Application Status: ✅ STABLE
 
 → Creating incident report...
-→ Moving story to /stories/development/
+→ Moving story to /docs/stories/development/
 
 ✅ ROLLBACK COMPLETE
 ════════════════════
@@ -719,11 +719,11 @@ CURRENT STATE:
 • Application: ✅ Running v1.2.0
 • Checkout: ✅ Working normally
 • Users: ✅ Can complete purchases
-• Story: Moved to /stories/development/
+• Story: Moved to /docs/stories/development/
 
 INCIDENT REPORT:
 Created: INC-2025-03-16-001
-Location: /stories/development/STORY-2025-003.md
+Location: /docs/stories/development/STORY-2025-003.md
 
 NEXT STEPS:
 1. Monitor payment processing
@@ -740,7 +740,7 @@ INPUT:
 
 PROCESS:
 → Locating story...
-→ Found in /stories/completed/STORY-2025-004.md
+→ Found in /docs/stories/completed/STORY-2025-004.md
 
 What issue are you experiencing?
 > UI rendering broken on mobile devices
@@ -780,10 +780,10 @@ INPUT:
 
 PROCESS:
 → Searching for STORY-2025-999...
-→ Not found in /stories/completed/
-→ Not found in /stories/qa/
-→ Not found in /stories/review/
-→ Not found in /stories/development/
+→ Not found in /docs/stories/completed/
+→ Not found in /docs/stories/qa/
+→ Not found in /docs/stories/review/
+→ Not found in /docs/stories/development/
 
 OUTPUT:
 ❌ STORY NOT FOUND
@@ -792,11 +792,11 @@ OUTPUT:
 Story ID: STORY-2025-999
 
 The story file was not found in any directory:
-- /stories/completed/
-- /stories/qa/
-- /stories/review/
-- /stories/development/
-- /stories/backlog/
+- /docs/stories/completed/
+- /docs/stories/qa/
+- /docs/stories/review/
+- /docs/stories/development/
+- /docs/stories/backlog/
 
 Please verify the story ID and try again.
 

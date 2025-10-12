@@ -5,6 +5,41 @@ All notable changes to the Story-Driven Development plugin will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-10-12
+
+### Added
+
+- **Enhanced `/sdd:story-flow`**: Added `/sdd:story-complete` as final step (Step 9) after shipping
+  - Complete workflow sequence is now: new → start → implement → review → qa → validate → save → ship → **complete**
+  - Story completion automatically populates retrospective, lessons learned, and metrics
+  - Stories are now archived with comprehensive documentation after shipping
+  - Default `--stop-at` parameter changed from "ship" to "complete" for full lifecycle
+  - Interactive mode prompts "Complete story and archive?" after successful deployment
+
+- **Story Index Management**: `/sdd:story-complete` now always creates and maintains `/docs/stories/completed/INDEX.md`
+  - Automatically creates index file if it doesn't exist
+  - Adds story summary with link to archived file
+  - Includes key metrics (duration, test coverage, business impact)
+  - Provides centralized view of all completed stories
+
+### Changed
+
+- `/sdd:story-flow` default behavior now includes story completion and archival
+  - Previous behavior of stopping at "ship" can be restored with `--stop-at=ship`
+  - Updated all examples to reflect 9-step workflow
+  - Total workflow time estimate updated to 13 minutes (was 12 minutes)
+
+## [3.0.0] - 2025-10-12
+
+### Changed
+
+- **BREAKING**: Moved all artifacts out of root into the `./docs/` directory for better organization.
+- You'll need to move any existing files from:
+    - `project-context/`
+    - `releases/`
+    - `stories/`
+into `./docs/` manually after updating.
+
 ## [2.0.1] - 2025-10-11
 
 ### Fixed

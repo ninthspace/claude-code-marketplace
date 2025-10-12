@@ -9,7 +9,7 @@ Execute comprehensive integration and end-to-end tests for story validation.
 **Category**: Testing & Validation
 **Format**: Imperative (Comprehensive)
 **Execution Time**: 3-8 minutes
-**Prerequisites**: Active story in `/stories/development/` or `/stories/review/`
+**Prerequisites**: Active story in `/docs/stories/development/` or `/docs/stories/review/`
 **Destructive**: No (read-only with test execution)
 
 **Related Commands**:
@@ -18,9 +18,9 @@ Execute comprehensive integration and end-to-end tests for story validation.
 - `/sdd:story-validate` - Final story validation (runs after this)
 
 **Context Requirements**:
-- `/project-context/technical-stack.md` (testing tools, frameworks, database)
-- `/project-context/coding-standards.md` (test patterns, coverage requirements)
-- `/project-context/development-process.md` (integration testing criteria)
+- `/docs/project-context/technical-stack.md` (testing tools, frameworks, database)
+- `/docs/project-context/coding-standards.md` (test patterns, coverage requirements)
+- `/docs/project-context/development-process.md` (integration testing criteria)
 
 ---
 
@@ -51,15 +51,15 @@ Execute comprehensive integration and end-to-end tests for story validation.
 **Load Context**:
 ```bash
 # Verify project context exists
-if ! [ -d /project-context/ ]; then
-  echo "⚠️  Missing /project-context/ - run /sdd:project-init first"
+if ! [ -d /docs/project-context/ ]; then
+  echo "⚠️  Missing /docs/project-context/ - run /sdd:project-init first"
   exit 1
 fi
 
 # Load testing requirements
-source /project-context/technical-stack.md      # Testing tools
-source /project-context/coding-standards.md     # Test patterns
-source /project-context/development-process.md  # Integration criteria
+source /docs/project-context/technical-stack.md      # Testing tools
+source /docs/project-context/coding-standards.md     # Test patterns
+source /docs/project-context/development-process.md  # Integration criteria
 ```
 
 **Identify Test Scope**:
@@ -338,10 +338,10 @@ Apply fixes? [y/n]:
 **Update Story Documentation**:
 ```bash
 # Append to story's progress log
-echo "$(date): Integration tests executed" >> /stories/development/STORY-XXX-NNN.md
+echo "$(date): Integration tests executed" >> /docs/stories/development/STORY-XXX-NNN.md
 
 # Add test results section
-cat >> /stories/development/STORY-XXX-NNN.md <<EOF
+cat >> /docs/stories/development/STORY-XXX-NNN.md <<EOF
 
 ## Integration Test Results ($(date +%Y-%m-%d))
 
@@ -370,7 +370,7 @@ EOF
 ```
 📝 STORY UPDATED
 ===============
-Progress log updated: /stories/development/STORY-XXX-NNN.md
+Progress log updated: /docs/stories/development/STORY-XXX-NNN.md
 Test results recorded
 Timestamp: 2025-10-01 14:37:27
 ```
@@ -478,7 +478,7 @@ Would you like me to implement optimizations? [y/n]:
 ## Output Files
 
 **Generated Reports**:
-- Story progress log updated: `/stories/development/STORY-XXX-NNN.md`
+- Story progress log updated: `/docs/stories/development/STORY-XXX-NNN.md`
 - Failure screenshots: `/tmp/test-failure-*.png` (if applicable)
 - Coverage reports: `/tests/coverage/` (if `--coverage` flag)
 

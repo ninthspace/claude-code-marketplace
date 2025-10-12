@@ -21,20 +21,20 @@
 
 ### INPUTS
 - phase_name: New phase identifier (optional, auto-generated if not provided)
-- current_brief: Main project brief at `/project-context/project-brief.md`
+- current_brief: Main project brief at `/docs/project-context/project-brief.md`
 - user_requirements: Interactive input from user about desired features and improvements
-- existing_phases: Previous phase documentation in `/project-context/phases/`
+- existing_phases: Previous phase documentation in `/docs/project-context/phases/`
 - analyze_only: Flag to perform analysis without creating new phase
-- Optional context: Stories in `/stories/completed/`, `/stories/development/`, `/stories/review/`, `/stories/qa/`
+- Optional context: Stories in `/docs/stories/completed/`, `/docs/stories/development/`, `/docs/stories/review/`, `/docs/stories/qa/`
 
 ### PROCESS
 
 #### Phase 1: Environment Setup and Discovery
-1. **VERIFY** main project brief exists at `/project-context/project-brief.md`
-2. **CREATE** `/project-context/phases/` directory if missing
+1. **VERIFY** main project brief exists at `/docs/project-context/project-brief.md`
+2. **CREATE** `/docs/project-context/phases/` directory if missing
 3. **SCAN** existing phase directories to determine version number
 4. **OPTIONAL CONTEXT GATHERING**:
-   - Count stories in each directory (`/stories/development/`, `/stories/review/`, `/stories/qa/`, `/stories/completed/`)
+   - Count stories in each directory (`/docs/stories/development/`, `/docs/stories/review/`, `/docs/stories/qa/`, `/docs/stories/completed/`)
    - Identify recent development patterns for context only
 
 #### Phase 2: User Consultation for New Phase
@@ -134,8 +134,8 @@
 
 #### Phase 6: Phase Documentation Generation (User Approved Only)
 1. **ONLY EXECUTE if user explicitly approved in Phase 5**:
-   - **CREATE** phase directory: `/project-context/phases/[phase_name]/`
-   - **GENERATE** phase brief at `/project-context/phases/[phase_name]/phase-brief.md`:
+   - **CREATE** phase directory: `/docs/project-context/phases/[phase_name]/`
+   - **GENERATE** phase brief at `/docs/project-context/phases/[phase_name]/phase-brief.md`:
      ```markdown
      # Phase Brief: [phase_name]
 
@@ -198,12 +198,12 @@
      [How to measure phase completion and success]
      ```
 
-   - **CREATE** story queue at `/project-context/phases/[phase_name]/story-queue.md`:
+   - **CREATE** story queue at `/docs/project-context/phases/[phase_name]/story-queue.md`:
      ```markdown
      # Story Queue: [phase_name]
 
      ## Ready for Development
-     [Stories ready to move to /stories/development/]
+     [Stories ready to move to /docs/stories/development/]
 
      ## Blocked/Waiting
      [Stories waiting for dependencies or decisions]
@@ -254,9 +254,9 @@
    - Technical setup requirements for user-requested features
 
 ### OUTPUTS
-- `/project-context/phases/[phase_name]/phase-brief.md`: Focused phase documentation
-- `/project-context/phases/[phase_name]/story-queue.md`: Prioritized story backlog
-- Updated `/project-context/project-brief.md`: Phase completion summary
+- `/docs/project-context/phases/[phase_name]/phase-brief.md`: Focused phase documentation
+- `/docs/project-context/phases/[phase_name]/story-queue.md`: Prioritized story backlog
+- Updated `/docs/project-context/project-brief.md`: Phase completion summary
 - Console summary: Completion analysis and phase planning results
 
 ### RULES

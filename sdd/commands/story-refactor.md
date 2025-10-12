@@ -20,21 +20,21 @@
 
 ### INPUTS
 - objective: Optional refactoring focus (e.g., "improve performance", "reduce complexity")
-- Project context from `/project-context/` directory
+- Project context from `/docs/project-context/` directory
 - Current codebase state
-- Active stories from `/stories/development/`
+- Active stories from `/docs/stories/development/`
 
 ### PROCESS
 
 #### Phase 1: Project Context Loading
-1. **CHECK** if `/project-context/` directory exists
+1. **CHECK** if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with initialization guidance
 3. **LOAD** project context from:
-   - `/project-context/coding-standards.md` - Code quality rules and thresholds
-   - `/project-context/technical-stack.md` - Framework patterns and best practices
-   - `/project-context/development-process.md` - Quality requirements
+   - `/docs/project-context/coding-standards.md` - Code quality rules and thresholds
+   - `/docs/project-context/technical-stack.md` - Framework patterns and best practices
+   - `/docs/project-context/development-process.md` - Quality requirements
 
 #### Phase 2: Objective Definition
 1. **PARSE** optional objective parameter
@@ -110,8 +110,8 @@
 3. **ENSURE** uniqueness
 
 #### Phase 5: Story File Creation
-1. **ENSURE** `/stories/backlog/` directory exists
-2. **CREATE** story file at `/stories/backlog/[story-id].md`
+1. **ENSURE** `/docs/stories/backlog/` directory exists
+2. **CREATE** story file at `/docs/stories/backlog/[story-id].md`
 3. **POPULATE** refactoring story template with:
 
    - Story ID and title (auto-generated based on objective)
@@ -141,7 +141,7 @@
 
    Story ID: [STORY-YYYY-NNN]
    Title: [Auto-generated Title]
-   Location: /stories/backlog/[story-id].md
+   Location: /docs/stories/backlog/[story-id].md
    Status: backlog
 
    Analysis Mode: [Comprehensive / Objective-focused: {objective}]
@@ -158,13 +158,13 @@
 2. **SUGGEST** next steps:
    ```
    💡 NEXT STEPS:
-   1. Review story in /stories/backlog/[story-id].md
+   1. Review story in /docs/stories/backlog/[story-id].md
    2. /sdd:story-start [story-id]      # Move to development when ready
    3. /sdd:project-status               # View all stories
    ```
 
 ### OUTPUTS
-- `/stories/backlog/[story-id].md` - New refactoring story with comprehensive analysis
+- `/docs/stories/backlog/[story-id].md` - New refactoring story with comprehensive analysis
 - Analysis summary with prioritized findings
 
 ### RULES
@@ -304,7 +304,7 @@ OUTPUT:
 
 Story ID: STORY-2025-012
 Title: Comprehensive Code Quality Improvements
-Location: /stories/backlog/STORY-2025-012.md
+Location: /docs/stories/backlog/STORY-2025-012.md
 Status: backlog
 
 Analysis Mode: Comprehensive
@@ -318,7 +318,7 @@ Files Affected: 8 files
 Estimated Complexity: High
 
 💡 NEXT STEPS:
-1. Review story in /stories/backlog/STORY-2025-012.md
+1. Review story in /docs/stories/backlog/STORY-2025-012.md
 2. /sdd:story-start STORY-2025-012      # Move to development when ready
 3. /sdd:project-status                   # View all stories
 ```
@@ -340,7 +340,7 @@ OUTPUT:
 
 Story ID: STORY-2025-013
 Title: Performance Optimization Refactoring
-Location: /stories/backlog/STORY-2025-013.md
+Location: /docs/stories/backlog/STORY-2025-013.md
 Status: backlog
 
 Analysis Mode: Objective-focused (improve performance)
@@ -357,7 +357,7 @@ Files Affected: 5 files
 Estimated Complexity: Medium
 
 💡 NEXT STEPS:
-1. Review story in /stories/backlog/STORY-2025-013.md
+1. Review story in /docs/stories/backlog/STORY-2025-013.md
 2. /sdd:story-start STORY-2025-013      # Move to development when ready
 3. /sdd:project-status                   # View all stories
 ```
@@ -377,7 +377,7 @@ OUTPUT:
 
 Story ID: STORY-2025-014
 Title: Accessibility Compliance Refactoring
-Location: /stories/backlog/STORY-2025-014.md
+Location: /docs/stories/backlog/STORY-2025-014.md
 Status: backlog
 
 Analysis Mode: Objective-focused (improve accessibility)
@@ -394,7 +394,7 @@ Files Affected: 6 components
 Estimated Complexity: Medium
 
 💡 NEXT STEPS:
-1. Review story in /stories/backlog/STORY-2025-014.md
+1. Review story in /docs/stories/backlog/STORY-2025-014.md
 2. /sdd:story-start STORY-2025-014      # Move to development when ready
 3. /sdd:project-status                   # View all stories
 ```
@@ -402,7 +402,7 @@ Estimated Complexity: Medium
 ## Edge Cases
 
 ### No Project Context
-- DETECT missing `/project-context/` directory
+- DETECT missing `/docs/project-context/` directory
 - SUGGEST running `/sdd:project-init`
 - CANNOT proceed without coding standards
 - EXIT with clear guidance
@@ -426,7 +426,7 @@ Estimated Complexity: Medium
 - DOCUMENT decision in story
 
 ## Error Handling
-- **Missing /project-context/**: Exit with suggestion to run `/sdd:project-init`
+- **Missing /docs/project-context/**: Exit with suggestion to run `/sdd:project-init`
 - **No coding-standards.md**: Cannot analyze - critical file missing
 - **Analysis errors**: Log specific files causing issues, continue with others
 - **Invalid objective**: Interpret broadly or ask user for clarification

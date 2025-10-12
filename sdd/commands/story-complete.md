@@ -19,17 +19,17 @@
 ## INSTRUCTION: Archive Completed Story
 
 ### INPUTS
-- story_id: Story identifier from /stories/completed/
+- story_id: Story identifier from /docs/stories/completed/
 - Story file with completion data
-- Project context from /project-context/
+- Project context from /docs/project-context/
 
 ### PROCESS
 
 #### Phase 1: Verification
-1. **VERIFY** story is in `/stories/completed/` directory
+1. **VERIFY** story is in `/docs/stories/completed/` directory
 2. IF NOT in completed:
-   - CHECK `/stories/qa/` - suggest running `/sdd:story-ship` first
-   - CHECK `/stories/review/` - suggest completing QA and shipping
+   - CHECK `/docs/stories/qa/` - suggest running `/sdd:story-ship` first
+   - CHECK `/docs/stories/review/` - suggest completing QA and shipping
    - EXIT with appropriate guidance
 3. **READ** story file and extract:
    - Start date and completion date
@@ -158,9 +158,9 @@
    - Deployment procedures
 
 3. **UPDATE** project context if needed:
-   - Add new tools to `/project-context/technical-stack.md`
-   - Document new patterns in `/project-context/coding-standards.md`
-   - Update process learnings in `/project-context/development-process.md`
+   - Add new tools to `/docs/project-context/technical-stack.md`
+   - Document new patterns in `/docs/project-context/coding-standards.md`
+   - Update process learnings in `/docs/project-context/development-process.md`
 
 #### Phase 5: Reusable Component Extraction
 1. **SCAN** implementation for reusable code:
@@ -193,20 +193,189 @@
    ```
 
 #### Phase 6: Story Archival
-1. **UPDATE** story file with completion data:
-   - Add metrics summary to story file
-   - Populate "Lessons Learned" section
-   - Add completion timestamp
-   - Mark as archived
+
+1. **UPDATE** story file with completion data using **EXACT STRUCTURE**:
+
+   **APPEND** the following sections to the story file in this exact order:
+
+   ```markdown
+   ---
+
+   ## 📊 COMPLETION METRICS
+
+   **Archived:** [YYYY-MM-DD HH:MM]
+   **Total Duration:** [X] calendar days ([Y] working days)
+   **Status:** Completed and Archived
+
+   ### Timeline
+   - **Started:** [YYYY-MM-DD]
+   - **Completed:** [YYYY-MM-DD]
+   - **Development:** [X] days
+   - **Review:** [Y] days
+   - **QA:** [Z] days
+
+   ### Effort
+   - **Planning:** [X] hours
+   - **Implementation:** [Y] hours
+   - **Testing:** [Z] hours
+   - **Review/QA:** [W] hours
+   - **Total:** [TOTAL] hours
+
+   ### Quality
+   - **Commits:** [count]
+   - **Files Changed:** [count]
+   - **Tests Added:** [count]
+   - **Test Coverage:** [X%]
+   - **Bugs in Review:** [count]
+   - **Bugs in QA:** [count]
+
+   ### Velocity
+   - **Story Points:** [points] (if applicable)
+   - **Estimated vs Actual:** [comparison]
+
+   ---
+
+   ## 📚 RETROSPECTIVE
+
+   ### What Went Well
+   - [Specific success 1 with details]
+   - [Specific success 2 with details]
+   - [Specific success 3 with details]
+
+   ### What Could Improve
+   - [Specific improvement 1 with action]
+   - [Specific improvement 2 with action]
+   - [Specific improvement 3 with action]
+
+   ### Surprises & Challenges
+   - [Unexpected finding 1]
+   - [Unexpected finding 2]
+
+   ### Technical Insights
+   - [Technical learning 1]
+   - [Technical learning 2]
+   - [Technical learning 3]
+
+   ### Process Improvements
+   - [Process improvement 1]
+   - [Process improvement 2]
+
+   ### Action Items for Next Time
+   - [ ] [Specific action 1]
+   - [ ] [Specific action 2]
+   - [ ] [Specific action 3]
+
+   ---
+
+   ## 🔧 REUSABLE COMPONENTS
+
+   ### Components Created
+   - **[Component Name]**: `[file path]` - [description]
+   - **[Component Name]**: `[file path]` - [description]
+
+   ### Patterns Documented
+   - **[Pattern Name]**: [location] - [use case]
+   - **[Pattern Name]**: [location] - [use case]
+
+   ### Extraction Opportunities
+   - [ ] **[Code to Extract]**: [benefit]
+   - [ ] **[Component to Generalize]**: [benefit]
+
+   ---
+
+   ## 📈 IMPACT ASSESSMENT
+
+   ### User Impact
+   [Description of how this benefits end users]
+
+   ### Business Impact
+   [Description of business value delivered]
+
+   ### Technical Impact
+   [Description of technical improvements or debt addressed]
+
+   ### Performance Metrics (if applicable)
+   - [Metric 1]: [baseline] → [achieved]
+   - [Metric 2]: [baseline] → [achieved]
+
+   ---
+
+   ## 🎯 KEY ACHIEVEMENTS
+
+   - [Major achievement 1 with specific deliverable]
+   - [Major achievement 2 with specific deliverable]
+   - [Major achievement 3 with specific deliverable]
+
+   ---
+
+   ## 🚀 TECHNICAL ADDITIONS
+
+   - [New capability/feature 1]
+   - [New pattern/approach 2]
+   - [Infrastructure/tooling improvement 3]
+
+   ---
+
+   ## 📋 FOLLOW-UP ITEMS
+
+   ### Technical Debt
+   - [Technical debt item 1]
+   - [Technical debt item 2]
+
+   ### Future Enhancements
+   - [Enhancement opportunity 1]
+   - [Enhancement opportunity 2]
+
+   ### Related Stories
+   - [Dependency or follow-up story 1]
+   - [Dependency or follow-up story 2]
+
+   ---
+
+   **Archive Status:** ✅ Complete
+   **Indexed:** Yes - `/docs/stories/completed/INDEX.md`
+   ```
+
+   **NOTES:**
+   - ALL sections are REQUIRED (use "N/A" or "None" if section doesn't apply)
+   - Use consistent formatting with exact heading levels shown
+   - Always include separator lines (`---`) between major sections
+   - Timestamps must use format: YYYY-MM-DD HH:MM
+   - Numbers should include units (days, hours, count, %)
+   - All lists must use consistent bullet format (- or checkbox [ ])
 
 2. **RENAME** story file:
-   - FROM: `/stories/completed/[story-id].md`
-   - TO: `/stories/completed/[ARCHIVED]-[story-id].md`
+   - FROM: `/docs/stories/completed/[story-id].md`
+   - TO: `/docs/stories/completed/[ARCHIVED]-[story-id].md`
 
-3. **CREATE** story index entry (if `/stories/completed/INDEX.md` exists):
-   - Add story summary
-   - Link to archived file
-   - Note key metrics
+3. **CREATE OR UPDATE** `/docs/stories/completed/INDEX.md`:
+
+   **IF FILE DOESN'T EXIST**, create with this header:
+   ```markdown
+   # Completed Stories Index
+
+   A chronological index of all completed and archived stories with key metrics.
+
+   ## Stories
+
+   ```
+
+   **THEN ADD** story entry using this EXACT format:
+   ```markdown
+   ### [STORY-ID] - [Title]
+
+   - **Completed:** [YYYY-MM-DD]
+   - **Duration:** [X] days ([Y] working days)
+   - **Test Coverage:** [Z%]
+   - **Impact:** [one-line business impact summary]
+   - **File:** [`[ARCHIVED]-[STORY-ID].md`](./%5BARCHIVED%5D-[STORY-ID].md)
+
+   ```
+
+   **NOTES:**
+   - Add newest entries at the TOP (reverse chronological order)
+   - Maintain consistent spacing between entries (one blank line)
+   - Use URL-encoded file links for [ARCHIVED] prefix
 
 4. **COMPRESS** large artifacts (optional):
    - Screenshots folder
@@ -220,7 +389,7 @@
    - Update cycle time averages
    - Calculate success rate
 
-2. **CREATE OR UPDATE** `/project-context/sdd:project-metrics.md`:
+2. **CREATE OR UPDATE** `/docs/project-context/project-metrics.md`:
    - Total stories completed
    - Average cycle time
    - Average time per stage
@@ -293,22 +462,29 @@
    ```
 
 ### OUTPUTS
-- `/stories/completed/[ARCHIVED]-[story-id].md` - Archived story with metrics and learnings
-- `/project-context/sdd:project-metrics.md` - Updated project metrics (created or updated)
+- `/docs/stories/completed/[ARCHIVED]-[story-id].md` - Archived story with metrics and learnings
+- `/docs/stories/completed/INDEX.md` - Updated story index (created or updated)
+- `/docs/project-context/sdd:project-metrics.md` - Updated project metrics (created or updated)
 - Updated documentation files (as needed)
 - Completion report (displayed to user)
 
 ### RULES
-- MUST verify story is in `/stories/completed/` before processing
+- MUST verify story is in `/docs/stories/completed/` before processing
 - MUST collect comprehensive metrics from story timeline
 - MUST capture lessons learned (prompt user if not documented)
+- MUST use EXACT document structure defined in Phase 6 Step 1 (no variation allowed)
+- MUST include ALL required sections (use "N/A" or "None" if not applicable)
+- MUST maintain consistent formatting: heading levels, bullet styles, separators
+- MUST use standard timestamp format: YYYY-MM-DD HH:MM
 - SHOULD identify reusable components and patterns
 - SHOULD update project-level metrics
 - MUST rename file with [ARCHIVED] prefix
+- MUST create or update `/docs/stories/completed/INDEX.md` with exact format specified
+- MUST add newest INDEX entries at TOP in reverse chronological order
 - ALWAYS generate detailed completion report
 - SHOULD update project context if new tools/patterns introduced
 - NEVER delete story files (archive only)
-- MUST add completion timestamp to story file
+- NEVER omit required sections from document structure
 
 ## Examples
 
@@ -319,7 +495,7 @@ INPUT:
 
 PROCESS:
 → Verifying story location...
-→ Found in /stories/completed/STORY-2025-001.md
+→ Found in /docs/stories/completed/STORY-2025-001.md
 → Analyzing story timeline and progress log...
 → Calculating metrics...
 → Extracting lessons learned...
@@ -450,8 +626,9 @@ For Next Time:
 4. /sdd:project-status to view remaining stories
 5. /sdd:story-new to begin next story
 
-→ Story archived: /stories/completed/[ARCHIVED]-STORY-2025-001.md
-→ Project metrics updated: /project-context/sdd:project-metrics.md
+→ Story archived: /docs/stories/completed/[ARCHIVED]-STORY-2025-001.md
+→ Story index updated: /docs/stories/completed/INDEX.md
+→ Project metrics updated: /docs/project-context/sdd:project-metrics.md
 ```
 
 ### Example 2: Story Not Ready for Archival
@@ -461,19 +638,19 @@ INPUT:
 
 PROCESS:
 → Searching for STORY-2025-002...
-→ Found in /stories/qa/
+→ Found in /docs/stories/qa/
 
 OUTPUT:
 ❌ Story Not Ready for Completion
 ═══════════════════════════════
 
 Story: STORY-2025-002 - User Profile Management
-Location: /stories/qa/
+Location: /docs/stories/qa/
 
 The story has not been shipped to production yet.
 
 Current Status: qa
-Required Status: complete (in /stories/completed/)
+Required Status: complete (in /docs/stories/completed/)
 
 NEXT STEPS:
 1. /sdd:story-ship STORY-2025-002    # Ship to production
@@ -490,7 +667,7 @@ INPUT:
 
 PROCESS:
 → Verifying story location...
-→ Found in /stories/completed/STORY-2025-003.md
+→ Found in /docs/stories/completed/STORY-2025-003.md
 → Analyzing story data...
 → Lessons learned section is empty
 
@@ -520,7 +697,7 @@ OUTPUT:
 ## Edge Cases
 
 ### Story in Wrong Directory
-- DETECT story not in `/stories/completed/`
+- DETECT story not in `/docs/stories/completed/`
 - IDENTIFY current location (qa, review, development, backlog)
 - SUGGEST appropriate next command to progress story
 - OFFER to force complete if user confirms (with warning)
@@ -540,7 +717,7 @@ OUTPUT:
 - ENCOURAGE documenting lessons during development
 
 ### Project Metrics File Doesn't Exist
-- CREATE `/project-context/sdd:project-metrics.md` with initial structure
+- CREATE `/docs/project-context/sdd:project-metrics.md` with initial structure
 - INITIALIZE with current story as first entry
 - SET baseline metrics
 - CONTINUE with normal completion
@@ -569,9 +746,15 @@ OUTPUT:
 - ✅ MUST verify story is shipped before archival
 - ✅ MUST collect comprehensive metrics
 - ✅ MUST capture lessons learned (prompt if missing)
+- 📋 MUST use exact document structure from Phase 6 Step 1 - NO VARIATION
+- 📋 MUST include ALL sections even if content is "N/A" or "None"
+- 📋 MUST maintain consistent heading levels, bullet styles, and separators
+- 📊 MUST create or update `/docs/stories/completed/INDEX.md` with exact format
+- 📊 MUST add newest INDEX entries at TOP (reverse chronological)
 - 📊 SHOULD update project-level metrics
 - 🔧 SHOULD identify reusable components
 - 📝 MUST generate detailed completion report
 - 💾 MUST rename file with [ARCHIVED] prefix
 - 🚫 NEVER delete story files
-- ⏱️ MUST add completion timestamp
+- 🚫 NEVER omit required sections
+- ⏱️ MUST use standard timestamp format: YYYY-MM-DD HH:MM

@@ -17,17 +17,17 @@ None
 ## Behavior
 
 ### Step 1: Project Context Loading
-1. CHECK if `/project-context/` directory exists
+1. CHECK if `/docs/project-context/` directory exists
 2. IF missing:
    - SUGGEST running `/sdd:project-init` first
    - EXIT with guidance message
 3. LOAD project-specific requirements from:
-   - `/project-context/project-brief.md` (project title, timeline, objectives)
-   - `/project-context/technical-stack.md` (technology information)
-   - `/project-context/development-process.md` (stage definitions, workflows)
+   - `/docs/project-context/project-brief.md` (project title, timeline, objectives)
+   - `/docs/project-context/technical-stack.md` (technology information)
+   - `/docs/project-context/development-process.md` (stage definitions, workflows)
 
 ### Step 2: Project Brief Analysis
-1. READ `/project-context/project-brief.md`
+1. READ `/docs/project-context/project-brief.md`
 2. EXTRACT:
    - Project title and current status
    - Project objectives and goals
@@ -39,11 +39,11 @@ None
 
 ### Step 3: Story Collection and Analysis
 1. SCAN all story directories for project stories:
-   - `/stories/development/` - Active implementation
-   - `/stories/review/` - Code review stage
-   - `/stories/qa/` - Quality assurance stage
-   - `/stories/completed/` - Finished stories
-   - `/stories/backlog/` - Planned stories (if exists)
+   - `/docs/stories/development/` - Active implementation
+   - `/docs/stories/review/` - Code review stage
+   - `/docs/stories/qa/` - Quality assurance stage
+   - `/docs/stories/completed/` - Finished stories
+   - `/docs/stories/backlog/` - Planned stories (if exists)
 
 2. FOR EACH story:
    - COUNT stories by status category
@@ -262,7 +262,7 @@ INPUT:
 OUTPUT:
 ⚠️  PROJECT CONTEXT NOT FOUND
 
-The /project-context/ directory does not exist.
+The /docs/project-context/ directory does not exist.
 
 To set up the story-driven development system, run:
 → /sdd:project-init
@@ -294,7 +294,7 @@ IF all stories are completed:
 - PROVIDE option to archive or start new phase
 
 ## Error Handling
-- **Missing /project-context/**: Suggest `/sdd:project-init` with clear instructions
+- **Missing /docs/project-context/**: Suggest `/sdd:project-init` with clear instructions
 - **Unreadable project brief**: Continue with simplified view, warn user
 - **Corrupted story files**: Skip corrupted files, log warning, continue
 - **Permission errors**: Report specific file/directory with permission issue

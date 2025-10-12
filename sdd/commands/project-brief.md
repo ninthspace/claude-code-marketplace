@@ -21,28 +21,28 @@
 ### INPUTS
 - project_title: Project or feature name (prompted if not provided)
 - Existing project context files (if present):
-  - `/project-context/project-brief.md` (current brief)
-  - `/project-context/story-relationships.md` (story dependencies)
-  - `/project-context/versions/` (historical versions)
+  - `/docs/project-context/project-brief.md` (current brief)
+  - `/docs/project-context/story-relationships.md` (story dependencies)
+  - `/docs/project-context/versions/` (historical versions)
 
 ### PROCESS
 
 #### Phase 1: Version Management & Context Loading
-1. CHECK for existing project brief at `/project-context/project-brief.md`
+1. CHECK for existing project brief at `/docs/project-context/project-brief.md`
 2. IF exists:
-   - CREATE `/project-context/versions/` directory if not present
+   - CREATE `/docs/project-context/versions/` directory if not present
    - ADD `.gitkeep` file to versions directory
    - GENERATE timestamp in format YYYYMMDD-HHMMSS
-   - MOVE existing brief to `/project-context/versions/project-brief-v[N]-[timestamp].md`
+   - MOVE existing brief to `/docs/project-context/versions/project-brief-v[N]-[timestamp].md`
    - PARSE existing brief to extract:
      * Current stories and their status
      * Timeline and milestones
      * Project objectives
      * Stakeholder information
    - LOG version backup location
-3. CHECK for existing `/project-context/story-relationships.md`
+3. CHECK for existing `/docs/project-context/story-relationships.md`
 4. IF exists:
-   - MOVE to `/project-context/versions/story-relationships-v[N]-[timestamp].md`
+   - MOVE to `/docs/project-context/versions/story-relationships-v[N]-[timestamp].md`
 5. LOAD existing context to build upon (don't start from scratch)
 
 #### Phase 2: Requirements Gathering
@@ -98,13 +98,13 @@
    - Timeline (if applicable)
    - Success Criteria
 
-3. WRITE to `/project-context/project-brief.md`
-   - ⚠️ MANDATORY: File MUST be at `/project-context/project-brief.md`
-   - ⚠️ MANDATORY: Do NOT create individual story files in `/stories/development/`
+3. WRITE to `/docs/project-context/project-brief.md`
+   - ⚠️ MANDATORY: File MUST be at `/docs/project-context/project-brief.md`
+   - ⚠️ MANDATORY: Do NOT create individual story files in `/docs/stories/development/`
 
 #### Phase 5: Story Relationships File (OPTIONAL)
 1. IF stories have dependencies:
-   - CREATE `/project-context/story-relationships.md`
+   - CREATE `/docs/project-context/story-relationships.md`
    - INCLUDE sections:
      * Dependency Graph (ASCII diagram)
      * Story Priority Matrix (table format)
@@ -129,8 +129,8 @@
    ✅ Project Brief Created
    ═══════════════════════════════════
    Project: [project_title]
-   Brief Location: /project-context/project-brief.md
-   Relationships: /project-context/story-relationships.md
+   Brief Location: /docs/project-context/project-brief.md
+   Relationships: /docs/project-context/story-relationships.md
 
    Stories Identified: [count]
    - Core Stories: [count]
@@ -147,15 +147,15 @@
    - Follow suggested implementation order from story-relationships.md
 
 ### OUTPUTS
-- `/project-context/project-brief.md` - Comprehensive project brief
-- `/project-context/story-relationships.md` - Story dependencies and implementation order (if applicable)
-- `/project-context/versions/project-brief-v[N]-[timestamp].md` - Versioned backup (if updating existing)
-- `/project-context/versions/story-relationships-v[N]-[timestamp].md` - Versioned relationships backup (if exists)
+- `/docs/project-context/project-brief.md` - Comprehensive project brief
+- `/docs/project-context/story-relationships.md` - Story dependencies and implementation order (if applicable)
+- `/docs/project-context/versions/project-brief-v[N]-[timestamp].md` - Versioned backup (if updating existing)
+- `/docs/project-context/versions/story-relationships-v[N]-[timestamp].md` - Versioned relationships backup (if exists)
 
 ### RULES
 - MUST complete version backup before modifying existing files
 - MUST preserve all existing project context when building upon it
-- NEVER create individual story files in `/stories/development/` directory
+- NEVER create individual story files in `/docs/stories/development/` directory
 - ALWAYS create comprehensive story definitions with all required elements
 - SHOULD use existing project context as foundation, not start from scratch
 - MUST include acceptance criteria for every story
@@ -208,14 +208,14 @@ Each story MUST include:
 
 ### Required Files
 ```
-/project-context/
+/docs/project-context/
 ├── project-brief.md              # Main project brief (REQUIRED)
 └── story-relationships.md        # Story dependencies (OPTIONAL)
 ```
 
 ### Version Management
 ```
-/project-context/versions/
+/docs/project-context/versions/
 ├── .gitkeep                      # Ensures directory is tracked
 ├── project-brief-v1-20250101-143000.md
 ├── project-brief-v2-20250115-091500.md
@@ -327,7 +327,7 @@ STORY-XXX-005 (Core, independent)
 
 ## Constraints
 - ⚠️ NEVER skip version management if existing files are present
-- ⚠️ NEVER create individual story files in `/stories/development/`
+- ⚠️ NEVER create individual story files in `/docs/stories/development/`
 - ✅ ALWAYS create comprehensive story definitions with all required elements
 - ✅ ALWAYS preserve existing project context when building upon it
 - ✅ MUST include dependency analysis if multiple stories exist
@@ -342,8 +342,8 @@ STORY-XXX-005 (Core, independent)
 
 → Prompts for project title
 → Gathers requirements interactively
-→ Creates /project-context/project-brief.md
-→ Creates /project-context/story-relationships.md
+→ Creates /docs/project-context/project-brief.md
+→ Creates /docs/project-context/story-relationships.md
 
 Output:
 ✅ Project Brief Created
@@ -357,15 +357,15 @@ Stories Identified: 5
 ```bash
 /sdd:project-brief "Enhanced Checkout"
 
-→ Finds existing /project-context/project-brief.md
-→ Creates backup: /project-context/versions/project-brief-v1-20250101-143000.md
+→ Finds existing /docs/project-context/project-brief.md
+→ Creates backup: /docs/project-context/versions/project-brief-v1-20250101-143000.md
 → Loads existing objectives and stories
 → Builds upon existing content
 → Creates enhanced version
 
 Output:
 ✅ Project Brief Updated
-Previous version backed up to: /project-context/versions/project-brief-v1-20250101-143000.md
+Previous version backed up to: /docs/project-context/versions/project-brief-v1-20250101-143000.md
 New stories added: 3
 Updated stories: 2
 ```

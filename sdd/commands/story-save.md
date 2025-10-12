@@ -21,9 +21,9 @@
 ### INPUTS
 - Current git working directory changes
 - Story ID from branch name or active story
-- Story file from `/stories/development/`, `/stories/review/`, or `/stories/qa/`
+- Story file from `/docs/stories/development/`, `/docs/stories/review/`, or `/docs/stories/qa/`
 - Optional: User-provided commit message
-- Project context from `/project-context/` (optional for enhanced commit messages)
+- Project context from `/docs/project-context/` (optional for enhanced commit messages)
 
 ### PROCESS
 
@@ -69,8 +69,8 @@
    - ATTEMPT 1: Extract from current git branch name
      * PATTERN: feature/[story-id]-[description]
      * EXAMPLE: feature/STORY-AUTH-001-login-form → STORY-AUTH-001
-   - ATTEMPT 2: Find most recently modified story in /stories/development/
-   - ATTEMPT 3: Check /stories/review/ and /stories/qa/
+   - ATTEMPT 2: Find most recently modified story in /docs/stories/development/
+   - ATTEMPT 3: Check /docs/stories/review/ and /docs/stories/qa/
    - IF no story found: PROCEED without story context
 
 2. **READ** story file (if found):

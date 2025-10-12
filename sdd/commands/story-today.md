@@ -15,9 +15,9 @@ Shows current story, stage, and next actions for today's work.
    - Last commit timestamp
 
 2. Find active stories:
-   - List files in `/stories/development/`
-   - List files in `/stories/review/`
-   - List files in `/stories/qa/`
+   - List files in `/docs/stories/development/`
+   - List files in `/docs/stories/review/`
+   - List files in `/docs/stories/qa/`
    - Match branch name to story files
 
 3. Parse active story:

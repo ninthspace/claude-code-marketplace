@@ -11,16 +11,16 @@ Suggests what to work on next based on priorities and status.
 ### Analysis Steps
 
 #### 1. Assess Current State
-- List all stories in `/stories/development/`
-- List all stories in `/stories/review/`
-- List all stories in `/stories/qa/`
-- List all completed stories in `/stories/completed/`
-- Read backlog priorities from `/stories/backlog/`
-- Read dependency graph from `/project-context/story-relationships.md`
+- List all stories in `/docs/stories/development/`
+- List all stories in `/docs/stories/review/`
+- List all stories in `/docs/stories/qa/`
+- List all completed stories in `/docs/stories/completed/`
+- Read backlog priorities from `/docs/stories/backlog/`
+- Read dependency graph from `/docs/project-context/story-relationships.md`
 
 #### 2. Validate Dependencies
 - Cross-reference dependencies against completed stories
-- Verify no recommended stories exist in `/stories/completed/`
+- Verify no recommended stories exist in `/docs/stories/completed/`
 - Flag mismatches between planned vs actual completion status
 - Identify stories with all dependencies satisfied
 
@@ -98,7 +98,7 @@ Dependencies:
 📚 BACKLOG OVERVIEW
 
 ✅ COMPLETED STORIES:
-[List from /stories/completed/ with dates]
+[List from /docs/stories/completed/ with dates]
 
 📋 REMAINING BACKLOG:
 
