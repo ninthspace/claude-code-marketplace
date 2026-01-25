@@ -1,0 +1,19 @@
+{
+  "name": "noteplan",
+  "description": "Search and query NotePlan content across markdown files and Spaces (team/shared) SQLite database",
+  "version": "1.0.0",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "noteplan",
+    "notes",
+    "search",
+    "productivity",
+    "macos",
+    "markdown",
+    "sqlite",
+    "spaces"
+  ]
+}

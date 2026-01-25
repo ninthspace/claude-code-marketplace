@@ -1,10 +1,10 @@
-# Story-Driven Development Marketplace
+# Claude Code Marketplace
 
-A Claude Code plugin marketplace providing comprehensive tools for story-driven agile development workflows.
+A Claude Code plugin marketplace providing development tools and productivity utilities.
 
 ## Overview
 
-This marketplace contains a plugin that enable complete story-driven development workflows, from ideation through production deployment. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins that enable complete story-driven development workflows, note searching, and more. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -14,8 +14,9 @@ This marketplace contains a plugin that enable complete story-driven development
 # Install the marketplace
 /plugin marketplace add ninthspace/claude-code-marketplace
 
-# Then install this plugin
+# Install individual plugins
 /plugin install sdd@claude-code-marketplace
+/plugin install noteplan@claude-code-marketplace
 ```
 
 ## Available Plugins
@@ -70,7 +71,54 @@ A comprehensive plugin providing:
 
 [View full documentation](./sdd/README.md)
 
-## Using the Plugin
+---
+
+### NotePlan Search (v1.0.0)
+
+**Search and query NotePlan notes from Claude Code**
+
+A skill for searching NotePlan content across:
+- **Notes folder** - Standalone notes
+- **Calendar folder** - Daily/weekly/monthly notes
+- **Spaces** - Team/shared notes (SQLite database)
+- **iCloud** - If syncing via iCloud Drive
+
+Results are sorted by most recently modified first.
+
+**Quick Start:**
+```bash
+# Search for a term
+/noteplan coffee
+
+# List all Spaces notes
+/noteplan --list --spaces
+
+# Fetch full note by ID
+/noteplan --get UUID
+
+# Search with date filters
+/noteplan meeting --after 2025-01-01
+
+# Natural language queries
+/noteplan find me everything about project planning
+```
+
+**Key Features:**
+- Full-text search across all NotePlan sources
+- Date filtering (--after, --before)
+- JSON output for AI tools
+- Direct noteplan:// URLs to open notes in the app
+- Excludes @Templates, @Trash, @Archive by default (use --all to include)
+
+**Requirements:**
+- macOS with NotePlan 3 installed
+- Python 3
+
+[View full documentation](./noteplan/SKILL.md)
+
+---
+
+## Using the SDD Plugin
 
 ### Complete Workflow
 
@@ -198,11 +246,12 @@ The plugin automatically reads these files and adapts its behavior to match your
 - **Independent**: Each command works standalone
 - **Full Lifecycle**: From idea to production deployment
 
-## Removing the Plugin (when in Claude Code)
+## Removing Plugins (when in Claude Code)
 
 ```bash
-# Uninstall this plugin
+# Uninstall individual plugins
 /plugin uninstall sdd@claude-code-marketplace
+/plugin uninstall noteplan@claude-code-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace

@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -24,6 +24,22 @@
         "deployment",
         "laravel",
         "tall-stack"
+      ]
+    },
+    {
+      "name": "noteplan",
+      "source": "./noteplan",
+      "description": "Search and query NotePlan content across markdown files and Spaces (team/shared) SQLite database",
+      "version": "1.0.0",
+      "keywords": [
+        "noteplan",
+        "notes",
+        "search",
+        "productivity",
+        "macos",
+        "markdown",
+        "sqlite",
+        "spaces"
       ]
     }
   ]
