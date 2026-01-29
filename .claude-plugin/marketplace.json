@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -40,6 +40,22 @@
         "markdown",
         "sqlite",
         "spaces"
+      ]
+    },
+    {
+      "name": "php-lsp",
+      "source": "./php-lsp",
+      "description": "PHP Language Server (intelephense) integration for Claude Code via lsp-mcp-server. Semantic code intelligence: go-to-definition, find references, hover, diagnostics, rename, and more.",
+      "version": "1.0.0",
+      "keywords": [
+        "php",
+        "lsp",
+        "intelephense",
+        "language-server",
+        "code-intelligence",
+        "laravel",
+        "mcp",
+        "refactoring"
       ]
     }
   ]

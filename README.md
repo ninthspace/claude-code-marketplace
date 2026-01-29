@@ -17,6 +17,7 @@ This marketplace contains plugins that enable complete story-driven development 
 # Install individual plugins
 /plugin install sdd@claude-code-marketplace
 /plugin install noteplan@claude-code-marketplace
+/plugin install php-lsp@claude-code-marketplace
 ```
 
 ## Available Plugins
@@ -115,6 +116,42 @@ Results are sorted by most recently modified first.
 - Python 3
 
 [View full documentation](./noteplan/SKILL.md)
+
+---
+
+### PHP LSP (v1.0.0)
+
+**PHP semantic code intelligence for Claude Code**
+
+Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intelephense.com/) and the [lsp-mcp-server](https://github.com/ProfessioneIT/lsp-mcp-server) bridge.
+
+**Capabilities:**
+- Go-to-definition, find references, find implementations
+- Hover info (type signatures, documentation)
+- Code completion and signature help
+- Diagnostics (errors, warnings) per file and project-wide
+- Safe rename across entire codebase
+- Code actions (quick fixes, refactoring)
+- Call hierarchy and type hierarchy
+- File analysis (imports, exports, related files)
+- Document formatting
+
+**Quick Start:**
+```bash
+# One-time setup (installs intelephense + lsp-mcp-server, configures project)
+/php-lsp:setup
+
+# Restart Claude Code — LSP auto-starts on first use
+
+# Check everything is working
+/php-lsp:status
+```
+
+**Requirements:**
+- Node.js >= 18
+- Git
+
+[View full documentation](./php-lsp/README.md)
 
 ---
 
@@ -252,6 +289,7 @@ The plugin automatically reads these files and adapts its behavior to match your
 # Uninstall individual plugins
 /plugin uninstall sdd@claude-code-marketplace
 /plugin uninstall noteplan@claude-code-marketplace
+/plugin uninstall php-lsp@claude-code-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace
