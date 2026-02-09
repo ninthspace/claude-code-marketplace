@@ -166,20 +166,20 @@ Structured discovery, specification, and work breakdown through guided conversat
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
-| `/discover` | Facilitated problem discovery | `docs/planning/brief-{slug}.md` |
-| `/spec` | Requirements & architecture specification | `docs/planning/spec-{slug}.md` |
+| `/discover` | Facilitated problem discovery | `docs/plans/{slug}.md` |
+| `/spec` | Requirements & architecture specification | `docs/specifications/{slug}.md` |
 | `/stories` | Work breakdown into tracked tasks | Claude Code tasks with dependencies |
 
 **Quick Start:**
 ```bash
 # Full pipeline: discover → spec → stories
 /discover build a customer portal for our booking system
-/spec docs/planning/brief-customer-portal.md
-/stories docs/planning/spec-customer-portal.md
+/spec docs/plans/customer-portal.md
+/stories docs/specifications/customer-portal.md
 
 # Or jump to any step independently
 /spec I need a REST API for inventory management
-/stories docs/planning/spec-inventory-api.md
+/stories docs/specifications/inventory-api.md
 ```
 
 **Key Features:**

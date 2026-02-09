@@ -13,7 +13,7 @@ Check for input in this order:
 
 1. If `$ARGUMENTS` references a file path, read that file as the source.
 2. If `$ARGUMENTS` contains a description, use that as the source.
-3. Look for planning docs in `docs/planning/` — prioritise `spec-*.md`, then `brief-*.md`.
+3. Look for planning docs — check `docs/specifications/` first, then `docs/plans/`.
 4. If nothing found, ask the user what work they want to break down.
 
 ## Process
@@ -75,7 +75,7 @@ Use AskUserQuestion for final confirmation.
 
 ## Optional Output
 
-If the user wants a document in addition to tasks, save to `docs/planning/stories-{slug}.md`:
+If the user wants a document in addition to tasks, save to `docs/stories/{slug}.md`:
 
 ```markdown
 # Stories: {Title}

@@ -64,9 +64,9 @@ Produce a problem brief document. Present it to the user for confirmation using 
 
 ## Output
 
-Save the brief to `docs/planning/brief-{slug}.md` in the current project, where `{slug}` is a short kebab-case name derived from the problem (e.g., `brief-user-onboarding.md`).
+Save the brief to `docs/plans/{slug}.md` in the current project, where `{slug}` is a short kebab-case name derived from the problem (e.g., `user-onboarding.md`).
 
-Create the `docs/planning/` directory if it doesn't exist.
+Create the `docs/plans/` directory if it doesn't exist.
 
 Use this format:
 

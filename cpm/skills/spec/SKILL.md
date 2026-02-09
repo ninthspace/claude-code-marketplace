@@ -13,7 +13,7 @@ Check for input in this order:
 
 1. If `$ARGUMENTS` references a file path, read that file as the starting context.
 2. If `$ARGUMENTS` contains a description, use that as the starting context.
-3. If neither, look for the most recent `docs/planning/brief-*.md` file in the current project and ask the user if they want to use it.
+3. If neither, look for the most recent `docs/plans/*.md` file in the current project and ask the user if they want to use it.
 4. If no brief exists, ask the user to describe what they want to build.
 
 ## Process
@@ -75,9 +75,9 @@ Present the complete spec to the user for review. Use AskUserQuestion to confirm
 
 ## Output
 
-Save the spec to `docs/planning/spec-{slug}.md` in the current project, where `{slug}` matches the brief slug if one was used as input, or is derived from the project name.
+Save the spec to `docs/specifications/{slug}.md` in the current project, where `{slug}` matches the brief slug if one was used as input, or is derived from the project name.
 
-Create the `docs/planning/` directory if it doesn't exist.
+Create the `docs/specifications/` directory if it doesn't exist.
 
 Use this format:
 

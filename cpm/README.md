@@ -32,7 +32,7 @@ Guided conversation to understand the problem before proposing solutions. Works 
 5. **Constraints** — Technical, business, timeline limits
 6. **Summary** — Problem brief for confirmation
 
-**Output**: `docs/planning/brief-{slug}.md`
+**Output**: `docs/plans/{slug}.md`
 
 ```
 /discover build a customer portal for our booking system
@@ -43,10 +43,10 @@ Guided conversation to understand the problem before proposing solutions. Works 
 Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, and scope boundaries.
 
 **Input**: A problem brief from `/discover`, a file path, or a description.
-**Output**: `docs/planning/spec-{slug}.md`
+**Output**: `docs/specifications/{slug}.md`
 
 ```
-/spec docs/planning/brief-customer-portal.md
+/spec docs/plans/customer-portal.md
 ```
 
 ### `/stories` — Work Breakdown
@@ -54,10 +54,10 @@ Builds a structured specification through facilitated conversation. Covers funct
 Converts plans into tracked work items using Claude Code's native task system (TaskCreate/TaskUpdate). Groups work into epics, breaks into right-sized stories with acceptance criteria, and sets up task dependencies.
 
 **Input**: A spec from `/spec`, a brief, or a description.
-**Output**: Claude Code tasks with dependencies (optionally `docs/planning/stories-{slug}.md`)
+**Output**: Claude Code tasks with dependencies (optionally `docs/stories/{slug}.md`)
 
 ```
-/stories docs/planning/spec-customer-portal.md
+/stories docs/specifications/customer-portal.md
 ```
 
 ## How It Works
@@ -75,11 +75,11 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 1. `/discover` — "I want to add multi-tenancy to our app"
    - Claude facilitates conversation about why, who, constraints
-   - Produces `docs/planning/brief-multi-tenancy.md`
+   - Produces `docs/plans/multi-tenancy.md`
 
 2. `/spec` — Reads the brief, builds requirements
    - Facilitates MoSCoW prioritisation, architecture decisions
-   - Produces `docs/planning/spec-multi-tenancy.md`
+   - Produces `docs/specifications/multi-tenancy.md`
 
 3. `/stories` — Reads the spec, creates tasks
    - Groups into epics, sets dependencies
