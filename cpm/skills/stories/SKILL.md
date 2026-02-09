@@ -48,9 +48,11 @@ For each story:
 ```
 TaskCreate:
   subject: "{Story title}"
-  description: "{Description with acceptance criteria}"
+  description: "{Description with acceptance criteria}\n\nStories doc: docs/stories/{slug}.md"
   activeForm: "{Present continuous form}"
 ```
+
+Include the path to the stories document in each task description so it can be found during implementation.
 
 ### Step 5: Set Dependencies
 
@@ -73,9 +75,9 @@ Present the full task tree to the user showing:
 
 Use AskUserQuestion for final confirmation.
 
-## Optional Output
+## Output
 
-If the user wants a document in addition to tasks, save to `docs/stories/{slug}.md`:
+Save the stories document to `docs/stories/{slug}.md`. Create the `docs/stories/` directory if it doesn't exist.
 
 ```markdown
 # Stories: {Title}
@@ -96,7 +98,9 @@ If the user wants a document in addition to tasks, save to `docs/stories/{slug}.
 ---
 ```
 
-Only create this document if the user asks for it. The primary output is Claude Code tasks.
+Always produce both the document and the Claude Code tasks. After saving, tell the user the document path so they can reference it later.
+
+When starting implementation of a task, read the stories document first to understand the full context: all epics, dependencies, acceptance criteria, and where the current task fits in the broader plan.
 
 ## Guidelines
 

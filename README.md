@@ -168,7 +168,7 @@ Structured discovery, specification, and work breakdown through guided conversat
 |-------|---------|--------|
 | `/discover` | Facilitated problem discovery | `docs/plans/{slug}.md` |
 | `/spec` | Requirements & architecture specification | `docs/specifications/{slug}.md` |
-| `/stories` | Work breakdown into tracked tasks | Claude Code tasks with dependencies |
+| `/stories` | Work breakdown into tracked tasks | `docs/stories/{slug}.md` + Claude Code tasks |
 
 **Quick Start:**
 ```bash

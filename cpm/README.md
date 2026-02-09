@@ -54,7 +54,7 @@ Builds a structured specification through facilitated conversation. Covers funct
 Converts plans into tracked work items using Claude Code's native task system (TaskCreate/TaskUpdate). Groups work into epics, breaks into right-sized stories with acceptance criteria, and sets up task dependencies.
 
 **Input**: A spec from `/spec`, a brief, or a description.
-**Output**: Claude Code tasks with dependencies (optionally `docs/stories/{slug}.md`)
+**Output**: `docs/stories/{slug}.md` + Claude Code tasks with dependencies
 
 ```
 /stories docs/specifications/customer-portal.md
