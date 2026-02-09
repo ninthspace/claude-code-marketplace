@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins that enable complete story-driven development workflows, note searching, and more. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for story-driven development, facilitated planning, note searching, and PHP code intelligence. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -18,6 +18,7 @@ This marketplace contains plugins that enable complete story-driven development 
 /plugin install sdd@claude-code-marketplace
 /plugin install noteplan@claude-code-marketplace
 /plugin install php-lsp@claude-code-marketplace
+/plugin install cpm@claude-code-marketplace
 ```
 
 ## Available Plugins
@@ -152,6 +153,44 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 - Git
 
 [View full documentation](./php-lsp/README.md)
+
+---
+
+### Claude Planning Method (v1.0.0)
+
+**Facilitated planning skills for Claude Code**
+
+Structured discovery, specification, and work breakdown through guided conversation. Helps you understand problems before jumping to solutions — inspired by the BMAD-METHOD.
+
+**Three skills forming a pipeline:**
+
+| Skill | Purpose | Output |
+|-------|---------|--------|
+| `/discover` | Facilitated problem discovery | `docs/planning/brief-{slug}.md` |
+| `/spec` | Requirements & architecture specification | `docs/planning/spec-{slug}.md` |
+| `/stories` | Work breakdown into tracked tasks | Claude Code tasks with dependencies |
+
+**Quick Start:**
+```bash
+# Full pipeline: discover → spec → stories
+/discover build a customer portal for our booking system
+/spec docs/planning/brief-customer-portal.md
+/stories docs/planning/spec-customer-portal.md
+
+# Or jump to any step independently
+/spec I need a REST API for inventory management
+/stories docs/planning/spec-inventory-api.md
+```
+
+**Key Features:**
+- Facilitated conversations, not forms — builds on your answers
+- One topic at a time with user-gated progression
+- Scales depth to complexity — skips phases that don't add value
+- MoSCoW prioritisation for requirements
+- Architecture decisions with rationale and alternatives
+- Right-sized stories with acceptance criteria and dependencies
+
+[View full documentation](./cpm/README.md)
 
 ---
 
@@ -290,6 +329,7 @@ The plugin automatically reads these files and adapts its behavior to match your
 /plugin uninstall sdd@claude-code-marketplace
 /plugin uninstall noteplan@claude-code-marketplace
 /plugin uninstall php-lsp@claude-code-marketplace
+/plugin uninstall cpm@claude-code-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace
