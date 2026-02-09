@@ -166,20 +166,20 @@ Structured discovery, specification, and work breakdown through guided conversat
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
-| `/discover` | Facilitated problem discovery | `docs/plans/{slug}.md` |
-| `/spec` | Requirements & architecture specification | `docs/specifications/{slug}.md` |
-| `/stories` | Work breakdown into tracked tasks | `docs/stories/{slug}.md` + Claude Code tasks |
+| `/cpm:discover` | Facilitated problem discovery | `docs/plans/{slug}.md` |
+| `/cpm:spec` | Requirements & architecture specification | `docs/specifications/{slug}.md` |
+| `/cpm:stories` | Work breakdown into tracked tasks | `docs/stories/{slug}.md` + Claude Code tasks |
 
 **Quick Start:**
 ```bash
 # Full pipeline: discover → spec → stories
-/discover build a customer portal for our booking system
-/spec docs/plans/customer-portal.md
-/stories docs/specifications/customer-portal.md
+/cpm:discover build a customer portal for our booking system
+/cpm:spec docs/plans/customer-portal.md
+/cpm:stories docs/specifications/customer-portal.md
 
 # Or jump to any step independently
-/spec I need a REST API for inventory management
-/stories docs/specifications/inventory-api.md
+/cpm:spec I need a REST API for inventory management
+/cpm:stories docs/specifications/inventory-api.md
 ```
 
 **Key Features:**

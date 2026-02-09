@@ -1,6 +1,6 @@
 ---
-name: stories
-description: Break a plan or spec into tracked work items with dependencies. Reads planning docs and creates tasks in Claude Code's native task system using TaskCreate. Triggers on "/stories".
+name: cpm:stories
+description: Break a plan or spec into tracked work items with dependencies. Reads planning docs and creates tasks in Claude Code's native task system using TaskCreate. Triggers on "/cpm:stories".
 ---
 
 # Work Breakdown into Tasks

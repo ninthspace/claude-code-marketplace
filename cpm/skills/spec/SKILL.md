@@ -1,6 +1,6 @@
 ---
-name: spec
-description: Build a structured requirements and architecture specification through facilitated conversation. Takes a problem brief or user description as input and produces a spec document with functional requirements, architecture decisions, and scope boundaries. Triggers on "/spec".
+name: cpm:spec
+description: Build a structured requirements and architecture specification through facilitated conversation. Takes a problem brief or user description as input and produces a spec document with functional requirements, architecture decisions, and scope boundaries. Triggers on "/cpm:spec".
 ---
 
 # Requirements & Architecture Specification
@@ -126,7 +126,7 @@ Use this format:
 - {item}
 ```
 
-After saving, suggest next steps: `/plan` (native plan mode) to design implementation, or `/stories` to break directly into tasks.
+After saving, suggest next steps: `/plan` (native plan mode) to design implementation, or `/cpm:stories` to break directly into tasks.
 
 ## Guidelines
 

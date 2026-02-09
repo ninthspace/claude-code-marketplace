@@ -1,6 +1,6 @@
 ---
-name: discover
-description: Facilitated problem discovery. Understand the problem before proposing solutions. Produces a problem brief through guided conversation. Use when starting a new product, complex feature, or any work where the problem isn't well-defined yet. Triggers on "/discover".
+name: cpm:discover
+description: Facilitated problem discovery. Understand the problem before proposing solutions. Produces a problem brief through guided conversation. Use when starting a new product, complex feature, or any work where the problem isn't well-defined yet. Triggers on "/cpm:discover".
 ---
 
 # Facilitated Problem Discovery
@@ -94,7 +94,7 @@ Use this format:
 {What's explicitly in and out of scope}
 ```
 
-After saving, suggest next steps: `/spec` to build requirements, or `/plan` (native plan mode) if the scope is clear enough to jump straight to implementation planning.
+After saving, suggest next steps: `/cpm:spec` to build requirements, or `/plan` (native plan mode) if the scope is clear enough to jump straight to implementation planning.
 
 ## Arguments
 

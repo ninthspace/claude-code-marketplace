@@ -9,19 +9,19 @@ Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Meth
 After installation, use any skill independently or as a pipeline:
 
 ```
-/discover → /spec → /stories → implement
+/cpm:discover → /cpm:spec → /cpm:stories → implement
 ```
 
 Each step is optional. Use what fits your situation:
 
-- Starting a new product? Begin with `/discover`
-- Problem is clear, need requirements? Jump to `/spec`
-- Have a plan, need tasks? Go straight to `/stories`
+- Starting a new product? Begin with `/cpm:discover`
+- Problem is clear, need requirements? Jump to `/cpm:spec`
+- Have a plan, need tasks? Go straight to `/cpm:stories`
 - Small bug fix? Skip planning entirely — Claude Code's native plan mode is enough
 
 ## Skills
 
-### `/discover` — Problem Discovery
+### `/cpm:discover` — Problem Discovery
 
 Guided conversation to understand the problem before proposing solutions. Works through six phases:
 
@@ -35,29 +35,29 @@ Guided conversation to understand the problem before proposing solutions. Works 
 **Output**: `docs/plans/{slug}.md`
 
 ```
-/discover build a customer portal for our booking system
+/cpm:discover build a customer portal for our booking system
 ```
 
-### `/spec` — Requirements & Architecture
+### `/cpm:spec` — Requirements & Architecture
 
 Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, and scope boundaries.
 
-**Input**: A problem brief from `/discover`, a file path, or a description.
-**Output**: `docs/specifications/{slug}.md`
+**Input**: A problem brief from `/cpm:discover`, a file path, or a description.
+**Output**: `docs/cpm:specifications/{slug}.md`
 
 ```
-/spec docs/plans/customer-portal.md
+/cpm:spec docs/plans/customer-portal.md
 ```
 
-### `/stories` — Work Breakdown
+### `/cpm:stories` — Work Breakdown
 
 Converts plans into tracked work items using Claude Code's native task system (TaskCreate/TaskUpdate). Groups work into epics, breaks into right-sized stories with acceptance criteria, and sets up task dependencies.
 
-**Input**: A spec from `/spec`, a brief, or a description.
-**Output**: `docs/stories/{slug}.md` + Claude Code tasks with dependencies
+**Input**: A spec from `/cpm:spec`, a brief, or a description.
+**Output**: `docs/cpm:stories/{slug}.md` + Claude Code tasks with dependencies
 
 ```
-/stories docs/specifications/customer-portal.md
+/cpm:stories docs/cpm:specifications/customer-portal.md
 ```
 
 ## How It Works
@@ -73,15 +73,15 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 **New feature with unclear scope:**
 
-1. `/discover` — "I want to add multi-tenancy to our app"
+1. `/cpm:discover` — "I want to add multi-tenancy to our app"
    - Claude facilitates conversation about why, who, constraints
    - Produces `docs/plans/multi-tenancy.md`
 
-2. `/spec` — Reads the brief, builds requirements
+2. `/cpm:spec` — Reads the brief, builds requirements
    - Facilitates MoSCoW prioritisation, architecture decisions
-   - Produces `docs/specifications/multi-tenancy.md`
+   - Produces `docs/cpm:specifications/multi-tenancy.md`
 
-3. `/stories` — Reads the spec, creates tasks
+3. `/cpm:stories` — Reads the spec, creates tasks
    - Groups into epics, sets dependencies
    - Creates Claude Code tasks ready for implementation
 
