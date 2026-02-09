@@ -1,7 +1,7 @@
 {
   "name": "cpm",
   "description": "Claude Planning Method — facilitated planning skills for Claude Code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Chris Aves"
   },
