@@ -44,7 +44,7 @@ Guided conversation to understand the problem before proposing solutions. Works 
 Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, and scope boundaries.
 
 **Input**: A problem brief from `/cpm:discover`, a file path, or a description.
-**Output**: `docs/cpm:specifications/{slug}.md`
+**Output**: `docs/specifications/{slug}.md`
 
 ```
 /cpm:spec docs/plans/customer-portal.md
@@ -55,10 +55,10 @@ Builds a structured specification through facilitated conversation. Covers funct
 Converts plans into tracked work items using Claude Code's native task system (TaskCreate/TaskUpdate). Groups work into epics, breaks into right-sized stories with acceptance criteria, and sets up task dependencies.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
-**Output**: `docs/cpm:stories/{slug}.md` + Claude Code tasks with dependencies
+**Output**: `docs/stories/{slug}.md` + Claude Code tasks with dependencies
 
 ```
-/cpm:stories docs/cpm:specifications/customer-portal.md
+/cpm:stories docs/specifications/customer-portal.md
 ```
 
 ### `/cpm:do` — Task Execution
@@ -106,7 +106,7 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 2. `/cpm:spec` — Reads the brief, builds requirements
    - Facilitates MoSCoW prioritisation, architecture decisions
-   - Produces `docs/cpm:specifications/multi-tenancy.md`
+   - Produces `docs/specifications/multi-tenancy.md`
 
 3. `/cpm:stories` — Reads the spec, creates tasks
    - Groups into epics, sets dependencies
