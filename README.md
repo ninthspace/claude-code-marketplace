@@ -156,36 +156,41 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.2.0)
+### Claude Planning Method (v1.3.0)
 
-**Facilitated planning skills for Claude Code**
+**Facilitated planning with multi-perspective party mode for Claude Code**
 
-Structured discovery, specification, work breakdown, and task execution through guided conversation. Helps you understand problems before jumping to solutions — inspired by the BMAD-METHOD.
+Structured discovery, specification, work breakdown, and task execution through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
 
-**Four skills forming a pipeline:**
+**Five skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
-| `/cpm:discover` | Facilitated problem discovery | `docs/plans/{slug}.md` |
-| `/cpm:spec` | Requirements & architecture specification | `docs/specifications/{slug}.md` |
-| `/cpm:stories` | Work breakdown into tracked tasks | `docs/stories/{slug}.md` + Claude Code tasks |
+| `/cpm:party` | Multi-perspective discussion with agent personas | Discussion summary + optional pipeline handoff |
+| `/cpm:discover` | Facilitated problem discovery | `docs/plans/01-plan-{slug}.md` |
+| `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
+| `/cpm:stories` | Work breakdown into tracked tasks | `docs/stories/01-story-{slug}.md` + Claude Code tasks |
 | `/cpm:do` | Task execution with acceptance criteria | Updated stories doc + implemented code |
 
 **Quick Start:**
 ```bash
+# Brainstorm with your team of agent personas
+/cpm:party should we use a monorepo or separate repos?
+
 # Full pipeline: discover → spec → stories → do
 /cpm:discover build a customer portal for our booking system
-/cpm:spec docs/plans/customer-portal.md
-/cpm:stories docs/specifications/customer-portal.md
+/cpm:spec docs/plans/01-plan-customer-portal.md
+/cpm:stories docs/specifications/01-spec-customer-portal.md
 /cpm:do
 
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management
-/cpm:stories docs/specifications/inventory-api.md
 /cpm:do 3  # work on a specific task
 ```
 
 **Key Features:**
+- Party mode — named agent personas discuss, debate, and disagree constructively
+- Multi-perspective insights woven into discover and spec phases
 - Facilitated conversations, not forms — builds on your answers
 - One topic at a time with user-gated progression
 - Scales depth to complexity — skips phases that don't add value
@@ -193,6 +198,7 @@ Structured discovery, specification, work breakdown, and task execution through 
 - Architecture decisions with rationale and alternatives
 - Right-sized stories with acceptance criteria and dependencies
 - Task execution loop with acceptance criteria verification
+- Customisable agent roster — override default personas per project
 - Compaction resilience — seamlessly survives Claude Code context compaction
 
 [View full documentation](./cpm/README.md)

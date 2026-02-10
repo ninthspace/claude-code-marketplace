@@ -18,11 +18,13 @@ Check for input in this order:
 
 ## Process
 
-**State tracking**: Before starting Step 1, create the progress file (see State Management below). After each step completes, update it. After saving the final stories doc, delete it.
+**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final stories doc, delete the file.
 
 ### Step 1: Read Source
 
 Read and understand the source document. Summarise the key work areas to the user.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
 
 ### Step 2: Identify Epics
 
@@ -33,6 +35,8 @@ Keep epics practical:
 - 5-10 for a larger project
 - Don't create epics for the sake of it
 
+**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary before continuing.
+
 ### Step 3: Break into Stories
 
 For each epic, break into implementable stories. Each story should have:
@@ -42,6 +46,8 @@ For each epic, break into implementable stories. Each story should have:
 
 Present the stories to the user for each epic using AskUserQuestion. Refine before moving to the next epic.
 
+**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
+
 ### Step 4: Create Tasks
 
 Use TaskCreate to create all tasks in Claude Code's native system.
@@ -50,11 +56,13 @@ For each story:
 ```
 TaskCreate:
   subject: "{Story title}"
-  description: "{Description with acceptance criteria}\n\nStories doc: docs/stories/{slug}.md"
+  description: "{Description with acceptance criteria}\n\nStories doc: docs/stories/{nn}-story-{slug}.md"
   activeForm: "{Present continuous form}"
 ```
 
 Include the path to the stories document in each task description so it can be found during implementation.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary (task IDs created) before continuing.
 
 ### Step 5: Set Dependencies
 
@@ -68,6 +76,8 @@ Common dependency patterns:
 
 Only add dependencies that are genuinely blocking — don't over-constrain the task graph.
 
+**Update progress file now** — write the full `.cpm-progress.md` with Step 5 summary (dependency map) before continuing.
+
 ### Step 6: Confirm
 
 Present the full task tree to the user showing:
@@ -79,7 +89,10 @@ Use AskUserQuestion for final confirmation.
 
 ## Output
 
-Save the stories document to `docs/stories/{slug}.md`. Create the `docs/stories/` directory if it doesn't exist.
+Save the stories document to `docs/stories/{nn}-story-{slug}.md`. Create the `docs/stories/` directory if it doesn't exist.
+
+- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/stories/[0-9]*-story-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{slug}` is derived from the spec or brief name.
 
 ```markdown
 # Stories: {Title}
@@ -117,7 +130,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 **Skill**: cpm:stories
 **Step**: {N} of 6 — {Step Name}
-**Output target**: docs/stories/{slug}.md
+**Output target**: docs/stories/{nn}-story-{slug}.md
 **Input source**: {path to spec or brief used as input}
 
 ## Completed Steps

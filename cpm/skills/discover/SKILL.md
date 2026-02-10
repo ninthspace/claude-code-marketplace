@@ -11,7 +11,7 @@ Guide the user through understanding their problem before jumping to solutions. 
 
 Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
 
-**State tracking**: Before starting Phase 1, create the progress file (see State Management below). After each phase completes, update it. After saving the final brief, delete it.
+**State tracking**: Before starting Phase 1, create the progress file (see State Management below). Each phase below ends with a mandatory progress file update — do not skip it. After saving the final brief, delete the file.
 
 ### Phase 1: Why
 
@@ -22,6 +22,10 @@ Questions to explore:
 - Why does this matter now?
 - What happens if we don't solve this?
 
+**Perspectives**: After the user describes their problem, before moving to Phase 2, briefly present 2-3 agent perspectives on the problem statement. Load the agent roster (see Perspectives below) and have relevant agents weigh in — e.g. the PM might reframe the problem in terms of user value, the architect might flag technical implications, or the UX designer might highlight user experience concerns. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`. This enriches the discovery without slowing it down.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Phase 1 summary before continuing.
+
 ### Phase 2: Who
 
 Identify target users and their needs.
@@ -30,6 +34,8 @@ Questions to explore:
 - Who will use this?
 - What are they trying to accomplish?
 - How technical are they?
+
+**Update progress file now** — write the full `.cpm-progress.md` with Phase 2 summary before continuing.
 
 ### Phase 3: Current State
 
@@ -42,6 +48,8 @@ Questions to explore:
 
 If there's an existing codebase to explore, use Read, Glob, and Grep to understand the current state before asking questions.
 
+**Update progress file now** — write the full `.cpm-progress.md` with Phase 3 summary before continuing.
+
 ### Phase 4: Success Criteria
 
 Define what "done" looks like.
@@ -50,6 +58,8 @@ Questions to explore:
 - How will we know this works?
 - What does the happy path look like?
 - Are there measurable outcomes?
+
+**Update progress file now** — write the full `.cpm-progress.md` with Phase 4 summary before continuing.
 
 ### Phase 5: Constraints
 
@@ -60,13 +70,20 @@ Questions to explore:
 - Business constraints (budget, timeline, compliance)?
 - What's explicitly out of scope?
 
+**Perspectives**: Before finalising constraints, have 2-3 agents weigh in on what constraints they see from their domain. The architect might flag scalability concerns, DevOps might raise deployment constraints, QA might identify testability challenges. This helps surface constraints the user might not have considered. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Phase 5 summary before continuing.
+
 ### Phase 6: Summary
 
 Produce a problem brief document. Present it to the user for confirmation using AskUserQuestion before saving.
 
 ## Output
 
-Save the brief to `docs/plans/{slug}.md` in the current project, where `{slug}` is a short kebab-case name derived from the problem (e.g., `user-onboarding.md`).
+Save the brief to `docs/plans/{nn}-plan-{slug}.md` in the current project.
+
+- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/plans/[0-9]*-plan-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{slug}` is a short kebab-case name derived from the problem (e.g., `user-onboarding`).
 
 Create the `docs/plans/` directory if it doesn't exist.
 
@@ -115,7 +132,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 **Skill**: cpm:discover
 **Phase**: {N} of 6 — {Phase Name}
-**Output target**: docs/plans/{slug}.md
+**Output target**: docs/plans/{nn}-plan-{slug}.md
 
 ## Completed Phases
 
@@ -134,6 +151,18 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 The "Completed Phases" section grows as phases complete. Each summary should capture the user's key decisions and answers in 2-4 sentences — enough for seamless continuation, not a transcript.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
+
+## Perspectives
+
+Some phases include a **Perspectives** block where agent personas briefly weigh in. To use perspectives:
+
+1. Load the agent roster: check `docs/agents/roster.yaml` in the project first, then fall back to the plugin's `agents/roster.yaml` (at `../../agents/roster.yaml` relative to this file).
+2. Select 2-3 agents whose expertise is relevant to the current phase and topic.
+3. Each agent provides a brief perspective (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`.
+4. Perspectives should add value — surface blind spots, challenge assumptions, or highlight concerns the user might not have considered. If a perspective would just echo what the user already said, skip it.
+5. Present perspectives as a natural part of the facilitation, not as a separate section. Weave them in after the user's answer and before moving to the next phase.
+
+If the roster cannot be loaded, skip perspectives and continue the facilitation normally.
 
 ## Guidelines
 

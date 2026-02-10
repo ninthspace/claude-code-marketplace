@@ -9,11 +9,12 @@ Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Meth
 After installation, use any skill independently or as a pipeline:
 
 ```
-/cpm:discover → /cpm:spec → /cpm:stories → /cpm:do
+/cpm:party → /cpm:discover → /cpm:spec → /cpm:stories → /cpm:do
 ```
 
 Each step is optional. Use what fits your situation:
 
+- Want diverse perspectives on an idea? Start with `/cpm:party`
 - Starting a new product? Begin with `/cpm:discover`
 - Problem is clear, need requirements? Jump to `/cpm:spec`
 - Have a plan, need tasks? Go straight to `/cpm:stories`
@@ -21,6 +22,21 @@ Each step is optional. Use what fits your situation:
 - Small bug fix? Skip planning entirely — Claude Code's native plan mode is enough
 
 ## Skills
+
+### `/cpm:party` — Multi-Perspective Discussion
+
+Launch a team discussion where named agent personas respond in character, building on each other's ideas and constructively disagreeing. Useful for brainstorming, decision-making, or exploring trade-offs before committing to a direction.
+
+The default roster includes 8 personas: Jordan (PM), Margot (Architect), Kai (Developer), Priya (UX Designer), Tomasz (QA), Sable (DevOps), Ellis (Tech Writer), and Ren (Scrum Master). Each has a distinct personality and communication style.
+
+```
+/cpm:party should we use a monorepo or separate repos?
+/cpm:party docs/plans/customer-portal.md
+```
+
+**On exit**: Produces a structured discussion summary (key points, agreements, open questions, recommendations) and offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:stories` with the summary as input.
+
+**Custom roster**: To customise personas, create `docs/agents/roster.yaml` in your project. This completely replaces the default roster. See `agents/roster.yaml` in the plugin for the schema.
 
 ### `/cpm:discover` — Problem Discovery
 
@@ -33,7 +49,9 @@ Guided conversation to understand the problem before proposing solutions. Works 
 5. **Constraints** — Technical, business, timeline limits
 6. **Summary** — Problem brief for confirmation
 
-**Output**: `docs/plans/{slug}.md`
+**Output**: `docs/plans/01-plan-{slug}.md` (auto-numbered)
+
+At the **Why** and **Constraints** phases, agent personas briefly weigh in with diverse viewpoints to surface blind spots before you respond.
 
 ```
 /cpm:discover build a customer portal for our booking system
@@ -43,11 +61,13 @@ Guided conversation to understand the problem before proposing solutions. Works 
 
 Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, and scope boundaries.
 
+At the **Architecture Decisions** and **Scope Boundary** sections, agent personas present competing trade-offs to help you make informed choices.
+
 **Input**: A problem brief from `/cpm:discover`, a file path, or a description.
-**Output**: `docs/specifications/{slug}.md`
+**Output**: `docs/specifications/01-spec-{slug}.md` (auto-numbered)
 
 ```
-/cpm:spec docs/plans/customer-portal.md
+/cpm:spec docs/plans/01-plan-customer-portal.md
 ```
 
 ### `/cpm:stories` — Work Breakdown
@@ -55,10 +75,10 @@ Builds a structured specification through facilitated conversation. Covers funct
 Converts plans into tracked work items using Claude Code's native task system (TaskCreate/TaskUpdate). Groups work into epics, breaks into right-sized stories with acceptance criteria, and sets up task dependencies.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
-**Output**: `docs/stories/{slug}.md` + Claude Code tasks with dependencies
+**Output**: `docs/stories/01-story-{slug}.md` (auto-numbered) + Claude Code tasks with dependencies
 
 ```
-/cpm:stories docs/specifications/customer-portal.md
+/cpm:stories docs/specifications/01-spec-customer-portal.md
 ```
 
 ### `/cpm:do` — Task Execution
@@ -102,11 +122,11 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 1. `/cpm:discover` — "I want to add multi-tenancy to our app"
    - Claude facilitates conversation about why, who, constraints
-   - Produces `docs/plans/multi-tenancy.md`
+   - Produces `docs/plans/01-plan-multi-tenancy.md`
 
 2. `/cpm:spec` — Reads the brief, builds requirements
    - Facilitates MoSCoW prioritisation, architecture decisions
-   - Produces `docs/specifications/multi-tenancy.md`
+   - Produces `docs/specifications/01-spec-multi-tenancy.md`
 
 3. `/cpm:stories` — Reads the spec, creates tasks
    - Groups into epics, sets dependencies
@@ -123,16 +143,20 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 cpm/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata
+├── agents/
+│   └── roster.yaml          # Default agent personas for party mode
 ├── hooks/
 │   ├── hooks.json           # Hook configuration (PreCompact, SessionStart)
 │   ├── pre-compact.sh       # Guides compaction to preserve planning state
 │   ├── session-start-compact.sh  # Re-injects state after compaction
 │   └── session-start.sh     # Re-injects state on session startup/resume
 ├── skills/
+│   ├── party/
+│   │   └── SKILL.md         # Multi-perspective discussion skill
 │   ├── discover/
-│   │   └── SKILL.md         # Problem discovery skill
+│   │   └── SKILL.md         # Problem discovery skill (with perspectives)
 │   ├── spec/
-│   │   └── SKILL.md         # Requirements specification skill
+│   │   └── SKILL.md         # Requirements specification skill (with perspectives)
 │   ├── stories/
 │   │   └── SKILL.md         # Work breakdown skill
 │   └── do/

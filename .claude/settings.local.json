@@ -8,7 +8,10 @@
       "Bash(git push:*)",
       "Bash(gh release create v1.2.0 --title \"v1.2.0: Add Claude Planning Method \\(CPM\\) plugin\" --notes \"$\\(cat <<''EOF''\n## New Plugin: Claude Planning Method \\(CPM\\) v1.0.0\n\nFacilitated planning skills for Claude Code — structured discovery, specification, and work breakdown through guided conversation. Inspired by the BMAD-METHOD.\n\n### Three skills forming a pipeline\n\n| Skill | Purpose | Output |\n|-------|---------|--------|\n| `/discover` | Facilitated problem discovery | `docs/planning/brief-{slug}.md` |\n| `/spec` | Requirements & architecture specification | `docs/planning/spec-{slug}.md` |\n| `/stories` | Work breakdown into tracked tasks | Claude Code tasks with dependencies |\n\n### Key features\n\n- Facilitated conversations, not forms — builds on your answers\n- One topic at a time with user-gated progression\n- Scales depth to complexity — skips phases that don''t add value\n- MoSCoW prioritisation for requirements\n- Architecture decisions with rationale and alternatives\n- Right-sized stories with acceptance criteria and dependencies\n\nEach skill works independently or as a pipeline: `/discover` → `/spec` → `/stories` → implement.\nEOF\n\\)\")",
       "Bash(git tag:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.bmad-method.org)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []

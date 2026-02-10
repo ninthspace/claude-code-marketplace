@@ -13,8 +13,8 @@ Resolve the stories doc first, then select a task.
 
 ### Stories Doc
 
-1. If `$ARGUMENTS` is a file path (e.g. `docs/stories/cpm-task-execution.md`), use that as the stories doc.
-2. If no path given, look for the most recent `docs/stories/*.md` file and ask the user to confirm.
+1. If `$ARGUMENTS` is a file path (e.g. `docs/stories/01-story-task-execution.md`), use that as the stories doc.
+2. If no path given, look for the most recent `docs/stories/*-story-*.md` file and ask the user to confirm.
 3. If no stories docs exist, proceed without one (tasks still work via their descriptions).
 
 The stories doc, once resolved, applies to the entire work loop — don't re-parse it from each task.
@@ -27,7 +27,7 @@ The stories doc, once resolved, applies to the entire work loop — don't re-par
 
 ## Per-Task Workflow
 
-**State tracking**: Before starting the first task, create the progress file (see State Management below). After each task completes, update it. After the work loop finishes, delete it.
+**State tracking**: Before starting the first task, create the progress file (see State Management below). Step 7 of each task cycle writes the update — do not skip it. After the work loop finishes, delete the file.
 
 For each task, follow these steps in order.
 
@@ -78,7 +78,16 @@ Before marking the task complete:
   - `new_string`: `**Status**: Complete`
 - Call `TaskUpdate` to set the task status to `completed`.
 
-### 7. Next Task
+### 7. Update Progress File
+
+**This step is mandatory after every task.** Write the full `.cpm-progress.md` file using the Write tool (see State Management below for format). The file must reflect:
+- The task just completed (added to Completed Tasks section)
+- The next action (which task to pick up next, or "work loop complete")
+- The current tasks remaining count
+
+This is the primary compaction resilience mechanism. If compaction fires between tasks, this file is what gets re-injected to restore context.
+
+### 8. Next Task
 
 - Call `TaskList` to check for remaining work.
 - Pick the next lowest-ID task that is `pending` and has no unresolved `blockedBy`.
