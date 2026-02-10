@@ -34,7 +34,7 @@ For each task, follow these steps in order.
 ### 1. Load Context
 
 - Call `TaskGet` to read the full task description.
-- If a stories doc was resolved during Input, read it with the Read tool. Locate the story by matching the task subject to a story heading (`### {subject}`). Note its acceptance criteria.
+- If a stories doc was resolved during Input, read it with the Read tool. Locate the story by searching for the `**Task ID**: {id}` field that matches the current task ID. If no Task ID match is found, fall back to matching the task subject to a story heading (`### {subject}`). Note its acceptance criteria.
 - If no stories doc is available, proceed without stories doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress

@@ -56,17 +56,19 @@ For each story:
 ```
 TaskCreate:
   subject: "{Story title}"
-  description: "{Description with acceptance criteria}\n\nStories doc: docs/stories/{nn}-story-{slug}.md"
+  description: "{Description with acceptance criteria}\n\nStories doc: docs/stories/{nn}-story-{slug}.md\nStory: {N}"
   activeForm: "{Present continuous form}"
 ```
 
-Include the path to the stories document in each task description so it can be found during implementation.
+Include the path to the stories document and the story number in each task description so it can be found during implementation.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary (task IDs created) before continuing.
+After creating each task, update the stories doc to record the assigned task ID in the `**Task ID**` field using the Edit tool. This maps document-level stories to runtime tasks.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary (story-to-task-ID mapping) before continuing.
 
 ### Step 5: Set Dependencies
 
-Use TaskUpdate to set `addBlockedBy` relationships where tasks depend on others completing first.
+Use TaskUpdate to set `addBlockedBy` relationships where tasks depend on others completing first. Map the story-level `**Blocked by**` references (e.g. `Story 1`) to the corresponding task IDs using the mapping from Step 4.
 
 Common dependency patterns:
 - Setup/infrastructure tasks block feature tasks
@@ -103,8 +105,10 @@ Save the stories document to `docs/stories/{nn}-story-{slug}.md`. Create the `do
 ## Epic: {Epic Name}
 
 ### {Story Title}
+**Story**: {N}
+**Task ID**: —
 **Status**: Pending
-**Blocked by**: {task IDs if any}
+**Blocked by**: —
 
 **Acceptance Criteria**:
 - {criterion}
@@ -112,6 +116,10 @@ Save the stories document to `docs/stories/{nn}-story-{slug}.md`. Create the `do
 
 ---
 ```
+
+Story numbers are sequential per document, starting at 1. They provide stable references within the doc that don't depend on Claude Code's task system. The `**Blocked by**` field references story numbers (e.g. `Story 1` or `Story 1, Story 2`).
+
+The `**Task ID**` field starts as `—` and gets filled in during Step 4 when Claude Code tasks are created. This maps the document-level story to the runtime task.
 
 Always produce both the document and the Claude Code tasks. After saving, tell the user the document path so they can reference it later.
 
