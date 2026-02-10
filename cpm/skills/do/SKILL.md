@@ -78,6 +78,31 @@ Before marking the task complete:
   - `new_string`: `**Status**: Complete`
 - Call `TaskUpdate` to set the task status to `completed`.
 
+### 6.5. Capture Observations (Retro)
+
+After marking the task complete, self-assess whether anything **noteworthy** happened during this task. This is a quality gate — only record an observation when something surprising, unexpected, or valuable was learned. Most tasks will have nothing to record, and that's fine.
+
+**Noteworthy-only gate**: Ask yourself: "Did anything happen during this task that would change how I'd plan similar work in the future?" If no, skip this step entirely. Do not prompt the user.
+
+**Observation categories** (use exactly one per observation):
+- **Scope surprise**: The task was larger or smaller than the story suggested
+- **Criteria gap**: Acceptance criteria missed something important that only became clear during implementation
+- **Complexity underestimate**: The implementation was harder than expected due to technical factors
+- **Codebase discovery**: Found something unexpected in the codebase (pattern, convention, limitation) that affected the work
+
+**Recording**: If something is noteworthy, use the Edit tool to append a `**Retro**:` field to the completed story in the stories doc, immediately after the last existing field for that story (before the `---` separator). Format:
+
+```
+**Retro**: [{category}] {One-sentence observation}
+```
+
+Example:
+```
+**Retro**: [Criteria gap] Acceptance criteria didn't mention error handling for missing config files, which was the bulk of the work
+```
+
+**Graceful degradation**: If no stories doc is available, or the story heading can't be found, skip this step silently — never block the work loop for observation capture.
+
 ### 7. Update Progress File
 
 **This step is mandatory after every task.** Write the full `.cpm-progress.md` file using the Write tool (see State Management below for format). The file must reflect:
@@ -92,7 +117,35 @@ This is the primary compaction resilience mechanism. If compaction fires between
 - Call `TaskList` to check for remaining work.
 - Pick the next lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 - If one exists, go back to step 1 (Load Context) for the new task.
-- If none exist, the work loop is done — report a summary of what was completed and stop.
+- If none exist, the work loop is done — proceed to step 9.
+
+### 9. Batch Summary (Loop Completion)
+
+When the work loop finishes (no more pending unblocked tasks):
+
+1. **Check for observations**: Read the stories doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the rest of this step — no lessons section needed.
+
+2. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the stories doc using the Edit tool. Group observations by category:
+
+```markdown
+## Lessons
+
+### Scope Surprises
+- {observation from story N}
+
+### Criteria Gaps
+- {observation from story N}
+
+### Complexity Underestimates
+- {observation from story N}
+
+### Codebase Discoveries
+- {observation from story N}
+```
+
+Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
+
+3. **Report and stop**: Report a summary of what was completed across the work loop, then delete the progress file.
 
 ## Graceful Degradation
 

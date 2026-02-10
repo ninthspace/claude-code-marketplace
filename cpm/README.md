@@ -9,7 +9,7 @@ Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Meth
 After installation, use any skill independently or as a pipeline:
 
 ```
-/cpm:party → /cpm:discover → /cpm:spec → /cpm:stories → /cpm:do
+/cpm:party → /cpm:discover → /cpm:spec → /cpm:stories → /cpm:do → /cpm:retro
 ```
 
 Each step is optional. Use what fits your situation:
@@ -94,6 +94,22 @@ Works through tasks created by `/cpm:stories`. For each task: reads the stories 
 
 The stories doc is updated as work progresses — statuses move from Pending → In Progress → Complete. Acceptance criteria are checked before marking any task done.
 
+During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries). These feed into `/cpm:retro`.
+
+### `/cpm:retro` — Lightweight Retrospective
+
+Reads a completed stories doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle.
+
+**Input**: A stories doc path, or auto-detects the most recent one.
+**Output**: `docs/retros/01-retro-{slug}.md` (auto-numbered)
+
+```
+/cpm:retro docs/stories/01-story-customer-portal.md
+/cpm:retro        # auto-detect most recent stories doc
+```
+
+**On exit**: Offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:stories` with the retro as input context — closing the feedback loop for the next planning cycle.
+
 ## Compaction Resilience
 
 CPM skills run long, multi-phase conversations that can trigger Claude Code's auto-compaction. When that happens, mid-skill state (current phase, user decisions, facilitation progress) would normally be lost.
@@ -159,8 +175,10 @@ cpm/
 │   │   └── SKILL.md         # Requirements specification skill (with perspectives)
 │   ├── stories/
 │   │   └── SKILL.md         # Work breakdown skill
-│   └── do/
-│       └── SKILL.md         # Task execution skill
+│   ├── do/
+│   │   └── SKILL.md         # Task execution skill
+│   └── retro/
+│       └── SKILL.md         # Lightweight retrospective skill
 ├── README.md
 └── LICENSE
 ```

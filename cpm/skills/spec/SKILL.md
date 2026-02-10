@@ -22,6 +22,18 @@ Work through these sections **one at a time**. Use AskUserQuestion for every gat
 
 **State tracking**: Before starting Section 1, create the progress file (see State Management below). Each section below ends with a mandatory progress file update — do not skip it. After saving the final spec, delete the file.
 
+### Retro Check (Startup)
+
+Before beginning Section 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+
+1. Read the most recent retro file.
+2. Present a brief summary of its key recommendations to the user.
+3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate as additional context?"
+   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the spec sections (especially functional requirements and scope)
+   - **No, skip** — Proceed normally without retro context
+
+If no retro files exist, skip this check silently and proceed to Section 1.
+
 ### Section 1: Problem Recap
 
 Briefly summarise the problem from the input (brief or description). Confirm understanding with the user. If starting from a brief, this should be quick — just verify nothing has changed.

@@ -13,6 +13,18 @@ Work through these phases **one at a time**. Complete each phase before moving t
 
 **State tracking**: Before starting Phase 1, create the progress file (see State Management below). Each phase below ends with a mandatory progress file update — do not skip it. After saving the final brief, delete the file.
 
+### Retro Check (Startup)
+
+Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+
+1. Read the most recent retro file.
+2. Present a brief summary of its key recommendations to the user.
+3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate into this discovery session?"
+   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the discovery phases
+   - **No, start fresh** — Proceed normally without retro context
+
+If no retro files exist, skip this check silently and proceed to Phase 1.
+
 ### Phase 1: Why
 
 Ask what the user is trying to accomplish and why it matters. Understand the motivation, not just the feature request.

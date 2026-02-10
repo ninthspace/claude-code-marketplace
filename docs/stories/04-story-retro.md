@@ -7,8 +7,8 @@
 
 ### Add per-task observation capture to cpm:do (step 6.5)
 **Story**: 1
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 1
+**Status**: Complete
 **Blocked by**: —
 
 **Acceptance Criteria**:
@@ -21,8 +21,8 @@
 
 ### Add batch summary to cpm:do loop completion
 **Story**: 2
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 2
+**Status**: Complete
 **Blocked by**: Story 1
 
 **Acceptance Criteria**:
@@ -37,8 +37,8 @@
 
 ### Create cpm:retro SKILL.md
 **Story**: 3
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 3
+**Status**: Complete
 **Blocked by**: —
 
 **Acceptance Criteria**:
@@ -53,8 +53,8 @@
 
 ### Add pipeline handoff from cpm:retro
 **Story**: 4
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 4
+**Status**: Complete
 **Blocked by**: Story 3
 
 **Acceptance Criteria**:
@@ -66,8 +66,8 @@
 
 ### Register cpm:retro in plugin manifest
 **Story**: 5
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 5
+**Status**: Complete
 **Blocked by**: Story 3
 
 **Acceptance Criteria**:
@@ -80,8 +80,8 @@
 
 ### Add retro file check to cpm:discover startup
 **Story**: 6
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 6
+**Status**: Complete
 **Blocked by**: Story 3
 
 **Acceptance Criteria**:
@@ -93,8 +93,8 @@
 
 ### Add retro file check to cpm:spec startup
 **Story**: 7
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 7
+**Status**: Complete
 **Blocked by**: Story 3
 
 **Acceptance Criteria**:
