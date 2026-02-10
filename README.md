@@ -156,30 +156,33 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.0.0)
+### Claude Planning Method (v1.2.0)
 
 **Facilitated planning skills for Claude Code**
 
-Structured discovery, specification, and work breakdown through guided conversation. Helps you understand problems before jumping to solutions — inspired by the BMAD-METHOD.
+Structured discovery, specification, work breakdown, and task execution through guided conversation. Helps you understand problems before jumping to solutions — inspired by the BMAD-METHOD.
 
-**Three skills forming a pipeline:**
+**Four skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
 | `/cpm:discover` | Facilitated problem discovery | `docs/plans/{slug}.md` |
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/{slug}.md` |
 | `/cpm:stories` | Work breakdown into tracked tasks | `docs/stories/{slug}.md` + Claude Code tasks |
+| `/cpm:do` | Task execution with acceptance criteria | Updated stories doc + implemented code |
 
 **Quick Start:**
 ```bash
-# Full pipeline: discover → spec → stories
+# Full pipeline: discover → spec → stories → do
 /cpm:discover build a customer portal for our booking system
 /cpm:spec docs/plans/customer-portal.md
 /cpm:stories docs/specifications/customer-portal.md
+/cpm:do
 
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management
 /cpm:stories docs/specifications/inventory-api.md
+/cpm:do 3  # work on a specific task
 ```
 
 **Key Features:**
@@ -189,6 +192,8 @@ Structured discovery, specification, and work breakdown through guided conversat
 - MoSCoW prioritisation for requirements
 - Architecture decisions with rationale and alternatives
 - Right-sized stories with acceptance criteria and dependencies
+- Task execution loop with acceptance criteria verification
+- Compaction resilience — seamlessly survives Claude Code context compaction
 
 [View full documentation](./cpm/README.md)
 
