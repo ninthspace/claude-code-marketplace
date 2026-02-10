@@ -11,6 +11,8 @@ Guide the user through understanding their problem before jumping to solutions. 
 
 Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
 
+**State tracking**: Before starting Phase 1, create the progress file (see State Management below). After each phase completes, update it. After saving the final brief, delete it.
+
 ### Phase 1: Why
 
 Ask what the user is trying to accomplish and why it matters. Understand the motivation, not just the feature request.
@@ -99,6 +101,39 @@ After saving, suggest next steps: `/cpm:spec` to build requirements, or `/plan` 
 ## Arguments
 
 If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead of asking from scratch. Still confirm understanding with the user before proceeding.
+
+## State Management
+
+Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+
+**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it after saving the final brief.
+
+Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+
+```markdown
+# CPM Session State
+
+**Skill**: cpm:discover
+**Phase**: {N} of 6 — {Phase Name}
+**Output target**: docs/plans/{slug}.md
+
+## Completed Phases
+
+### Phase 1: Why
+{Concise summary of the user's answers — motivation, importance, consequences of inaction}
+
+### Phase 2: Who
+{Concise summary — target users, their goals, technical level}
+
+{...continue for each completed phase...}
+
+## Next Action
+{What to ask or do next in the facilitation}
+```
+
+The "Completed Phases" section grows as phases complete. Each summary should capture the user's key decisions and answers in 2-4 sentences — enough for seamless continuation, not a transcript.
+
+The "Next Action" field tells the post-compaction context exactly where to pick up.
 
 ## Guidelines
 

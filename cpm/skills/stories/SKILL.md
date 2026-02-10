@@ -18,6 +18,8 @@ Check for input in this order:
 
 ## Process
 
+**State tracking**: Before starting Step 1, create the progress file (see State Management below). After each step completes, update it. After saving the final stories doc, delete it.
+
 ### Step 1: Read Source
 
 Read and understand the source document. Summarise the key work areas to the user.
@@ -101,6 +103,49 @@ Save the stories document to `docs/stories/{slug}.md`. Create the `docs/stories/
 Always produce both the document and the Claude Code tasks. After saving, tell the user the document path so they can reference it later.
 
 When starting implementation of a task, read the stories document first to understand the full context: all epics, dependencies, acceptance criteria, and where the current task fits in the broader plan.
+
+## State Management
+
+Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it after saving the final stories document.
+
+Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+
+```markdown
+# CPM Session State
+
+**Skill**: cpm:stories
+**Step**: {N} of 6 — {Step Name}
+**Output target**: docs/stories/{slug}.md
+**Input source**: {path to spec or brief used as input}
+
+## Completed Steps
+
+### Step 1: Read Source
+{Concise summary — what document was read, key work areas identified}
+
+### Step 2: Identify Epics
+{Concise summary — epic names and descriptions as confirmed by user}
+
+### Step 3: Break into Stories
+{List of stories per epic — titles and brief descriptions}
+
+### Step 4: Create Tasks
+{Task IDs created and their corresponding story titles}
+
+### Step 5: Set Dependencies
+{Dependency map — which tasks block which}
+
+{...include only completed steps...}
+
+## Next Action
+{What to ask or do next in the facilitation}
+```
+
+The "Completed Steps" section grows as steps complete. Stories state is more structured than discover/spec because it accumulates concrete artifacts — epic names, story titles, task IDs, and dependency maps that must survive compaction for the remaining steps to work.
+
+The "Next Action" field tells the post-compaction context exactly where to pick up.
 
 ## Guidelines
 

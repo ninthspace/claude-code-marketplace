@@ -20,6 +20,8 @@ Check for input in this order:
 
 Work through these sections **one at a time**. Use AskUserQuestion for every gate.
 
+**State tracking**: Before starting Section 1, create the progress file (see State Management below). After each section completes, update it. After saving the final spec, delete it.
+
 ### Section 1: Problem Recap
 
 Briefly summarise the problem from the input (brief or description). Confirm understanding with the user. If starting from a brief, this should be quick — just verify nothing has changed.
@@ -127,6 +129,40 @@ Use this format:
 ```
 
 After saving, suggest next steps: `/plan` (native plan mode) to design implementation, or `/cpm:stories` to break directly into tasks.
+
+## State Management
+
+Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+
+**Create** the file before starting Section 1 (ensure `docs/plans/` exists). **Update** it after each section completes. **Delete** it after saving the final spec.
+
+Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+
+```markdown
+# CPM Session State
+
+**Skill**: cpm:spec
+**Section**: {N} of 6 — {Section Name}
+**Output target**: docs/specifications/{slug}.md
+**Input source**: {path to brief or description used as input}
+
+## Completed Sections
+
+### Section 1: Problem Recap
+{Concise summary — confirmed problem statement, any changes from brief}
+
+### Section 2: Functional Requirements
+{Concise summary — key must-haves, should-haves, won't-haves decided}
+
+{...continue for each completed section...}
+
+## Next Action
+{What to ask or do next in the facilitation}
+```
+
+The "Completed Sections" section grows as sections complete. Each summary should capture the key decisions, requirements, and priorities in enough detail for seamless continuation — not a transcript, but enough that no question needs to be re-asked.
+
+The "Next Action" field tells the post-compaction context exactly where to pick up.
 
 ## Guidelines
 
