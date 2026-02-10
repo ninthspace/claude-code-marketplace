@@ -9,9 +9,19 @@ Work through tasks created by `cpm:stories`. For each task: read context, do the
 
 ## Input
 
-Check for input in this order:
+Resolve the stories doc first, then select a task.
 
-1. If `$ARGUMENTS` is a task ID (e.g. `3` or `#3`), use that task.
+### Stories Doc
+
+1. If `$ARGUMENTS` is a file path (e.g. `docs/stories/cpm-task-execution.md`), use that as the stories doc.
+2. If no path given, look for the most recent `docs/stories/*.md` file and ask the user to confirm.
+3. If no stories docs exist, proceed without one (tasks still work via their descriptions).
+
+The stories doc, once resolved, applies to the entire work loop — don't re-parse it from each task.
+
+### Task Selection
+
+1. If `$ARGUMENTS` includes a task ID (e.g. `3` or `#3`), start with that task.
 2. Otherwise, call `TaskList` and pick the lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 3. If no pending unblocked tasks exist, tell the user there's nothing to do.
 
@@ -24,9 +34,8 @@ For each task, follow these steps in order.
 ### 1. Load Context
 
 - Call `TaskGet` to read the full task description.
-- Parse the `Stories doc:` path from the task description (e.g. `Stories doc: docs/stories/cpm-task-execution.md`).
-- If a stories doc path is found, read it with the Read tool. Locate the story by matching the task subject to a story heading (`### {subject}`). Note its acceptance criteria.
-- If no stories doc path is found, or the file doesn't exist, proceed without stories doc integration — the task still gets done.
+- If a stories doc was resolved during Input, read it with the Read tool. Locate the story by matching the task subject to a story heading (`### {subject}`). Note its acceptance criteria.
+- If no stories doc is available, proceed without stories doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress
 
@@ -80,8 +89,8 @@ Before marking the task complete:
 
 The skill should work even without a stories doc:
 
-- **No `Stories doc:` in task description**: Skip stories doc reads and status updates. Still do the work, still verify acceptance criteria from the task description.
-- **Stories doc file doesn't exist**: Same — skip stories doc integration, work on the task directly.
+- **No stories doc resolved during Input**: Skip stories doc reads and status updates. Still do the work, still verify acceptance criteria from the task description.
+- **Stories doc file doesn't exist or was deleted mid-loop**: Same — skip stories doc integration, work on the task directly.
 - **Story heading not found in stories doc**: Log a note, skip status updates for that story, continue with the work.
 
 ## State Management
