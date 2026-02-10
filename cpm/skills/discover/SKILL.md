@@ -23,7 +23,20 @@ Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/
    - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the discovery phases
    - **No, start fresh** — Proceed normally without retro context
 
-If no retro files exist, skip this check silently and proceed to Phase 1.
+If no retro files exist, skip this check silently and proceed to the Library Check.
+
+### Library Check (Startup)
+
+After the Retro Check and before Phase 1, check the project library for reference documents:
+
+1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Phase 1.
+2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `discover` or `all`.
+3. **Report to user**: "Found {N} library documents relevant to discovery: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
+4. **Deep-read selectively** during discovery phases when a library document's content is relevant to the current discussion — e.g. reading an architecture doc when discussing constraints, or a glossary when clarifying terminology.
+
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context (e.g. "Found `coding-standards.md` in project library"). Never block the discovery process due to a malformed library document.
+
+**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
 ### Phase 1: Why
 

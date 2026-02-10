@@ -25,6 +25,19 @@ The stories doc, once resolved, applies to the entire work loop — don't re-par
 2. Otherwise, call `TaskList` and pick the lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 3. If no pending unblocked tasks exist, tell the user there's nothing to do.
 
+## Library Check
+
+After resolving the stories doc and before starting the per-task workflow, check the project library for reference documents:
+
+1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
+2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `do` or `all`.
+3. **Report to user**: "Found {N} library documents relevant to task execution: {titles}. I'll reference these during implementation." If none match the scope filter, skip silently.
+4. **Deep-read selectively** during task execution (step 4 of the per-task workflow) when a library document's content is directly relevant to the current task — e.g. reading coding standards before writing code, or architecture docs before making structural decisions.
+
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block task execution due to a malformed library document.
+
+**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file. These results persist across the entire task loop — do not re-scan between tasks. Only re-scan if the progress file is missing (post-compaction recovery).
+
 ## Per-Task Workflow
 
 **State tracking**: Before starting the first task, create the progress file (see State Management below). Step 7 of each task cycle writes the update — do not skip it. After the work loop finishes, delete the file.

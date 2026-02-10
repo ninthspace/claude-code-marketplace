@@ -1,0 +1,19 @@
+{
+  "tasks": [
+    {
+      "id": "0698b4c6-0bb6-7ba0-8000-e660ac371897",
+      "short_id": "QB7R",
+      "title": "Why one task per story?",
+      "status": "open",
+      "group": null,
+      "sort_order": 0,
+      "archived": false,
+      "flagged": false,
+      "notes": [],
+      "created_at": "2026-02-10T15:18:56.732098",
+      "updated_at": "2026-02-10T15:18:56.732098",
+      "closed_at": null
+    }
+  ],
+  "groups": []
+}

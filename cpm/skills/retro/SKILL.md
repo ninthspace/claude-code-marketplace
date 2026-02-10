@@ -96,6 +96,48 @@ Tell the user the retro file path after saving.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
 
+### Step 3.5: Library Write-Back
+
+After writing the retro file, check if any retro observations should be fed back into library documents. This step closes the loop: `library → ... → retro → library`.
+
+1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip this step silently and proceed to Step 4.
+
+2. **Read front-matter** of each library document. Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
+
+3. **Match observations to library documents**: For each retro observation (from the `**Retro**:` fields collected in Step 1), assess whether it's relevant to any library document. Use the observation category and content to match:
+   - **Codebase discoveries** → likely relevant to architecture or coding standards docs
+   - **Complexity underestimates** → may indicate missing constraints in architecture docs
+   - **Criteria gaps** → may indicate missing rules in coding standards or business rules docs
+   - **Scope surprises** → less commonly relevant to library docs, but flag if they reveal missing architectural context
+
+4. **Propose amendments**: For each matched observation, draft an amendment block:
+
+   ```markdown
+   ## Amendment — {YYYY-MM-DD} (via retro)
+
+   **Source**: {path to retro file just written}
+   **Category**: {observation category}
+
+   {Observation text — what was learned and what should change}
+   ```
+
+5. **User approval gate**: Present all proposed amendments to the user, grouped by target library document. Use AskUserQuestion:
+   - **Apply all amendments** — Write all proposed amendments
+   - **Review individually** — Walk through each amendment one at a time
+   - **Skip write-back** — Don't amend any library documents
+
+6. **Write amendments**: For each approved amendment, use the Edit tool to:
+   - Append the `## Amendment` block to the end of the library document
+   - Update the `last-reviewed` date in the document's front-matter to today's date
+
+**Graceful degradation**:
+- If no library directory exists, skip silently.
+- If no observations match any library documents, skip silently — don't force amendments.
+- If no `**Retro**:` fields were captured (status-only retro), skip this step entirely.
+- Never block the retro workflow for write-back failures.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 3.5 summary before continuing.
+
 ### Step 4: Pipeline Handoff
 
 After presenting the retro file path, offer the user options for what to do next. Use AskUserQuestion:

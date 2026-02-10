@@ -20,6 +20,19 @@ Check for input in this order:
 
 **State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final stories doc, delete the file.
 
+### Library Check (Startup)
+
+Before Step 1, check the project library for reference documents:
+
+1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
+2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `stories` or `all`.
+3. **Report to user**: "Found {N} library documents relevant to work breakdown: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
+4. **Deep-read selectively** during story breakdown when a library document's content is relevant — e.g. reading architecture docs to inform epic grouping or dependency identification.
+
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the stories process due to a malformed library document.
+
+**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+
 ### Step 1: Read Source
 
 Read and understand the source document. Summarise the key work areas to the user.
