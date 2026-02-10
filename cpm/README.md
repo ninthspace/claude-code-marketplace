@@ -10,6 +10,7 @@ After installation, use any skill independently or as a pipeline:
 
 ```
 /cpm:party → /cpm:discover → /cpm:spec → /cpm:stories → /cpm:do → /cpm:retro
+                                                    ↑ /cpm:pivot (amend any artefact mid-flow)
 ```
 
 Each step is optional. Use what fits your situation:
@@ -110,6 +111,19 @@ Reads a completed stories doc, synthesises observations captured during task exe
 
 **On exit**: Offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:stories` with the retro as input context — closing the feedback loop for the next planning cycle.
 
+### `/cpm:pivot` — Course Correction
+
+Revisit any planning artefact (brief, spec, or stories), surgically amend it, and cascade changes through downstream documents. Lighter than re-running the original skill — edit what exists rather than starting over.
+
+**Input**: A file path to any planning document, or auto-discovers artefact chains for selection.
+
+```
+/cpm:pivot docs/specifications/01-spec-customer-portal.md
+/cpm:pivot        # discover and select from existing artefacts
+```
+
+The workflow: select a document, describe your changes in natural language, review a change summary, then walk downstream documents with guided per-section updates. Tasks affected by changed stories are flagged (but never auto-modified).
+
 ## Compaction Resilience
 
 CPM skills run long, multi-phase conversations that can trigger Claude Code's auto-compaction. When that happens, mid-skill state (current phase, user decisions, facilitation progress) would normally be lost.
@@ -177,8 +191,10 @@ cpm/
 │   │   └── SKILL.md         # Work breakdown skill
 │   ├── do/
 │   │   └── SKILL.md         # Task execution skill
-│   └── retro/
-│       └── SKILL.md         # Lightweight retrospective skill
+│   ├── retro/
+│   │   └── SKILL.md         # Lightweight retrospective skill
+│   └── pivot/
+│       └── SKILL.md         # Course correction skill
 ├── README.md
 └── LICENSE
 ```

@@ -156,13 +156,13 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.3.0)
+### Claude Planning Method (v1.4.0)
 
 **Facilitated planning with multi-perspective party mode for Claude Code**
 
-Structured discovery, specification, work breakdown, and task execution through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
+Structured discovery, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
 
-**Five skills forming a pipeline:**
+**Seven skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -171,17 +171,23 @@ Structured discovery, specification, work breakdown, and task execution through 
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
 | `/cpm:stories` | Work breakdown into tracked tasks | `docs/stories/01-story-{slug}.md` + Claude Code tasks |
 | `/cpm:do` | Task execution with acceptance criteria | Updated stories doc + implemented code |
+| `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
+| `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
 
 **Quick Start:**
 ```bash
 # Brainstorm with your team of agent personas
 /cpm:party should we use a monorepo or separate repos?
 
-# Full pipeline: discover → spec → stories → do
+# Full pipeline: discover → spec → stories → do → retro
 /cpm:discover build a customer portal for our booking system
 /cpm:spec docs/plans/01-plan-customer-portal.md
 /cpm:stories docs/specifications/01-spec-customer-portal.md
 /cpm:do
+/cpm:retro
+
+# Course correct mid-flow
+/cpm:pivot docs/specifications/01-spec-customer-portal.md
 
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management
@@ -198,6 +204,8 @@ Structured discovery, specification, work breakdown, and task execution through 
 - Architecture decisions with rationale and alternatives
 - Right-sized stories with acceptance criteria and dependencies
 - Task execution loop with acceptance criteria verification
+- Lightweight retros that feed forward into the next planning cycle
+- Course correction — surgically amend any artefact with cascading downstream updates
 - Customisable agent roster — override default personas per project
 - Compaction resilience — seamlessly survives Claude Code context compaction
 

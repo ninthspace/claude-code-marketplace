@@ -7,8 +7,8 @@
 
 ### Create cpm:pivot SKILL.md skeleton
 **Story**: 1
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 1
+**Status**: Complete
 **Blocked by**: —
 
 **Acceptance Criteria**:
@@ -22,8 +22,8 @@
 
 ### Build artefact chain discovery
 **Story**: 2
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 2
+**Status**: Complete
 **Blocked by**: Story 1
 
 **Acceptance Criteria**:
@@ -38,8 +38,8 @@
 
 ### Implement surgical amendment workflow
 **Story**: 3
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 3
+**Status**: Complete
 **Blocked by**: Story 1
 
 **Acceptance Criteria**:
@@ -55,8 +55,8 @@
 
 ### Implement cascading update facilitation
 **Story**: 4
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 4
+**Status**: Complete
 **Blocked by**: Story 2, Story 3
 
 **Acceptance Criteria**:
@@ -71,8 +71,8 @@
 
 ### Implement task impact flagging
 **Story**: 5
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 5
+**Status**: Complete
 **Blocked by**: Story 4
 
 **Acceptance Criteria**:
@@ -87,8 +87,8 @@
 
 ### Register cpm:pivot in plugin manifest
 **Story**: 6
-**Task ID**: —
-**Status**: Pending
+**Task ID**: 6
+**Status**: Complete
 **Blocked by**: Story 1
 
 **Acceptance Criteria**:
