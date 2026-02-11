@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPM Training Guide — Interactive Playground</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --text-faint: #6e7681;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
+    --green: #3fb950;
+    --green-dim: #238636;
+    --yellow: #d29922;
+    --yellow-dim: #9e6a03;
+    --red: #f85149;
+    --red-dim: #da3633;
+    --purple: #bc8cff;
+    --purple-dim: #8957e5;
+    --orange: #f0883e;
+    --cyan: #39d2c0;
+    --pink: #f778ba;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  /* Header */
+  header {
+    grid-column: 1 / -1;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  .preset-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .preset-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .preset-btn:hover { border-color: var(--accent); color: var(--text); }
+  .preset-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+
+  /* Canvas area */
+  .canvas-wrap {
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+
+  canvas.dragging { cursor: grabbing; }
+
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    max-width: 320px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+  }
+
+  .tooltip.visible { opacity: 1; }
+  .tooltip h3 { font-size: 13px; margin-bottom: 4px; color: var(--accent); }
+  .tooltip .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--surface2); color: var(--text-dim); margin-right: 4px; }
+  .tooltip p { color: var(--text-dim); margin-top: 4px; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Skill list */
+  .skill-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .skill-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .skill-row:hover { background: var(--surface2); }
+  .skill-row.selected { background: var(--accent-dim); }
+
+  .skill-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .skill-name {
+    font-size: 12px;
+    flex: 1;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+  }
+
+  .knowledge-btn {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+    min-width: 56px;
+    text-align: center;
+  }
+
+  .knowledge-btn.know { background: var(--green-dim); color: var(--green); border-color: var(--green-dim); }
+  .knowledge-btn.fuzzy { background: var(--yellow-dim); color: var(--yellow); border-color: var(--yellow-dim); }
+  .knowledge-btn.unknown { background: var(--red-dim); color: var(--red); border-color: var(--red-dim); }
+
+  /* Detail panel */
+  .detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+  }
+
+  .detail-panel h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .detail-panel .subtitle {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+
+  .detail-panel .desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .detail-panel .field-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+
+  .detail-panel .field-value {
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+    background: var(--surface2);
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  .detail-panel .phases {
+    list-style: none;
+    counter-reset: phase;
+  }
+
+  .detail-panel .phases li {
+    counter-increment: phase;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    padding-left: 22px;
+    position: relative;
+  }
+
+  .detail-panel .phases li::before {
+    content: counter(phase);
+    position: absolute;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 4px;
+    color: var(--text-faint);
+  }
+
+  .detail-panel .tip {
+    background: var(--accent-dim);
+    border-left: 3px solid var(--accent);
+    padding: 8px 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+
+  .detail-panel .tip strong { color: var(--accent); }
+
+  .no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
+    padding: 20px;
+    line-height: 1.6;
+  }
+
+  /* Prompt output */
+  .prompt-bar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .prompt-bar label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    padding-top: 4px;
+    white-space: nowrap;
+  }
+
+  .prompt-text {
+    flex: 1;
+    font-size: 12px;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-height: 60px;
+    overflow-y: auto;
+  }
+
+  .copy-btn {
+    padding: 6px 14px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover { background: var(--accent); color: var(--bg); }
+  .copy-btn.copied { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>/cpm</span> Training Guide</h1>
+  <div class="preset-bar">
+    <button class="preset-btn active" data-preset="full" onclick="applyPreset('full')">Full Pipeline</button>
+    <button class="preset-btn" data-preset="quick" onclick="applyPreset('quick')">Quick Start</button>
+    <button class="preset-btn" data-preset="planning" onclick="applyPreset('planning')">Planning Only</button>
+    <button class="preset-btn" data-preset="execution" onclick="applyPreset('execution')">Execution Focus</button>
+    <button class="preset-btn" data-preset="review" onclick="applyPreset('review')">Review Cycle</button>
+  </div>
+</header>
+
+<div class="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-section">
+    <h2>Knowledge Level</h2>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Know</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Fuzzy</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Unknown</div>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <h2>CPM Skills</h2>
+    <div class="skill-list" id="skillList"></div>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="no-selection">Click a skill node on the canvas<br>or in the list to explore it</div>
+  </div>
+</div>
+
+<div class="prompt-bar">
+  <label>Prompt</label>
+  <div class="prompt-text" id="promptText">Mark your knowledge level for each CPM skill, then copy this prompt to get a tailored tutorial.</div>
+  <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────────────────
+
+const SKILLS = [
+  {
+    id: 'party',
+    name: '/cpm:party',
+    label: 'Party',
+    icon: '💬',
+    color: '#f778ba',
+    category: 'planning',
+    short: 'Multi-perspective brainstorming',
+    description: 'Launch team discussions where named agent personas respond in character, build on each other\'s ideas, and constructively disagree. Great for brainstorming, decision-making, or exploring trade-offs.',
+    input: 'A topic, file path, URL, or description',
+    output: 'Discussion summary with agreements, open questions, and recommendations',
+    outputFile: '(inline summary, no file)',
+    phases: ['Load agent roster (8 default personas)', 'Check library for relevant docs', 'Orchestration loop: 2-3 agents per turn', 'Agents reference each other, disagree constructively', 'Exit option after each round', 'Summary with pipeline handoff'],
+    tip: 'Use party before discover when you\'re unsure about the problem space. The diverse perspectives help surface blind spots early.',
+    personas: 'Jordan (PM), Margot (Architect), Bella (Dev), Priya (UX), Tomas (QA), Sable (DevOps), Elli (Writer), Ren (Scrum Master)',
+    next: ['discover', 'spec', 'epics']
+  },
+  {
+    id: 'discover',
+    name: '/cpm:discover',
+    label: 'Discover',
+    icon: '🔍',
+    color: '#58a6ff',
+    category: 'planning',
+    short: 'Guided problem discovery',
+    description: 'Facilitated conversation to understand the problem before proposing solutions. Walks through six phases: Why, Who, Current State, Success Criteria, Constraints, and Summary. Agent personas weigh in at phases 1 and 5.',
+    input: 'User description of what they want to build',
+    output: 'Problem brief with why, who, current state, success criteria, constraints',
+    outputFile: 'docs/plans/{nn}-plan-{slug}.md',
+    phases: ['Why — motivation and importance', 'Who — target users and needs', 'Current State — how it\'s solved today', 'Success Criteria — definition of done', 'Constraints — technical, business, timeline', 'Summary — confirm the problem brief'],
+    tip: 'Resist the urge to jump to solutions. The discover phase builds shared understanding that prevents costly pivots later.',
+    next: ['spec']
+  },
+  {
+    id: 'spec',
+    name: '/cpm:spec',
+    label: 'Spec',
+    icon: '📋',
+    color: '#bc8cff',
+    category: 'planning',
+    short: 'Requirements & architecture',
+    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements, architecture decisions, and scope boundaries. Agent personas surface trade-offs at key decisions.',
+    input: 'Problem brief from discover (auto-detected)',
+    output: 'Specification with MoSCoW requirements, architecture decisions, scope boundaries',
+    outputFile: 'docs/specifications/{nn}-spec-{slug}.md',
+    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority', 'Non-Functional Requirements — performance, security', 'Architecture Decisions — with agent perspectives', 'Scope Boundary — in/out/deferred', 'Review — user confirmation'],
+    tip: 'MoSCoW means Must / Should / Could / Won\'t. Be ruthless with "Won\'t" — it protects your scope.',
+    next: ['epics']
+  },
+  {
+    id: 'epics',
+    name: '/cpm:epics',
+    label: 'Epics',
+    icon: '📦',
+    color: '#3fb950',
+    category: 'planning',
+    short: 'Break spec into work items',
+    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria and dependencies. Tasks use dot notation (1.1, 1.2) within stories.',
+    input: 'Specification from spec (auto-detected)',
+    output: 'Multiple epic docs, each with stories and tasks',
+    outputFile: 'docs/epics/{nn}-epic-{slug}.md (one per epic)',
+    phases: ['Read source specification', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
+    tip: 'Stories are deliverables. Tasks are steps. Acceptance criteria live on stories, not tasks. Dependencies are between stories/epics, never between tasks.',
+    next: ['do', 'review']
+  },
+  {
+    id: 'do',
+    name: '/cpm:do',
+    label: 'Do',
+    icon: '⚡',
+    color: '#f0883e',
+    category: 'execution',
+    short: 'Execute tasks from epics',
+    description: 'Works through stories and tasks from epic documents. Hydrates one story at a time into Claude Code tasks, executes each task, verifies acceptance criteria, and captures retro observations. Updates the epic doc after every task.',
+    input: 'Epic doc (auto-detected or user provides)',
+    output: 'Completed code + updated epic docs with retro observations',
+    outputFile: '(updates epic docs in place)',
+    phases: ['Resolve epic doc', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work', 'Verify acceptance criteria', 'Mark complete + capture retro observation', 'Loop until story done → hydrate next'],
+    tip: 'Retro observations captured during /do (scope surprise, criteria gap, complexity underestimate, codebase discovery) feed directly into /retro. They\'re gold for improving future planning.',
+    next: ['retro', 'review', 'pivot']
+  },
+  {
+    id: 'review',
+    name: '/cpm:review',
+    label: 'Review',
+    icon: '🔎',
+    color: '#39d2c0',
+    category: 'quality',
+    short: 'Adversarial review of artifacts',
+    description: 'Critical review of epic docs or stories using the party agent roster. Examines for unclear requirements, missing acceptance criteria, hidden complexity, architectural risks, testability concerns, scope creep, and dependency risks. Can auto-generate remediation tasks.',
+    input: 'Epic doc or story',
+    output: 'Review document with findings by severity (Critical / Warning / Suggestion)',
+    outputFile: 'docs/reviews/{nn}-review-{slug}.md',
+    phases: ['Analyse artifact structure', 'Conduct review (2-4 agents)', 'Write review file with severity ratings', 'Optionally generate remediation tasks', 'Pipeline handoff (adaptive to epic status)'],
+    tip: 'Run review before /do to catch planning gaps early. Critical findings block execution. Autofix appends a remediation story to the epic.',
+    next: ['do', 'pivot']
+  },
+  {
+    id: 'pivot',
+    name: '/cpm:pivot',
+    label: 'Pivot',
+    icon: '🔀',
+    color: '#d29922',
+    category: 'quality',
+    short: 'Course correction',
+    description: 'Surgically amend any planning artifact and cascade changes downstream. Discovers the artifact chain (brief → spec → epics), edits the selected document, then walks downstream docs with guided per-section updates. Never auto-modifies tasks.',
+    input: 'Any planning artifact to amend',
+    output: 'Updated artifact + cascaded downstream changes',
+    outputFile: '(edits existing files in place)',
+    phases: ['Discover artifact chain by back-references', 'Surgical amendment (Edit tool only)', 'Walk downstream docs with guided updates', 'Flag affected tasks (never auto-modify)'],
+    tip: 'Pivot is lighter than re-running the original skill. Use it when requirements shift mid-flight instead of starting over.',
+    next: ['do', 'review']
+  },
+  {
+    id: 'retro',
+    name: '/cpm:retro',
+    label: 'Retro',
+    icon: '📊',
+    color: '#f85149',
+    category: 'quality',
+    short: 'Lightweight retrospective',
+    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (scope surprise, criteria gap, complexity underestimate, codebase discovery), extracts patterns, and produces actionable recommendations. Can write learnings back to library docs.',
+    input: 'Completed epic doc',
+    output: 'Retro file with patterns, observations, and recommendations',
+    outputFile: 'docs/retros/{nn}-retro-{slug}.md',
+    phases: ['Read epic doc, identify retro observations', 'Synthesise by category, extract patterns', 'Write retro file with recommendations', 'Optionally amend library docs with learnings', 'Pipeline handoff to next cycle'],
+    tip: 'The library write-back is powerful — learnings from this project become reference material for the next. This is how institutional knowledge compounds.',
+    next: ['discover', 'spec', 'epics', 'library']
+  },
+  {
+    id: 'library',
+    name: '/cpm:library',
+    label: 'Library',
+    icon: '📚',
+    color: '#bc8cff',
+    category: 'support',
+    short: 'Curate reference documents',
+    description: 'Import and manage reference documents that other CPM skills discover and use as context. Three actions: intake (import with front-matter), consolidate (merge amendments), and batch (add missing front-matter). Scope tags control which skills see each doc.',
+    input: 'File path, URL, or existing library doc',
+    output: 'Library doc with YAML front-matter (title, source, scope, summary)',
+    outputFile: 'docs/library/{filename}.md',
+    phases: ['Intake: import file/URL with auto-generated front-matter', 'Consolidate: merge amendment blocks into clean doc', 'Batch: add front-matter to bare documents'],
+    tip: 'Scope tags (discover, spec, epics, do, party, review, all) control which skills see each doc. Be specific — a coding standard is relevant to "do" but not "discover".',
+    next: []
+  },
+  {
+    id: 'archive',
+    name: '/cpm:archive',
+    label: 'Archive',
+    icon: '🗄️',
+    color: '#6e7681',
+    category: 'support',
+    short: 'Archive completed artifacts',
+    description: 'Scans for stale planning artifacts, groups them by slug into chains (brief → spec → epics → retro), evaluates staleness signals, and moves completed chains to docs/archive/ with preserved directory structure. Never deletes files.',
+    input: 'Scans docs/ automatically',
+    output: 'Archived files moved to docs/archive/',
+    outputFile: 'docs/archive/{type}/{filename}.md',
+    phases: ['Scan docs/ for all planning artifacts', 'Group by slug into artifact chains', 'Evaluate 4 staleness signals', 'Present candidates for user approval', 'Move to docs/archive/ preserving structure'],
+    tip: 'Archive detects: completed epics, orphaned plans, completed retros, and fully implemented specs. It groups by chain so related artifacts move together.',
+    next: []
+  }
+];
+
+const EDGES = [
+  { from: 'party', to: 'discover', label: 'informs', style: 'dashed' },
+  { from: 'discover', to: 'spec', label: 'produces brief for', style: 'solid' },
+  { from: 'spec', to: 'epics', label: 'produces spec for', style: 'solid' },
+  { from: 'epics', to: 'do', label: 'produces epics for', style: 'solid' },
+  { from: 'epics', to: 'review', label: 'pre-execution review', style: 'dashed' },
+  { from: 'review', to: 'do', label: 'cleared to execute', style: 'dashed' },
+  { from: 'review', to: 'pivot', label: 'needs amendment', style: 'dashed' },
+  { from: 'do', to: 'retro', label: 'observations feed into', style: 'solid' },
+  { from: 'do', to: 'pivot', label: 'mid-flight correction', style: 'dashed' },
+  { from: 'pivot', to: 'do', label: 'resume execution', style: 'dashed' },
+  { from: 'retro', to: 'discover', label: 'feed forward', style: 'dashed' },
+  { from: 'retro', to: 'library', label: 'write-back learnings', style: 'dashed' },
+  { from: 'library', to: 'discover', label: 'context for', style: 'dotted' },
+  { from: 'library', to: 'spec', label: 'context for', style: 'dotted' },
+  { from: 'library', to: 'party', label: 'context for', style: 'dotted' },
+];
+
+const PRESETS = {
+  full: { highlight: ['party','discover','spec','epics','review','do','pivot','retro','library','archive'], knowledge: {} },
+  quick: { highlight: ['discover','spec','epics','do'], knowledge: { party:'know', review:'know', pivot:'know', retro:'know', library:'know', archive:'know' } },
+  planning: { highlight: ['party','discover','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', archive:'know' } },
+  execution: { highlight: ['do','pivot','review','retro'], knowledge: { party:'know', discover:'know', spec:'know', epics:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', discover:'know', spec:'know', epics:'know', do:'know', library:'know' } },
+};
+
+// ── State ───────────────────────────────────────────────────────────────
+
+const LEVELS = ['unknown', 'fuzzy', 'know'];
+
+const state = {
+  selected: null,
+  knowledge: {},
+  activePreset: 'full',
+  highlightedSkills: SKILLS.map(s => s.id),
+  drag: null,
+  hover: null,
+  pan: { x: 0, y: 0 },
+};
+
+// Init knowledge
+SKILLS.forEach(s => state.knowledge[s.id] = 'unknown');
+
+// ── Node positions (arranged as a pipeline flow) ────────────────────────
+
+const NODE_POSITIONS = {
+  party:    { x: 100, y: 220 },
+  discover: { x: 260, y: 220 },
+  spec:     { x: 420, y: 220 },
+  epics:    { x: 580, y: 220 },
+  review:   { x: 580, y: 90 },
+  do:       { x: 740, y: 220 },
+  pivot:    { x: 660, y: 350 },
+  retro:    { x: 900, y: 220 },
+  library:  { x: 180, y: 90 },
+  archive:  { x: 900, y: 370 },
+};
+
+const NODE_RADIUS = 34;
+
+// ── Canvas ──────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+function resize() {
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth * devicePixelRatio;
+  canvas.height = wrap.clientHeight * devicePixelRatio;
+  canvas.style.width = wrap.clientWidth + 'px';
+  canvas.style.height = wrap.clientHeight + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+window.addEventListener('resize', resize);
+
+function getSkill(id) { return SKILLS.find(s => s.id === id); }
+
+function getNodeScreenPos(id) {
+  const p = NODE_POSITIONS[id];
+  const wrap = canvas.parentElement;
+  const ox = (wrap.clientWidth - 1000) / 2 + state.pan.x;
+  const oy = (wrap.clientHeight - 440) / 2 + state.pan.y;
+  return { x: p.x + ox, y: p.y + oy };
+}
+
+function draw() {
+  const w = canvas.parentElement.clientWidth;
+  const h = canvas.parentElement.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  // Offset to center the layout
+  const ox = (w - 1000) / 2 + state.pan.x;
+  const oy = (h - 440) / 2 + state.pan.y;
+
+  // Draw edges
+  EDGES.forEach(e => {
+    const from = NODE_POSITIONS[e.from];
+    const to = NODE_POSITIONS[e.to];
+    if (!from || !to) return;
+
+    const fx = from.x + ox, fy = from.y + oy;
+    const tx = to.x + ox, ty = to.y + oy;
+
+    const highlighted = state.highlightedSkills.includes(e.from) && state.highlightedSkills.includes(e.to);
+    const isSelectedEdge = state.selected && (e.from === state.selected || e.to === state.selected);
+
+    ctx.beginPath();
+    ctx.strokeStyle = isSelectedEdge ? 'rgba(88,166,255,0.6)' : highlighted ? 'rgba(139,148,158,0.35)' : 'rgba(139,148,158,0.12)';
+    ctx.lineWidth = isSelectedEdge ? 2 : 1.5;
+
+    if (e.style === 'dashed') ctx.setLineDash([6, 4]);
+    else if (e.style === 'dotted') ctx.setLineDash([2, 4]);
+    else ctx.setLineDash([]);
+
+    // Curved edges
+    const mx = (fx + tx) / 2;
+    const my = (fy + ty) / 2;
+    const dx = tx - fx;
+    const dy = ty - fy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const curve = dist > 200 ? 30 : 15;
+    const nx = -dy / dist * curve;
+    const ny = dx / dist * curve;
+
+    ctx.moveTo(fx, fy);
+    ctx.quadraticCurveTo(mx + nx, my + ny, tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrow head
+    const t = 0.92;
+    const ax = (1-t)*(1-t)*fx + 2*(1-t)*t*(mx+nx) + t*t*tx;
+    const ay = (1-t)*(1-t)*fy + 2*(1-t)*t*(my+ny) + t*t*ty;
+    const angle = Math.atan2(ty - ay, tx - ax);
+    const alen = 8;
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.moveTo(tx, ty);
+    // Pull arrow back to edge of node
+    const arrowTipX = tx - Math.cos(angle) * NODE_RADIUS;
+    const arrowTipY = ty - Math.sin(angle) * NODE_RADIUS;
+    ctx.moveTo(arrowTipX, arrowTipY);
+    ctx.lineTo(arrowTipX - alen * Math.cos(angle - 0.4), arrowTipY - alen * Math.sin(angle - 0.4));
+    ctx.lineTo(arrowTipX - alen * Math.cos(angle + 0.4), arrowTipY - alen * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // Edge label
+    if (isSelectedEdge) {
+      ctx.font = '10px -apple-system, sans-serif';
+      ctx.fillStyle = 'rgba(139,148,158,0.7)';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, mx + nx * 1.5, my + ny * 1.5 - 4);
+    }
+  });
+
+  // Draw nodes
+  SKILLS.forEach(skill => {
+    const pos = NODE_POSITIONS[skill.id];
+    if (!pos) return;
+    const x = pos.x + ox;
+    const y = pos.y + oy;
+    const highlighted = state.highlightedSkills.includes(skill.id);
+    const selected = state.selected === skill.id;
+    const hovered = state.hover === skill.id;
+    const level = state.knowledge[skill.id];
+    const dimmed = !highlighted;
+
+    // Glow for selected
+    if (selected) {
+      const grad = ctx.createRadialGradient(x, y, NODE_RADIUS, x, y, NODE_RADIUS * 2);
+      grad.addColorStop(0, skill.color + '30');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - NODE_RADIUS * 2, y - NODE_RADIUS * 2, NODE_RADIUS * 4, NODE_RADIUS * 4);
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
+
+    if (dimmed) {
+      ctx.fillStyle = '#161b22';
+      ctx.strokeStyle = '#30363d';
+    } else {
+      ctx.fillStyle = selected ? skill.color + '25' : hovered ? skill.color + '18' : '#161b22';
+      ctx.strokeStyle = selected ? skill.color : hovered ? skill.color + '90' : '#30363d';
+    }
+
+    ctx.lineWidth = selected ? 2.5 : 1.5;
+    ctx.fill();
+    ctx.stroke();
+
+    // Knowledge ring
+    if (!dimmed && level !== 'unknown') {
+      ctx.beginPath();
+      ctx.arc(x, y, NODE_RADIUS + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = level === 'know' ? '#3fb95060' : '#d2992260';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Icon
+    ctx.font = '18px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = dimmed ? 0.3 : 1;
+    ctx.fillText(skill.icon, x, y - 2);
+    ctx.globalAlpha = 1;
+
+    // Label
+    ctx.font = `${selected ? '600' : '500'} 11px -apple-system, sans-serif`;
+    ctx.fillStyle = dimmed ? '#6e768140' : selected ? skill.color : '#e6edf3';
+    ctx.textAlign = 'center';
+    ctx.fillText(skill.label, x, y + NODE_RADIUS + 14);
+
+    // Category badge
+    if (!dimmed) {
+      ctx.font = '9px -apple-system, sans-serif';
+      ctx.fillStyle = '#6e7681';
+      ctx.fillText(skill.category, x, y + NODE_RADIUS + 26);
+    }
+  });
+}
+
+// ── Interactions ────────────────────────────────────────────────────────
+
+function hitTest(mx, my) {
+  for (const skill of SKILLS) {
+    const pos = getNodeScreenPos(skill.id);
+    const dx = mx - pos.x;
+    const dy = my - pos.y;
+    if (dx*dx + dy*dy <= NODE_RADIUS * NODE_RADIUS) return skill.id;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (state.drag) {
+    state.pan.x += e.movementX;
+    state.pan.y += e.movementY;
+    draw();
+    return;
+  }
+
+  const hit = hitTest(mx, my);
+  if (hit !== state.hover) {
+    state.hover = hit;
+    canvas.style.cursor = hit ? 'pointer' : 'grab';
+    draw();
+  }
+
+  // Tooltip
+  if (hit) {
+    const skill = getSkill(hit);
+    const pos = getNodeScreenPos(hit);
+    tooltip.innerHTML = `<h3>${skill.icon} ${skill.name}</h3><span class="tag">${skill.category}</span><p>${skill.short}</p>`;
+    tooltip.style.left = (pos.x + NODE_RADIUS + 10) + 'px';
+    tooltip.style.top = (pos.y - 20) + 'px';
+    tooltip.classList.add('visible');
+  } else {
+    tooltip.classList.remove('visible');
+  }
+});
+
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const hit = hitTest(mx, my);
+
+  if (hit) {
+    selectSkill(hit);
+  } else {
+    state.drag = true;
+    canvas.classList.add('dragging');
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  state.drag = false;
+  canvas.classList.remove('dragging');
+});
+
+canvas.addEventListener('mouseleave', () => {
+  state.drag = false;
+  state.hover = null;
+  tooltip.classList.remove('visible');
+  canvas.classList.remove('dragging');
+  draw();
+});
+
+// ── Sidebar ─────────────────────────────────────────────────────────────
+
+function buildSkillList() {
+  const list = document.getElementById('skillList');
+  list.innerHTML = '';
+  SKILLS.forEach(skill => {
+    const row = document.createElement('div');
+    row.className = 'skill-row' + (state.selected === skill.id ? ' selected' : '');
+    row.onclick = () => selectSkill(skill.id);
+
+    const dot = document.createElement('div');
+    dot.className = 'skill-icon';
+    dot.style.background = skill.color;
+
+    const name = document.createElement('span');
+    name.className = 'skill-name';
+    name.textContent = skill.name;
+
+    const btn = document.createElement('button');
+    const level = state.knowledge[skill.id];
+    btn.className = 'knowledge-btn ' + level;
+    btn.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      cycleKnowledge(skill.id);
+    };
+
+    row.appendChild(dot);
+    row.appendChild(name);
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+
+function cycleKnowledge(id) {
+  const cur = LEVELS.indexOf(state.knowledge[id]);
+  state.knowledge[id] = LEVELS[(cur + 1) % LEVELS.length];
+  clearActivePreset();
+  updateAll();
+}
+
+function clearActivePreset() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function selectSkill(id) {
+  state.selected = state.selected === id ? null : id;
+  updateAll();
+}
+
+function renderDetail() {
+  const panel = document.getElementById('detailPanel');
+  if (!state.selected) {
+    panel.innerHTML = '<div class="no-selection">Click a skill node on the canvas<br>or in the list to explore it</div>';
+    return;
+  }
+
+  const skill = getSkill(state.selected);
+  const level = state.knowledge[skill.id];
+
+  let html = `<h3>${skill.icon} ${skill.name}</h3>`;
+  html += `<div class="subtitle">${skill.category} &middot; ${level}</div>`;
+  html += `<div class="desc">${skill.description}</div>`;
+
+  html += `<div class="field-label">Input</div><div class="field-value">${skill.input}</div>`;
+  html += `<div class="field-label">Output</div><div class="field-value">${skill.output}</div>`;
+  html += `<div class="field-label">Output File</div><div class="field-value">${skill.outputFile}</div>`;
+
+  if (skill.personas) {
+    html += `<div class="field-label">Agent Roster</div><div class="field-value">${skill.personas}</div>`;
+  }
+
+  html += `<div class="field-label">Phases</div><ol class="phases">`;
+  skill.phases.forEach(p => html += `<li>${p}</li>`);
+  html += `</ol>`;
+
+  if (skill.next.length > 0) {
+    html += `<div class="field-label">Pipeline Handoffs</div><div class="field-value">${skill.next.map(n => '/cpm:' + n).join(' → ')}</div>`;
+  }
+
+  html += `<div class="tip"><strong>Tip:</strong> ${skill.tip}</div>`;
+
+  panel.innerHTML = html;
+}
+
+// ── Presets ──────────────────────────────────────────────────────────────
+
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  state.activePreset = name;
+  state.highlightedSkills = preset.highlight;
+
+  SKILLS.forEach(s => {
+    state.knowledge[s.id] = preset.knowledge[s.id] || 'unknown';
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === name);
+  });
+
+  updateAll();
+}
+
+// ── Prompt ──────────────────────────────────────────────────────────────
+
+function updatePrompt() {
+  const known = SKILLS.filter(s => state.knowledge[s.id] === 'know');
+  const fuzzy = SKILLS.filter(s => state.knowledge[s.id] === 'fuzzy');
+  const unknown = SKILLS.filter(s => state.knowledge[s.id] === 'unknown');
+
+  if (known.length === SKILLS.length) {
+    document.getElementById('promptText').textContent = 'You\'ve marked everything as known! Adjust your knowledge levels or select a specific skill for a targeted deep-dive.';
+    return;
+  }
+
+  if (unknown.length === SKILLS.length) {
+    document.getElementById('promptText').textContent = 'I\'m new to the CPM plugin for Claude Code. Give me a complete walkthrough of the planning lifecycle: what each skill does, the standard pipeline (discover → spec → epics → do → retro), what artifacts are produced, and how they chain together. Start with the big picture, then explain each skill with a practical example.';
+    return;
+  }
+
+  const parts = ['I\'m learning the CPM (Claude Planning Method) plugin for Claude Code.'];
+
+  if (known.length > 0) {
+    parts.push('I already understand: ' + known.map(s => s.name + ' (' + s.short + ')').join(', ') + '.');
+  }
+
+  if (fuzzy.length > 0) {
+    parts.push('I\'m fuzzy on: ' + fuzzy.map(s => s.name + ' (' + s.short + ')').join(', ') + '.');
+  }
+
+  if (unknown.length > 0) {
+    parts.push('I don\'t know: ' + unknown.map(s => s.name + ' (' + s.short + ')').join(', ') + '.');
+  }
+
+  if (fuzzy.length > 0 || unknown.length > 0) {
+    parts.push('Please explain the concepts I\'m fuzzy on or don\'t know, building on what I already understand. Use a practical example of building a feature to show how these skills chain together. Include the file paths of artifacts produced and how they reference each other.');
+  }
+
+  if (state.selected) {
+    const skill = getSkill(state.selected);
+    parts.push(`I'm particularly interested in ${skill.name} right now — give extra detail on its phases, inputs, outputs, and when to use it vs alternatives.`);
+  }
+
+  document.getElementById('promptText').textContent = parts.join(' ');
+}
+
+function copyPrompt() {
+  const text = document.getElementById('promptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// ── Update all ──────────────────────────────────────────────────────────
+
+function updateAll() {
+  draw();
+  buildSkillList();
+  renderDetail();
+  updatePrompt();
+}
+
+// ── Init ────────────────────────────────────────────────────────────────
+
+resize();
+updateAll();
+</script>
+</body>
+</html>

@@ -224,7 +224,7 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 - Customisable agent roster — override default personas per project
 - Compaction resilience — seamlessly survives Claude Code context compaction
 
-[View full documentation](./cpm/README.md)
+[View full documentation](./cpm/README.md) | [Interactive Training Guide](./cpm-training-guide.html)
 
 ---
 

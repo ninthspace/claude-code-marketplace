@@ -13,7 +13,8 @@
       "WebFetch(domain:docs.bmad-method.org)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(CLAUDE_PROJECT_DIR=/Users/chris/Work/git/claude-code-marketplace bash:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(open:*)"
     ],
     "deny": [],
     "ask": []

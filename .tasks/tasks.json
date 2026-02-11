@@ -60,15 +60,15 @@
       "id": "0698c7a8-6108-78e7-8000-855ea1492c2b",
       "short_id": "SCNY",
       "title": "/cpm:do doesn't keep .cpm-progress.md updated",
-      "status": "open",
+      "status": "closed",
       "group": null,
       "sort_order": 4,
       "archived": false,
       "flagged": false,
       "notes": [],
       "created_at": "2026-02-11T12:48:06.064578",
-      "updated_at": "2026-02-11T12:48:06.064578",
-      "closed_at": null
+      "updated_at": "2026-02-11T15:58:19.333934",
+      "closed_at": "2026-02-11T15:58:19.333925"
     }
   ],
   "groups": []
