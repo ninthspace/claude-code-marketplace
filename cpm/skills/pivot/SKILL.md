@@ -108,7 +108,7 @@ Identify tasks that may be affected by the changes. Skip this step if no tasks e
 
 Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it after the workflow finishes.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all amended artifacts have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 

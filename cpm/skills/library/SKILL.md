@@ -199,7 +199,7 @@ After all documents are processed, tell the user how many were updated and delet
 
 Maintain `docs/plans/.cpm-progress.md` during the intake and batch front-matter workflows for compaction resilience.
 
-**Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it after saving the final library document or completing the batch workflow.
+**Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it only after all output artifacts (library documents, batch results) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale).
 

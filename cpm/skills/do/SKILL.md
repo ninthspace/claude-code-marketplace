@@ -47,7 +47,7 @@ For each task, follow these steps in order.
 ### 1. Load Context
 
 - Call `TaskGet` to read the full task description.
-- If a stories doc was resolved during Input, read it with the Read tool. Locate the matching entry by searching for the `**Task ID**: {id}` field that matches the current task ID. This may match either a `###` story heading (for verification gate tasks) or a `####` task heading (for implementation tasks). If no Task ID match is found, fall back to matching the task subject to a heading. Note the parent story's acceptance criteria — for `####` tasks, look up to the nearest `###` story heading above the matched task.
+- If a stories doc was resolved during Input, read it with the Read tool. Locate the matching entry by searching for the `**Task ID**: {id}` field that matches the current task ID. This may match either a `###` story heading (for verification gate tasks) or a `####` task heading (for implementation tasks). If no Task ID match is found, fall back to matching the task subject to a heading. Note the parent story's acceptance criteria — for `####` tasks, look up to the nearest `###` story heading above the matched task. If the matched `####` task has a `**Description**:` field, read it — this scopes the task within its parent story and clarifies which acceptance criteria it addresses.
 - **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
 - If no stories doc is available, proceed without stories doc integration — the task still gets done.
 
@@ -173,7 +173,7 @@ The skill should work even without a stories doc:
 
 Maintain `docs/plans/.cpm-progress.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
 
-**Create** the file before starting the first task. **Update** it after each task completes. **Delete** it after the work loop finishes (no more tasks).
+**Create** the file before starting the first task. **Update** it after each task completes. **Delete** it only after all output artifacts (stories doc updates, batch summary) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 

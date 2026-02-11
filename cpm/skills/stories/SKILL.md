@@ -70,6 +70,9 @@ Present the stories to the user for each epic using AskUserQuestion. Refine befo
 For each story, identify the **tasks** — concrete implementation steps needed to deliver the story. Each task should have:
 - A clear, actionable title (imperative form: "Create hooks.json configuration")
 - A dot-notation number linking it to its parent story (e.g. Task 1.1, 1.2, 1.3 for Story 1)
+- An optional one-sentence **description** that scopes the task within its parent story — clarifying which acceptance criteria or concern the task addresses
+
+**Task descriptions**: Descriptions help implementers understand task scope without a three-hop lookup (title → story criteria → spec), especially after context compaction or in a new session. Write a description when the task's scope isn't obvious from the title alone — e.g. when a story has multiple tasks that divide its acceptance criteria between them. Omit the description when the title is self-evident, such as single-task stories or tasks with unambiguous titles. This is a judgement call, not a mandatory field.
 
 Tasks are the actual work items. They should be specific enough that an implementer knows exactly what to do.
 
@@ -87,7 +90,7 @@ Use TaskCreate to create all items in Claude Code's native system — both stori
 ```
 TaskCreate:
   subject: "{Task title}"
-  description: "{Description with relevant context}\n\nStories doc: docs/stories/{nn}-story-{slug}.md\nStory: {N}\nTask: {N.M}"
+  description: "{Task description from stories doc}\n\nStories doc: docs/stories/{nn}-story-{slug}.md\nStory: {N}\nTask: {N.M}"
   activeForm: "{Present continuous form}"
 ```
 
@@ -168,11 +171,13 @@ Save the stories document to `docs/stories/{nn}-story-{slug}.md`. Create the `do
 
 #### {Task Title}
 **Task**: {N.1}
+**Description**: {One-sentence scope within parent story — which acceptance criteria or concern this task addresses}
 **Task ID**: —
 **Status**: Pending
 
 #### {Task Title}
 **Task**: {N.2}
+**Description**: {One-sentence scope within parent story — which acceptance criteria or concern this task addresses}
 **Task ID**: —
 **Status**: Pending
 
@@ -193,7 +198,7 @@ When starting implementation of a task, read the stories document first to under
 
 Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it after saving the final stories document.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final stories document has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
