@@ -1,11 +1,11 @@
 ---
 name: cpm:stories
-description: Break a plan or spec into tracked work items with dependencies. Reads planning docs and creates tasks in Claude Code's native task system using TaskCreate. Triggers on "/cpm:stories".
+description: Break a plan or spec into tracked work items with dependencies. Reads planning docs and creates stories with sub-tasks in Claude Code's native task system using TaskCreate. Triggers on "/cpm:stories".
 ---
 
-# Work Breakdown into Tasks
+# Work Breakdown into Stories & Tasks
 
-Turn a plan or spec into trackable work items using Claude Code's native task system (TaskCreate/TaskUpdate).
+Turn a plan or spec into a two-level structure: **stories** (meaningful deliverables with acceptance criteria) containing **tasks** (implementation steps). Both levels are tracked in Claude Code's native task system via TaskCreate.
 
 ## Input
 
@@ -52,52 +52,91 @@ Keep epics practical:
 
 ### Step 3: Break into Stories
 
-For each epic, break into implementable stories. Each story should have:
-- A clear, actionable title (imperative form: "Add user login endpoint")
-- A description with acceptance criteria
-- An activeForm for progress display (present continuous: "Adding user login endpoint")
+For each epic, break into **stories** — meaningful deliverables that represent a coherent unit of value. A story answers "what are we delivering?" not "what file are we editing?"
+
+Each story should have:
+- A clear, actionable title (imperative form: "Set up compaction hook infrastructure")
+- Acceptance criteria that describe the deliverable outcome
+- An activeForm for progress display (present continuous: "Setting up compaction hook infrastructure")
+
+**Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 
 Present the stories to the user for each epic using AskUserQuestion. Refine before moving to the next epic.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
 
+### Step 3b: Identify Tasks within Stories
+
+For each story, identify the **tasks** — concrete implementation steps needed to deliver the story. Each task should have:
+- A clear, actionable title (imperative form: "Create hooks.json configuration")
+- A dot-notation number linking it to its parent story (e.g. Task 1.1, 1.2, 1.3 for Story 1)
+
+Tasks are the actual work items. They should be specific enough that an implementer knows exactly what to do.
+
+Not every story needs multiple tasks. If a story is straightforward enough to be done in one step, a single task is fine. Don't decompose for the sake of it.
+
+Present the tasks for each story using AskUserQuestion. Refine before moving to the next story.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 3b summary before continuing.
+
 ### Step 4: Create Tasks
 
-Use TaskCreate to create all tasks in Claude Code's native system.
+Use TaskCreate to create all items in Claude Code's native system — both stories (as verification gates) and tasks (as implementation work).
 
-For each story:
+**For each task** (implementation work):
 ```
 TaskCreate:
-  subject: "{Story title}"
-  description: "{Description with acceptance criteria}\n\nStories doc: docs/stories/{nn}-story-{slug}.md\nStory: {N}"
+  subject: "{Task title}"
+  description: "{Description with relevant context}\n\nStories doc: docs/stories/{nn}-story-{slug}.md\nStory: {N}\nTask: {N.M}"
   activeForm: "{Present continuous form}"
 ```
 
-Include the path to the stories document and the story number in each task description so it can be found during implementation.
+**For each story** (verification gate):
+```
+TaskCreate:
+  subject: "Verify: {Story title}"
+  description: "Verify acceptance criteria for Story {N}: {Story title}\n\n{List the acceptance criteria here}\n\nStories doc: docs/stories/{nn}-story-{slug}.md\nStory: {N}\nType: verification"
+  activeForm: "Verifying: {Story title}"
+```
 
-After creating each task, update the stories doc to record the assigned task ID in the `**Task ID**` field using the Edit tool. This maps document-level stories to runtime tasks.
+**Order of creation**: Create all tasks for a story first, then the story's verification gate. This ensures sub-task IDs exist before the gate needs to reference them.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary (story-to-task-ID mapping) before continuing.
+After creating each item, update the stories doc to record the assigned task ID in the relevant `**Task ID**` field using the Edit tool.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary (complete ID mapping: stories and tasks) before continuing.
 
 ### Step 5: Set Dependencies
 
-Use TaskUpdate to set `addBlockedBy` relationships where tasks depend on others completing first. Map the story-level `**Blocked by**` references (e.g. `Story 1`) to the corresponding task IDs using the mapping from Step 4.
+Use TaskUpdate to set `addBlockedBy` relationships. Apply two rules:
+
+**Rule 1 — Intra-story** (verification gate blocked by its own tasks):
+For each story, set its verification gate task as `addBlockedBy` all of its sub-task IDs. This ensures the gate only fires after all implementation work is complete.
+
+```
+TaskUpdate(storyGateTaskId, addBlockedBy: [task1Id, task2Id, ...])
+```
+
+**Rule 2 — Cross-story** (dependent story's tasks blocked by upstream gate):
+For each `**Blocked by**: Story N` declaration in the stories doc, set all sub-tasks of the dependent story as `addBlockedBy` the upstream story's verification gate task ID. This ensures a story's implementation work only begins after the upstream story is fully implemented AND verified.
+
+```
+TaskUpdate(eachDependentSubtaskId, addBlockedBy: [upstreamStoryGateTaskId])
+```
 
 Common dependency patterns:
-- Setup/infrastructure tasks block feature tasks
-- Data model tasks block API tasks
-- API tasks block UI tasks
-- Core features block enhancement features
+- Setup/infrastructure stories block feature stories
+- Data model stories block API stories
+- Core feature stories block enhancement stories
 
-Only add dependencies that are genuinely blocking — don't over-constrain the task graph.
+Only add cross-story dependencies that are genuinely blocking — don't over-constrain the task graph.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 5 summary (dependency map) before continuing.
 
 ### Step 6: Confirm
 
 Present the full task tree to the user showing:
-- All tasks grouped by epic
-- Dependencies between tasks
+- All stories and tasks grouped by epic
+- Dependencies between stories (cross-story) and within stories (gate blocked by tasks)
 - Suggested implementation order
 
 Use AskUserQuestion for final confirmation.
@@ -127,16 +166,28 @@ Save the stories document to `docs/stories/{nn}-story-{slug}.md`. Create the `do
 - {criterion}
 - {criterion}
 
+#### {Task Title}
+**Task**: {N.1}
+**Task ID**: —
+**Status**: Pending
+
+#### {Task Title}
+**Task**: {N.2}
+**Task ID**: —
+**Status**: Pending
+
 ---
 ```
 
-Story numbers are sequential per document, starting at 1. They provide stable references within the doc that don't depend on Claude Code's task system. The `**Blocked by**` field references story numbers (e.g. `Story 1` or `Story 1, Story 2`).
+**Story numbers** are sequential per document, starting at 1. They provide stable references within the doc that don't depend on Claude Code's task system. The `**Blocked by**` field references story numbers (e.g. `Story 1` or `Story 1, Story 2`).
 
-The `**Task ID**` field starts as `—` and gets filled in during Step 4 when Claude Code tasks are created. This maps the document-level story to the runtime task.
+**Task numbers** use dot notation: `{story number}.{task sequence}`. Task 1.1 is the first task of Story 1, Task 2.3 is the third task of Story 2.
+
+The `**Task ID**` field starts as `—` on both stories and tasks, and gets filled in during Step 4 when Claude Code tasks are created. This maps document-level items to runtime tasks.
 
 Always produce both the document and the Claude Code tasks. After saving, tell the user the document path so they can reference it later.
 
-When starting implementation of a task, read the stories document first to understand the full context: all epics, dependencies, acceptance criteria, and where the current task fits in the broader plan.
+When starting implementation of a task, read the stories document first to understand the full context: all epics, stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan.
 
 ## State Management
 
@@ -163,13 +214,16 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 {Concise summary — epic names and descriptions as confirmed by user}
 
 ### Step 3: Break into Stories
-{List of stories per epic — titles and brief descriptions}
+{List of stories per epic — titles and acceptance criteria summaries}
+
+### Step 3b: Identify Tasks within Stories
+{List of tasks per story — titles and dot-notation numbers}
 
 ### Step 4: Create Tasks
-{Task IDs created and their corresponding story titles}
+{Task IDs created for both stories (verification gates) and tasks (implementation), with mappings}
 
 ### Step 5: Set Dependencies
-{Dependency map — which tasks block which}
+{Dependency map — intra-story (gate blocked by tasks) and cross-story (tasks blocked by upstream gate)}
 
 {...include only completed steps...}
 
@@ -177,14 +231,15 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 {What to ask or do next in the facilitation}
 ```
 
-The "Completed Steps" section grows as steps complete. Stories state is more structured than discover/spec because it accumulates concrete artifacts — epic names, story titles, task IDs, and dependency maps that must survive compaction for the remaining steps to work.
+The "Completed Steps" section grows as steps complete. Stories state is more structured than discover/spec because it accumulates concrete artifacts — epic names, story titles, task titles, task IDs, and dependency maps that must survive compaction for the remaining steps to work.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
 
 ## Guidelines
 
-- **Right-sized stories.** Each story should be completable in a single focused session. Not too big (vague), not too small (trivial).
-- **Acceptance criteria matter.** Each story needs clear criteria so you know when it's done.
-- **Don't over-decompose.** If a story is straightforward, it doesn't need sub-tasks. If it's complex, break it down further.
-- **Dependencies should be minimal.** Prefer independent stories that can be worked in any order. Only add blockedBy where there's a genuine technical dependency.
+- **Stories are deliverables, tasks are steps.** A story represents a meaningful outcome ("Set up compaction hooks"). Tasks are the implementation work to get there ("Create hooks.json", "Write pre-compact.sh"). If a story title sounds like a single file edit, it's probably a task.
+- **Right-sized stories.** Each story should be completable in a focused session. Not too big (vague multi-day effort), not too small (a single trivial change). A story with 2-5 tasks is typical.
+- **Acceptance criteria live on stories.** Tasks don't have their own acceptance criteria — they inherit meaning from their parent story. The story is done when its acceptance criteria pass, not necessarily when every task checkbox is ticked.
+- **Don't over-decompose tasks.** Not every story needs multiple tasks. If the work is straightforward, one task is fine. The value of task-level breakdown is making complex stories manageable, not adding bureaucracy to simple ones.
+- **Dependencies between stories, not tasks.** Use `**Blocked by**: Story N` to express story-level dependencies. Don't create cross-story task dependencies — if tasks in different stories are interdependent, the stories themselves should have the dependency.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.

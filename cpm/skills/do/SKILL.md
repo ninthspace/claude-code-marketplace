@@ -47,14 +47,15 @@ For each task, follow these steps in order.
 ### 1. Load Context
 
 - Call `TaskGet` to read the full task description.
-- If a stories doc was resolved during Input, read it with the Read tool. Locate the story by searching for the `**Task ID**: {id}` field that matches the current task ID. If no Task ID match is found, fall back to matching the task subject to a story heading (`### {subject}`). Note its acceptance criteria.
+- If a stories doc was resolved during Input, read it with the Read tool. Locate the matching entry by searching for the `**Task ID**: {id}` field that matches the current task ID. This may match either a `###` story heading (for verification gate tasks) or a `####` task heading (for implementation tasks). If no Task ID match is found, fall back to matching the task subject to a heading. Note the parent story's acceptance criteria — for `####` tasks, look up to the nearest `###` story heading above the matched task.
+- **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
 - If no stories doc is available, proceed without stories doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress
 
 - Call `TaskUpdate` to set the task status to `in_progress`.
-- If stories doc integration is active, use the Edit tool to update the story's status:
-  - `old_string`: `**Status**: Pending` (scoped near the matched story heading)
+- If stories doc integration is active, use the Edit tool to update the matched entry's status. The entry may be a `###` story or a `####` task — locate the correct `**Status**: Pending` field near the matched heading:
+  - `old_string`: `**Status**: Pending` (scoped near the matched heading)
   - `new_string`: `**Status**: In Progress`
 
 ### 3. Plan (when warranted)
@@ -71,9 +72,9 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 
 ### 4. Do the Work
 
-Execute the task as described. This is the actual implementation — writing code, creating files, running commands, whatever the task requires.
+**If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the stories doc and verify each criterion against the current state of the codebase. Check files, run tests, or inspect outputs as needed to confirm each criterion is met. Proceed to step 5 with your assessment.
 
-Read the full task description and acceptance criteria to understand what "done" looks like. Work until all criteria are met.
+**If this is an implementation task** (no `Type: verification`): Execute the task as described. This is the actual implementation — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
 
 ### 5. Verify Acceptance Criteria
 
@@ -86,8 +87,8 @@ Before marking the task complete:
 
 ### 6. Mark Complete
 
-- If stories doc integration is active, use the Edit tool to update the story's status:
-  - `old_string`: `**Status**: In Progress`
+- If stories doc integration is active, use the Edit tool to update the matched entry's status (whether `###` story or `####` task):
+  - `old_string`: `**Status**: In Progress` (scoped near the matched heading)
   - `new_string`: `**Status**: Complete`
 - Call `TaskUpdate` to set the task status to `completed`.
 
