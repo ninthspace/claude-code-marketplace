@@ -156,7 +156,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.8.0)
+### Claude Planning Method (v1.9.0)
 
 **Facilitated planning with multi-perspective party mode for Claude Code**
 

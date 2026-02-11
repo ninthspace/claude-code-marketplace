@@ -1,11 +1,11 @@
 ---
 name: cpm:epics
-description: Break a spec into epic documents with tracked stories and tasks. Reads a specification and produces multiple epic docs, each containing stories with sub-tasks, tracked in Claude Code's native task system using TaskCreate. Triggers on "/cpm:epics".
+description: Break a spec into epic documents with stories and tasks. Reads a specification and produces multiple epic docs, each containing stories with sub-tasks. Triggers on "/cpm:epics".
 ---
 
 # Work Breakdown into Epics
 
-Turn a specification into a set of **epic documents** — each representing a major work area containing **stories** (meaningful deliverables with acceptance criteria) and **tasks** (implementation steps). All items are tracked in Claude Code's native task system via TaskCreate.
+Turn a specification into a set of **epic documents** — each representing a major work area containing **stories** (meaningful deliverables with acceptance criteria) and **tasks** (implementation steps). Epic documents are the plan of record — task creation in Claude Code's native system happens later during execution via `cpm:do`.
 
 ## Input
 
@@ -92,71 +92,11 @@ Present the tasks for each story using AskUserQuestion. Refine before moving to 
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 3b summary before continuing.
 
-### Step 4: Create Tasks
-
-Use TaskCreate to create all items in Claude Code's native system — both stories (as verification gates) and tasks (as implementation work).
-
-**For each task** (implementation work):
-```
-TaskCreate:
-  subject: "{Task title}"
-  description: "{Task description from epic doc}\n\nEpic doc: docs/epics/{nn}-epic-{slug}.md\nStory: {N}\nTask: {N.M}"
-  activeForm: "{Present continuous form}"
-```
-
-**For each story** (verification gate):
-```
-TaskCreate:
-  subject: "Verify: {Story title}"
-  description: "Verify acceptance criteria for Story {N}: {Story title}\n\n{List the acceptance criteria here}\n\nEpic doc: docs/epics/{nn}-epic-{slug}.md\nStory: {N}\nType: verification"
-  activeForm: "Verifying: {Story title}"
-```
-
-**Order of creation**: Create all tasks for a story first, then the story's verification gate. This ensures sub-task IDs exist before the gate needs to reference them.
-
-After creating each item, update the epic doc to record the assigned task ID in the relevant `**Task ID**` field using the Edit tool.
-
-**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary (complete ID mapping: stories and tasks) before continuing.
-
-### Step 5: Set Dependencies
-
-Use TaskUpdate to set `addBlockedBy` relationships. Apply three rules:
-
-**Rule 1 — Intra-story** (verification gate blocked by its own tasks):
-For each story, set its verification gate task as `addBlockedBy` all of its sub-task IDs. This ensures the gate only fires after all implementation work is complete.
-
-```
-TaskUpdate(storyGateTaskId, addBlockedBy: [task1Id, task2Id, ...])
-```
-
-**Rule 2 — Cross-story** (dependent story's tasks blocked by upstream gate):
-For each `**Blocked by**: Story N` declaration in an epic doc, set all sub-tasks of the dependent story as `addBlockedBy` the upstream story's verification gate task ID. This ensures a story's implementation work only begins after the upstream story is fully implemented AND verified.
-
-```
-TaskUpdate(eachDependentSubtaskId, addBlockedBy: [upstreamStoryGateTaskId])
-```
-
-**Rule 3 — Cross-epic** (dependent epic's tasks blocked by upstream epic):
-For each `**Blocked by**: Epic {nn}-epic-{slug}` declaration on an epic doc, set all sub-tasks of the dependent epic's first story as `addBlockedBy` the final verification gate of the upstream epic. This creates a serialization point between epics without over-constraining the entire task graph.
-
-```
-TaskUpdate(eachFirstStorySubtaskId, addBlockedBy: [upstreamEpicFinalGateTaskId])
-```
-
-Common dependency patterns:
-- Setup/infrastructure epics block feature epics
-- Data model epics block API epics
-- Core feature epics block enhancement epics
-
-Only add cross-epic dependencies that are genuinely blocking — don't over-constrain the task graph.
-
-**Update progress file now** — write the full `.cpm-progress.md` with Step 5 summary (dependency map) before continuing.
-
-### Step 6: Confirm
+### Step 4: Confirm
 
 Present the full task tree to the user showing:
-- All epics with their stories and tasks
-- Dependencies between epics (cross-epic), between stories (cross-story), and within stories (gate blocked by tasks)
+- All epics with their stories and tasks (using story numbers and task dot-notation)
+- Dependencies between epics (cross-epic) and between stories (cross-story)
 - Suggested implementation order
 
 Use AskUserQuestion for final confirmation.
@@ -178,7 +118,6 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 
 ## {Story Title}
 **Story**: {N}
-**Task ID**: —
 **Status**: Pending
 **Blocked by**: —
 
@@ -189,13 +128,11 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 ### {Task Title}
 **Task**: {N.1}
 **Description**: {One-sentence scope within parent story — which acceptance criteria or concern this task addresses}
-**Task ID**: —
 **Status**: Pending
 
 ### {Task Title}
 **Task**: {N.2}
 **Description**: {One-sentence scope within parent story — which acceptance criteria or concern this task addresses}
-**Task ID**: —
 **Status**: Pending
 
 ---
@@ -210,9 +147,7 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 
 **Task numbers** use dot notation: `{story number}.{task sequence}`. Task 1.1 is the first task of Story 1, Task 2.3 is the third task of Story 2.
 
-The `**Task ID**` field starts as `—` on both stories and tasks, and gets filled in during Step 4 when Claude Code tasks are created. This maps document-level items to runtime tasks.
-
-Always produce both the documents and the Claude Code tasks. After saving each epic doc, tell the user the document path so they can reference it later.
+After saving each epic doc, tell the user the document path so they can reference it later.
 
 When starting implementation of a task, read the relevant epic document first to understand the full context: all stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan.
 
@@ -228,7 +163,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 # CPM Session State
 
 **Skill**: cpm:epics
-**Step**: {N} of 6 — {Step Name}
+**Step**: {N} of 4 — {Step Name}
 **Input source**: {path to spec or brief used as input}
 
 ## Epic Files
@@ -252,12 +187,6 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ### Step 3b: Identify Tasks within Stories
 {List of tasks per story — titles and dot-notation numbers}
 
-### Step 4: Create Tasks
-{Task IDs created for both stories (verification gates) and tasks (implementation), with mappings per epic}
-
-### Step 5: Set Dependencies
-{Dependency map — intra-story, cross-story, and cross-epic dependencies}
-
 {...include only completed steps...}
 
 ## Next Action
@@ -266,7 +195,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 The "Epic Files" table tracks which epic documents have been written. Mark each as "Written" after saving it during the production loop in Steps 3/3b. This enables post-compaction recovery to know which files exist and which still need to be produced.
 
-The "Completed Steps" section grows as steps complete. Epic state is more structured than other skills because it accumulates concrete artifacts — epic names, story titles, task titles, task IDs, and dependency maps that must survive compaction for the remaining steps to work.
+The "Completed Steps" section grows as steps complete. Epic state is more structured than other skills because it accumulates concrete artifacts — epic names, story titles, task titles, and dependency declarations that must survive compaction for the remaining steps to work.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
 
