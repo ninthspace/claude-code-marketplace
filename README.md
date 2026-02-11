@@ -156,13 +156,13 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.4.0)
+### Claude Planning Method (v1.7.2)
 
 **Facilitated planning with multi-perspective party mode for Claude Code**
 
 Structured discovery, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
 
-**Seven skills forming a pipeline:**
+**Nine skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -173,6 +173,8 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 | `/cpm:do` | Task execution with acceptance criteria | Updated stories doc + implemented code |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
+| `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
+| `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
 
 **Quick Start:**
 ```bash
@@ -186,8 +188,14 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 /cpm:do
 /cpm:retro
 
+# Import reference docs for skills to use as context
+/cpm:library docs/architecture-decisions.md
+
 # Course correct mid-flow
 /cpm:pivot docs/specifications/01-spec-customer-portal.md
+
+# Clean up completed artefacts
+/cpm:archive
 
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management
@@ -206,6 +214,8 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 - Task execution loop with acceptance criteria verification
 - Lightweight retros that feed forward into the next planning cycle
 - Course correction — surgically amend any artefact with cascading downstream updates
+- Project reference library — import docs that skills auto-discover and use as context
+- Archive — clean up completed artefacts with staleness heuristics and chain detection
 - Customisable agent roster — override default personas per project
 - Compaction resilience — seamlessly survives Claude Code context compaction
 

@@ -11,6 +11,8 @@ After installation, use any skill independently or as a pipeline:
 ```
 /cpm:party → /cpm:discover → /cpm:spec → /cpm:stories → /cpm:do → /cpm:retro
                                                     ↑ /cpm:pivot (amend any artefact mid-flow)
+                                                                           ↓ /cpm:archive (clean up completed artefacts)
+/cpm:library (import reference docs used by all skills)
 ```
 
 Each step is optional. Use what fits your situation:
@@ -20,6 +22,7 @@ Each step is optional. Use what fits your situation:
 - Problem is clear, need requirements? Jump to `/cpm:spec`
 - Have a plan, need tasks? Go straight to `/cpm:stories`
 - Ready to implement? `/cpm:do` works through tasks one by one
+- Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
 - Small bug fix? Skip planning entirely — Claude Code's native plan mode is enough
 
 ## Skills
@@ -124,6 +127,38 @@ Revisit any planning artefact (brief, spec, or stories), surgically amend it, an
 
 The workflow: select a document, describe your changes in natural language, review a change summary, then walk downstream documents with guided per-section updates. Tasks affected by changed stories are flagged (but never auto-modified).
 
+### `/cpm:library` — Project Reference Library
+
+Import external documents (coding standards, architecture decisions, API contracts, business rules) into a curated `docs/library/` directory with structured YAML front-matter. Other CPM skills automatically discover and reference these documents during planning and execution — specs pick up architectural constraints, stories inherit coding standards, and `/cpm:do` reads relevant docs before implementing.
+
+Three actions:
+
+- **Intake** — Import a local file or URL into the library with auto-generated front-matter (title, scope, summary)
+- **Consolidate** — Reconcile accumulated amendments on a library document into a clean version
+- **Batch front-matter** — Scan for library documents missing front-matter and add it
+
+```
+/cpm:library docs/architecture-decisions.md    # import a file
+/cpm:library https://example.com/standards     # import from URL
+/cpm:library consolidate docs/library/coding-standards.md  # reconcile amendments
+/cpm:library consolidate                       # batch add front-matter
+```
+
+**Scope tagging**: Each library document is tagged with which skills should reference it (`discover`, `spec`, `stories`, `do`, `party`, or `all`). Skills filter by scope during their library check phase — only reading documents relevant to the current workflow.
+
+### `/cpm:archive` — Archive Planning Documents
+
+Move completed or stale planning artifacts out of the active `docs/` directories into `docs/archive/`. Scans for documents across plans, specifications, stories, and retros, groups them into artifact chains by slug, evaluates staleness heuristics, and lets you select which chains to archive.
+
+**Input**: Optional file path to archive a specific document and its chain. Without arguments, scans all planning directories.
+
+```
+/cpm:archive                                          # scan and select
+/cpm:archive docs/specifications/01-spec-auth.md      # archive a specific chain
+```
+
+Staleness signals: all stories complete, orphaned plan (no downstream spec), completed retro, spec fully implemented. Files are moved to `docs/archive/` with mirrored subdirectory structure — never deleted.
+
 ## Compaction Resilience
 
 CPM skills run long, multi-phase conversations that can trigger Claude Code's auto-compaction. When that happens, mid-skill state (current phase, user decisions, facilitation progress) would normally be lost.
@@ -192,8 +227,12 @@ cpm/
 │   │   └── SKILL.md         # Task execution skill
 │   ├── retro/
 │   │   └── SKILL.md         # Lightweight retrospective skill
-│   └── pivot/
-│       └── SKILL.md         # Course correction skill
+│   ├── pivot/
+│   │   └── SKILL.md         # Course correction skill
+│   ├── library/
+│   │   └── SKILL.md         # Project reference library skill
+│   └── archive/
+│       └── SKILL.md         # Archive planning documents skill
 ├── README.md
 └── LICENSE
 ```
