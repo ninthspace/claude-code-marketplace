@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "PreCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.sh"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "matcher": "compact",
@@ -32,6 +21,15 @@
       },
       {
         "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "clear",
         "hooks": [
           {
             "type": "command",

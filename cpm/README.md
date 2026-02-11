@@ -131,8 +131,8 @@ CPM skills run long, multi-phase conversations that can trigger Claude Code's au
 CPM handles this automatically through **on-disk state tracking** and **plugin hooks**:
 
 1. **During a skill**: After each phase/section/step, the skill writes progress to `docs/plans/.cpm-progress.md` — a hidden file capturing the active skill, completed phases with summaries, and what to do next.
-2. **On compaction**: A PreCompact hook guides the summary to preserve planning context. A SessionStart hook re-injects the full state file into the fresh post-compaction context.
-3. **On session start/resume**: If a previous session left an incomplete planning session, the state is re-injected and Claude offers to continue where you left off or start fresh.
+2. **On compaction**: A SessionStart hook (matcher: `compact`) re-injects the full state file into the fresh post-compaction context.
+3. **On session start/resume/clear**: If a previous session left an incomplete planning session, the state is re-injected and Claude offers to continue where you left off or start fresh.
 4. **On skill completion**: The state file is deleted — it only exists while a skill is actively running.
 
 This means compaction is seamless — Claude picks up exactly where it left off without repeating questions or losing decisions.
@@ -176,10 +176,9 @@ cpm/
 ├── agents/
 │   └── roster.yaml          # Default agent personas for party mode
 ├── hooks/
-│   ├── hooks.json           # Hook configuration (PreCompact, SessionStart)
-│   ├── pre-compact.sh       # Guides compaction to preserve planning state
+│   ├── hooks.json           # Hook configuration (SessionStart)
 │   ├── session-start-compact.sh  # Re-injects state after compaction
-│   └── session-start.sh     # Re-injects state on session startup/resume
+│   └── session-start.sh     # Re-injects state on session startup/resume/clear
 ├── skills/
 │   ├── party/
 │   │   └── SKILL.md         # Multi-perspective discussion skill
