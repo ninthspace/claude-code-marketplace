@@ -10,10 +10,14 @@ After installation, use any skill independently or as a pipeline:
 
 ```
 /cpm:party → /cpm:discover → /cpm:spec → /cpm:epics → /cpm:do → /cpm:retro
-                                                    ↑ /cpm:pivot (amend any artefact mid-flow)
-                                                                           ↓ /cpm:archive (clean up completed artefacts)
+                                                  ↕            ↕
+                                           /cpm:review    /cpm:pivot
+                                                                          ↓
+                                                                   /cpm:archive
 /cpm:library (import reference docs used by all skills)
 ```
+
+`/cpm:review` sits between planning and execution — review an epic before or after `/cpm:do`. `/cpm:pivot` amends any artefact mid-flow. `/cpm:archive` cleans up completed artefacts.
 
 Each step is optional. Use what fits your situation:
 
@@ -22,6 +26,7 @@ Each step is optional. Use what fits your situation:
 - Problem is clear, need requirements? Jump to `/cpm:spec`
 - Have a plan, need epics? Go straight to `/cpm:epics`
 - Ready to implement? `/cpm:do` works through tasks one by one
+- Want a critical review before starting? `/cpm:review` runs adversarial review of epics/stories
 - Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
 - Small bug fix? Skip planning entirely — Claude Code's native plan mode is enough
 
@@ -76,10 +81,10 @@ At the **Architecture Decisions** and **Scope Boundary** sections, agent persona
 
 ### `/cpm:epics` — Work Breakdown
 
-Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. All items are tracked in Claude Code's native task system (TaskCreate/TaskUpdate) with dependencies.
+Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
-**Output**: `docs/epics/{nn}-epic-{slug}.md` (one per epic) + Claude Code tasks with dependencies
+**Output**: `docs/epics/{nn}-epic-{slug}.md` (one per epic)
 
 ```
 /cpm:epics docs/specifications/01-spec-customer-portal.md
@@ -87,9 +92,9 @@ Converts a spec into epic documents — one per major work area — each contain
 
 ### `/cpm:do` — Task Execution
 
-Works through tasks created by `/cpm:epics`. For each task: reads the epic doc for context and acceptance criteria, does the implementation work, verifies criteria are met, updates the story's status, and moves on to the next unblocked task. Loops until all tasks are done.
+Works through stories and tasks defined in epic documents. Hydrates one story at a time into Claude Code's native task system, then for each task: reads the epic doc for context and acceptance criteria, does the implementation work, verifies criteria are met, updates the story's status, and moves on to the next unblocked task. Loops until all stories are done.
 
-**Input**: Optional task ID. Without arguments, picks the next unblocked task automatically.
+**Input**: An epic doc path, or auto-detects epics with remaining work. Optionally a task ID to start with.
 
 ```
 /cpm:do        # pick up the next task
@@ -99,6 +104,25 @@ Works through tasks created by `/cpm:epics`. For each task: reads the epic doc f
 The epic doc is updated as work progresses — statuses move from Pending → In Progress → Complete. Acceptance criteria are checked before marking any task done.
 
 During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries). These feed into `/cpm:retro`.
+
+### `/cpm:review` — Adversarial Review
+
+Run a critical review of an epic doc or a specific story using the party agent roster. Each persona examines the artifact through their professional lens — challenging assumptions, spotting gaps, and flagging risks. Produces a structured review document with severity-tagged findings (critical, warning, suggestion) and an optional autofix that generates remediation tasks.
+
+**Input**: An epic doc path, optionally with a story number. Or auto-detects the most recent epic doc.
+**Output**: `docs/reviews/01-review-{slug}.md` (auto-numbered)
+
+```
+/cpm:review docs/epics/01-epic-customer-portal.md        # review entire epic
+/cpm:review docs/epics/01-epic-customer-portal.md 2      # review story 2 only
+/cpm:review                                               # auto-detect most recent epic
+```
+
+Agent selection is dynamic — 2-3 agents for single stories, 3-4 for full epics, chosen by content relevance. Every review includes at least one agent challenging business value and one challenging technical approach.
+
+**Autofix**: After review, optionally generate remediation tasks from critical and warning findings. For active epics, tasks are appended as a new story in the epic doc. For completed epics, standalone Claude Code tasks are created.
+
+**On exit**: Adaptive pipeline handoff — pre-execution epics offer pivot/do/exit; post-execution epics offer retro/pivot/discover/spec/exit.
 
 ### `/cpm:retro` — Lightweight Retrospective
 
@@ -144,7 +168,7 @@ Three actions:
 /cpm:library consolidate                       # batch add front-matter
 ```
 
-**Scope tagging**: Each library document is tagged with which skills should reference it (`discover`, `spec`, `epics`, `do`, `party`, or `all`). Skills filter by scope during their library check phase — only reading documents relevant to the current workflow.
+**Scope tagging**: Each library document is tagged with which skills should reference it (`discover`, `spec`, `epics`, `do`, `party`, `review`, or `all`). Skills filter by scope during their library check phase — only reading documents relevant to the current workflow.
 
 ### `/cpm:archive` — Archive Planning Documents
 
@@ -195,12 +219,16 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 3. `/cpm:epics` — Reads the spec, creates epic docs
    - Breaks into epics, stories, and tasks with dependencies
-   - Creates Claude Code tasks ready for implementation
+   - Produces `docs/epics/01-epic-multi-tenancy.md` (one per epic)
 
-4. `/cpm:do` — Works through tasks one by one
-   - Reads epic doc for context and acceptance criteria
+4. `/cpm:review` (optional) — Review before implementing
+   - Agents challenge the epic from different perspectives
+   - Produces `docs/reviews/01-review-multi-tenancy.md`
+
+5. `/cpm:do` — Works through tasks one by one
+   - Hydrates stories into Claude Code tasks automatically
    - Implements each task, verifies criteria, updates status
-   - Loops until all tasks are complete
+   - Loops until all stories are complete
 
 ## What's Included
 
@@ -209,7 +237,7 @@ cpm/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata
 ├── agents/
-│   └── roster.yaml          # Default agent personas for party mode
+│   └── roster.yaml          # Default agent personas for party mode and review
 ├── hooks/
 │   ├── hooks.json           # Hook configuration (SessionStart)
 │   ├── session-start-compact.sh  # Re-injects state after compaction
@@ -225,6 +253,8 @@ cpm/
 │   │   └── SKILL.md         # Work breakdown skill
 │   ├── do/
 │   │   └── SKILL.md         # Task execution skill
+│   ├── review/
+│   │   └── SKILL.md         # Adversarial review skill
 │   ├── retro/
 │   │   └── SKILL.md         # Lightweight retrospective skill
 │   ├── pivot/

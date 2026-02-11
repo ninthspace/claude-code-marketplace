@@ -101,7 +101,9 @@ Parse stories and tasks by their heading structure (`##` for stories, `###` for 
 
 ## Per-Task Workflow
 
-**State tracking**: Before starting the first task, create the progress file (see State Management below). Step 6 Part C of each task cycle writes the progress update as part of the completion step. After the work loop finishes, delete the file.
+**State tracking**: Before starting the first task, create the progress file (see State Management below). After the work loop finishes, delete the file.
+
+> **HARD RULE — PROGRESS FILE UPDATE**: After completing EVERY task, you MUST call the Write tool on `docs/plans/.cpm-progress.md` BEFORE doing anything else. This is not optional. This is not deferrable. This has the same priority as saving a file after editing it. A task is NOT done until the progress file reflects it. Historically this step gets silently dropped when momentum is high — that is a bug, not an optimisation. If compaction fires and this file is stale, the user loses all session context with no recovery path.
 
 For each task, follow these steps in order.
 
@@ -148,7 +150,7 @@ Before marking the task complete:
 
 ### 6. Complete and Update State
 
-This step combines task completion, observation capture, and progress file update into a single operation. Do all three parts before moving to the next task.
+> **THIS STEP HAS THREE PARTS. ALL THREE ARE MANDATORY. YOU MUST COMPLETE ALL THREE BEFORE MOVING TO STEP 7. THE THIRD PART (PROGRESS FILE) IS THE ONE THAT GETS DROPPED — DO NOT DROP IT.**
 
 **Part A — Mark complete**:
 - If epic doc integration is active, use the Edit tool to update the matched entry's status (whether `##` story or `###` task):
@@ -169,13 +171,18 @@ Observation categories (use exactly one per observation):
 
 If noteworthy, use the Edit tool to append a `**Retro**:` field to the completed story in the epic doc, immediately after the last existing field for that story (before the `---` separator). Format: `**Retro**: [{category}] {One-sentence observation}`
 
-**Part C — Update progress file**:
-Write the full `.cpm-progress.md` file using the Write tool (see State Management below for format). The file must reflect:
+**Part C — Write progress file**:
+
+> **YOU ARE ABOUT TO SKIP THIS. DO NOT SKIP THIS.**
+>
+> Call the Write tool on `docs/plans/.cpm-progress.md` RIGHT NOW. Not later. Not after the next task. NOW. Every time you have completed Part A, you must immediately do Part C. There is no scenario where skipping this is acceptable. A skipped progress file write is a data loss bug — the user loses their entire session if compaction fires.
+
+The file must reflect:
 - The task just completed (added to Completed Tasks section)
 - The next action (which task to pick up next, or "work loop complete")
 - The current tasks remaining count
 
-This is the primary compaction resilience mechanism. If compaction fires between tasks, this file is what gets re-injected to restore context.
+**Step 6 is not complete until the Write tool call for `.cpm-progress.md` has returned. Do not call TaskList, TaskGet, Read, or any other tool until the Write has succeeded. The very next tool call after Part A's TaskUpdate (and Part B's Edit if applicable) MUST be the Write call for the progress file.**
 
 ### 7. Next Task
 
@@ -224,7 +231,9 @@ The skill should work even without an epic doc:
 
 Maintain `docs/plans/.cpm-progress.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
 
-**Create** the file before starting the first task. **Update** it after each task completes. **Delete** it only after all output artifacts (epic doc updates, batch summary) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+> **KNOWN FAILURE MODE**: The progress file update is the single most skipped instruction in this skill. It gets silently dropped when task momentum is high. Every time it is skipped, it creates a window where compaction would destroy the session with no recovery. Treat the Write call for this file with the same urgency as saving user code — it is not bookkeeping, it is the only thing standing between the user and total context loss.
+
+**Create** the file before starting the first task. **Update** it after EVERY task completes. **Delete** it only after all output artifacts (epic doc updates, batch summary) have been confirmed written — never before.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
