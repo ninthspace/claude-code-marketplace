@@ -156,13 +156,13 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.9.0)
+### Claude Planning Method (v1.10.1)
 
 **Facilitated planning with multi-perspective party mode for Claude Code**
 
 Structured discovery, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
 
-**Nine skills forming a pipeline:**
+**Ten skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -171,6 +171,7 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
 | `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{nn}-epic-{slug}.md` + Claude Code tasks |
 | `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
+| `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
 | `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
@@ -190,6 +191,9 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 
 # Import reference docs for skills to use as context
 /cpm:library docs/architecture-decisions.md
+
+# Review planning artifacts before or after execution
+/cpm:review docs/epics/01-epic-customer-portal.md
 
 # Course correct mid-flow
 /cpm:pivot docs/specifications/01-spec-customer-portal.md
@@ -213,6 +217,7 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 - Right-sized epics and stories with acceptance criteria and dependencies
 - Task execution loop with acceptance criteria verification
 - Lightweight retros that feed forward into the next planning cycle
+- Adversarial review — agent personas challenge assumptions, spot gaps, and flag risks with optional autofix
 - Course correction — surgically amend any artefact with cascading downstream updates
 - Project reference library — import docs that skills auto-discover and use as context
 - Archive — clean up completed artefacts with staleness heuristics and chain detection

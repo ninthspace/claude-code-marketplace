@@ -205,6 +205,8 @@ Format:
 
 Only include concern type sections that have findings. If a category has no findings, omit the heading entirely.
 
+Step 4 may append a `## Remediation` section to this file — see Autofix below.
+
 Tell the user the review file path after saving.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
@@ -215,12 +217,28 @@ After writing the review file, offer the user the option to generate remediation
 
 #### Decision Gate
 
-If the review produced **no critical or warning findings**, skip autofix entirely — there's nothing actionable to fix. Inform the user: "No critical or warning findings — skipping autofix."
+If the review produced **no critical or warning findings**, skip autofix entirely — there's nothing actionable to fix. Inform the user: "No critical or warning findings — skipping autofix." Use the Edit tool to append a `## Remediation` section to the review file:
+
+```markdown
+
+## Remediation
+
+No critical or warning findings — autofix not applicable.
+```
 
 If critical or warning findings exist, present the autofix option using AskUserQuestion:
 
 - **Generate fix tasks** — Create remediation items from critical and warning findings
 - **Skip autofix** — Proceed to pipeline handoff without generating tasks
+
+If the user chooses **Skip autofix**, use the Edit tool to append a `## Remediation` section to the review file before proceeding to Step 5:
+
+```markdown
+
+## Remediation
+
+Autofix offered but declined. {N} critical and {N} warning findings remain unaddressed.
+```
 
 Suggestions are informational and never generate fix tasks, regardless of the user's choice.
 
@@ -269,6 +287,24 @@ When the epic has pending work, append a remediation story to the epic doc. This
 
 4. **Report**: Tell the user what was added — story number, task count, and which findings were converted.
 
+5. **Update review file**: Use the Edit tool to append a `## Remediation` section to the review file:
+
+   ```markdown
+
+   ## Remediation
+
+   **Path**: Epic amendment
+   **Target**: {epic doc path}
+   **Story**: {story number} — Address review findings
+
+   | # | Finding | Severity | Task |
+   |---|---------|----------|------|
+   | 1 | {finding summary} | {severity} | {N.1} |
+   | 2 | {finding summary} | {severity} | {N.2} |
+   ```
+
+   Include one row per finding that generated a task. The Task column references the task number within the remediation story.
+
 #### Standalone Task Path (Complete or Missing Epics)
 
 When the epic is complete or no epic doc exists, create Claude Code tasks directly. This avoids reopening a completed planning artifact.
@@ -285,6 +321,23 @@ When the epic is complete or no epic doc exists, create Claude Code tasks direct
 2. **Set dependencies**: If findings have a logical order (e.g. a critical finding should be addressed before a related warning), use TaskUpdate with `addBlockedBy` to sequence them. Otherwise, leave all tasks independent.
 
 3. **Report**: Tell the user how many tasks were created and list them briefly.
+
+4. **Update review file**: Use the Edit tool to append a `## Remediation` section to the review file:
+
+   ```markdown
+
+   ## Remediation
+
+   **Path**: Standalone tasks (epic complete)
+   **Tasks created**: {count}
+
+   | # | Finding | Severity | Task |
+   |---|---------|----------|------|
+   | 1 | {finding summary} | {severity} | {task subject} |
+   | 2 | {finding summary} | {severity} | {task subject} |
+   ```
+
+   Include one row per finding that generated a task. The Task column uses the Claude Code task subject.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary before continuing.
 
