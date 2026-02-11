@@ -11,9 +11,10 @@ Import external documents into a curated `docs/library/` directory with structur
 
 Parse `$ARGUMENTS` to determine the action:
 
-1. **Consolidate action**: If `$ARGUMENTS` starts with `consolidate` (e.g. `consolidate docs/library/coding-standards.md`), extract the file path and proceed to the Consolidation workflow below.
-2. **Intake action**: If `$ARGUMENTS` is a file path or URL, use it as the source document for intake.
-3. **No arguments**: Ask the user what document they want to import. Use AskUserQuestion:
+1. **Batch front-matter action**: If `$ARGUMENTS` is exactly `consolidate` (no file path after it), proceed to the Batch Front-Matter Workflow below.
+2. **Consolidate action**: If `$ARGUMENTS` starts with `consolidate` followed by a file path (e.g. `consolidate docs/library/coding-standards.md`), extract the file path and proceed to the Consolidation Workflow below.
+3. **Intake action**: If `$ARGUMENTS` is a file path or URL, use it as the source document for intake.
+4. **No arguments**: Ask the user what document they want to import. Use AskUserQuestion:
    - **Import a local file** — Provide a file path
    - **Import from a URL** — Provide a URL
 
@@ -135,13 +136,74 @@ This action is invoked as `/cpm:library consolidate <file-path>`.
 3. If approved, write the reconciled document using the Write tool (full replacement is appropriate here since the user is approving the complete new version).
 4. Tell the user the updated file path.
 
+## Batch Front-Matter Workflow
+
+Scan the library for documents missing front-matter and add it. This action is invoked as `/cpm:library consolidate` (with no file path argument).
+
+**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After processing all documents, delete the file.
+
+### Step 1: Scan Library
+
+1. Use the Glob tool to find all `docs/library/*.md` files. If the directory doesn't exist or contains no `.md` files, tell the user there are no library documents to process and stop.
+2. Read each file's first line with the Read tool. Check whether the file starts with `---` (the opening delimiter of YAML front-matter).
+   - Files starting with `---`: **has front-matter** — skip.
+   - Files not starting with `---`: **bare** — queue for processing.
+3. If all files already have front-matter, tell the user: "All library documents already have front-matter. Nothing to do." Stop.
+4. Present the list of bare files to the user.
+
+**Update progress file now.**
+
+### Step 2: Batch Summary
+
+Present a summary to the user: "Found {N} documents without front-matter: {filenames}." Use AskUserQuestion to confirm before processing:
+
+- **Proceed** — Process all bare documents
+- **Cancel** — Stop without making changes
+
+If cancelled, stop the workflow.
+
+**Update progress file now.**
+
+### Step 3: Generate Front-Matter per Document
+
+For each bare document in the queue, process one at a time:
+
+1. Read the full document content with the Read tool.
+2. Analyse the content and generate the six required front-matter fields:
+   - **`title`**: Derived from the document's heading or content.
+   - **`source`**: The document's current file path (e.g. `docs/library/coding-standards.md`).
+   - **`added`**: Today's date in `YYYY-MM-DD` format.
+   - **`last-reviewed`**: Same as `added`.
+   - **`scope`**: Use the Auto-Scope Suggestion heuristics from the Intake Workflow section above to suggest which skills should reference this document.
+   - **`summary`**: A CPM-oriented actionable distillation, following the same guidelines as the Intake Workflow (written for skills, not humans; 2-5 sentences of actionable constraints).
+3. Present the generated front-matter to the user with AskUserQuestion:
+   - **Accept suggested scope** — Use the suggested scope values
+   - **Adjust scope** — Let the user modify the list
+4. If a document's content can't be meaningfully analysed, skip it with a warning to the user and move to the next document. Do not abort the batch.
+
+**Update progress file now** (record which documents have been processed and which remain).
+
+### Step 4: Write Front-Matter
+
+For each document that was approved in Step 3:
+
+1. Prepend the front-matter block (with `---` delimiters) to the existing file content. Use the Write tool with the complete file contents — front-matter followed by the original body. The original body content must not be modified.
+2. Tell the user the updated file path.
+3. If a document can't be written, skip it with a warning to the user and continue to the next document. Do not abort the batch.
+
+After all documents are processed, tell the user how many were updated and delete the progress file.
+
+**Update progress file now, then delete the progress file.**
+
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` during the intake workflow for compaction resilience.
+Maintain `docs/plans/.cpm-progress.md` during the intake and batch front-matter workflows for compaction resilience.
 
-**Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it after saving the final library document.
+**Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it after saving the final library document or completing the batch workflow.
 
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale).
+
+### Intake / Consolidation Format
 
 ```markdown
 # CPM Session State
@@ -167,6 +229,31 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Next Action
 {What to do next}
+```
+
+### Batch Front-Matter Format
+
+```markdown
+# CPM Session State
+
+**Skill**: cpm:library
+**Action**: batch-front-matter
+**Step**: {N} of 4 — {Step Name}
+**Documents found**: {total count}
+**Documents remaining**: {count not yet processed}
+
+## Bare Documents
+{List of file paths queued for processing}
+
+## Completed Documents
+
+### {filename}
+{Summary — title assigned, scope values chosen}
+
+{...continue for each processed document...}
+
+## Next Action
+{What to do next — e.g. "Process next document: {filename}" or "All documents processed, delete state file"}
 ```
 
 ## Front-Matter Schema Reference
