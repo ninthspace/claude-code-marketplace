@@ -156,7 +156,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.7.2)
+### Claude Planning Method (v1.8.0)
 
 **Facilitated planning with multi-perspective party mode for Claude Code**
 
@@ -169,8 +169,8 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 | `/cpm:party` | Multi-perspective discussion with agent personas | Discussion summary + optional pipeline handoff |
 | `/cpm:discover` | Facilitated problem discovery | `docs/plans/01-plan-{slug}.md` |
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
-| `/cpm:stories` | Work breakdown into tracked tasks | `docs/stories/01-story-{slug}.md` + Claude Code tasks |
-| `/cpm:do` | Task execution with acceptance criteria | Updated stories doc + implemented code |
+| `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{nn}-epic-{slug}.md` + Claude Code tasks |
+| `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
 | `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
@@ -181,10 +181,10 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 # Brainstorm with your team of agent personas
 /cpm:party should we use a monorepo or separate repos?
 
-# Full pipeline: discover → spec → stories → do → retro
+# Full pipeline: discover → spec → epics → do → retro
 /cpm:discover build a customer portal for our booking system
 /cpm:spec docs/plans/01-plan-customer-portal.md
-/cpm:stories docs/specifications/01-spec-customer-portal.md
+/cpm:epics docs/specifications/01-spec-customer-portal.md
 /cpm:do
 /cpm:retro
 
@@ -210,7 +210,7 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 - Scales depth to complexity — skips phases that don't add value
 - MoSCoW prioritisation for requirements
 - Architecture decisions with rationale and alternatives
-- Right-sized stories with acceptance criteria and dependencies
+- Right-sized epics and stories with acceptance criteria and dependencies
 - Task execution loop with acceptance criteria verification
 - Lightweight retros that feed forward into the next planning cycle
 - Course correction — surgically amend any artefact with cascading downstream updates

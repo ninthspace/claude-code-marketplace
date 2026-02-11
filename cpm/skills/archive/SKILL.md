@@ -25,7 +25,7 @@ Scan the four planning directories for documents and group them into artifact ch
 1. **Glob** the following patterns:
    - `docs/plans/[0-9]*-plan-*.md`
    - `docs/specifications/[0-9]*-spec-*.md`
-   - `docs/stories/[0-9]*-story-*.md`
+   - `docs/epics/[0-9]*-epic-*.md`
    - `docs/retros/[0-9]*-retro-*.md`
 
    **Explicitly exclude** `docs/library/` — library documents have their own lifecycle via `/cpm:library`.
@@ -38,9 +38,11 @@ Scan the four planning directories for documents and group them into artifact ch
 3. **Group into chains**: Match documents across directories by slug. A chain is the set of all documents sharing the same slug. For example, slug `compaction-resilience` might have:
    - `docs/plans/01-plan-compaction-resilience.md`
    - `docs/specifications/01-spec-compaction-resilience.md`
-   - `docs/stories/01-story-compaction-resilience.md`
+   - `docs/epics/01-epic-compaction-resilience.md`
 
-   Not every chain will be complete — a spec without a plan, or stories without a retro, are normal.
+   A chain may contain multiple epic docs when a single spec produced several epics (1:many). To discover these, read the `**Source spec**:` field from each epic doc's header and group epic docs that share the same source spec into the same chain.
+
+   Not every chain will be complete — a spec without a plan, or epics without a retro, are normal.
 
 4. If `$ARGUMENTS` was a file path, extract its slug and filter to only that chain. If no other chain members exist, the chain contains only the specified file.
 
@@ -52,13 +54,13 @@ Scan the four planning directories for documents and group them into artifact ch
 
 For each chain (or individual document), evaluate staleness using four signals. A chain is flagged as stale if **any** signal fires. Read documents with the Read tool as needed to check status fields.
 
-**Signal 1 — Stories all complete**: Read the stories doc in the chain. If every `### {Story Title}` heading has `**Status**: Complete`, the chain's stories are done. Flag the chain as stale.
+**Signal 1 — Epic complete**: Read the epic doc(s) in the chain. If every `## {Story Title}` heading has `**Status**: Complete` and the epic-level `**Status**:` is `Complete`, the epic is done. When a chain has multiple epic docs (1:many from a single spec), all must be complete for this signal to fire. Flag the chain as stale.
 
 **Signal 2 — Orphaned plan**: A plan document whose slug has no matching spec in `docs/specifications/`. This suggests the plan was abandoned or superseded. Flag the plan as stale.
 
-**Signal 3 — Completed retro**: A retro document whose source stories doc (matched by slug) has all stories Complete. The retro has served its purpose. Flag the retro as stale.
+**Signal 3 — Completed retro**: A retro document whose source epic doc(s) (matched by slug or `**Source**:` back-reference) all have status Complete. The retro has served its purpose. Flag the retro as stale.
 
-**Signal 4 — Spec fully implemented**: A spec whose matching stories doc (by slug) has all stories Complete. The spec has been fully delivered. Flag the spec as stale.
+**Signal 4 — Spec fully implemented**: A spec whose matching epic doc(s) (linked via `**Source spec**:` back-references in the epic docs) all have status Complete. The spec has been fully delivered. Flag the spec as stale.
 
 For each chain, record which signals fired. Chains with no signals are still presented as candidates — the user may want to archive them for other reasons — but they are not flagged.
 
@@ -70,8 +72,8 @@ Present the discovered chains and documents to the user, grouped by chain with s
 
 1. **Format the candidate list**: For each chain, show:
    - The slug name as the chain heading
-   - All documents in the chain (plan → spec → stories → retro order)
-   - Which staleness signals fired (if any), as brief labels: `[stories complete]`, `[orphaned plan]`, `[completed retro]`, `[spec implemented]`
+   - All documents in the chain (plan → spec → epics → retro order)
+   - Which staleness signals fired (if any), as brief labels: `[epic complete]`, `[orphaned plan]`, `[completed retro]`, `[spec implemented]`
    - Chains with staleness signals should be presented first
 
 2. **Dry-run summary**: Before asking for selection, show a summary: "Found {N} artifact chains containing {M} total documents. {X} chains flagged as stale."

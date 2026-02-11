@@ -9,7 +9,7 @@ Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Meth
 After installation, use any skill independently or as a pipeline:
 
 ```
-/cpm:party → /cpm:discover → /cpm:spec → /cpm:stories → /cpm:do → /cpm:retro
+/cpm:party → /cpm:discover → /cpm:spec → /cpm:epics → /cpm:do → /cpm:retro
                                                     ↑ /cpm:pivot (amend any artefact mid-flow)
                                                                            ↓ /cpm:archive (clean up completed artefacts)
 /cpm:library (import reference docs used by all skills)
@@ -20,7 +20,7 @@ Each step is optional. Use what fits your situation:
 - Want diverse perspectives on an idea? Start with `/cpm:party`
 - Starting a new product? Begin with `/cpm:discover`
 - Problem is clear, need requirements? Jump to `/cpm:spec`
-- Have a plan, need tasks? Go straight to `/cpm:stories`
+- Have a plan, need epics? Go straight to `/cpm:epics`
 - Ready to implement? `/cpm:do` works through tasks one by one
 - Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
 - Small bug fix? Skip planning entirely — Claude Code's native plan mode is enough
@@ -38,7 +38,7 @@ The default roster includes 8 personas: Jordan (PM), Margot (Architect), Kai (De
 /cpm:party docs/plans/customer-portal.md
 ```
 
-**On exit**: Produces a structured discussion summary (key points, agreements, open questions, recommendations) and offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:stories` with the summary as input.
+**On exit**: Produces a structured discussion summary (key points, agreements, open questions, recommendations) and offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` with the summary as input.
 
 **Custom roster**: To customise personas, create `docs/agents/roster.yaml` in your project. This completely replaces the default roster. See `agents/roster.yaml` in the plugin for the schema.
 
@@ -74,20 +74,20 @@ At the **Architecture Decisions** and **Scope Boundary** sections, agent persona
 /cpm:spec docs/plans/01-plan-customer-portal.md
 ```
 
-### `/cpm:stories` — Work Breakdown
+### `/cpm:epics` — Work Breakdown
 
-Converts plans into tracked work items using Claude Code's native task system (TaskCreate/TaskUpdate). Groups work into epics, breaks into right-sized stories with acceptance criteria, and sets up task dependencies.
+Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. All items are tracked in Claude Code's native task system (TaskCreate/TaskUpdate) with dependencies.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
-**Output**: `docs/stories/01-story-{slug}.md` (auto-numbered) + Claude Code tasks with dependencies
+**Output**: `docs/epics/{nn}-epic-{slug}.md` (one per epic) + Claude Code tasks with dependencies
 
 ```
-/cpm:stories docs/specifications/01-spec-customer-portal.md
+/cpm:epics docs/specifications/01-spec-customer-portal.md
 ```
 
 ### `/cpm:do` — Task Execution
 
-Works through tasks created by `/cpm:stories`. For each task: reads the stories doc for context and acceptance criteria, does the implementation work, verifies criteria are met, updates the story's status, and moves on to the next unblocked task. Loops until all tasks are done.
+Works through tasks created by `/cpm:epics`. For each task: reads the epic doc for context and acceptance criteria, does the implementation work, verifies criteria are met, updates the story's status, and moves on to the next unblocked task. Loops until all tasks are done.
 
 **Input**: Optional task ID. Without arguments, picks the next unblocked task automatically.
 
@@ -96,27 +96,27 @@ Works through tasks created by `/cpm:stories`. For each task: reads the stories 
 /cpm:do 3      # work on task #3 specifically
 ```
 
-The stories doc is updated as work progresses — statuses move from Pending → In Progress → Complete. Acceptance criteria are checked before marking any task done.
+The epic doc is updated as work progresses — statuses move from Pending → In Progress → Complete. Acceptance criteria are checked before marking any task done.
 
 During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries). These feed into `/cpm:retro`.
 
 ### `/cpm:retro` — Lightweight Retrospective
 
-Reads a completed stories doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle.
+Reads a completed epic doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle.
 
-**Input**: A stories doc path, or auto-detects the most recent one.
+**Input**: An epic doc path, or auto-detects the most recent one.
 **Output**: `docs/retros/01-retro-{slug}.md` (auto-numbered)
 
 ```
-/cpm:retro docs/stories/01-story-customer-portal.md
-/cpm:retro        # auto-detect most recent stories doc
+/cpm:retro docs/epics/01-epic-customer-portal.md
+/cpm:retro        # auto-detect most recent epic doc
 ```
 
-**On exit**: Offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:stories` with the retro as input context — closing the feedback loop for the next planning cycle.
+**On exit**: Offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` with the retro as input context — closing the feedback loop for the next planning cycle.
 
 ### `/cpm:pivot` — Course Correction
 
-Revisit any planning artefact (brief, spec, or stories), surgically amend it, and cascade changes through downstream documents. Lighter than re-running the original skill — edit what exists rather than starting over.
+Revisit any planning artefact (brief, spec, or epic), surgically amend it, and cascade changes through downstream documents. Lighter than re-running the original skill — edit what exists rather than starting over.
 
 **Input**: A file path to any planning document, or auto-discovers artefact chains for selection.
 
@@ -125,7 +125,7 @@ Revisit any planning artefact (brief, spec, or stories), surgically amend it, an
 /cpm:pivot        # discover and select from existing artefacts
 ```
 
-The workflow: select a document, describe your changes in natural language, review a change summary, then walk downstream documents with guided per-section updates. Tasks affected by changed stories are flagged (but never auto-modified).
+The workflow: select a document, describe your changes in natural language, review a change summary, then walk downstream documents with guided per-section updates. Tasks affected by changed epic stories are flagged (but never auto-modified).
 
 ### `/cpm:library` — Project Reference Library
 
@@ -144,11 +144,11 @@ Three actions:
 /cpm:library consolidate                       # batch add front-matter
 ```
 
-**Scope tagging**: Each library document is tagged with which skills should reference it (`discover`, `spec`, `stories`, `do`, `party`, or `all`). Skills filter by scope during their library check phase — only reading documents relevant to the current workflow.
+**Scope tagging**: Each library document is tagged with which skills should reference it (`discover`, `spec`, `epics`, `do`, `party`, or `all`). Skills filter by scope during their library check phase — only reading documents relevant to the current workflow.
 
 ### `/cpm:archive` — Archive Planning Documents
 
-Move completed or stale planning artifacts out of the active `docs/` directories into `docs/archive/`. Scans for documents across plans, specifications, stories, and retros, groups them into artifact chains by slug, evaluates staleness heuristics, and lets you select which chains to archive.
+Move completed or stale planning artifacts out of the active `docs/` directories into `docs/archive/`. Scans for documents across plans, specifications, epics, and retros, groups them into artifact chains by slug, evaluates staleness heuristics, and lets you select which chains to archive.
 
 **Input**: Optional file path to archive a specific document and its chain. Without arguments, scans all planning directories.
 
@@ -157,7 +157,7 @@ Move completed or stale planning artifacts out of the active `docs/` directories
 /cpm:archive docs/specifications/01-spec-auth.md      # archive a specific chain
 ```
 
-Staleness signals: all stories complete, orphaned plan (no downstream spec), completed retro, spec fully implemented. Files are moved to `docs/archive/` with mirrored subdirectory structure — never deleted.
+Staleness signals: epic complete, orphaned plan (no downstream spec), completed retro, spec fully implemented. Files are moved to `docs/archive/` with mirrored subdirectory structure — never deleted.
 
 ## Compaction Resilience
 
@@ -193,12 +193,12 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
    - Facilitates MoSCoW prioritisation, architecture decisions
    - Produces `docs/specifications/01-spec-multi-tenancy.md`
 
-3. `/cpm:stories` — Reads the spec, creates tasks
-   - Groups into epics, sets dependencies
+3. `/cpm:epics` — Reads the spec, creates epic docs
+   - Breaks into epics, stories, and tasks with dependencies
    - Creates Claude Code tasks ready for implementation
 
 4. `/cpm:do` — Works through tasks one by one
-   - Reads stories doc for context and acceptance criteria
+   - Reads epic doc for context and acceptance criteria
    - Implements each task, verifies criteria, updates status
    - Loops until all tasks are complete
 
@@ -221,7 +221,7 @@ cpm/
 │   │   └── SKILL.md         # Problem discovery skill (with perspectives)
 │   ├── spec/
 │   │   └── SKILL.md         # Requirements specification skill (with perspectives)
-│   ├── stories/
+│   ├── epics/
 │   │   └── SKILL.md         # Work breakdown skill
 │   ├── do/
 │   │   └── SKILL.md         # Task execution skill

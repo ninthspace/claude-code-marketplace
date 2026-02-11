@@ -1,27 +1,27 @@
 ---
 name: cpm:retro
-description: Lightweight retrospective. Reads a completed stories doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Triggers on "/cpm:retro".
+description: Lightweight retrospective. Reads a completed epic doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Triggers on "/cpm:retro".
 ---
 
 # Lightweight Retrospective
 
-Read a completed (or partially completed) stories doc, synthesise observations captured during task execution, and produce a retro file that feeds forward into the next planning cycle.
+Read a completed (or partially completed) epic doc, synthesise observations captured during task execution, and produce a retro file that feeds forward into the next planning cycle.
 
 ## Input
 
 Check for input in this order:
 
-1. If `$ARGUMENTS` references a file path (e.g. `docs/stories/01-story-auth.md`), use that as the stories doc.
-2. If no path given, look for the most recent `docs/stories/*-story-*.md` file and ask the user to confirm.
-3. If no stories docs exist, tell the user there's nothing to retro and stop.
+1. If `$ARGUMENTS` references a file path (e.g. `docs/epics/01-epic-auth.md`), use that as the epic doc.
+2. If no path given, look for the most recent `docs/epics/*-epic-*.md` file and ask the user to confirm.
+3. If no epic docs exist, tell the user there's nothing to retro and stop.
 
 ## Process
 
 **State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final retro file, delete the progress file.
 
-### Step 1: Read Stories Doc
+### Step 1: Read Epic Doc
 
-Read the resolved stories doc with the Read tool. Identify:
+Read the resolved epic doc with the Read tool. Identify:
 
 - Total number of stories and their statuses (Pending, In Progress, Complete)
 - Any `**Retro**:` fields on completed stories (these are per-task observations captured by `cpm:do` step 6.5)
@@ -56,7 +56,7 @@ For each category with observations, write a brief synthesis — not just a list
 Save the retro file to `docs/retros/{nn}-retro-{slug}.md`. Create the `docs/retros/` directory if it doesn't exist.
 
 - `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/retros/[0-9]*-retro-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
-- `{slug}` is derived from the stories doc name (e.g. stories doc `01-story-auth.md` produces retro slug `auth`).
+- `{slug}` is derived from the epic doc name (e.g. epic doc `01-epic-auth.md` produces retro slug `auth`).
 
 Format:
 
@@ -64,7 +64,7 @@ Format:
 # Retro: {Title}
 
 **Date**: {today's date}
-**Source**: {path to stories doc}
+**Source**: {path to epic doc}
 **Stories**: {completed}/{total} complete
 
 ## Summary
@@ -144,7 +144,7 @@ After presenting the retro file path, offer the user options for what to do next
 
 - **Continue to /cpm:discover** — Use the retro as starting context for problem discovery
 - **Continue to /cpm:spec** — Use the retro as starting context for requirements specification
-- **Continue to /cpm:stories** — Use the retro as starting context for work breakdown
+- **Continue to /cpm:epics** — Use the retro as starting context for work breakdown
 - **Just exit** — End the session, no handoff
 
 If the user chooses a pipeline skill, pass the retro file path as the input context for that skill. The retro file becomes the `$ARGUMENTS` equivalent — the next skill should treat it as its starting context.
@@ -165,11 +165,11 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Skill**: cpm:retro
 **Step**: {N} of 4 — {Step Name}
 **Output target**: docs/retros/{nn}-retro-{slug}.md
-**Input source**: {path to stories doc}
+**Input source**: {path to epic doc}
 
 ## Completed Steps
 
-### Step 1: Read Stories Doc
+### Step 1: Read Epic Doc
 {Summary — story count, completion status, observation count}
 
 ### Step 2: Synthesise Observations

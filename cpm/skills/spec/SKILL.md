@@ -170,7 +170,7 @@ Use this format:
 - {item}
 ```
 
-After saving, suggest next steps: `/plan` (native plan mode) to design implementation, or `/cpm:stories` to break directly into tasks.
+After saving, suggest next steps: `/plan` (native plan mode) to design implementation, or `/cpm:epics` to break directly into epics.
 
 ## State Management
 

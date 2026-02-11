@@ -1,23 +1,30 @@
 ---
 name: cpm:do
-description: Execute tasks from a stories doc. Picks the next unblocked task, reads context and acceptance criteria, does the work, verifies criteria, updates the stories doc, and loops until done. Triggers on "/cpm:do".
+description: Execute tasks from an epic doc. Picks the next unblocked task, reads context and acceptance criteria, does the work, verifies criteria, updates the epic doc, and loops until done. Triggers on "/cpm:do".
 ---
 
 # Task Execution
 
-Work through tasks created by `cpm:stories`. For each task: read context, do the work, verify acceptance criteria, update the stories doc, and move on to the next.
+Work through tasks created by `cpm:epics`. For each task: read context, do the work, verify acceptance criteria, update the epic doc, and move on to the next.
 
 ## Input
 
-Resolve the stories doc first, then select a task.
+Resolve the epic doc first, then select a task.
 
-### Stories Doc
+### Epic Doc
 
-1. If `$ARGUMENTS` is a file path (e.g. `docs/stories/01-story-task-execution.md`), use that as the stories doc.
-2. If no path given, look for the most recent `docs/stories/*-story-*.md` file and ask the user to confirm.
-3. If no stories docs exist, proceed without one (tasks still work via their descriptions).
+1. If `$ARGUMENTS` is a file path (e.g. `docs/epics/01-epic-setup.md`), use that as the epic doc.
+2. If no path given, run smart discovery:
+   a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
+   b. If no epic files found, proceed without one (tasks still work via their descriptions).
+   c. If only one epic file exists, use it — no need to ask.
+   d. If multiple epic files exist, call `TaskList` and cross-reference each task's `Epic doc:` field in its description against the epic file paths. Determine which epics have pending unblocked tasks.
+   e. If only one epic has unblocked work, auto-select it.
+   f. If multiple epics have unblocked work, present the choices to the user with AskUserQuestion — show each epic's name and count of pending unblocked tasks.
+   g. If no epics have unblocked work, tell the user there's nothing to do.
+3. If no epic docs exist, proceed without one (tasks still work via their descriptions).
 
-The stories doc, once resolved, applies to the entire work loop — don't re-parse it from each task.
+The epic doc, once resolved, applies to the entire work loop — don't re-parse it from each task.
 
 ### Task Selection
 
@@ -27,7 +34,7 @@ The stories doc, once resolved, applies to the entire work loop — don't re-par
 
 ## Library Check
 
-After resolving the stories doc and before starting the per-task workflow, check the project library for reference documents:
+After resolving the epic doc and before starting the per-task workflow, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
 2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `do` or `all`.
@@ -47,14 +54,14 @@ For each task, follow these steps in order.
 ### 1. Load Context
 
 - Call `TaskGet` to read the full task description.
-- If a stories doc was resolved during Input, read it with the Read tool. Locate the matching entry by searching for the `**Task ID**: {id}` field that matches the current task ID. This may match either a `###` story heading (for verification gate tasks) or a `####` task heading (for implementation tasks). If no Task ID match is found, fall back to matching the task subject to a heading. Note the parent story's acceptance criteria — for `####` tasks, look up to the nearest `###` story heading above the matched task. If the matched `####` task has a `**Description**:` field, read it — this scopes the task within its parent story and clarifies which acceptance criteria it addresses.
+- If an epic doc was resolved during Input, read it with the Read tool. Locate the matching entry by searching for the `**Task ID**: {id}` field that matches the current task ID. This may match either a `##` story heading (for verification gate tasks) or a `###` task heading (for implementation tasks). If no Task ID match is found, fall back to matching the task subject to a heading. Note the parent story's acceptance criteria — for `###` tasks, look up to the nearest `##` story heading above the matched task. If the matched `###` task has a `**Description**:` field, read it — this scopes the task within its parent story and clarifies which acceptance criteria it addresses.
 - **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
-- If no stories doc is available, proceed without stories doc integration — the task still gets done.
+- If no epic doc is available, proceed without epic doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress
 
 - Call `TaskUpdate` to set the task status to `in_progress`.
-- If stories doc integration is active, use the Edit tool to update the matched entry's status. The entry may be a `###` story or a `####` task — locate the correct `**Status**: Pending` field near the matched heading:
+- If epic doc integration is active, use the Edit tool to update the matched entry's status. The entry may be a `##` story or a `###` task — locate the correct `**Status**: Pending` field near the matched heading:
   - `old_string`: `**Status**: Pending` (scoped near the matched heading)
   - `new_string`: `**Status**: In Progress`
 
@@ -72,7 +79,7 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 
 ### 4. Do the Work
 
-**If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the stories doc and verify each criterion against the current state of the codebase. Check files, run tests, or inspect outputs as needed to confirm each criterion is met. Proceed to step 5 with your assessment.
+**If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase. Check files, run tests, or inspect outputs as needed to confirm each criterion is met. Proceed to step 5 with your assessment.
 
 **If this is an implementation task** (no `Type: verification`): Execute the task as described. This is the actual implementation — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
 
@@ -80,14 +87,14 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 
 Before marking the task complete:
 
-- Re-read the acceptance criteria from the stories doc (or from the task description if no stories doc).
+- Re-read the acceptance criteria from the epic doc (or from the task description if no epic doc).
 - Self-assess each criterion. For each one, determine whether it's been met.
 - If all criteria are met, proceed to step 6.
 - If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as done anyway. Use AskUserQuestion for this gate.
 
 ### 6. Mark Complete
 
-- If stories doc integration is active, use the Edit tool to update the matched entry's status (whether `###` story or `####` task):
+- If epic doc integration is active, use the Edit tool to update the matched entry's status (whether `##` story or `###` task):
   - `old_string`: `**Status**: In Progress` (scoped near the matched heading)
   - `new_string`: `**Status**: Complete`
 - Call `TaskUpdate` to set the task status to `completed`.
@@ -104,7 +111,7 @@ After marking the task complete, self-assess whether anything **noteworthy** hap
 - **Complexity underestimate**: The implementation was harder than expected due to technical factors
 - **Codebase discovery**: Found something unexpected in the codebase (pattern, convention, limitation) that affected the work
 
-**Recording**: If something is noteworthy, use the Edit tool to append a `**Retro**:` field to the completed story in the stories doc, immediately after the last existing field for that story (before the `---` separator). Format:
+**Recording**: If something is noteworthy, use the Edit tool to append a `**Retro**:` field to the completed story in the epic doc, immediately after the last existing field for that story (before the `---` separator). Format:
 
 ```
 **Retro**: [{category}] {One-sentence observation}
@@ -115,7 +122,7 @@ Example:
 **Retro**: [Criteria gap] Acceptance criteria didn't mention error handling for missing config files, which was the bulk of the work
 ```
 
-**Graceful degradation**: If no stories doc is available, or the story heading can't be found, skip this step silently — never block the work loop for observation capture.
+**Graceful degradation**: If no epic doc is available, or the story heading can't be found, skip this step silently — never block the work loop for observation capture.
 
 ### 7. Update Progress File
 
@@ -137,9 +144,9 @@ This is the primary compaction resilience mechanism. If compaction fires between
 
 When the work loop finishes (no more pending unblocked tasks):
 
-1. **Check for observations**: Read the stories doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the rest of this step — no lessons section needed.
+1. **Check for observations**: Read the epic doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the rest of this step — no lessons section needed.
 
-2. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the stories doc using the Edit tool. Group observations by category:
+2. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the epic doc using the Edit tool. Group observations by category:
 
 ```markdown
 ## Lessons
@@ -159,21 +166,21 @@ When the work loop finishes (no more pending unblocked tasks):
 
 Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
 
-3. **Report and stop**: Report a summary of what was completed across the work loop, then delete the progress file.
+3. **Report and stop**: Report a summary of what was completed across the work loop, and delete the progress file.
 
 ## Graceful Degradation
 
-The skill should work even without a stories doc:
+The skill should work even without an epic doc:
 
-- **No stories doc resolved during Input**: Skip stories doc reads and status updates. Still do the work, still verify acceptance criteria from the task description.
-- **Stories doc file doesn't exist or was deleted mid-loop**: Same — skip stories doc integration, work on the task directly.
-- **Story heading not found in stories doc**: Log a note, skip status updates for that story, continue with the work.
+- **No epic doc resolved during Input**: Skip epic doc reads and status updates. Still do the work, still verify acceptance criteria from the task description.
+- **Epic doc file doesn't exist or was deleted mid-loop**: Same — skip epic doc integration, work on the task directly.
+- **Story heading not found in epic doc**: Log a note, skip status updates for that story, continue with the work.
 
 ## State Management
 
 Maintain `docs/plans/.cpm-progress.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
 
-**Create** the file before starting the first task. **Update** it after each task completes. **Delete** it only after all output artifacts (stories doc updates, batch summary) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting the first task. **Update** it after each task completes. **Delete** it only after all output artifacts (epic doc updates, batch summary) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
@@ -182,7 +189,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 **Skill**: cpm:do
 **Current task**: {task ID} — {task subject}
-**Stories doc**: {path to stories doc, or "none"}
+**Epic doc**: {path to epic doc, or "none"}
 **Tasks remaining**: {count of pending unblocked tasks}
 
 ## Completed Tasks

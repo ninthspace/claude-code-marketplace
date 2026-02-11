@@ -5,7 +5,7 @@ description: Course correction. Revisit any planning artefact, surgically amend 
 
 # Course Correction
 
-Revisit any planning artefact (brief, spec, or stories), make surgical edits, and walk downstream documents through guided updates. Pivot is lighter than re-running the original skill — amend what exists rather than starting over.
+Revisit any planning artefact (brief, spec, or epic), make surgical edits, and walk downstream documents through guided updates. Pivot is lighter than re-running the original skill — amend what exists rather than starting over.
 
 ## Input
 
@@ -26,18 +26,18 @@ Discover existing planning artefacts and their relationships. Skip this step if 
 1. **Glob all three planning directories**:
    - `docs/plans/[0-9]*-plan-*.md` (briefs from cpm:discover)
    - `docs/specifications/[0-9]*-spec-*.md` (specs from cpm:spec)
-   - `docs/stories/[0-9]*-story-*.md` (stories from cpm:stories)
+   - `docs/epics/[0-9]*-epic-*.md` (epics from cpm:epics)
 
 2. **Build dependency chains**: For each document found, read the first 10 lines and look for back-reference fields:
    - Specs have `**Brief**:` — may contain a file path (e.g. `docs/plans/01-plan-auth.md`) or a description (e.g. `Party mode discussion`). Only treat it as a chain link if the value is a valid file path that exists on disk.
-   - Stories have `**Source**:` — typically a file path to the source spec (e.g. `docs/specifications/01-spec-auth.md`). Verify the file exists before treating it as a chain link.
+   - Epics have `**Source spec**:` — a file path to the source spec (e.g. `docs/specifications/01-spec-auth.md`). Verify the file exists before treating it as a chain link. Multiple epic docs may share the same source spec (1:many).
    - Briefs are root nodes with no upstream reference.
 
-   Use verified file-path references to group documents into chains (e.g. `plan-auth.md` → `spec-auth.md` → `story-auth.md`).
+   Use verified file-path references to group documents into chains (e.g. `plan-auth.md` → `spec-auth.md` → `01-epic-auth.md`).
 
 3. **Fall back to slug matching**: When back-references are missing, contain descriptions instead of file paths, or don't resolve to existing files, match documents by slug. Extract the slug from the filename (the part after the number-prefix and type — e.g. `auth` from `01-plan-auth.md`, `pivot` from `05-spec-pivot.md`) and group documents with the same slug into a chain.
 
-4. **Handle partial chains**: Not every chain will be complete. A spec without a brief, or stories without a spec, are valid — present what exists.
+4. **Handle partial chains**: Not every chain will be complete. A spec without a brief, or epics without a spec, are valid — present what exists.
 
 5. **Present to user**: Show the discovered chains and individual documents. Use AskUserQuestion to let the user select which document to amend. Group by chain where possible, list orphan documents separately.
 
@@ -66,15 +66,15 @@ Read and amend the selected document.
 Walk downstream documents and facilitate updates. Skip this step if no downstream documents exist.
 
 1. **Identify downstream documents**: Using the chain discovered in Step 1 (or built from the direct file path), find documents that depend on the one just amended:
-   - If a brief was amended → its spec and stories are downstream
-   - If a spec was amended → its stories are downstream
-   - If stories were amended → no downstream documents (stories are leaf nodes)
+   - If a brief was amended → its spec and epics are downstream
+   - If a spec was amended → its epics are downstream
+   - If an epic was amended → no downstream documents (epics are leaf nodes)
 
-2. **Walk in dependency order**: Process downstream documents one at a time, starting with the closest dependency (spec before stories).
+2. **Walk in dependency order**: Process downstream documents one at a time, starting with the closest dependency (spec before epics).
 
 3. **For each downstream document**:
    a. Read the document with the Read tool.
-   b. Compare against the upstream changes made in Step 2. Identify sections that are affected — requirements that reference changed scope, stories that implement changed requirements, etc.
+   b. Compare against the upstream changes made in Step 2. Identify sections that are affected — requirements that reference changed scope, epic stories that implement changed requirements, etc.
    c. Propose specific updates with clear rationale for each. Explain what changed upstream and how it affects this section.
    d. Gate each proposed change with AskUserQuestion:
       - **Apply this change** — Make the edit as proposed
@@ -90,17 +90,17 @@ Walk downstream documents and facilitate updates. Skip this step if no downstrea
 
 ### Step 4: Task Impact Flagging
 
-Identify tasks that may be affected by the changes. Skip this step if no tasks exist or if the stories doc wasn't changed.
+Identify tasks that may be affected by the changes. Skip this step if no tasks exist or if no epic doc was changed.
 
-1. **Check preconditions**: Call `TaskList` to see if any tasks exist. If none, skip this step. Also skip if the cascade in Step 3 didn't touch any stories doc (changes to briefs/specs that didn't cascade to stories won't affect tasks).
+1. **Check preconditions**: Call `TaskList` to see if any tasks exist. If none, skip this step. Also skip if the cascade in Step 3 didn't touch any epic doc (changes to briefs/specs that didn't cascade to epics won't affect tasks).
 
 2. **Match affected stories to tasks**: For stories that were changed in Step 2 or Step 3:
-   - Match by Task ID: look for `**Task ID**: {id}` fields in the stories doc and match against task IDs from TaskList.
+   - Match by Task ID: look for `**Task ID**: {id}` fields in the epic doc and match against task IDs from TaskList.
    - Match by subject: fall back to matching story headings (`### {subject}`) against task subjects.
 
 3. **Present the list**: Show the user which tasks may be affected by the pivot, with a brief note on what changed in the corresponding story. Do NOT automatically modify any tasks — present the information and let the user decide what action to take.
 
-4. **Graceful skip**: If no tasks are matched, or if no stories were modified, skip this step silently.
+4. **Graceful skip**: If no tasks are matched, or if no epic stories were modified, skip this step silently.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary, then delete the progress file.
 
@@ -118,7 +118,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Skill**: cpm:pivot
 **Step**: {N} of 4 — {Step Name}
 **Target document**: {path to document being amended}
-**Chain**: {brief → spec → stories paths, or "single document"}
+**Chain**: {brief → spec → epics paths, or "single document"}
 
 ## Completed Steps
 

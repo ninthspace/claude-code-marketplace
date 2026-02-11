@@ -150,7 +150,7 @@ After presenting the summary, offer the user options for what to do next. Use As
 
 - **Continue to /cpm:discover** — Use the summary as starting context for problem discovery
 - **Continue to /cpm:spec** — Use the summary as starting context for requirements specification
-- **Continue to /cpm:stories** — Use the summary as starting context for work breakdown
+- **Continue to /cpm:epics** — Use the summary as starting context for work breakdown
 - **Just exit** — End the session, no handoff
 
 If the user chooses a pipeline skill, pass the discussion summary as the input context for that skill. The summary becomes the `$ARGUMENTS` equivalent — the next skill should treat it as its starting brief/description.
