@@ -17,10 +17,10 @@ CPM is a planning plugin for Claude Code that brings structured thinking to soft
 - **Discover** — Understand the problem: who has it, why it matters, what success looks like
 - **Brief** — Define the product: vision, value propositions, key features
 - **Architect** — Make technical decisions: evaluate options, document trade-offs
-- **Spec** — Write requirements: prioritised, scoped, with clear boundaries
-- **Epics** — Break work down: stories and tasks with acceptance criteria
-- **Do** — Execute: work through tasks one by one, verifying each is done correctly
-- **Review** — Quality check: multiple perspectives challenge assumptions before work begins
+- **Spec** — Write requirements: prioritised, scoped, with clear boundaries and a testing strategy
+- **Epics** — Break work down: stories and tasks with acceptance criteria and auto-generated testing tasks
+- **Do** — Execute: work through tasks one by one, discovering the test runner, running tests in verification gates, and confirming each is done correctly
+- **Review** — Quality check: multiple perspectives challenge assumptions, check test coverage, before work begins
 
 Every step is optional. A simple bug fix needs no planning. A major new feature benefits from the full pipeline. Teams use what fits.
 
@@ -31,7 +31,8 @@ Every step is optional. A simple bug fix needs no planning. A major new feature 
 1. **Visibility** — Planning artifacts are written documents you can read, share, and reference
 2. **Consistency** — Every significant feature goes through the same structured thinking
 3. **Traceability** — Requirements trace to stories, stories trace to tasks, tasks trace to code
-4. **Course correction** — Plans can be amended mid-stream with changes cascading through downstream documents
-5. **Knowledge capture** — Decisions and their rationale are recorded, not lost in conversations
+4. **Built-in testing** — Test approaches are defined in requirements, propagated to stories, and executed automatically during task verification
+5. **Course correction** — Plans can be amended mid-stream with changes cascading through downstream documents
+6. **Knowledge capture** — Decisions and their rationale are recorded, not lost in conversations
 
 **Bottom line**: CPM turns the gap between "we need this feature" and "here's the code" into a structured, visible, auditable process — without adding bureaucracy. It scales to the complexity of the work.

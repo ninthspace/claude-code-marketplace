@@ -26,7 +26,7 @@ Discover > Brief > Architect > Spec > Epics > Do — each step optional.
 Scales to the work. Bug fix = skip planning. Big feature = full pipeline.
 
 ## Slide 6 — Quality Checks
-Review, Retro, and Pivot provide built-in feedback loops.
+Review, Retro, and Pivot provide built-in feedback loops. Testing is threaded through the pipeline: specs define test approaches per acceptance criterion, epics auto-generate testing tasks, and execution gates run the test suite automatically.
 
 ## Slide 7 — Manager Benefits
 Visibility, traceability, knowledge capture, consistency, progress tracking.

@@ -42,7 +42,7 @@ Each step is optional. Use what fits your situation:
 
 Launch a team discussion where named agent personas respond in character, building on each other's ideas and constructively disagreeing. Useful for brainstorming, decision-making, or exploring trade-offs before committing to a direction.
 
-The default roster includes 8 personas: Jordan (PM), Margot (Architect), Kai (Developer), Priya (UX Designer), Tomasz (QA), Sable (DevOps), Ellis (Tech Writer), and Ren (Scrum Master). Each has a distinct personality and communication style.
+The default roster includes 9 personas: Jordan (PM), Margot (Architect), Kai (Developer), Priya (UX Designer), Tomasz (QA), Casey (Test Engineer), Sable (DevOps), Ellis (Tech Writer), and Ren (Scrum Master). Each has a distinct personality and communication style.
 
 ```
 /cpm:party should we use a monorepo or separate repos?
@@ -117,7 +117,7 @@ Works through four phases:
 
 ### `/cpm:spec` — Requirements & Architecture
 
-Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, scope boundaries, a testing strategy, and a final review.
+Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, scope boundaries, testing strategy (with test approach tags per acceptance criterion: `[unit]`, `[integration]`, `[feature]`, `[manual]`), and a final review.
 
 When product briefs exist in `docs/briefs/`, they're used as input context. When ADRs exist in `docs/architecture/`, the architecture section references them rather than starting from scratch — only facilitating new decisions for gaps.
 
@@ -135,7 +135,7 @@ At the **Architecture Decisions** and **Scope Boundary** sections, agent persona
 
 ### `/cpm:epics` — Work Breakdown
 
-Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. Stories include traceability to spec requirements, showing which functional requirements each story satisfies. When ADRs exist in `docs/architecture/`, they're referenced when breaking down architectural work.
+Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. Stories include traceability to spec requirements, showing which functional requirements each story satisfies. When the spec has a testing strategy, test approach tags are propagated to story acceptance criteria, testing tasks are auto-generated for stories with automated test tags, and integration testing stories are created for epics with significant cross-story interactions. When ADRs exist in `docs/architecture/`, they're referenced when breaking down architectural work.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
 **Output**: `docs/epics/{nn}-epic-{slug}.md` (one per epic)
@@ -148,6 +148,8 @@ Converts a spec into epic documents — one per major work area — each contain
 
 Works through stories and tasks defined in epic documents. Hydrates one story at a time into Claude Code's native task system, then for each task: reads the epic doc for context and acceptance criteria, does the implementation work, verifies criteria are met, updates the story's status, and moves on to the next unblocked task. Loops until all stories are done.
 
+At startup, discovers the project's test runner (from library docs, config files like `composer.json`/`package.json`/`Makefile`, or by asking the user) and caches it for the session. Verification gates run the test command when acceptance criteria carry automated test tags (`[unit]`, `[integration]`, `[feature]`), falling back to self-assessment for `[manual]` criteria or when no test runner is available. Task ordering in the epic doc is respected, enabling TDD when testing tasks precede implementation tasks.
+
 When ADRs exist in `docs/architecture/`, tasks that touch architectural boundaries read the relevant ADR for context. When all stories in an epic complete, an integration-level check verifies the completed epic against its source spec's requirements.
 
 **Input**: An epic doc path, or auto-detects epics with remaining work. Optionally a task ID to start with.
@@ -159,13 +161,13 @@ When ADRs exist in `docs/architecture/`, tasks that touch architectural boundari
 
 The epic doc is updated as work progresses — statuses move from Pending -> In Progress -> Complete. Acceptance criteria are checked before marking any task done.
 
-During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries). These feed into `/cpm:retro`.
+During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps). These feed into `/cpm:retro`.
 
 ### `/cpm:review` — Adversarial Review
 
 Run a critical review of an epic doc or a specific story using the party agent roster. Each persona examines the artifact through their professional lens — challenging assumptions, spotting gaps, and flagging risks. Produces a structured review document with severity-tagged findings (critical, warning, suggestion) and an optional autofix that generates remediation tasks.
 
-Reviews also check spec compliance (whether an epic implements what its source spec requires) and ADR compliance (whether stories respect architectural decisions).
+Reviews check spec compliance, ADR compliance, and missing test coverage — flagging stories with automated test tags (`[unit]`, `[integration]`, `[feature]`) that lack corresponding testing tasks, or stories that warrant test approach tags but don't have them.
 
 **Input**: An epic doc path, optionally with a story number. Or auto-detects the most recent epic doc.
 **Output**: `docs/reviews/01-review-{slug}.md` (auto-numbered)
@@ -184,7 +186,7 @@ Agent selection is dynamic — 2-3 agents for single stories, 3-4 for full epics
 
 ### `/cpm:retro` — Lightweight Retrospective
 
-Reads a completed epic doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle.
+Reads a completed epic doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle. Observation categories include scope surprises, criteria gaps, complexity underestimates, codebase discoveries, and testing gaps. When library documents exist, relevant observations are offered as amendments back to the library — closing the feedback loop.
 
 **Input**: An epic doc path, or auto-detects the most recent one.
 **Output**: `docs/retros/01-retro-{slug}.md` (auto-numbered)
@@ -315,21 +317,25 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 4. `/cpm:spec` — Reads the brief and ADRs, builds requirements
    - Facilitates MoSCoW prioritisation, references existing ADRs
+   - Defines testing strategy with test approach tags per criterion
    - Produces `docs/specifications/01-spec-multi-tenancy.md`
 
 5. `/cpm:epics` — Reads the spec, creates epic docs
    - Breaks into epics, stories, and tasks with dependencies
    - Stories trace back to spec requirements
+   - Propagates test approach tags, generates testing tasks
    - Produces `docs/epics/01-epic-multi-tenancy.md` (one per epic)
 
 6. `/cpm:review` (optional) — Review before implementing
    - Agents challenge the epic from different perspectives
-   - Checks spec and ADR compliance
+   - Checks spec compliance, ADR compliance, and test coverage
    - Produces `docs/reviews/01-review-multi-tenancy.md`
 
 7. `/cpm:do` — Works through tasks one by one
+   - Discovers test runner at startup, caches for the session
    - Hydrates stories into Claude Code tasks automatically
    - Reads ADRs when touching architectural boundaries
+   - Runs tests in verification gates for automated criteria
    - Implements each task, verifies criteria, updates status
    - Loops until all stories are complete
 

@@ -47,6 +47,7 @@ Analyse the collected observations and story outcomes. Build the retro content:
 - **Criteria Gaps**: Acceptance criteria that missed something important
 - **Complexity Underestimates**: Tasks harder than expected due to technical factors
 - **Codebase Discoveries**: Unexpected findings in the codebase
+- **Testing Gaps**: Tests that revealed issues acceptance criteria didn't anticipate, or acceptance criteria that proved untestable with the available test infrastructure
 
 **If no `**Retro**:` fields exist**, produce a summary from story status alone:
 - Which stories completed, which didn't
@@ -91,6 +92,9 @@ Format:
 ### Codebase Discoveries
 - {observation from story N}: {synthesis}
 
+### Testing Gaps
+- {observation from story N}: {synthesis}
+
 ## Recommendations
 
 {2-5 bullet points — concrete suggestions for the next planning cycle based on the observations. These should be actionable inputs for cpm:discover or cpm:spec.}
@@ -115,6 +119,7 @@ After writing the retro file, check if any retro observations should be fed back
    - **Complexity underestimates** → may indicate missing constraints in architecture docs
    - **Criteria gaps** → may indicate missing rules in coding standards or business rules docs
    - **Scope surprises** → less commonly relevant to library docs, but flag if they reveal missing architectural context
+   - **Testing gaps** → may indicate missing testing conventions in library docs or gaps in test infrastructure documentation
 
 4. **Propose amendments**: For each matched observation, draft an amendment block:
 

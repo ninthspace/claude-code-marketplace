@@ -521,7 +521,7 @@
             <span class="icon">&#x1F4CB;</span>
             <span class="label">Spec</span>
           </div>
-          <span class="pipeline-desc">Requirements</span>
+          <span class="pipeline-desc">Requirements + test strategy</span>
         </div>
         <span class="pipeline-arrow">&rarr;</span>
         <div class="pipeline-stage">
@@ -529,7 +529,7 @@
             <span class="icon">&#x1F4E6;</span>
             <span class="label">Epics</span>
           </div>
-          <span class="pipeline-desc">Stories & tasks</span>
+          <span class="pipeline-desc">Stories, tasks + test tags</span>
         </div>
         <span class="pipeline-arrow">&rarr;</span>
         <div class="pipeline-stage">
@@ -537,7 +537,7 @@
             <span class="icon">&#x2699;</span>
             <span class="label">Do</span>
           </div>
-          <span class="pipeline-desc">Execute & verify</span>
+          <span class="pipeline-desc">Execute, test & verify</span>
         </div>
       </div>
       <p style="text-align:center;color:var(--text-dim);font-size:14px;margin-top:14px;">Each step feeds into the next. Outputs are markdown files in <code style="font-family:var(--mono);font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">docs/</code> subdirectories.</p>
@@ -556,11 +556,11 @@
         </div>
         <div class="support-card">
           <div class="card-cmd">/cpm:review</div>
-          <p>Adversarial review of epics — agents challenge assumptions & flag risks</p>
+          <p>Adversarial review of epics — agents challenge assumptions, check test coverage & flag risks</p>
         </div>
         <div class="support-card">
           <div class="card-cmd">/cpm:retro</div>
-          <p>Lightweight retrospective after completing an epic</p>
+          <p>Lightweight retrospective — captures lessons including testing gaps</p>
         </div>
         <div class="support-card">
           <div class="card-cmd">/cpm:pivot</div>
@@ -657,7 +657,7 @@
     <div class="slide-inner">
       <div class="tag">Team Perspectives</div>
       <h2>The agent roster</h2>
-      <p style="color:var(--text-dim);font-size:15px;margin-bottom:16px;">8 simulated personas that provide perspectives during planning. They appear automatically at relevant points.</p>
+      <p style="color:var(--text-dim);font-size:15px;margin-bottom:16px;">9 simulated personas that provide perspectives during planning. They appear automatically at relevant points.</p>
       <div class="agent-grid">
         <div class="agent-card">
           <div class="agent-icon">&#x1F4CB;</div>
@@ -688,6 +688,12 @@
           <h3>Tomas</h3>
           <div class="role">QA Engineer</div>
           <p>Edge cases, testability, what could break</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F9EA;</div>
+          <h3>Casey</h3>
+          <div class="role">Test Engineer</div>
+          <p>Test strategy, coverage boundaries, right level of test</p>
         </div>
         <div class="agent-card">
           <div class="agent-icon">&#x1F680;</div>
@@ -759,17 +765,17 @@
         <div class="example-step">
           <div class="step-num" style="background:var(--accent);">4</div>
           <div class="cmd">/cpm:spec</div>
-          <div class="desc">Prioritised requirements, referencing ADRs for architecture</div>
+          <div class="desc">Prioritised requirements, referencing ADRs, testing strategy with approach tags</div>
         </div>
         <div class="example-step">
           <div class="step-num" style="background:var(--green);">5</div>
           <div class="cmd">/cpm:epics</div>
-          <div class="desc">Stories with acceptance criteria and tasks, traceable to spec</div>
+          <div class="desc">Stories with acceptance criteria, test tags, auto-generated testing tasks</div>
         </div>
         <div class="example-step">
           <div class="step-num" style="background:var(--blue);">6</div>
           <div class="cmd">/cpm:do</div>
-          <div class="desc">Pick up tasks, implement, verify criteria, update status, repeat</div>
+          <div class="desc">Discover test runner, implement tasks, run tests in verification gates, repeat</div>
         </div>
       </div>
     </div>

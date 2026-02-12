@@ -1,6 +1,6 @@
 ---
 name: cpm:party
-description: Multi-perspective discussion with named agent personas. Bring your whole team into one conversation — PM, Architect, Developer, UX Designer, and more. Use for brainstorming, decision-making, or exploring trade-offs from diverse viewpoints. Triggers on "/cpm:party".
+description: Multi-perspective discussion with named agent personas. Bring your whole team into one conversation — PM, Architect, Developer, UX Designer, Test Engineer, and more. Use for brainstorming, decision-making, or exploring trade-offs from diverse viewpoints. Triggers on "/cpm:party".
 ---
 
 # Party Mode
@@ -36,6 +36,7 @@ Your team for this session:
 💻 **Kai** — Senior Developer
 🎨 **Priya** — UX Designer
 🔍 **Tomasz** — QA Engineer
+🧪 **Casey** — Test Engineer
 🚀 **Sable** — DevOps Engineer
 📝 **Ellis** — Technical Writer
 🔄 **Ren** — Scrum Master

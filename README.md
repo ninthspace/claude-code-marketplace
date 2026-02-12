@@ -230,10 +230,12 @@ Structured discovery, product ideation, architecture exploration, specification,
 - Architecture decisions with rationale and alternatives (references existing ADRs)
 - Spec requirement traceability — stories link back to the requirements they satisfy
 - Right-sized epics and stories with acceptance criteria and dependencies
+- Testing thread through the pipeline — spec defines test approach tags, epics propagate them to criteria and generate testing tasks, do discovers and runs tests in verification gates
 - Task execution loop with acceptance criteria verification and ADR awareness
+- Test runner discovery — convention-based detection from project config files, cached per session
 - Epic-level verification — completed epics are checked against their source spec
-- Spec and ADR compliance review dimensions
-- Lightweight retros that feed forward into the next planning cycle
+- Spec, ADR, and test coverage compliance review dimensions
+- Lightweight retros with testing gap analysis that feed forward into the next planning cycle
 - Adversarial review — agent personas challenge assumptions, spot gaps, and flag risks with optional autofix
 - Course correction — surgically amend any artefact with cascading downstream updates (5 artifact types)
 - Audience-aware artifact transformation — present planning artifacts to any audience in any format

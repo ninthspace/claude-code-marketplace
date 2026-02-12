@@ -417,9 +417,9 @@ const SKILLS = [
     input: 'A topic, file path, URL, or description',
     output: 'Discussion summary with agreements, open questions, and recommendations',
     outputFile: '(inline summary, no file)',
-    phases: ['Load agent roster (8 default personas)', 'Check library for relevant docs', 'Orchestration loop: 2-3 agents per turn', 'Agents reference each other, disagree constructively', 'Exit option after each round', 'Summary with pipeline handoff'],
+    phases: ['Load agent roster (9 default personas)', 'Check library for relevant docs', 'Orchestration loop: 2-3 agents per turn', 'Agents reference each other, disagree constructively', 'Exit option after each round', 'Summary with pipeline handoff'],
     tip: 'Use party before discover when you\'re unsure about the problem space. The diverse perspectives help surface blind spots early.',
-    personas: 'Jordan (PM), Margot (Architect), Bella (Dev), Priya (UX), Tomas (QA), Sable (DevOps), Elli (Writer), Ren (Scrum Master)',
+    personas: 'Jordan (PM), Margot (Architect), Bella (Dev), Priya (UX), Tomas (QA), Casey (Test Engineer), Sable (DevOps), Elli (Writer), Ren (Scrum Master)',
     next: ['discover', 'spec', 'epics']
   },
   {
@@ -477,13 +477,13 @@ const SKILLS = [
     icon: '📋',
     color: '#bc8cff',
     category: 'planning',
-    short: 'Requirements & architecture',
-    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements, architecture decisions (references existing ADRs), scope boundaries, testing strategy, and review. Agent personas surface trade-offs at key decisions.',
+    short: 'Requirements, architecture & testing strategy',
+    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements, architecture decisions (references existing ADRs), scope boundaries, testing strategy with test approach tags ([unit], [integration], [feature], [manual]) per acceptance criterion, and review. Agent personas surface trade-offs at key decisions.',
     input: 'Product brief, problem brief, or description (auto-detected)',
-    output: 'Specification with MoSCoW requirements, architecture decisions, testing strategy',
+    output: 'Specification with MoSCoW requirements, architecture decisions, testing strategy with approach tags',
     outputFile: 'docs/specifications/{nn}-spec-{slug}.md',
-    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority', 'Non-Functional Requirements — performance, security', 'Architecture Decisions — references ADRs, fills gaps', 'Scope Boundary — in/out/deferred', 'Testing Strategy — criteria mapping, boundaries', 'Review — user confirmation'],
-    tip: 'When ADRs exist in docs/architecture/, the architecture section references them instead of starting from scratch. Only new decisions for gaps are facilitated.',
+    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority', 'Non-Functional Requirements — performance, security', 'Architecture Decisions — references ADRs, fills gaps', 'Scope Boundary — in/out/deferred', 'Testing Strategy — test approach tags per criterion, integration boundaries', 'Review — user confirmation'],
+    tip: 'The testing strategy section defines test approach tags ([unit], [integration], [feature], [manual]) per acceptance criterion. These tags propagate to epics and drive test execution in /cpm:do.',
     next: ['epics']
   },
   {
@@ -493,13 +493,13 @@ const SKILLS = [
     icon: '📦',
     color: '#3fb950',
     category: 'planning',
-    short: 'Break spec into work items',
-    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria, dependencies, and spec requirement traceability. When ADRs exist, they\'re referenced for architectural work.',
+    short: 'Break spec into work items with test tags',
+    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria with test approach tags propagated from the spec, auto-generated testing tasks for stories with automated tags, and integration testing stories for cross-story verification. Stories include dependencies and spec requirement traceability. When ADRs exist, they\'re referenced for architectural work.',
     input: 'Specification from spec (auto-detected)',
-    output: 'Multiple epic docs, each with stories and tasks',
+    output: 'Multiple epic docs with stories, tasks, test tags, and testing tasks',
     outputFile: 'docs/epics/{nn}-epic-{slug}.md (one per epic)',
-    phases: ['Read source specification + ADRs', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria', 'Add spec requirement traceability per story', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
-    tip: 'Stories now include a **Satisfies** field linking to spec requirements. This enables /cpm:review to check spec compliance and /cpm:do to verify epics against their source spec.',
+    phases: ['Read source specification + ADRs', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria + test tags', 'Auto-generate testing tasks for automated criteria', 'Add integration testing stories where needed', 'Add spec requirement traceability per story', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
+    tip: 'Test approach tags ([unit], [integration], [feature], [manual]) flow from specs to story acceptance criteria. Testing tasks are auto-generated for stories with automated tags. Integration testing stories are created for epics with significant cross-story interactions.',
     next: ['do', 'review']
   },
   {
@@ -509,13 +509,13 @@ const SKILLS = [
     icon: '⚡',
     color: '#f0883e',
     category: 'execution',
-    short: 'Execute tasks from epics',
-    description: 'Works through stories and tasks from epic documents. Hydrates one story at a time into Claude Code tasks, executes each task, verifies acceptance criteria, and captures retro observations. Reads ADRs when touching architectural boundaries. On epic completion, verifies against source spec.',
+    short: 'Execute tasks with test verification',
+    description: 'Works through stories and tasks from epic documents. At startup, discovers the project\'s test runner (from library docs, config files like composer.json/package.json/Makefile, or by asking the user) and caches it for the session. Hydrates one story at a time into Claude Code tasks, executes each task, runs tests in verification gates when criteria carry automated test tags ([unit]/[integration]/[feature]), and captures retro observations (including testing gaps). Task ordering enables TDD when testing tasks precede implementation. Reads ADRs when touching architectural boundaries. On epic completion, verifies against source spec.',
     input: 'Epic doc (auto-detected or user provides)',
     output: 'Completed code + updated epic docs with retro observations',
     outputFile: '(updates epic docs in place)',
-    phases: ['Resolve epic doc + scan ADRs', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria', 'Mark complete + capture retro observation', 'Loop until story done → hydrate next', 'Epic-level verification against source spec'],
-    tip: 'When all stories complete, /do runs an integration-level check against the source spec. Individual stories may pass while the epic misses cross-story requirements — this catches that.',
+    phases: ['Resolve epic doc + scan ADRs', 'Discover test runner (library → config → ask user)', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria — run tests for [unit]/[integration]/[feature], self-assess for [manual]', 'Mark complete + capture retro observation (including testing gaps)', 'Loop until story done → hydrate next', 'Epic-level verification against source spec'],
+    tip: 'Test runner discovery is convention-based: library docs → project config files (composer.json, package.json, Makefile, pyproject.toml, Cargo.toml) → ask user. The cached command is used in all verification gates. TDD is supported by task ordering — place testing tasks before implementation tasks in the epic doc.',
     next: ['retro', 'review', 'pivot']
   },
   {
@@ -525,13 +525,13 @@ const SKILLS = [
     icon: '🔎',
     color: '#39d2c0',
     category: 'quality',
-    short: 'Adversarial review of artifacts',
-    description: 'Critical review of epic docs or stories using the party agent roster. Examines for unclear requirements, missing acceptance criteria, hidden complexity, architectural risks, testability concerns, scope creep, and dependency risks. Also checks spec compliance and ADR compliance. Can auto-generate remediation tasks.',
+    short: 'Adversarial review with test coverage checks',
+    description: 'Critical review of epic docs or stories using the party agent roster. Examines for unclear requirements, missing acceptance criteria, hidden complexity, architectural risks, testability concerns, missing test coverage, scope creep, and dependency risks. Checks spec compliance, ADR compliance, and test coverage — flagging stories with automated test tags that lack testing tasks, or stories that warrant test tags but don\'t have them. Can auto-generate remediation tasks.',
     input: 'Epic doc or story',
     output: 'Review document with findings by severity (Critical / Warning / Suggestion)',
     outputFile: 'docs/reviews/{nn}-review-{slug}.md',
-    phases: ['Analyse artifact + discover spec/ADRs', 'Conduct review (2-4 agents)', 'Check spec compliance (requirements coverage)', 'Check ADR compliance (architectural decisions)', 'Write review file with severity ratings', 'Optionally generate remediation tasks', 'Pipeline handoff (adaptive to epic status)'],
-    tip: 'Review now checks spec compliance (does the epic cover all spec requirements?) and ADR compliance (do stories respect architectural decisions?). These are in addition to the standard review dimensions.',
+    phases: ['Analyse artifact + discover spec/ADRs', 'Conduct review (2-4 agents)', 'Check spec compliance (requirements coverage)', 'Check ADR compliance (architectural decisions)', 'Check test coverage (tags vs testing tasks)', 'Write review file with severity ratings', 'Optionally generate remediation tasks', 'Pipeline handoff (adaptive to epic status)'],
+    tip: 'Review checks three compliance dimensions: spec (does the epic cover all requirements?), ADR (do stories respect architectural decisions?), and test coverage (do stories with automated test tags have corresponding testing tasks?).',
     next: ['do', 'pivot']
   },
   {
@@ -557,13 +557,13 @@ const SKILLS = [
     icon: '📊',
     color: '#f85149',
     category: 'quality',
-    short: 'Lightweight retrospective',
-    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (scope surprise, criteria gap, complexity underestimate, codebase discovery), extracts patterns, and produces actionable recommendations. Can write learnings back to library docs.',
+    short: 'Retrospective with testing gap analysis',
+    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (scope surprise, criteria gap, complexity underestimate, codebase discovery, testing gap), extracts patterns, and produces actionable recommendations. Testing gaps capture when tests revealed issues criteria didn\'t anticipate, or criteria that proved untestable. Can write learnings back to library docs.',
     input: 'Completed epic doc',
-    output: 'Retro file with patterns, observations, and recommendations',
+    output: 'Retro file with patterns, observations (including testing gaps), and recommendations',
     outputFile: 'docs/retros/{nn}-retro-{slug}.md',
-    phases: ['Read epic doc, identify retro observations', 'Synthesise by category, extract patterns', 'Write retro file with recommendations', 'Optionally amend library docs with learnings', 'Pipeline handoff to next cycle'],
-    tip: 'The library write-back is powerful — learnings from this project become reference material for the next. This is how institutional knowledge compounds.',
+    phases: ['Read epic doc, identify retro observations', 'Synthesise by category (including testing gaps), extract patterns', 'Write retro file with recommendations', 'Optionally amend library docs with learnings', 'Pipeline handoff to next cycle'],
+    tip: 'Testing gap observations capture when tests revealed issues criteria didn\'t anticipate or when criteria proved untestable. The library write-back can feed testing conventions back to reference docs for the next cycle.',
     next: ['discover', 'spec', 'epics', 'library']
   },
   {
@@ -736,7 +736,8 @@ function draw() {
   const ox = (w - 1100) / 2 + state.pan.x;
   const oy = (h - 440) / 2 + state.pan.y;
 
-  // Draw edges
+  // Draw edges, collect labels to draw on top of nodes later
+  const edgeLabels = [];
   EDGES.forEach(e => {
     const from = NODE_POSITIONS[e.from];
     const to = NODE_POSITIONS[e.to];
@@ -756,13 +757,14 @@ function draw() {
     else if (e.style === 'dotted') ctx.setLineDash([2, 4]);
     else ctx.setLineDash([]);
 
-    // Curved edges
+    // Curved edges — selected edges arc further out to clear node labels
     const mx = (fx + tx) / 2;
     const my = (fy + ty) / 2;
     const dx = tx - fx;
     const dy = ty - fy;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    const curve = dist > 200 ? 30 : 15;
+    const baseCurve = dist > 200 ? 30 : 15;
+    const curve = isSelectedEdge ? Math.max(baseCurve, NODE_RADIUS * 4) : baseCurve;
     const nx = -dy / dist * curve;
     const ny = dx / dist * curve;
 
@@ -780,7 +782,6 @@ function draw() {
     ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
     ctx.moveTo(tx, ty);
-    // Pull arrow back to edge of node
     const arrowTipX = tx - Math.cos(angle) * NODE_RADIUS;
     const arrowTipY = ty - Math.sin(angle) * NODE_RADIUS;
     ctx.moveTo(arrowTipX, arrowTipY);
@@ -789,12 +790,16 @@ function draw() {
     ctx.closePath();
     ctx.fill();
 
-    // Edge label
+    // Collect label for deferred drawing (on top of nodes)
     if (isSelectedEdge) {
-      ctx.font = '10px -apple-system, sans-serif';
-      ctx.fillStyle = 'rgba(139,148,158,0.7)';
-      ctx.textAlign = 'center';
-      ctx.fillText(e.label, mx + nx * 1.5, my + ny * 1.5 - 4);
+      const nLen = Math.sqrt(nx*nx + ny*ny);
+      const ndx = nx/nLen, ndy = ny/nLen;
+      edgeLabels.push({
+        label: e.label,
+        x: mx + ndx * (nLen * 0.5 + 18),
+        y: my + ndy * (nLen * 0.5 + 18),
+        ndx, ndy,
+      });
     }
   });
 
@@ -864,6 +869,62 @@ function draw() {
       ctx.fillStyle = '#6e7681';
       ctx.fillText(skill.category, x, y + NODE_RADIUS + 26);
     }
+  });
+
+  // Resolve collisions: push labels away from overlapping node regions
+  // Node exclusion box covers circle + name + category text below
+  const nodeBoxes = SKILLS.map(s => {
+    const p = NODE_POSITIONS[s.id];
+    if (!p) return null;
+    const cx = p.x + ox, cy = p.y + oy;
+    return {
+      cx, cy,
+      l: cx - NODE_RADIUS - 30,
+      r: cx + NODE_RADIUS + 30,
+      t: cy - NODE_RADIUS - 8,
+      b: cy + NODE_RADIUS + 34,
+    };
+  }).filter(Boolean);
+
+  const lbHW = 32, lbHH = 28;
+
+  edgeLabels.forEach(el => {
+    for (let i = 0; i < 50; i++) {
+      let closest = null, closestDist = Infinity;
+      for (const nb of nodeBoxes) {
+        if (el.x + lbHW > nb.l && el.x - lbHW < nb.r &&
+            el.y + lbHH > nb.t && el.y - lbHH < nb.b) {
+          const d = (el.x - nb.cx) ** 2 + (el.y - nb.cy) ** 2;
+          if (d < closestDist) { closestDist = d; closest = nb; }
+        }
+      }
+      if (!closest) break;
+      // Push directly away from the overlapping node's center
+      const awayX = el.x - closest.cx, awayY = el.y - closest.cy;
+      const awayLen = Math.sqrt(awayX * awayX + awayY * awayY) || 1;
+      el.x += (awayX / awayLen) * 10;
+      el.y += (awayY / awayLen) * 10;
+    }
+  });
+
+  // Draw deferred edge labels on top of everything
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(88,166,255,0.85)';
+  ctx.textAlign = 'center';
+  edgeLabels.forEach(el => {
+    const words = el.label.split(' ');
+    const maxW = 50;
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else { line = test; }
+    }
+    if (line) lines.push(line);
+    const lh = 12;
+    const startY = el.y - (lines.length - 1) * lh / 2;
+    lines.forEach((l, i) => ctx.fillText(l, el.x, startY + i * lh));
   });
 }
 

@@ -134,15 +134,54 @@ Consolidate from the conversation:
 
 ### Section 6: Testing Strategy
 
-Outline how the system will be verified. This section bridges the spec and implementation by making testability explicit.
+Outline how the system will be verified. This section bridges the spec and implementation by making testability explicit — not just what to test, but how each requirement will be verified.
 
-- **Acceptance criteria mapping**: For each must-have functional requirement, confirm it has at least one testable acceptance criterion. Flag any requirements that are vague or untestable.
-- **Integration boundaries**: If ADRs were discovered, identify the key integration boundaries between architectural components (e.g. API contracts, event schemas, data flows between services). These become the seams where integration tests should focus.
-- **Unit testing**: Confirm that unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.
+#### Step 6a: Define Tag Vocabulary
 
-Present the testing strategy to the user and refine. This section should be lightweight — a checklist of what to test and where, not a full test plan.
+Present the test approach tag vocabulary to the user:
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 6 summary before continuing.
+- `[unit]` — Verified by unit tests targeting individual components in isolation
+- `[integration]` — Verified by integration tests that exercise boundaries between components (API contracts, event flows, data layer interactions)
+- `[feature]` — Verified by feature/end-to-end tests that exercise complete user-facing workflows
+- `[manual]` — Verified by manual inspection, observation, or user confirmation (no automated test)
+
+These tags will flow downstream: `cpm:epics` propagates them onto story acceptance criteria, and `cpm:do` uses them to determine verification approach (run tests vs. self-assess). Use AskUserQuestion to confirm the vocabulary or let the user adjust it for their project.
+
+**Graceful fallback**: If the user prefers not to tag criteria (e.g. for a small project where tagging adds ceremony without value), skip tag assignment and proceed with the current lightweight behaviour — acceptance criteria mapping without tags. The rest of Section 6 still runs.
+
+#### Step 6b: Tag Acceptance Criteria
+
+For each must-have functional requirement from Section 2, review its acceptance criteria and assign a test approach tag:
+
+1. Present the requirement and its criteria.
+2. Propose a tag for each criterion based on its nature — boundary-crossing behaviour suggests `[integration]`, isolated logic suggests `[unit]`, user-visible workflow suggests `[feature]`, and non-automatable checks suggest `[manual]`.
+3. Use AskUserQuestion to confirm or adjust the proposed tags.
+4. **Flag incomplete criteria**: Any acceptance criterion that cannot be assigned a tag because it's too vague or subjective to verify should be flagged. Present the flagged criteria and ask the user to refine them until they're testable.
+
+Work through requirements one at a time — don't dump all tags at once.
+
+#### Step 6c: Integration Boundaries
+
+If ADRs were discovered, identify the key integration boundaries between architectural components (e.g. API contracts, event schemas, data flows between services). These become the seams where integration tests should focus. If no ADRs exist, derive boundaries from the architecture decisions made in Section 4.
+
+Present the integration boundaries to the user and refine.
+
+#### Step 6d: Test Infrastructure
+
+Assess whether the project needs any testing infrastructure that doesn't already exist:
+
+- Test frameworks (e.g. PHPUnit, Pest, Jest, pytest)
+- Test databases or fixtures
+- CI configuration for running tests
+- Mock/stub libraries for external services
+
+If infrastructure is needed, capture it — these become stories in `cpm:epics`. If the project already has adequate test infrastructure, note that and move on. Use AskUserQuestion to confirm.
+
+#### Step 6e: Present and Refine
+
+Present the complete testing strategy to the user: tagged criteria, integration boundaries, and infrastructure needs. Refine with AskUserQuestion before proceeding.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Section 6 summary (including tag assignments per requirement and infrastructure needs) before continuing.
 
 ### Section 7: Review
 
@@ -205,11 +244,27 @@ Use this format:
 
 ## Testing Strategy
 
+### Tag Vocabulary
+Test approach tags used in this spec:
+- `[unit]` — Unit tests targeting individual components in isolation
+- `[integration]` — Integration tests exercising boundaries between components
+- `[feature]` — Feature/end-to-end tests exercising complete user-facing workflows
+- `[manual]` — Manual inspection, observation, or user confirmation
+
 ### Acceptance Criteria Coverage
-{Mapping of must-have requirements to their acceptance criteria — confirms each requirement is testable}
+
+| Requirement | Acceptance Criterion | Test Approach |
+|---|---|---|
+| {Requirement label} | {Criterion text} | {[tag]} |
+| {Requirement label} | {Criterion text} | {[tag]} |
+
+{Each must-have requirement has at least one testable criterion with a tag. Criteria flagged during Section 6b as vague should be refined before inclusion here.}
 
 ### Integration Boundaries
 {Key integration points between architectural components, derived from ADRs if available}
+
+### Test Infrastructure
+{Testing infrastructure the project needs — frameworks, test databases, fixtures, CI configuration, mock libraries. "None required" if the project already has adequate infrastructure. Items listed here become stories in `cpm:epics`.}
 
 ### Unit Testing
 Unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.
@@ -247,6 +302,13 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 {Concise summary — key must-haves, should-haves, won't-haves decided}
 
 {...continue for each completed section...}
+
+### Section 6: Testing Strategy
+{Tag vocabulary confirmed or skipped. Per-requirement tag assignments:
+- Requirement 1: [tag] criterion summary, [tag] criterion summary
+- Requirement 2: [tag] criterion summary
+...
+Integration boundaries identified. Test infrastructure needs: {list or "none"}.}
 
 ## Next Action
 {What to ask or do next in the facilitation}

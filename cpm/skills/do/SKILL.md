@@ -50,6 +50,27 @@ After the Library Check and before task selection, display:
 
 > Output format is fixed (used by downstream skills). Run `/cpm:templates preview do` to see the format.
 
+### Test Runner Discovery (Startup)
+
+After the Template Hint and before story hydration, discover the project's test runner command. This command is used by verification gates to execute tests when acceptance criteria carry automated test tags (`[unit]`, `[integration]`, `[feature]`).
+
+**Discovery priority**:
+
+1. **Library documents**: Check any library documents scoped to `do` (found during Library Check) for testing instructions. Look for explicit test commands, framework references, or testing conventions. If found, use the specified command.
+2. **Project config files**: If no library document provides a test command, inspect project configuration files:
+   - `composer.json` — check `scripts.test` (e.g. `composer test`, `./vendor/bin/pest`, `./vendor/bin/phpunit`)
+   - `package.json` — check `scripts.test` (e.g. `npm test`, `npx jest`)
+   - `Makefile` — check for a `test` target (e.g. `make test`)
+   - `pyproject.toml` or `pytest.ini` — check for pytest configuration (e.g. `pytest`)
+   - `Cargo.toml` — check for Rust project (e.g. `cargo test`)
+3. **Ask the user**: If no test command is discoverable from steps 1-2, use AskUserQuestion to ask: "No test runner found automatically. What command runs your tests?" with options for common runners and a freeform option.
+
+**Cache the result**: Store the discovered test command in the progress file (see State Management) as `**Test command**: {command}` or `**Test command**: none` if the user declines. This persists across all verification gates in the session — do not re-discover between tasks.
+
+**Graceful degradation**: If no test runner is discoverable and the user chooses not to provide one, set `**Test command**: none`. Verification gates will fall back to the existing self-assessment approach and note that no test runner was available.
+
+**Skip conditions**: If the epic doc has no acceptance criteria with `[unit]`, `[integration]`, or `[feature]` tags, skip test runner discovery entirely — it won't be needed.
+
 ## Story Hydration
 
 When `cpm:do` needs work and no pending unblocked Claude Code tasks exist, it hydrates the next story from the epic doc into Claude Code's task system. This is the bridge between planning artifacts (epic docs) and execution state (Claude Code tasks).
@@ -141,7 +162,16 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 
 ### 4. Do the Work
 
-**If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase. Check files, run tests, or inspect outputs as needed to confirm each criterion is met. Proceed to step 5 with your assessment.
+**If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase.
+
+**Test execution in verification gates**: Scan the story's acceptance criteria for test approach tags (`[unit]`, `[integration]`, `[feature]`). If any automated tags are present and `**Test command**` in the progress file is not `none`:
+
+1. Run the cached test command using the Bash tool.
+2. If tests **pass**: report the pass and continue verification of remaining criteria (including `[manual]` ones via self-assessment).
+3. If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". Do not block the work loop — let the user decide.
+4. If `**Test command**` is `none` or all criteria are tagged `[manual]`, use the existing self-assessment approach — inspect files, check outputs, and assess each criterion manually.
+
+Proceed to step 5 with your assessment.
 
 **If this is an implementation task** (no `Type: verification`): Execute the task as described. This is the actual implementation — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
 
@@ -152,8 +182,10 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 Before marking the task complete:
 
 - Re-read the acceptance criteria from the epic doc (or from the task description if no epic doc).
-- Self-assess each criterion. For each one, determine whether it's been met.
-- If all criteria are met, proceed to step 6.
+- For each criterion, assess whether it's been met. The assessment method depends on the criterion's tag:
+  - **`[unit]`, `[integration]`, `[feature]`**: If a test command is cached (`**Test command**` is not `none`), run it and use the pass/fail result as evidence. A passing test suite satisfies these criteria. A failing test suite means the criterion is not met — report the specific failures.
+  - **`[manual]` or no tag**: Self-assess by inspecting the codebase, checking files, or reviewing outputs. This is the existing approach.
+- If all criteria are met (by test results or self-assessment), proceed to step 6.
 - If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as done anyway. Use AskUserQuestion for this gate.
 
 ### 6. Complete and Update State
@@ -176,6 +208,7 @@ Observation categories (use exactly one per observation):
 - **Criteria gap**: Acceptance criteria missed something important that only became clear during implementation
 - **Complexity underestimate**: The implementation was harder than expected due to technical factors
 - **Codebase discovery**: Found something unexpected in the codebase (pattern, convention, limitation) that affected the work
+- **Testing gap**: Tests revealed issues that acceptance criteria didn't anticipate, or criteria proved untestable with the available test infrastructure
 
 If noteworthy, use the Edit tool to append a `**Retro**:` field to the completed story in the epic doc, immediately after the last existing field for that story (before the `---` separator). Format: `**Retro**: [{category}] {One-sentence observation}`
 
@@ -223,6 +256,9 @@ When the work loop finishes (no more pending unblocked tasks):
 
 ### Codebase Discoveries
 - {observation from story N}
+
+### Testing Gaps
+- {observation from story N}
 ```
 
 Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
@@ -236,6 +272,9 @@ The skill should work even without an epic doc:
 - **No epic doc resolved during Input**: Skip epic doc reads and status updates. Still do the work, still verify acceptance criteria from the task description.
 - **Epic doc file doesn't exist or was deleted mid-loop**: Same — skip epic doc integration, work on the task directly.
 - **Story heading not found in epic doc**: Log a note, skip status updates for that story, continue with the work.
+- **Test command fails to execute** (command not found, timeout, permission error): Report the error to the user via AskUserQuestion. Do not retry automatically. Offer options: "Provide a different test command", "Continue without tests (self-assessment only)", "Stop and investigate". If the user provides a new command, update `**Test command**` in the progress file. Never block the work loop on a broken test command.
+- **Test command returns failures** (tests run but some fail): This is not an error — it's information. Report which tests failed and let the user decide how to proceed (see Step 4 verification gate logic). The work loop continues regardless of the user's choice.
+- **No test command cached** (`**Test command**: none`): All verification uses self-assessment. This is the default fallback and is always available.
 
 ## State Management
 
@@ -255,6 +294,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Skill**: cpm:do
 **Current task**: {task ID} — {task subject}
 **Epic doc**: {path to epic doc, or "none"}
+**Test command**: {discovered test command, or "none" if no runner found}
 **Tasks remaining**: {count of pending unblocked tasks}
 
 ## Completed Tasks
@@ -279,3 +319,4 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Acceptance criteria are the definition of done.** Don't mark a task complete if criteria aren't met unless the user explicitly approves.
 - **Keep momentum.** Move through tasks efficiently. Don't over-explain between tasks — just pick up the next one and go.
 - **One task at a time.** Complete each task fully before starting the next. Don't interleave work across tasks.
+- **Task ordering enables TDD.** Tasks are hydrated and executed in the order they appear in the epic doc. When `cpm:epics` places a "Write tests" task before implementation tasks (rather than the default after), `cpm:do` naturally follows that sequence — tests first, then implementation. No special logic needed; the ordering convention is enough.

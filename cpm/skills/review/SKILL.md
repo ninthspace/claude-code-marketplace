@@ -125,14 +125,15 @@ Agents should look for issues across these concern types:
 - **Dependency Risks** — Missing or incorrect `**Blocked by**` declarations. Circular dependencies. Stories that should be sequenced but aren't.
 - **Spec Compliance** — Stories or acceptance criteria that don't align with the spec's requirements. Must-have requirements that aren't covered by any story. Only applicable when a source spec was discovered in Step 1.
 - **ADR Compliance** — Stories or tasks that contradict or ignore architectural decisions from existing ADRs. Implementation approaches that conflict with the rationale or constraints documented in ADRs. Only applicable when ADRs were discovered in Step 1.
+- **Missing Test Coverage** — Stories with acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]` that lack a corresponding testing task. Stories where criteria warrant automated testing but have no test approach tags. Only applicable when the source spec has a testing strategy or when stories carry test approach tags.
 
 Not every agent reviews every dimension. Each agent focuses on what they'd naturally notice given their role:
 
 - **Product Manager**: Unclear requirements, scope creep, missing user value, spec compliance
 - **Architect**: Architectural risks, hidden complexity, dependency risks, ADR compliance
-- **Developer**: Hidden complexity, testability concerns, missing acceptance criteria, ADR compliance
+- **Developer**: Hidden complexity, testability concerns, missing acceptance criteria, ADR compliance, missing test coverage
 - **UX Designer**: Unclear requirements from a user perspective, missing edge cases in user flows
-- **QA Engineer**: Testability concerns, missing acceptance criteria, missing error states
+- **QA Engineer**: Testability concerns, missing acceptance criteria, missing error states, missing test coverage
 - **DevOps Engineer**: Architectural risks (deployment, scaling), dependency risks
 - **Technical Writer**: Unclear requirements (naming, terminology), scope creep (documentation gaps)
 - **Scrum Master**: Scope creep, dependency risks, story sizing concerns
@@ -219,6 +220,9 @@ Format:
 
 ### ADR Compliance
 {findings in this category — only if ADRs were discovered}
+
+### Missing Test Coverage
+{findings in this category — only if test approach tags or testing strategy present}
 ```
 
 Only include concern type sections that have findings. If a category has no findings, omit the heading entirely.

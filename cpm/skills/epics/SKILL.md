@@ -86,11 +86,20 @@ Each story should have:
 - An activeForm for progress display (present continuous: "Setting up compaction hook infrastructure")
 - **Spec traceability** (when input is a spec): Which functional requirements from the spec this story satisfies. Use the requirement text or a short label. This enables verification that the spec is fully covered across all epics — every must-have requirement should appear in at least one story.
 
+**Test approach tag propagation** (when the input spec has a Testing Strategy section with tagged criteria):
+
+1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
+2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tag from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, or `[manual]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments.
+3. If a story's criteria don't map directly to a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), propose a tag based on the criterion's nature and confirm with the user.
+4. Tags appear at the end of the acceptance criteria line, e.g.: `- User can log in via OAuth [integration]`
+
+**Graceful degradation**: If the spec has no Testing Strategy section, no Acceptance Criteria Coverage table, or no tags, skip tag propagation entirely — write acceptance criteria without tags. The skill must work without `cpm:spec`'s enhanced Section 6 having been used.
+
 **Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 
 Present the stories for each epic to the user using AskUserQuestion. Refine before moving to the next epic.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary (including which tags were propagated to which stories) before continuing.
 
 ### Step 3b: Identify Tasks within Stories
 
@@ -105,9 +114,42 @@ Tasks are the actual work items. They should be specific enough that an implemen
 
 Not every story needs multiple tasks. If a story is straightforward enough to be done in one step, a single task is fine. Don't decompose for the sake of it.
 
+**Auto-generated testing tasks**: After identifying implementation tasks for a story, check whether any of the story's acceptance criteria carry `[unit]`, `[integration]`, or `[feature]` tags. If at least one automated test tag is present:
+
+1. Auto-generate a testing task titled "Write tests for {story title}".
+2. Place it **after** all implementation tasks (as the last task in the story, before the verification gate that `cpm:do` will create).
+3. Give it a description: "Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`."
+4. The testing task's dot-notation number follows the last implementation task (e.g. if implementation tasks are 1.1, 1.2, 1.3, the testing task is 1.4).
+
+If **all** of a story's criteria are tagged `[manual]` (or have no tags), do **not** generate a testing task — there's nothing to automate.
+
+**Graceful degradation**: If no tags were propagated during Step 3 (e.g. the spec had no testing strategy), skip testing task generation entirely.
+
 Present the tasks for each story using AskUserQuestion. Refine before moving to the next story.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 3b summary before continuing.
+
+### Step 3c: Integration Testing Story (when warranted)
+
+After all implementation stories and their tasks are defined for an epic, assess whether the epic warrants a **dedicated integration testing story**. This is separate from per-story testing tasks (which test a single story's criteria) — an integration testing story verifies cross-story behaviour and integration points.
+
+**When to generate**: Create an integration testing story when the epic has:
+- Multiple stories with `[integration]` tagged criteria that interact with each other
+- Cross-story data flows, API contracts, or event-driven interactions
+- Stories that produce components which must work together as a system
+
+**When to skip**: Skip if the epic has only 1-2 stories, no `[integration]` tags, or stories that are independent of each other.
+
+**How to generate**:
+1. Title: "Verify cross-story integration for {epic name}"
+2. Story number: the next sequential number after the last implementation story
+3. `**Blocked by**`: all implementation stories in the epic (comma-separated)
+4. Acceptance criteria: specific cross-story integration points that need verification. These should describe observable behaviour that spans multiple stories — not just "everything works together." Confirm with the user via AskUserQuestion.
+5. Tasks: typically a single task — "Write integration tests for {epic name}" — unless the integration points are complex enough to warrant separate tasks.
+
+**Graceful degradation**: If no tags were propagated during Step 3, skip this step entirely.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Step 3c summary (integration story generated or skipped, with rationale) before continuing.
 
 ### Step 4: Confirm
 
@@ -202,10 +244,15 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 {Epic names, numbers, slugs, and output paths as confirmed by user}
 
 ### Step 3: Break into Stories
-{List of stories per epic — titles and acceptance criteria summaries}
+{List of stories per epic — titles and acceptance criteria summaries. Include tag propagation status:
+- Tags propagated from spec: yes/no/skipped (no testing strategy in spec)
+- Per-story tags: Story 1 criteria tagged [unit] x2, [integration] x1; Story 2 criteria tagged [manual] x3; etc.}
 
 ### Step 3b: Identify Tasks within Stories
-{List of tasks per story — titles and dot-notation numbers}
+{List of tasks per story — titles and dot-notation numbers. Note which stories got auto-generated testing tasks.}
+
+### Step 3c: Integration Testing Story
+{Integration testing story generated or skipped, with rationale. If generated: story title, blocked-by list, acceptance criteria summary.}
 
 {...include only completed steps...}
 
@@ -227,4 +274,6 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Don't over-decompose tasks.** Not every story needs multiple tasks. If the work is straightforward, one task is fine. The value of task-level breakdown is making complex stories manageable, not adding bureaucracy to simple ones.
 - **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {nn}-epic-{slug}` for cross-epic dependencies. Don't create cross-story task dependencies — if tasks in different stories are interdependent, the stories themselves should have the dependency.
 - **One epic, one document.** Each epic produces its own markdown file. This keeps documents focused and allows parallel work on independent epics.
+- **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
+- **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.

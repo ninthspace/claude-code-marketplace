@@ -31,9 +31,9 @@ Here's what each skill does:
 | `/cpm:discover` | Understand the problem — why it matters, who it's for, what success looks like | `docs/plans/01-plan-{slug}.md` |
 | `/cpm:brief` | Define the product — vision, value propositions, key features, user journeys | `docs/briefs/01-brief-{slug}.md` |
 | `/cpm:architect` | Explore key technical decisions — options, trade-offs, dependencies | `docs/architecture/01-adr-{slug}.md` (one per decision) |
-| `/cpm:spec` | Build requirements — functional (MoSCoW prioritised), non-functional, scope boundaries | `docs/specifications/01-spec-{slug}.md` |
-| `/cpm:epics` | Break work into epic docs — stories with acceptance criteria and tasks | `docs/epics/01-epic-{slug}.md` (one per epic) |
-| `/cpm:do` | Execute — picks up tasks one by one, implements, verifies acceptance criteria, updates status | Updates the epic doc in place |
+| `/cpm:spec` | Build requirements — functional (MoSCoW prioritised), non-functional, scope boundaries, testing strategy with test approach tags | `docs/specifications/01-spec-{slug}.md` |
+| `/cpm:epics` | Break work into epic docs — stories with acceptance criteria (tagged for test approach), auto-generated testing tasks, and integration testing stories | `docs/epics/01-epic-{slug}.md` (one per epic) |
+| `/cpm:do` | Execute — discovers test runner, picks up tasks one by one, implements, runs tests in verification gates, updates status | Updates the epic doc in place |
 
 ### Supporting Skills
 
@@ -42,8 +42,8 @@ These aren't part of the main pipeline but plug in around it:
 | Skill | What it does |
 |-------|-------------|
 | `/cpm:party` | Multi-perspective brainstorming — simulated team discusses a topic before you commit to a direction |
-| `/cpm:review` | Adversarial review of an epic — agents challenge assumptions, check spec/ADR compliance, flag risks |
-| `/cpm:retro` | Lightweight retrospective after completing an epic — captures lessons for the next planning cycle |
+| `/cpm:review` | Adversarial review of an epic — agents challenge assumptions, check spec/ADR/test coverage compliance, flag risks |
+| `/cpm:retro` | Lightweight retrospective after completing an epic — captures lessons (including testing gaps) for the next planning cycle |
 | `/cpm:pivot` | Course correction — amend any planning artifact and cascade changes downstream |
 | `/cpm:present` | Transform artifacts for different audiences (executive summaries, status updates, etc.) |
 | `/cpm:library` | Import reference docs (coding standards, architecture docs) that all skills can use as context |
@@ -76,7 +76,7 @@ Sessions are resilient. If Claude's context compacts mid-conversation (long sess
 
 ## The Agent Roster
 
-CPM includes 8 simulated team personas that provide perspectives during planning:
+CPM includes 9 simulated team personas that provide perspectives during planning:
 
 | Agent | Role | What they bring |
 |-------|------|----------------|
@@ -85,6 +85,7 @@ CPM includes 8 simulated team personas that provide perspectives during planning
 | Bella | Senior Developer | Implementation reality, hidden complexity, practical concerns |
 | Priya | UX Designer | User empathy, interaction quality, simplicity |
 | Tomas | QA Engineer | Edge cases, testability, "what could go wrong?" |
+| Casey | Test Engineer | Test strategy, coverage boundaries, right level of test |
 | Sable | DevOps Engineer | Deployment, monitoring, operational concerns |
 | Elli | Technical Writer | Clarity, naming, documentation quality |
 | Ren | Scrum Master | Process, delivery, scope management |
@@ -151,25 +152,25 @@ Claude identifies key decisions (e.g. "how to isolate tenant data"), explores op
 ```
 /cpm:spec docs/briefs/01-brief-multi-tenancy.md
 ```
-Claude builds prioritised requirements, references existing ADRs for architecture sections. Output: `docs/specifications/01-spec-multi-tenancy.md`
+Claude builds prioritised requirements, references existing ADRs for architecture sections, and defines a testing strategy with test approach tags (`[unit]`, `[integration]`, `[feature]`, `[manual]`) per acceptance criterion. Output: `docs/specifications/01-spec-multi-tenancy.md`
 
 **5. Break into epics**
 ```
 /cpm:epics docs/specifications/01-spec-multi-tenancy.md
 ```
-Claude creates epic docs with stories, acceptance criteria, and tasks. Output: `docs/epics/01-epic-tenant-setup.md`, etc.
+Claude creates epic docs with stories, acceptance criteria (carrying test approach tags from the spec), and tasks. Testing tasks are auto-generated for stories with automated test tags. Output: `docs/epics/01-epic-tenant-setup.md`, etc.
 
 **6. (Optional) Review before implementing**
 ```
 /cpm:review docs/epics/01-epic-tenant-setup.md
 ```
-Agents challenge the epic. Findings are severity-tagged. Optional autofix generates remediation tasks.
+Agents challenge the epic. Findings are severity-tagged, including test coverage gaps. Optional autofix generates remediation tasks.
 
 **7. Execute**
 ```
 /cpm:do
 ```
-Claude picks up the next unblocked task, implements it, verifies acceptance criteria, updates the epic doc, and moves to the next task. Repeat until done.
+Claude discovers the project's test runner at startup (from config files or by asking you), then picks up the next unblocked task, implements it, runs tests in verification gates for criteria tagged `[unit]`/`[integration]`/`[feature]`, updates the epic doc, and moves to the next task. Repeat until done.
 
 **8. Retrospective**
 ```
