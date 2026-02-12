@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPM — Claude Planning Method</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f1117;
+    --bg-slide: #161822;
+    --surface: #1e2030;
+    --border: #2a2d3e;
+    --text: #e2e4f0;
+    --text-dim: #8b8fa8;
+    --accent: #7c6aef;
+    --accent-glow: rgba(124, 106, 239, 0.15);
+    --accent-bright: #9b8bff;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --cyan: #22d3ee;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Slide Container ── */
+  .deck {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .slide.exiting-left {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  .slide-inner {
+    max-width: 960px;
+    width: 100%;
+  }
+
+  /* ── Typography ── */
+  .slide-number-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+
+  h1 .highlight {
+    background: linear-gradient(135deg, var(--accent-bright), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  h2 {
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.8px;
+    margin-bottom: 32px;
+  }
+
+  .subtitle {
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-width: 640px;
+  }
+
+  /* ── Bullet Lists ── */
+  .bullets {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .bullets li {
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--text);
+    padding-left: 28px;
+    position: relative;
+  }
+
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .bullets li em {
+    color: var(--text-dim);
+    font-style: normal;
+  }
+
+  .bullets li strong {
+    color: var(--accent-bright);
+    font-weight: 600;
+  }
+
+  /* ── Pipeline Visual (Slide 4) ── */
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin: 40px 0 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pipeline-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+
+  .pipeline-node {
+    width: 110px;
+    height: 110px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    cursor: default;
+  }
+
+  .pipeline-node:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 24px var(--accent-glow);
+    transform: translateY(-4px);
+  }
+
+  .pipeline-node .icon {
+    font-size: 28px;
+    margin-bottom: 4px;
+  }
+
+  .pipeline-node .label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .pipeline-arrow {
+    font-size: 20px;
+    color: var(--text-dim);
+    margin: 45px 6px 0;
+    flex-shrink: 0;
+  }
+
+  .pipeline-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 110px;
+    line-height: 1.3;
+  }
+
+  /* ── Benefit Cards (Slide 7) ── */
+  .benefit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .benefit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .benefit-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .benefit-card .card-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .benefit-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .benefit-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .benefit-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* ── Contrast Cards (Slide 8) ── */
+  .contrast-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 8px;
+  }
+
+  .contrast-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+
+  .contrast-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .contrast-card p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-dim);
+  }
+
+  /* ── Bottom Line (Slide 9) ── */
+  .takeaway {
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.6;
+    max-width: 760px;
+    text-align: center;
+    color: var(--text);
+  }
+
+  .takeaway strong {
+    color: var(--accent-bright);
+    font-weight: 600;
+  }
+
+  .takeaway-sub {
+    margin-top: 28px;
+    font-size: 17px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    text-align: center;
+    max-width: 640px;
+  }
+
+  /* ── Navigation Bar ── */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    background: var(--bg-slide);
+    border-top: 1px solid var(--border);
+    user-select: none;
+  }
+
+  .nav-bar .counter {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    min-width: 80px;
+  }
+
+  .progress-track {
+    flex: 1;
+    max-width: 400px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 24px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .nav-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .nav-btn:hover {
+    background: var(--border);
+    border-color: var(--accent);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* ── Title slide special ── */
+  .title-slide {
+    text-align: center;
+    align-items: center;
+  }
+
+  .title-slide .subtitle {
+    margin: 0 auto;
+  }
+
+  .title-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(124, 106, 239, 0.25);
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-bright);
+    margin-bottom: 28px;
+  }
+
+  /* ── Bottom-line slide special ── */
+  .bottom-line-slide {
+    text-align: center;
+    align-items: center;
+  }
+
+  /* ── Problem slide icons ── */
+  .problem-bullets li::before {
+    background: var(--rose);
+  }
+
+  /* ── Quality check colors ── */
+  .quality-bullets .review::before { background: var(--cyan); }
+  .quality-bullets .retro::before { background: var(--green); }
+  .quality-bullets .pivot::before { background: var(--amber); }
+
+  /* ── Hint text ── */
+  .hint {
+    position: fixed;
+    bottom: 72px;
+    right: 32px;
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .slide { padding: 40px 28px; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 26px; }
+    .subtitle { font-size: 17px; }
+    .bullets li { font-size: 16px; }
+    .pipeline { gap: 0; }
+    .pipeline-node { width: 80px; height: 80px; border-radius: 14px; }
+    .pipeline-node .icon { font-size: 22px; }
+    .pipeline-node .label { font-size: 11px; }
+    .pipeline-arrow { font-size: 16px; margin: 0 2px; }
+    .pipeline-desc { display: none; }
+    .benefit-grid { grid-template-columns: 1fr; }
+    .contrast-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- Slide 1: Title -->
+  <div class="slide title-slide active" data-slide="0">
+    <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="title-badge">Claude Code Plugin</div>
+      <h1>Claude Planning<br><span class="highlight">Method</span></h1>
+      <p class="subtitle">Structured planning for software development.<br>From idea to implementation — visible, consistent, auditable.</p>
+    </div>
+  </div>
+
+  <!-- Slide 2: The Problem -->
+  <div class="slide" data-slide="1">
+    <div class="slide-inner">
+      <div class="slide-number-label">The Challenge</div>
+      <h2>Planning gaps cost time and money</h2>
+      <ul class="bullets problem-bullets">
+        <li>Developers jump from idea to code without structured planning</li>
+        <li>Scope creep, rework, and misaligned expectations follow</li>
+        <li>Planning conversations happen verbally and <strong>get lost</strong></li>
+        <li><em>"What did we decide and why?"</em> is hard to answer later</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Slide 3: What CPM Does -->
+  <div class="slide" data-slide="2">
+    <div class="slide-inner">
+      <div class="slide-number-label">The Solution</div>
+      <h2>CPM fills the planning gap</h2>
+      <ul class="bullets">
+        <li>A planning plugin for <strong>Claude Code</strong> — AI-powered development</li>
+        <li>Guides teams through structured thinking <em>before</em> building</li>
+        <li>Produces written planning documents at each stage</li>
+        <li>Every step is conversational — not forms, not bureaucracy</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Slide 4: The Pipeline -->
+  <div class="slide" data-slide="3">
+    <div class="slide-inner">
+      <div class="slide-number-label">How It Works</div>
+      <h2>A guided planning pipeline</h2>
+      <div class="pipeline">
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: #fb7185;">
+            <span class="icon">&#x1F50D;</span>
+            <span class="label">Discover</span>
+          </div>
+          <span class="pipeline-desc">Understand the problem</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: #fbbf24;">
+            <span class="icon">&#x1F4A1;</span>
+            <span class="label">Brief</span>
+          </div>
+          <span class="pipeline-desc">Define the vision</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: #22d3ee;">
+            <span class="icon">&#x1F3D7;</span>
+            <span class="label">Architect</span>
+          </div>
+          <span class="pipeline-desc">Key decisions</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: #7c6aef;">
+            <span class="icon">&#x1F4CB;</span>
+            <span class="label">Spec</span>
+          </div>
+          <span class="pipeline-desc">Requirements</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: #4ade80;">
+            <span class="icon">&#x1F4E6;</span>
+            <span class="label">Epics</span>
+          </div>
+          <span class="pipeline-desc">Stories & tasks</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: #38bdf8;">
+            <span class="icon">&#x2699;</span>
+            <span class="label">Do</span>
+          </div>
+          <span class="pipeline-desc">Execute & verify</span>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:15px;margin-top:16px;">Each step is optional. Use what fits the complexity of the work.</p>
+    </div>
+  </div>
+
+  <!-- Slide 5: Use What You Need -->
+  <div class="slide" data-slide="4">
+    <div class="slide-inner">
+      <div class="slide-number-label">Flexibility</div>
+      <h2>Scales to the work</h2>
+      <ul class="bullets">
+        <li><strong>Small bug fix?</strong> Skip planning entirely</li>
+        <li><strong>Clear problem, need requirements?</strong> Start at Spec</li>
+        <li><strong>Big new feature?</strong> Use the full pipeline</li>
+        <li>The method matches depth to complexity — no unnecessary overhead</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Slide 6: Quality Checks -->
+  <div class="slide" data-slide="5">
+    <div class="slide-inner">
+      <div class="slide-number-label">Quality</div>
+      <h2>Built-in quality checks</h2>
+      <ul class="bullets quality-bullets">
+        <li class="review"><strong>Review</strong> — Multiple perspectives challenge assumptions before coding starts</li>
+        <li class="retro"><strong>Retro</strong> — Lessons from completed work feed into the next planning cycle</li>
+        <li class="pivot"><strong>Pivot</strong> — Amend plans mid-stream; changes cascade through all downstream documents automatically</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Slide 7: What You Get -->
+  <div class="slide" data-slide="6">
+    <div class="slide-inner">
+      <div class="slide-number-label">Manager Benefits</div>
+      <h2>What you get</h2>
+      <div class="benefit-grid">
+        <div class="benefit-card">
+          <div class="card-icon">&#x1F4C4;</div>
+          <h3>Visibility</h3>
+          <p>Written, shareable planning documents at every stage you can read and reference.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="card-icon">&#x1F517;</div>
+          <h3>Traceability</h3>
+          <p>Requirements trace to stories, stories to tasks, tasks to code. End to end.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="card-icon">&#x1F4BE;</div>
+          <h3>Knowledge Capture</h3>
+          <p>Decisions and their rationale are recorded permanently — not lost in conversations.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="card-icon">&#x2705;</div>
+          <h3>Consistency</h3>
+          <p>Every significant feature goes through the same structured thinking process.</p>
+        </div>
+        <div class="benefit-card full-width">
+          <div class="card-icon">&#x1F4CA;</div>
+          <h3>Progress Visibility</h3>
+          <p>Structured status tracking across all active work — see what's done, what's in progress, what's blocked.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 8: How It's Different -->
+  <div class="slide" data-slide="7">
+    <div class="slide-inner">
+      <div class="slide-number-label">Differentiation</div>
+      <h2>How CPM is different</h2>
+      <div class="contrast-grid">
+        <div class="contrast-card">
+          <h3>&#x1F91D; Facilitates, not prescribes</h3>
+          <p>Teams make the decisions. CPM guides the conversation and captures the outcomes.</p>
+        </div>
+        <div class="contrast-card">
+          <h3>&#x1F465; Built-in perspectives</h3>
+          <p>Simulated team roles (PM, architect, QA) weigh in at key moments to surface blind spots.</p>
+        </div>
+        <div class="contrast-card">
+          <h3>&#x1F4AC; Conversational</h3>
+          <p>One question at a time. Builds on answers. Not forms, not checklists, not bureaucracy.</p>
+        </div>
+        <div class="contrast-card">
+          <h3>&#x1F504; Living documents</h3>
+          <p>Planning artifacts evolve with the project — not shelf-ware that's written once and forgotten.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 9: Bottom Line -->
+  <div class="slide bottom-line-slide" data-slide="8">
+    <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="slide-number-label">Bottom Line</div>
+      <p class="takeaway">CPM turns the gap between <strong>"we need this feature"</strong> and <strong>"here's the code"</strong> into a structured, visible, auditable process.</p>
+      <p class="takeaway-sub">No overhead for simple work.<br>Full structure when complexity demands it.<br>Planning artifacts you can read, share, and hold people accountable to.</p>
+    </div>
+  </div>
+
+</div>
+
+<span class="hint">Arrow keys or click to navigate</span>
+
+<div class="nav-bar">
+  <span class="counter" id="counter">1 / 9</span>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress" style="width: 11.1%"></div>
+  </div>
+  <div class="nav-buttons">
+    <button class="nav-btn" id="prevBtn" disabled onclick="go(-1)">&#8592;</button>
+    <button class="nav-btn" id="nextBtn" onclick="go(1)">&#8594;</button>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  let animating = false;
+
+  function go(dir) {
+    if (animating) return;
+    const next = current + dir;
+    if (next < 0 || next >= total) return;
+    animating = true;
+    const leaving = slides[current];
+    const entering = slides[next];
+    leaving.classList.remove('active');
+    leaving.style.transform = dir > 0 ? 'translateX(-60px)' : 'translateX(60px)';
+    leaving.style.opacity = '0';
+    entering.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+    entering.style.opacity = '0';
+    requestAnimationFrame(() => {
+      entering.classList.add('active');
+      entering.style.transform = 'translateX(0)';
+      entering.style.opacity = '1';
+    });
+    current = next;
+    updateNav();
+    setTimeout(() => { animating = false; }, 450);
+  }
+
+  function updateNav() {
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === total - 1;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') { e.preventDefault(); while (current > 0) go(-1); }
+    if (e.key === 'End') { e.preventDefault(); while (current < total - 1) go(1); }
+  });
+
+  document.getElementById('deck').addEventListener('click', function(e) {
+    if (e.target.closest('.nav-bar')) return;
+    const x = e.clientX / window.innerWidth;
+    if (x < 0.3) go(-1);
+    else if (x > 0.7) go(1);
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPM Onboarding — Technical Team</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f1117;
+    --bg-slide: #161822;
+    --surface: #1e2030;
+    --surface-hover: #252840;
+    --border: #2a2d3e;
+    --text: #e2e4f0;
+    --text-dim: #8b8fa8;
+    --accent: #7c6aef;
+    --accent-glow: rgba(124, 106, 239, 0.15);
+    --accent-bright: #9b8bff;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --cyan: #22d3ee;
+    --blue: #38bdf8;
+    --radius: 12px;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck { flex: 1; position: relative; overflow: hidden; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px 72px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    pointer-events: none;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .slide-inner { max-width: 1000px; width: 100%; }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 18px;
+  }
+  h1 .hl {
+    background: linear-gradient(135deg, var(--accent-bright), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  h2 {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.8px;
+    margin-bottom: 28px;
+  }
+
+  .subtitle {
+    font-size: 20px;
+    font-weight: 300;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-width: 680px;
+  }
+
+  .title-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(124,106,239,0.25);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-bright);
+    margin-bottom: 24px;
+  }
+
+  /* ── Bullets ── */
+  .bullets { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+  .bullets li {
+    font-size: 18px;
+    line-height: 1.55;
+    padding-left: 26px;
+    position: relative;
+  }
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 10px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .bullets li strong { color: var(--accent-bright); font-weight: 600; }
+  .bullets li em { color: var(--text-dim); font-style: normal; }
+  .bullets li code {
+    font-family: var(--mono);
+    font-size: 15px;
+    background: var(--surface);
+    padding: 2px 7px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Pipeline (Slide 3) ── */
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin: 32px 0 16px;
+    justify-content: center;
+  }
+  .pipeline-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .pipeline-node {
+    width: 100px; height: 100px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    cursor: default;
+  }
+  .pipeline-node:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-3px);
+  }
+  .pipeline-node .icon { font-size: 26px; margin-bottom: 3px; }
+  .pipeline-node .label { font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
+  .pipeline-arrow {
+    font-size: 18px;
+    color: var(--text-dim);
+    margin: 40px 5px 0;
+    flex-shrink: 0;
+  }
+  .pipeline-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 100px;
+    line-height: 1.3;
+  }
+
+  /* ── Supporting skills ring (Slide 4) ── */
+  .support-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .support-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .support-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .support-card .card-cmd {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent-bright);
+    margin-bottom: 6px;
+  }
+  .support-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.45;
+  }
+
+  /* ── Decision matrix (Slide 5) ── */
+  .decision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .decision-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+  }
+  .decision-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .decision-card p { font-size: 14px; color: var(--text-dim); line-height: 1.5; }
+  .decision-card code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent-bright);
+  }
+
+  /* ── Session flow (Slide 6) ── */
+  .flow-steps {
+    display: flex;
+    gap: 0;
+    margin: 24px 0;
+    align-items: flex-start;
+  }
+  .flow-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .flow-num {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  .flow-step h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .flow-step p { font-size: 12px; color: var(--text-dim); line-height: 1.4; padding: 0 8px; }
+  .flow-connector {
+    width: 40px;
+    margin: 20px -8px 0;
+    font-size: 16px;
+    color: var(--text-dim);
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Agent roster (Slide 7) ── */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .agent-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .agent-icon { font-size: 28px; margin-bottom: 6px; }
+  .agent-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .agent-card .role { font-size: 11px; color: var(--accent-bright); font-weight: 500; margin-bottom: 6px; }
+  .agent-card p { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+  /* ── File tree (Slide 8) ── */
+  .file-tree {
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.8;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-top: 8px;
+  }
+  .file-tree .dir { color: var(--cyan); }
+  .file-tree .comment { color: var(--text-dim); }
+  .file-tree .indent { padding-left: 24px; }
+  .file-tree .indent2 { padding-left: 48px; }
+
+  /* ── Example walkthrough (Slide 9) ── */
+  .example-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .example-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .example-step .cmd {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent-bright);
+    min-width: 180px;
+    flex-shrink: 0;
+  }
+  .example-step .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  /* ── Tips (Slide 10) ── */
+  .tip-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .tip-list li {
+    font-size: 17px;
+    line-height: 1.55;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .tip-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .tip-list li strong { color: var(--accent-bright); }
+  .tip-list li code {
+    font-family: var(--mono);
+    font-size: 14px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--cyan);
+  }
+
+  /* ── Nav bar ── */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--bg-slide);
+    border-top: 1px solid var(--border);
+    user-select: none;
+  }
+  .counter { font-size: 13px; font-weight: 500; color: var(--text-dim); min-width: 80px; }
+  .progress-track {
+    flex: 1; max-width: 420px; height: 3px;
+    background: var(--border); border-radius: 2px;
+    margin: 0 20px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 2px; transition: width 0.4s ease;
+  }
+  .nav-buttons { display: flex; gap: 8px; }
+  .nav-btn {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .nav-btn:hover { background: var(--border); border-color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .hint {
+    position: fixed;
+    bottom: 64px;
+    right: 28px;
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: 0.4;
+  }
+
+  .centered { text-align: center; align-items: center; }
+  .centered .subtitle { margin: 0 auto; }
+
+  @media (max-width: 860px) {
+    .slide { padding: 32px 24px; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 24px; }
+    .subtitle { font-size: 16px; }
+    .bullets li { font-size: 15px; }
+    .pipeline-node { width: 72px; height: 72px; }
+    .pipeline-node .icon { font-size: 20px; }
+    .pipeline-node .label { font-size: 10px; }
+    .pipeline-arrow { margin: 30px 3px 0; font-size: 14px; }
+    .pipeline-desc { display: none; }
+    .support-grid { grid-template-columns: 1fr 1fr; }
+    .agent-grid { grid-template-columns: 1fr 1fr; }
+    .decision-grid { grid-template-columns: 1fr; }
+    .example-step .cmd { min-width: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- 1: Title -->
+  <div class="slide centered active" data-slide="0">
+    <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="title-badge">Technical Onboarding</div>
+      <h1>Getting Started with <span class="hl">CPM</span></h1>
+      <p class="subtitle">A practical guide to structured planning in Claude Code.<br>What it is, how it works, and when to use it.</p>
+    </div>
+  </div>
+
+  <!-- 2: What is CPM -->
+  <div class="slide" data-slide="1">
+    <div class="slide-inner">
+      <div class="tag">Overview</div>
+      <h2>What is CPM?</h2>
+      <ul class="bullets">
+        <li>A <strong>planning plugin</strong> for Claude Code — adds slash commands called "skills"</li>
+        <li>Each skill handles a different planning stage through <strong>guided conversation</strong></li>
+        <li>Produces <strong>written markdown artifacts</strong> — committed to your repo, readable by anyone</li>
+        <li>Conversational, not bureaucratic — asks questions one at a time, builds on your answers</li>
+        <li>Every step is optional — <em>match planning depth to task complexity</em></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3: The Pipeline -->
+  <div class="slide" data-slide="2">
+    <div class="slide-inner">
+      <div class="tag">Core Pipeline</div>
+      <h2>The planning pipeline</h2>
+      <div class="pipeline">
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--rose);">
+            <span class="icon">&#x1F50D;</span>
+            <span class="label">Discover</span>
+          </div>
+          <span class="pipeline-desc">Why? Who? What?</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--amber);">
+            <span class="icon">&#x1F4A1;</span>
+            <span class="label">Brief</span>
+          </div>
+          <span class="pipeline-desc">Vision & value</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--cyan);">
+            <span class="icon">&#x1F3D7;</span>
+            <span class="label">Architect</span>
+          </div>
+          <span class="pipeline-desc">Key decisions</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--accent);">
+            <span class="icon">&#x1F4CB;</span>
+            <span class="label">Spec</span>
+          </div>
+          <span class="pipeline-desc">Requirements</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--green);">
+            <span class="icon">&#x1F4E6;</span>
+            <span class="label">Epics</span>
+          </div>
+          <span class="pipeline-desc">Stories & tasks</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--blue);">
+            <span class="icon">&#x2699;</span>
+            <span class="label">Do</span>
+          </div>
+          <span class="pipeline-desc">Execute & verify</span>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:14px;margin-top:14px;">Each step feeds into the next. Outputs are markdown files in <code style="font-family:var(--mono);font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">docs/</code> subdirectories.</p>
+    </div>
+  </div>
+
+  <!-- 4: Supporting Skills -->
+  <div class="slide" data-slide="3">
+    <div class="slide-inner">
+      <div class="tag">Supporting Skills</div>
+      <h2>The rest of the toolkit</h2>
+      <div class="support-grid">
+        <div class="support-card">
+          <div class="card-cmd">/cpm:party</div>
+          <p>Multi-perspective brainstorming with simulated team personas</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:review</div>
+          <p>Adversarial review of epics — agents challenge assumptions & flag risks</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:retro</div>
+          <p>Lightweight retrospective after completing an epic</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:pivot</div>
+          <p>Amend any artifact mid-stream; changes cascade downstream</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:present</div>
+          <p>Transform artifacts for different audiences and formats</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:library</div>
+          <p>Import reference docs that all skills can use as context</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:templates</div>
+          <p>Explore and customise output templates</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:archive</div>
+          <p>Move completed artifacts to docs/archive/</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5: When to Use What -->
+  <div class="slide" data-slide="4">
+    <div class="slide-inner">
+      <div class="tag">Decision Guide</div>
+      <h2>When to use what</h2>
+      <div class="decision-grid">
+        <div class="decision-card">
+          <h3>&#x26A1; Quick fix</h3>
+          <p>Typo, one-liner, small bug. <strong>Don't use CPM.</strong> Just do it, or use Claude Code's native <code>/plan</code>.</p>
+        </div>
+        <div class="decision-card">
+          <h3>&#x1F3AF; Known scope</h3>
+          <p>Feature is clear, just need structure. <strong>Jump to</strong> <code>/cpm:spec</code> or <code>/cpm:epics</code>.</p>
+        </div>
+        <div class="decision-card">
+          <h3>&#x1F914; Unclear requirements</h3>
+          <p>Not sure what to build or why. <strong>Start at</strong> <code>/cpm:discover</code> to understand the problem first.</p>
+        </div>
+        <div class="decision-card">
+          <h3>&#x1F680; Major initiative</h3>
+          <p>New product, big feature, cross-cutting change. <strong>Use the full pipeline</strong> from discover through do.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: How a Session Works -->
+  <div class="slide" data-slide="5">
+    <div class="slide-inner">
+      <div class="tag">Mechanics</div>
+      <h2>How a skill session works</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <h4>Invoke</h4>
+          <p>Run a slash command, optionally with a file path or description</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <h4>Converse</h4>
+          <p>Claude asks questions one at a time, building on your answers</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <h4>Perspectives</h4>
+          <p>Agent personas weigh in at key moments to surface blind spots</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <h4>Review</h4>
+          <p>Claude presents a draft — you refine until it's right</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <h4>Save</h4>
+          <p>Output saved as markdown in the appropriate docs/ subdirectory</p>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:14px;margin-top:20px;">Sessions are <strong style="color:var(--green);">compaction-resilient</strong> — state is saved to disk after each phase. Long sessions won't lose progress.</p>
+    </div>
+  </div>
+
+  <!-- 7: Agent Roster -->
+  <div class="slide" data-slide="6">
+    <div class="slide-inner">
+      <div class="tag">Team Perspectives</div>
+      <h2>The agent roster</h2>
+      <p style="color:var(--text-dim);font-size:15px;margin-bottom:16px;">8 simulated personas that provide perspectives during planning. They appear automatically at relevant points.</p>
+      <div class="agent-grid">
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F4CB;</div>
+          <h3>Jordan</h3>
+          <div class="role">Product Manager</div>
+          <p>User focus, business value, cuts unnecessary complexity</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F3D7;</div>
+          <h3>Margot</h3>
+          <div class="role">Architect</div>
+          <p>Systems thinking, trade-offs, boundaries</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F4BB;</div>
+          <h3>Bella</h3>
+          <div class="role">Senior Developer</div>
+          <p>Implementation reality, hidden complexity</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F3A8;</div>
+          <h3>Priya</h3>
+          <div class="role">UX Designer</div>
+          <p>User empathy, simplicity, interaction quality</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F50D;</div>
+          <h3>Tomas</h3>
+          <div class="role">QA Engineer</div>
+          <p>Edge cases, testability, what could break</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F680;</div>
+          <h3>Sable</h3>
+          <div class="role">DevOps</div>
+          <p>Deployment, monitoring, operational concerns</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F4DD;</div>
+          <h3>Elli</h3>
+          <div class="role">Tech Writer</div>
+          <p>Clarity, naming, documentation quality</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F504;</div>
+          <h3>Ren</h3>
+          <div class="role">Scrum Master</div>
+          <p>Scope, delivery, sustainable pace</p>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:13px;margin-top:14px;">Customise with <code style="font-family:var(--mono);font-size:11px;background:var(--surface);padding:2px 5px;border-radius:4px;border:1px solid var(--border);color:var(--cyan);">docs/agents/roster.yaml</code> in your project.</p>
+    </div>
+  </div>
+
+  <!-- 8: File Structure -->
+  <div class="slide" data-slide="7">
+    <div class="slide-inner">
+      <div class="tag">Artifacts</div>
+      <h2>Where things live</h2>
+      <div class="file-tree">
+        <div><span class="dir">docs/</span></div>
+        <div class="indent"><span class="dir">plans/</span> <span class="comment">&#8592; problem briefs from /cpm:discover</span></div>
+        <div class="indent"><span class="dir">briefs/</span> <span class="comment">&#8592; product briefs from /cpm:brief</span></div>
+        <div class="indent"><span class="dir">architecture/</span> <span class="comment">&#8592; ADRs from /cpm:architect</span></div>
+        <div class="indent"><span class="dir">specifications/</span> <span class="comment">&#8592; specs from /cpm:spec</span></div>
+        <div class="indent"><span class="dir">epics/</span> <span class="comment">&#8592; epic docs from /cpm:epics</span></div>
+        <div class="indent"><span class="dir">reviews/</span> <span class="comment">&#8592; review files from /cpm:review</span></div>
+        <div class="indent"><span class="dir">retros/</span> <span class="comment">&#8592; retro files from /cpm:retro</span></div>
+        <div class="indent"><span class="dir">communications/</span> <span class="comment">&#8592; presentations from /cpm:present</span></div>
+        <div class="indent"><span class="dir">library/</span> <span class="comment">&#8592; reference docs from /cpm:library</span></div>
+        <div class="indent"><span class="dir">templates/</span> <span class="comment">&#8592; project-level template overrides</span></div>
+        <div class="indent"><span class="dir">archive/</span> <span class="comment">&#8592; completed artifacts from /cpm:archive</span></div>
+      </div>
+      <p style="color:var(--text-dim);font-size:14px;margin-top:16px;">All files are markdown. Commit them to your repo — the whole team can see what was decided and why.</p>
+    </div>
+  </div>
+
+  <!-- 9: Example Walkthrough -->
+  <div class="slide" data-slide="8">
+    <div class="slide-inner">
+      <div class="tag">In Practice</div>
+      <h2>Example: adding multi-tenancy</h2>
+      <div class="example-steps">
+        <div class="example-step">
+          <div class="step-num" style="background:var(--rose);">1</div>
+          <div class="cmd">/cpm:discover</div>
+          <div class="desc">Understand the problem — who needs it, why, what success looks like</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--amber);">2</div>
+          <div class="cmd">/cpm:brief</div>
+          <div class="desc">Define vision, value props, features, user journeys</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--cyan);">3</div>
+          <div class="cmd">/cpm:architect</div>
+          <div class="desc">Explore tenant isolation, data partitioning — produce ADRs</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--accent);">4</div>
+          <div class="cmd">/cpm:spec</div>
+          <div class="desc">Prioritised requirements, referencing ADRs for architecture</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--green);">5</div>
+          <div class="cmd">/cpm:epics</div>
+          <div class="desc">Stories with acceptance criteria and tasks, traceable to spec</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--blue);">6</div>
+          <div class="cmd">/cpm:do</div>
+          <div class="desc">Pick up tasks, implement, verify criteria, update status, repeat</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10: Tips -->
+  <div class="slide" data-slide="9">
+    <div class="slide-inner">
+      <div class="tag">Tips</div>
+      <h2>Getting the most out of CPM</h2>
+      <ul class="tip-list">
+        <li>
+          <span class="tip-icon">&#x1F3AF;</span>
+          <div><strong>Start anywhere.</strong> The pipeline is a suggestion, not a requirement. Jump to whatever skill matches where you are.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x1F4C1;</span>
+          <div><strong>Pass file paths.</strong> Most skills accept input: <code>/cpm:spec docs/briefs/01-brief-auth.md</code>. No path? Claude auto-discovers available artifacts.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x1F504;</span>
+          <div><strong>Use pivot, not start over.</strong> <code>/cpm:pivot</code> amends existing artifacts and cascades changes — no need to re-run the full pipeline.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x1F4DA;</span>
+          <div><strong>Feed the library.</strong> Import coding standards, architecture docs, API specs with <code>/cpm:library</code> — skills reference them automatically during planning and execution.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x2705;</span>
+          <div><strong>Commit your docs.</strong> Planning artifacts in the repo mean the whole team sees what was decided, why, and what's left to do.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 11: Get Started -->
+  <div class="slide centered" data-slide="10">
+    <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="tag">Let's Go</div>
+      <h1>Start with <span class="hl">what you need</span></h1>
+      <p class="subtitle" style="margin-bottom:32px;">Pick the skill that matches where you are right now.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/cpm:discover</div>
+          <div style="font-size:12px;color:var(--text-dim);">Unclear problem</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/cpm:spec</div>
+          <div style="font-size:12px;color:var(--text-dim);">Need requirements</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/cpm:epics</div>
+          <div style="font-size:12px;color:var(--text-dim);">Ready to break down</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/cpm:do</div>
+          <div style="font-size:12px;color:var(--text-dim);">Ready to build</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<span class="hint">Arrow keys or click to navigate</span>
+
+<div class="nav-bar">
+  <span class="counter" id="counter">1 / 11</span>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress" style="width: 9.1%"></div>
+  </div>
+  <div class="nav-buttons">
+    <button class="nav-btn" id="prevBtn" disabled onclick="go(-1)">&#8592;</button>
+    <button class="nav-btn" id="nextBtn" onclick="go(1)">&#8594;</button>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  let animating = false;
+
+  function go(dir) {
+    if (animating) return;
+    const next = current + dir;
+    if (next < 0 || next >= total) return;
+    animating = true;
+    const leaving = slides[current];
+    const entering = slides[next];
+    leaving.classList.remove('active');
+    leaving.style.transform = dir > 0 ? 'translateX(-60px)' : 'translateX(60px)';
+    leaving.style.opacity = '0';
+    entering.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+    entering.style.opacity = '0';
+    requestAnimationFrame(() => {
+      entering.classList.add('active');
+      entering.style.transform = 'translateX(0)';
+      entering.style.opacity = '1';
+    });
+    current = next;
+    updateNav();
+    setTimeout(() => { animating = false; }, 450);
+  }
+
+  function updateNav() {
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === total - 1;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') { e.preventDefault(); while (current > 0) go(-1); }
+    if (e.key === 'End') { e.preventDefault(); while (current < total - 1) go(1); }
+  });
+
+  document.getElementById('deck').addEventListener('click', function(e) {
+    if (e.target.closest('.nav-bar')) return;
+    const x = e.clientX / window.innerWidth;
+    if (x < 0.3) go(-1);
+    else if (x > 0.7) go(1);
+  });
+</script>
+
+</body>
+</html>
