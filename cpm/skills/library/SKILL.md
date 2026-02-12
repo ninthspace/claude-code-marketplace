@@ -199,6 +199,8 @@ After all documents are processed, tell the user how many were updated and delet
 
 Maintain `docs/plans/.cpm-progress.md` during the intake and batch front-matter workflows for compaction resilience.
 
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
 **Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it only after all output artifacts (library documents, batch results) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale).

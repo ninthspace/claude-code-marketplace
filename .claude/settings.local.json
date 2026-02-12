@@ -15,7 +15,8 @@
       "Bash(CLAUDE_PROJECT_DIR=/Users/chris/Work/git/claude-code-marketplace bash:*)",
       "WebSearch",
       "Bash(open:*)",
-      "Bash(mdfind:*)"
+      "Bash(mdfind:*)",
+      "Bash(zip:*)"
     ],
     "deny": [],
     "ask": []
