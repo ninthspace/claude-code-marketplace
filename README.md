@@ -156,24 +156,28 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.10.1)
+### Claude Planning Method (v1.11.0)
 
 **Facilitated planning with multi-perspective party mode for Claude Code**
 
-Structured discovery, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
+Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
 
-**Ten skills forming a pipeline:**
+**Fourteen skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
 | `/cpm:party` | Multi-perspective discussion with agent personas | Discussion summary + optional pipeline handoff |
 | `/cpm:discover` | Facilitated problem discovery | `docs/plans/01-plan-{slug}.md` |
+| `/cpm:brief` | Product ideation — vision, features, user journeys | `docs/briefs/01-brief-{slug}.md` |
+| `/cpm:architect` | Architecture exploration — ADRs with trade-offs | `docs/architecture/01-adr-{slug}.md` |
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
-| `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{nn}-epic-{slug}.md` + Claude Code tasks |
+| `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{nn}-epic-{slug}.md` |
 | `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
 | `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
+| `/cpm:present` | Audience-aware artifact transformation | `docs/communications/{nn}-{format}-{slug}.md` |
+| `/cpm:templates` | Template discoverability & scaffolding | Template previews + override files at `docs/templates/` |
 | `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
 | `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
 
@@ -182,9 +186,11 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 # Brainstorm with your team of agent personas
 /cpm:party should we use a monorepo or separate repos?
 
-# Full pipeline: discover → spec → epics → do → retro
+# Full pipeline: discover → brief → architect → spec → epics → do → retro
 /cpm:discover build a customer portal for our booking system
-/cpm:spec docs/plans/01-plan-customer-portal.md
+/cpm:brief docs/plans/01-plan-customer-portal.md
+/cpm:architect docs/briefs/01-brief-customer-portal.md
+/cpm:spec docs/briefs/01-brief-customer-portal.md
 /cpm:epics docs/specifications/01-spec-customer-portal.md
 /cpm:do
 /cpm:retro
@@ -198,6 +204,12 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 # Course correct mid-flow
 /cpm:pivot docs/specifications/01-spec-customer-portal.md
 
+# Transform artifacts for stakeholders
+/cpm:present docs/specifications/01-spec-customer-portal.md
+
+# Explore and customise templates
+/cpm:templates preview brief
+
 # Clean up completed artefacts
 /cpm:archive
 
@@ -209,16 +221,23 @@ Structured discovery, specification, work breakdown, task execution, retrospecti
 **Key Features:**
 - Party mode — named agent personas discuss, debate, and disagree constructively
 - Multi-perspective insights woven into discover and spec phases
+- Product ideation — explore vision, value propositions, and user journeys before requirements
+- Architecture exploration — facilitated ADRs with trade-off analysis and dependency mapping
 - Facilitated conversations, not forms — builds on your answers
 - One topic at a time with user-gated progression
 - Scales depth to complexity — skips phases that don't add value
 - MoSCoW prioritisation for requirements
-- Architecture decisions with rationale and alternatives
+- Architecture decisions with rationale and alternatives (references existing ADRs)
+- Spec requirement traceability — stories link back to the requirements they satisfy
 - Right-sized epics and stories with acceptance criteria and dependencies
-- Task execution loop with acceptance criteria verification
+- Task execution loop with acceptance criteria verification and ADR awareness
+- Epic-level verification — completed epics are checked against their source spec
+- Spec and ADR compliance review dimensions
 - Lightweight retros that feed forward into the next planning cycle
 - Adversarial review — agent personas challenge assumptions, spot gaps, and flag risks with optional autofix
-- Course correction — surgically amend any artefact with cascading downstream updates
+- Course correction — surgically amend any artefact with cascading downstream updates (5 artifact types)
+- Audience-aware artifact transformation — present planning artifacts to any audience in any format
+- Two-tier template system — structural (fixed data contracts) and presentational (overridable)
 - Project reference library — import docs that skills auto-discover and use as context
 - Archive — clean up completed artefacts with staleness heuristics and chain detection
 - Customisable agent roster — override default personas per project

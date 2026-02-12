@@ -13,8 +13,20 @@ Check for input in this order:
 
 1. If `$ARGUMENTS` references a file path, read that file as the starting context.
 2. If `$ARGUMENTS` contains a description, use that as the starting context.
-3. If neither, look for the most recent `docs/plans/*-plan-*.md` file in the current project and ask the user if they want to use it.
-4. If no brief exists, ask the user to describe what they want to build.
+3. If neither, look for product briefs first, then problem briefs:
+   a. **Glob** `docs/briefs/[0-9]*-brief-*.md` to find product briefs. If found, present them with AskUserQuestion — show each brief's title and date. Product briefs are the preferred input since they already contain vision, value propositions, and key features.
+   b. If no product briefs, look for the most recent `docs/plans/[0-9]*-plan-*.md` file and ask the user if they want to use it.
+4. If no briefs exist, ask the user to describe what they want to build.
+
+### ADR Discovery (Startup)
+
+After resolving the input source and before starting Section 1, discover existing Architecture Decision Records:
+
+1. **Glob** `docs/architecture/[0-9]*-adr-*.md`. If no files found or directory doesn't exist, skip silently — the spec will facilitate architecture decisions from scratch in Section 4.
+2. If ADRs exist, read each one and present a summary to the user: "Found {N} existing ADRs: {titles}. I'll reference these during architecture decisions (Section 4) and only facilitate new decisions for gaps."
+3. Store the ADR paths and summaries for use in Section 4.
+
+**Graceful degradation**: If ADRs don't exist, Section 4 works as before — facilitating architecture decisions from scratch. The spec skill must work without `cpm:architect` having been run.
 
 ## Process
 
@@ -46,6 +58,12 @@ After the Retro Check and before Section 1, check the project library for refere
 **Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the spec process due to a malformed library document.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+
+### Template Hint (Startup)
+
+After startup checks and before Section 1, display:
+
+> Output format is fixed (used by downstream skills). Run `/cpm:templates preview spec` to see the format.
 
 ### Section 1: Problem Recap
 
@@ -81,7 +99,11 @@ Areas to consider:
 
 ### Section 4: Architecture Decisions
 
-Key technical choices with rationale. For each decision:
+If ADRs were discovered during the ADR Discovery startup check, this section references them rather than doing architecture from scratch.
+
+**When ADRs exist**: Present the existing ADRs as context for the spec. For each ADR, summarise the decision, rationale, and consequences. Ask the user if the existing decisions still hold for this spec's scope. Then identify any **gaps** — architecture areas needed for this spec that aren't covered by existing ADRs. Only facilitate new decisions for gaps.
+
+**When no ADRs exist**: Facilitate architecture decisions from scratch, as before. For each decision, capture:
 - What was chosen
 - Why (brief rationale)
 - What alternatives were considered
@@ -95,7 +117,7 @@ Areas to cover as relevant:
 - Deployment model
 - Major structural patterns
 
-**Perspectives**: Before presenting each major architecture decision to the user, have 2-3 agents weigh in with competing trade-offs. The architect might advocate for one approach, the developer might flag implementation cost, DevOps might raise deployment concerns, and QA might highlight testability. Present these as brief agent perspectives (1-2 sentences each) using the format: `{icon} **{name}**: {perspective}`. This surfaces trade-offs the user should consider before deciding.
+**Perspectives**: Before presenting each major architecture decision to the user (whether referencing an existing ADR or facilitating a new one), have 2-3 agents weigh in with competing trade-offs. The architect might advocate for one approach, the developer might flag implementation cost, DevOps might raise deployment concerns, and QA might highlight testability. Present these as brief agent perspectives (1-2 sentences each) using the format: `{icon} **{name}**: {perspective}`. This surfaces trade-offs the user should consider before deciding.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Section 4 summary before continuing.
 
@@ -110,7 +132,19 @@ Consolidate from the conversation:
 
 **Update progress file now** — write the full `.cpm-progress.md` with Section 5 summary before continuing.
 
-### Section 6: Review
+### Section 6: Testing Strategy
+
+Outline how the system will be verified. This section bridges the spec and implementation by making testability explicit.
+
+- **Acceptance criteria mapping**: For each must-have functional requirement, confirm it has at least one testable acceptance criterion. Flag any requirements that are vague or untestable.
+- **Integration boundaries**: If ADRs were discovered, identify the key integration boundaries between architectural components (e.g. API contracts, event schemas, data flows between services). These become the seams where integration tests should focus.
+- **Unit testing**: Confirm that unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.
+
+Present the testing strategy to the user and refine. This section should be lightweight — a checklist of what to test and where, not a full test plan.
+
+**Update progress file now** — write the full `.cpm-progress.md` with Section 6 summary before continuing.
+
+### Section 7: Review
 
 Present the complete spec to the user for review. Use AskUserQuestion to confirm or request changes.
 
@@ -168,9 +202,23 @@ Use this format:
 
 ### Deferred
 - {item}
+
+## Testing Strategy
+
+### Acceptance Criteria Coverage
+{Mapping of must-have requirements to their acceptance criteria — confirms each requirement is testable}
+
+### Integration Boundaries
+{Key integration points between architectural components, derived from ADRs if available}
+
+### Unit Testing
+Unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.
 ```
 
-After saving, suggest next steps: `/plan` (native plan mode) to design implementation, or `/cpm:epics` to break directly into epics.
+After saving, suggest next steps:
+- `/cpm:epics` to break the spec into epic documents with stories and tasks (recommended)
+- `/cpm:architect` to explore architecture first, if no ADRs exist yet and the system has non-trivial architectural decisions
+- `/plan` (native plan mode) if the scope is small enough to skip planning artifacts entirely
 
 ## State Management
 
@@ -186,7 +234,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 # CPM Session State
 
 **Skill**: cpm:spec
-**Section**: {N} of 6 — {Section Name}
+**Section**: {N} of 7 — {Section Name}
 **Output target**: docs/specifications/{nn}-spec-{slug}.md
 **Input source**: {path to brief or description used as input}
 

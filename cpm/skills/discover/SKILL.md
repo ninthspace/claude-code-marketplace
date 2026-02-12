@@ -38,6 +38,12 @@ After the Retro Check and before Phase 1, check the project library for referenc
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
+### Template Hint (Startup)
+
+After startup checks and before Phase 1, display:
+
+> Output format is fixed (used by downstream skills). Run `/cpm:templates preview discover` to see the format.
+
 ### Phase 1: Why
 
 Ask what the user is trying to accomplish and why it matters. Understand the motivation, not just the feature request.
@@ -138,7 +144,10 @@ Use this format:
 {What's explicitly in and out of scope}
 ```
 
-After saving, suggest next steps: `/cpm:spec` to build requirements, or `/plan` (native plan mode) if the scope is clear enough to jump straight to implementation planning.
+After saving, suggest next steps:
+- `/cpm:brief` to explore product ideation — vision, value propositions, and key features (recommended for most problems)
+- `/cpm:spec` to jump straight to requirements if the solution approach is already clear
+- `/plan` (native plan mode) if the scope is small enough to skip planning artifacts entirely
 
 ## Arguments
 

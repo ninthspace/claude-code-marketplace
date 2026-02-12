@@ -51,6 +51,12 @@ After roster loading and before starting the review, check the project library f
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
+### Template Hint (Startup)
+
+After the Library Check and before Agent Selection, display:
+
+> Output format is fixed (used by downstream skills). Run `/cpm:templates preview review` to see the format.
+
 ## Agent Selection
 
 Select agents dynamically based on the review scope and content. The goal is to match reviewer expertise to what's being reviewed.
@@ -94,7 +100,11 @@ Read the target artifact (full epic or specific story) and build a structured un
 - **For epic-level review**: Parse all `##` story headings, their acceptance criteria, tasks, dependencies, and status. Note the epic's overall structure — how many stories, dependency chains, completion state.
 - **For story-level review**: Parse the target `##` story heading, its acceptance criteria, all `###` tasks, and any `**Blocked by**` dependencies. Also note the story's position within the broader epic for context.
 
-Present a brief summary to the user: what's being reviewed, how many stories/tasks, current status.
+**Spec discovery**: If the epic doc has a `**Source spec**:` field, read the referenced spec. This enables spec compliance review — checking whether the epic's stories cover the spec's requirements. If no spec exists, skip silently.
+
+**ADR discovery**: **Glob** `docs/architecture/[0-9]*-adr-*.md`. If ADRs exist, read them. This enables ADR compliance review — checking whether stories respect architectural decisions. If no ADRs exist, skip silently.
+
+Present a brief summary to the user: what's being reviewed, how many stories/tasks, current status. If a spec or ADRs were found, note that they'll be used as review context.
 
 **Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
 
@@ -113,12 +123,14 @@ Agents should look for issues across these concern types:
 - **Testability Concerns** — Stories or tasks that would be difficult to verify. Acceptance criteria that can't be automatically checked.
 - **Scope Creep** — Stories that try to do too much, tasks that go beyond their parent story's acceptance criteria, or work that belongs in a different epic.
 - **Dependency Risks** — Missing or incorrect `**Blocked by**` declarations. Circular dependencies. Stories that should be sequenced but aren't.
+- **Spec Compliance** — Stories or acceptance criteria that don't align with the spec's requirements. Must-have requirements that aren't covered by any story. Only applicable when a source spec was discovered in Step 1.
+- **ADR Compliance** — Stories or tasks that contradict or ignore architectural decisions from existing ADRs. Implementation approaches that conflict with the rationale or constraints documented in ADRs. Only applicable when ADRs were discovered in Step 1.
 
 Not every agent reviews every dimension. Each agent focuses on what they'd naturally notice given their role:
 
-- **Product Manager**: Unclear requirements, scope creep, missing user value
-- **Architect**: Architectural risks, hidden complexity, dependency risks
-- **Developer**: Hidden complexity, testability concerns, missing acceptance criteria
+- **Product Manager**: Unclear requirements, scope creep, missing user value, spec compliance
+- **Architect**: Architectural risks, hidden complexity, dependency risks, ADR compliance
+- **Developer**: Hidden complexity, testability concerns, missing acceptance criteria, ADR compliance
 - **UX Designer**: Unclear requirements from a user perspective, missing edge cases in user flows
 - **QA Engineer**: Testability concerns, missing acceptance criteria, missing error states
 - **DevOps Engineer**: Architectural risks (deployment, scaling), dependency risks
@@ -201,6 +213,12 @@ Format:
 
 ### Dependency Risks
 {findings in this category}
+
+### Spec Compliance
+{findings in this category — only if a source spec was discovered}
+
+### ADR Compliance
+{findings in this category — only if ADRs were discovered}
 ```
 
 Only include concern type sections that have findings. If a category has no findings, omit the heading entirely.

@@ -430,12 +430,44 @@ const SKILLS = [
     color: '#58a6ff',
     category: 'planning',
     short: 'Guided problem discovery',
-    description: 'Facilitated conversation to understand the problem before proposing solutions. Walks through six phases: Why, Who, Current State, Success Criteria, Constraints, and Summary. Agent personas weigh in at phases 1 and 5.',
+    description: 'Facilitated conversation to understand the problem before proposing solutions. Walks through six phases: Why, Who, Current State, Success Criteria, Constraints, and Summary. Agent personas weigh in at phases 1 and 5. Suggests /cpm:brief as the primary next step.',
     input: 'User description of what they want to build',
     output: 'Problem brief with why, who, current state, success criteria, constraints',
     outputFile: 'docs/plans/{nn}-plan-{slug}.md',
     phases: ['Why — motivation and importance', 'Who — target users and needs', 'Current State — how it\'s solved today', 'Success Criteria — definition of done', 'Constraints — technical, business, timeline', 'Summary — confirm the problem brief'],
     tip: 'Resist the urge to jump to solutions. The discover phase builds shared understanding that prevents costly pivots later.',
+    next: ['brief', 'spec']
+  },
+  {
+    id: 'brief',
+    name: '/cpm:brief',
+    label: 'Brief',
+    icon: '💡',
+    color: '#d29922',
+    category: 'planning',
+    short: 'Product ideation & vision',
+    description: 'Transform a problem brief into a product brief through guided conversation. Explores vision, value propositions, key features (MoSCoW), differentiation, and user journey narratives. Bridges problem discovery and requirements specification.',
+    input: 'Problem brief from discover, file path, or description',
+    output: 'Product brief with vision, value props, features, user journeys',
+    outputFile: 'docs/briefs/{nn}-brief-{slug}.md',
+    phases: ['Vision & Positioning — what and who', 'Value Propositions — why use this', 'Key Features — MoSCoW prioritised', 'Differentiation — vs alternatives', 'User Journey Narratives — key user flows'],
+    tip: 'Brief captures *what* we\'re building and *why* this approach. It sits between problem discovery (the "why") and specification (the "how"). Skip it when the solution is obvious.',
+    next: ['architect', 'spec']
+  },
+  {
+    id: 'architect',
+    name: '/cpm:architect',
+    label: 'Architect',
+    icon: '🏗️',
+    color: '#f0883e',
+    category: 'planning',
+    short: 'Architecture exploration & ADRs',
+    description: 'Facilitated architecture exploration that derives decisions from the product\'s actual needs. For each decision, explores options, trade-offs, and dependencies. Produces Architecture Decision Records (ADRs) that downstream skills reference.',
+    input: 'Product brief from brief, problem brief, or description',
+    output: 'ADRs with context, options, trade-offs, and rationale',
+    outputFile: 'docs/architecture/{nn}-adr-{slug}.md (one per decision)',
+    phases: ['Decision Discovery — what needs deciding', 'Trade-off Exploration — options per decision', 'Dependency Mapping — how decisions interact', 'ADR Production — structured records'],
+    tip: 'ADRs produced here are referenced by /cpm:spec (architecture section), /cpm:epics (story breakdown), /cpm:do (task implementation), and /cpm:review (compliance checks). They\'re the architecture backbone.',
     next: ['spec']
   },
   {
@@ -446,12 +478,12 @@ const SKILLS = [
     color: '#bc8cff',
     category: 'planning',
     short: 'Requirements & architecture',
-    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements, architecture decisions, and scope boundaries. Agent personas surface trade-offs at key decisions.',
-    input: 'Problem brief from discover (auto-detected)',
-    output: 'Specification with MoSCoW requirements, architecture decisions, scope boundaries',
+    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements, architecture decisions (references existing ADRs), scope boundaries, testing strategy, and review. Agent personas surface trade-offs at key decisions.',
+    input: 'Product brief, problem brief, or description (auto-detected)',
+    output: 'Specification with MoSCoW requirements, architecture decisions, testing strategy',
     outputFile: 'docs/specifications/{nn}-spec-{slug}.md',
-    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority', 'Non-Functional Requirements — performance, security', 'Architecture Decisions — with agent perspectives', 'Scope Boundary — in/out/deferred', 'Review — user confirmation'],
-    tip: 'MoSCoW means Must / Should / Could / Won\'t. Be ruthless with "Won\'t" — it protects your scope.',
+    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority', 'Non-Functional Requirements — performance, security', 'Architecture Decisions — references ADRs, fills gaps', 'Scope Boundary — in/out/deferred', 'Testing Strategy — criteria mapping, boundaries', 'Review — user confirmation'],
+    tip: 'When ADRs exist in docs/architecture/, the architecture section references them instead of starting from scratch. Only new decisions for gaps are facilitated.',
     next: ['epics']
   },
   {
@@ -462,12 +494,12 @@ const SKILLS = [
     color: '#3fb950',
     category: 'planning',
     short: 'Break spec into work items',
-    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria and dependencies. Tasks use dot notation (1.1, 1.2) within stories.',
+    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria, dependencies, and spec requirement traceability. When ADRs exist, they\'re referenced for architectural work.',
     input: 'Specification from spec (auto-detected)',
     output: 'Multiple epic docs, each with stories and tasks',
     outputFile: 'docs/epics/{nn}-epic-{slug}.md (one per epic)',
-    phases: ['Read source specification', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
-    tip: 'Stories are deliverables. Tasks are steps. Acceptance criteria live on stories, not tasks. Dependencies are between stories/epics, never between tasks.',
+    phases: ['Read source specification + ADRs', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria', 'Add spec requirement traceability per story', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
+    tip: 'Stories now include a **Satisfies** field linking to spec requirements. This enables /cpm:review to check spec compliance and /cpm:do to verify epics against their source spec.',
     next: ['do', 'review']
   },
   {
@@ -478,12 +510,12 @@ const SKILLS = [
     color: '#f0883e',
     category: 'execution',
     short: 'Execute tasks from epics',
-    description: 'Works through stories and tasks from epic documents. Hydrates one story at a time into Claude Code tasks, executes each task, verifies acceptance criteria, and captures retro observations. Updates the epic doc after every task.',
+    description: 'Works through stories and tasks from epic documents. Hydrates one story at a time into Claude Code tasks, executes each task, verifies acceptance criteria, and captures retro observations. Reads ADRs when touching architectural boundaries. On epic completion, verifies against source spec.',
     input: 'Epic doc (auto-detected or user provides)',
     output: 'Completed code + updated epic docs with retro observations',
     outputFile: '(updates epic docs in place)',
-    phases: ['Resolve epic doc', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work', 'Verify acceptance criteria', 'Mark complete + capture retro observation', 'Loop until story done → hydrate next'],
-    tip: 'Retro observations captured during /do (scope surprise, criteria gap, complexity underestimate, codebase discovery) feed directly into /retro. They\'re gold for improving future planning.',
+    phases: ['Resolve epic doc + scan ADRs', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria', 'Mark complete + capture retro observation', 'Loop until story done → hydrate next', 'Epic-level verification against source spec'],
+    tip: 'When all stories complete, /do runs an integration-level check against the source spec. Individual stories may pass while the epic misses cross-story requirements — this catches that.',
     next: ['retro', 'review', 'pivot']
   },
   {
@@ -494,12 +526,12 @@ const SKILLS = [
     color: '#39d2c0',
     category: 'quality',
     short: 'Adversarial review of artifacts',
-    description: 'Critical review of epic docs or stories using the party agent roster. Examines for unclear requirements, missing acceptance criteria, hidden complexity, architectural risks, testability concerns, scope creep, and dependency risks. Can auto-generate remediation tasks.',
+    description: 'Critical review of epic docs or stories using the party agent roster. Examines for unclear requirements, missing acceptance criteria, hidden complexity, architectural risks, testability concerns, scope creep, and dependency risks. Also checks spec compliance and ADR compliance. Can auto-generate remediation tasks.',
     input: 'Epic doc or story',
     output: 'Review document with findings by severity (Critical / Warning / Suggestion)',
     outputFile: 'docs/reviews/{nn}-review-{slug}.md',
-    phases: ['Analyse artifact structure', 'Conduct review (2-4 agents)', 'Write review file with severity ratings', 'Optionally generate remediation tasks', 'Pipeline handoff (adaptive to epic status)'],
-    tip: 'Run review before /do to catch planning gaps early. Critical findings block execution. Autofix appends a remediation story to the epic.',
+    phases: ['Analyse artifact + discover spec/ADRs', 'Conduct review (2-4 agents)', 'Check spec compliance (requirements coverage)', 'Check ADR compliance (architectural decisions)', 'Write review file with severity ratings', 'Optionally generate remediation tasks', 'Pipeline handoff (adaptive to epic status)'],
+    tip: 'Review now checks spec compliance (does the epic cover all spec requirements?) and ADR compliance (do stories respect architectural decisions?). These are in addition to the standard review dimensions.',
     next: ['do', 'pivot']
   },
   {
@@ -510,12 +542,12 @@ const SKILLS = [
     color: '#d29922',
     category: 'quality',
     short: 'Course correction',
-    description: 'Surgically amend any planning artifact and cascade changes downstream. Discovers the artifact chain (brief → spec → epics), edits the selected document, then walks downstream docs with guided per-section updates. Never auto-modifies tasks.',
+    description: 'Surgically amend any planning artifact and cascade changes downstream. Discovers the full artifact chain (problem brief → product brief → ADRs → spec → epics), edits the selected document, then walks downstream docs with guided per-section updates. Never auto-modifies tasks.',
     input: 'Any planning artifact to amend',
     output: 'Updated artifact + cascaded downstream changes',
     outputFile: '(edits existing files in place)',
-    phases: ['Discover artifact chain by back-references', 'Surgical amendment (Edit tool only)', 'Walk downstream docs with guided updates', 'Flag affected tasks (never auto-modify)'],
-    tip: 'Pivot is lighter than re-running the original skill. Use it when requirements shift mid-flight instead of starting over.',
+    phases: ['Discover artifact chain (5 directories)', 'Surgical amendment (Edit tool only)', 'Walk downstream docs with guided updates', 'Flag affected tasks (never auto-modify)'],
+    tip: 'Pivot discovers all 5 artifact types: problem briefs, product briefs, ADRs, specs, and epics. The full cascade chain means amending a brief can ripple through ADRs, specs, and epics.',
     next: ['do', 'review']
   },
   {
@@ -533,6 +565,38 @@ const SKILLS = [
     phases: ['Read epic doc, identify retro observations', 'Synthesise by category, extract patterns', 'Write retro file with recommendations', 'Optionally amend library docs with learnings', 'Pipeline handoff to next cycle'],
     tip: 'The library write-back is powerful — learnings from this project become reference material for the next. This is how institutional knowledge compounds.',
     next: ['discover', 'spec', 'epics', 'library']
+  },
+  {
+    id: 'present',
+    name: '/cpm:present',
+    label: 'Present',
+    icon: '📣',
+    color: '#f778ba',
+    category: 'communication',
+    short: 'Audience-aware transformation',
+    description: 'Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering, stakeholders) and format (memo, slide deck, email), and get derived content tailored to the readers. Regenerable when sources change.',
+    input: 'One or more CPM artifact file paths',
+    output: 'Audience-tailored communication derived from source artifacts',
+    outputFile: 'docs/communications/{nn}-{format}-{slug}.md',
+    phases: ['Discover and select source artifacts', 'Choose audience and format', 'Extract and transform content', 'Write communication file'],
+    tip: 'Content is derived from source artifacts — not written from scratch. Create multiple presentations from the same sources for different audiences. Regenerate when sources change.',
+    next: []
+  },
+  {
+    id: 'templates',
+    name: '/cpm:templates',
+    label: 'Templates',
+    icon: '📐',
+    color: '#8b949e',
+    category: 'support',
+    short: 'Template discovery & scaffolding',
+    description: 'Explore and customise artifact templates. CPM uses a two-tier system: structural templates (fixed data contracts parsed by downstream skills) and presentational templates (overridable at docs/templates/). List all templates, preview any skeleton, or scaffold an override.',
+    input: 'Subcommand: list, preview {skill}, or scaffold {skill}',
+    output: 'Template listing, preview, or scaffolded override file',
+    outputFile: 'docs/templates/{skill}.md (scaffold only)',
+    phases: ['List: show all templates with type and override paths', 'Preview: display template skeleton with placeholders', 'Scaffold: create override file for presentational templates'],
+    tip: 'Structural templates (discover, spec, epics, do, review, retro) are fixed because downstream skills parse them. Presentational templates (brief, architect, present) can be customised per project.',
+    next: []
   },
   {
     id: 'library',
@@ -570,7 +634,10 @@ const SKILLS = [
 
 const EDGES = [
   { from: 'party', to: 'discover', label: 'informs', style: 'dashed' },
-  { from: 'discover', to: 'spec', label: 'produces brief for', style: 'solid' },
+  { from: 'discover', to: 'brief', label: 'produces brief for', style: 'solid' },
+  { from: 'brief', to: 'architect', label: 'informs decisions', style: 'solid' },
+  { from: 'architect', to: 'spec', label: 'ADRs referenced by', style: 'solid' },
+  { from: 'brief', to: 'spec', label: 'alternative path', style: 'dashed' },
   { from: 'spec', to: 'epics', label: 'produces spec for', style: 'solid' },
   { from: 'epics', to: 'do', label: 'produces epics for', style: 'solid' },
   { from: 'epics', to: 'review', label: 'pre-execution review', style: 'dashed' },
@@ -587,11 +654,11 @@ const EDGES = [
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','discover','spec','epics','review','do','pivot','retro','library','archive'], knowledge: {} },
-  quick: { highlight: ['discover','spec','epics','do'], knowledge: { party:'know', review:'know', pivot:'know', retro:'know', library:'know', archive:'know' } },
-  planning: { highlight: ['party','discover','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', archive:'know' } },
-  execution: { highlight: ['do','pivot','review','retro'], knowledge: { party:'know', discover:'know', spec:'know', epics:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', discover:'know', spec:'know', epics:'know', do:'know', library:'know' } },
+  full: { highlight: ['party','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do'], knowledge: { party:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  planning: { highlight: ['party','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know' } },
+  execution: { highlight: ['do','pivot','review','retro'], knowledge: { party:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────
@@ -614,16 +681,20 @@ SKILLS.forEach(s => state.knowledge[s.id] = 'unknown');
 // ── Node positions (arranged as a pipeline flow) ────────────────────────
 
 const NODE_POSITIONS = {
-  party:    { x: 100, y: 220 },
-  discover: { x: 260, y: 220 },
-  spec:     { x: 420, y: 220 },
-  epics:    { x: 580, y: 220 },
-  review:   { x: 580, y: 90 },
-  do:       { x: 740, y: 220 },
-  pivot:    { x: 660, y: 350 },
-  retro:    { x: 900, y: 220 },
-  library:  { x: 180, y: 90 },
-  archive:  { x: 900, y: 370 },
+  party:     { x: 60,   y: 220 },
+  discover:  { x: 190,  y: 220 },
+  brief:     { x: 320,  y: 220 },
+  architect: { x: 450,  y: 220 },
+  spec:      { x: 580,  y: 220 },
+  epics:     { x: 710,  y: 220 },
+  review:    { x: 710,  y: 90 },
+  do:        { x: 840,  y: 220 },
+  pivot:     { x: 775,  y: 350 },
+  retro:     { x: 970,  y: 220 },
+  present:   { x: 450,  y: 370 },
+  templates: { x: 190,  y: 370 },
+  library:   { x: 120,  y: 90 },
+  archive:   { x: 970,  y: 370 },
 };
 
 const NODE_RADIUS = 34;
@@ -651,7 +722,7 @@ function getSkill(id) { return SKILLS.find(s => s.id === id); }
 function getNodeScreenPos(id) {
   const p = NODE_POSITIONS[id];
   const wrap = canvas.parentElement;
-  const ox = (wrap.clientWidth - 1000) / 2 + state.pan.x;
+  const ox = (wrap.clientWidth - 1100) / 2 + state.pan.x;
   const oy = (wrap.clientHeight - 440) / 2 + state.pan.y;
   return { x: p.x + ox, y: p.y + oy };
 }
@@ -662,7 +733,7 @@ function draw() {
   ctx.clearRect(0, 0, w, h);
 
   // Offset to center the layout
-  const ox = (w - 1000) / 2 + state.pan.x;
+  const ox = (w - 1100) / 2 + state.pan.x;
   const oy = (h - 440) / 2 + state.pan.y;
 
   // Draw edges
@@ -983,7 +1054,7 @@ function updatePrompt() {
   }
 
   if (unknown.length === SKILLS.length) {
-    document.getElementById('promptText').textContent = 'I\'m new to the CPM plugin for Claude Code. Give me a complete walkthrough of the planning lifecycle: what each skill does, the standard pipeline (discover → spec → epics → do → retro), what artifacts are produced, and how they chain together. Start with the big picture, then explain each skill with a practical example.';
+    document.getElementById('promptText').textContent = 'I\'m new to the CPM plugin for Claude Code. Give me a complete walkthrough of the planning lifecycle: what each skill does, the standard pipeline (discover → brief → architect → spec → epics → do → retro), what artifacts are produced, and how they chain together. Start with the big picture, then explain each skill with a practical example.';
     return;
   }
 

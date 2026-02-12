@@ -19,6 +19,12 @@ Check for input in this order:
 
 **State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final retro file, delete the progress file.
 
+### Template Hint (Startup)
+
+Before Step 1, display:
+
+> Output format is fixed (used by downstream skills). Run `/cpm:templates preview retro` to see the format.
+
 ### Step 1: Read Epic Doc
 
 Read the resolved epic doc with the Read tool. Identify:

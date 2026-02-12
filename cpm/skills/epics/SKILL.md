@@ -33,6 +33,22 @@ Before Step 1, check the project library for reference documents:
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
+### Template Hint (Startup)
+
+After startup checks and before Step 1, display:
+
+> Output format is fixed (used by downstream skills). Run `/cpm:templates preview epics` to see the format.
+
+### ADR Discovery (Startup)
+
+After the Template Hint and before Step 1, discover existing Architecture Decision Records:
+
+1. **Glob** `docs/architecture/[0-9]*-adr-*.md`. If no files found or directory doesn't exist, skip silently.
+2. If ADRs exist, read each one and note the architectural decisions and their dependencies. Report to the user: "Found {N} existing ADRs: {titles}. I'll reference these when breaking down architectural work into epics and stories."
+3. During Step 2 (Identify Epics) and Step 3 (Break into Stories), use ADR context to inform epic grouping — e.g. if an ADR identifies separate concerns or bounded contexts, these may map naturally to epics. Reference specific ADRs in story descriptions when they constrain or inform the implementation approach.
+
+**Graceful degradation**: If ADRs don't exist, epic breakdown works as before — deriving structure purely from the spec. The skill must work without `cpm:architect` having been run.
+
 ### Step 1: Read Source
 
 Read and understand the source document. Summarise the key work areas to the user.
@@ -68,6 +84,7 @@ Each story should have:
 - A clear, actionable title (imperative form: "Set up compaction hook infrastructure")
 - Acceptance criteria that describe the deliverable outcome
 - An activeForm for progress display (present continuous: "Setting up compaction hook infrastructure")
+- **Spec traceability** (when input is a spec): Which functional requirements from the spec this story satisfies. Use the requirement text or a short label. This enables verification that the spec is fully covered across all epics — every must-have requirement should appear in at least one story.
 
 **Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 
@@ -120,6 +137,7 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 **Story**: {N}
 **Status**: Pending
 **Blocked by**: —
+**Satisfies**: {spec requirement label(s) this story addresses — omit if no spec input}
 
 **Acceptance Criteria**:
 - {criterion}

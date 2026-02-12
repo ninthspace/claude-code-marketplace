@@ -5,7 +5,7 @@ description: Course correction. Revisit any planning artefact, surgically amend 
 
 # Course Correction
 
-Revisit any planning artefact (brief, spec, or epic), make surgical edits, and walk downstream documents through guided updates. Pivot is lighter than re-running the original skill — amend what exists rather than starting over.
+Revisit any planning artefact (problem brief, product brief, ADR, spec, or epic), make surgical edits, and walk downstream documents through guided updates. Pivot is lighter than re-running the original skill — amend what exists rather than starting over.
 
 ## Input
 
@@ -23,17 +23,21 @@ Check for input in this order:
 
 Discover existing planning artefacts and their relationships. Skip this step if `$ARGUMENTS` provided a direct file path.
 
-1. **Glob all three planning directories**:
-   - `docs/plans/[0-9]*-plan-*.md` (briefs from cpm:discover)
+1. **Glob all five planning directories**:
+   - `docs/plans/[0-9]*-plan-*.md` (problem briefs from cpm:discover)
+   - `docs/briefs/[0-9]*-brief-*.md` (product briefs from cpm:brief)
+   - `docs/architecture/[0-9]*-adr-*.md` (ADRs from cpm:architect)
    - `docs/specifications/[0-9]*-spec-*.md` (specs from cpm:spec)
    - `docs/epics/[0-9]*-epic-*.md` (epics from cpm:epics)
 
 2. **Build dependency chains**: For each document found, read the first 10 lines and look for back-reference fields:
-   - Specs have `**Brief**:` — may contain a file path (e.g. `docs/plans/01-plan-auth.md`) or a description (e.g. `Party mode discussion`). Only treat it as a chain link if the value is a valid file path that exists on disk.
-   - Epics have `**Source spec**:` — a file path to the source spec (e.g. `docs/specifications/01-spec-auth.md`). Verify the file exists before treating it as a chain link. Multiple epic docs may share the same source spec (1:many).
-   - Briefs are root nodes with no upstream reference.
+   - Product briefs have `**Source**:` — may contain a path to a problem brief.
+   - ADRs have `**Source**:` — may contain a path to a product brief or problem brief.
+   - Specs have `**Brief**:` — may contain a file path to a problem brief or product brief, or a description. Only treat it as a chain link if the value is a valid file path that exists on disk.
+   - Epics have `**Source spec**:` — a file path to the source spec. Verify the file exists before treating it as a chain link. Multiple epic docs may share the same source spec (1:many).
+   - Problem briefs are root nodes with no upstream reference.
 
-   Use verified file-path references to group documents into chains (e.g. `plan-auth.md` → `spec-auth.md` → `01-epic-auth.md`).
+   The full cascade chain is: problem brief → product brief → ADRs → spec → epics. Not every chain will have all levels. Use verified file-path references to group documents into chains.
 
 3. **Fall back to slug matching**: When back-references are missing, contain descriptions instead of file paths, or don't resolve to existing files, match documents by slug. Extract the slug from the filename (the part after the number-prefix and type — e.g. `auth` from `01-plan-auth.md`, `pivot` from `05-spec-pivot.md`) and group documents with the same slug into a chain.
 
@@ -66,7 +70,9 @@ Read and amend the selected document.
 Walk downstream documents and facilitate updates. Skip this step if no downstream documents exist.
 
 1. **Identify downstream documents**: Using the chain discovered in Step 1 (or built from the direct file path), find documents that depend on the one just amended:
-   - If a brief was amended → its spec and epics are downstream
+   - If a problem brief was amended → its product briefs, ADRs, specs, and epics are downstream
+   - If a product brief was amended → its ADRs, specs, and epics are downstream
+   - If an ADR was amended → specs and epics that reference it are downstream
    - If a spec was amended → its epics are downstream
    - If an epic was amended → no downstream documents (epics are leaf nodes)
 

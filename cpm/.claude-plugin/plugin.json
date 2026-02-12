@@ -1,7 +1,7 @@
 {
   "name": "cpm",
   "description": "Claude Planning Method — facilitated planning skills with multi-perspective party mode for Claude Code",
-  "version": "1.10.3",
+  "version": "1.11.0",
   "author": {
     "name": "Chris Aves"
   },

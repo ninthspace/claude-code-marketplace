@@ -44,6 +44,12 @@ After resolving the epic doc and before starting the per-task workflow, check th
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file. These results persist across the entire task loop — do not re-scan between tasks. Only re-scan if the progress file is missing (post-compaction recovery).
 
+### Template Hint (Startup)
+
+After the Library Check and before task selection, display:
+
+> Output format is fixed (used by downstream skills). Run `/cpm:templates preview do` to see the format.
+
 ## Story Hydration
 
 When `cpm:do` needs work and no pending unblocked Claude Code tasks exist, it hydrates the next story from the epic doc into Claude Code's task system. This is the bridge between planning artifacts (epic docs) and execution state (Claude Code tasks).
@@ -139,6 +145,8 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 
 **If this is an implementation task** (no `Type: verification`): Execute the task as described. This is the actual implementation — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
 
+**ADR awareness**: Before starting implementation, check if this task touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the task involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
+
 ### 5. Verify Acceptance Criteria
 
 Before marking the task complete:
@@ -195,9 +203,11 @@ The file must reflect:
 
 When the work loop finishes (no more pending unblocked tasks):
 
-1. **Check for observations**: Read the epic doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the rest of this step — no lessons section needed.
+1. **Epic-level verification**: If the epic doc has a `**Source spec**:` field, read the referenced spec. Check whether the completed epic, taken as a whole, satisfies the spec's requirements that fall within this epic's scope. This is an integration-level check — individual story criteria may all pass while the epic as a whole misses something (e.g. a requirement that spans multiple stories, or an integration point between stories). Report the assessment to the user. If gaps are found, flag them — they may warrant additional work or a `cpm:pivot`. If no spec exists, skip this step.
 
-2. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the epic doc using the Edit tool. Group observations by category:
+2. **Check for observations**: Read the epic doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the lessons step.
+
+3. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the epic doc using the Edit tool. Group observations by category:
 
 ```markdown
 ## Lessons
@@ -217,7 +227,7 @@ When the work loop finishes (no more pending unblocked tasks):
 
 Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
 
-3. **Report and stop**: Report a summary of what was completed across the work loop, and delete the progress file.
+4. **Report and stop**: Report a summary of what was completed across the work loop, and delete the progress file.
 
 ## Graceful Degradation
 
