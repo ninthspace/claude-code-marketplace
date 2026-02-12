@@ -115,51 +115,47 @@ When an exit is triggered, follow this sequence:
 
 Briefly acknowledge the end of the discussion. Keep it natural — one sentence, not a ceremony.
 
-### 2. Discussion Summary
+### 2. Save Discussion Record
 
-Produce a structured summary of the conversation:
+Save the progress file's content as a permanent discussion artifact. This preserves the full fidelity of decisions, key points, and context accumulated during the conversation — no summarisation, no information loss.
+
+1. **Read the current progress file** (`docs/plans/.cpm-progress.md`).
+2. **Determine the output path**: Save to `docs/discussions/{nn}-discussion-{slug}.md`.
+   - `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/discussions/[0-9]*-discussion-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+   - `{slug}` is a short kebab-case name derived from the discussion topic.
+   - Create the `docs/discussions/` directory if it doesn't exist.
+3. **Write the discussion record**: Transform the progress file into the output artifact by replacing the session state header with a discussion record header. Format:
 
 ```markdown
-## Discussion Summary
+# Discussion: {Topic}
 
-**Topic**: {the original topic or question}
+**Date**: {today's date}
+**Agents**: {comma-separated list of agent display names who participated}
 
-### Key Points
-- {Major insight or conclusion from the discussion}
-- {Another key point}
-
-### Agreements
-- {Points where agents converged or the user confirmed a direction}
-
-### Open Questions
-- {Unresolved disagreements or topics that need more thought}
-
-### Recommendations
-- {Actionable next steps suggested by agents during the discussion}
+{Rest of the Discussion Highlights section from the progress file — key points, decisions, active thread, and any other accumulated content — preserved verbatim}
 ```
 
-Rules for the summary:
-- **Be selective.** Capture the substance, not a transcript. 3-5 bullet points per section is typical.
-- **Attribute where useful.** If a key insight came from a specific agent, mention them: "Margot recommended separating the read and write paths."
-- **Skip empty sections.** If there are no open questions, don't include that heading.
-- **Make it reusable.** This summary may be passed as input to discover/spec/stories via the pipeline handoff. Write it so it stands on its own without the full conversation context.
+4. **Tell the user** the saved file path.
+5. **Delete the progress file** after the discussion record has been confirmed written.
+
+**Do not summarise.** The progress file already contains curated, structured content — decisions with numbered objectives, key points, rationale. Summarising loses this detail. The discussion record is the artifact.
 
 ### 3. Pipeline Handoff
 
-After presenting the summary, offer the user options for what to do next. Use AskUserQuestion:
+After saving the discussion record, offer the user options for what to do next. Use AskUserQuestion:
 
-- **Continue to /cpm:discover** — Use the summary as starting context for problem discovery
-- **Continue to /cpm:spec** — Use the summary as starting context for requirements specification
-- **Continue to /cpm:epics** — Use the summary as starting context for work breakdown
+- **Continue to /cpm:discover** — Use the discussion record as starting context for problem discovery
+- **Continue to /cpm:spec** — Use the discussion record as starting context for requirements specification
+- **Continue to /cpm:epics** — Use the discussion record as starting context for work breakdown
 - **Just exit** — End the session, no handoff
 
-If the user chooses a pipeline skill, pass the discussion summary as the input context for that skill. The summary becomes the `$ARGUMENTS` equivalent — the next skill should treat it as its starting brief/description.
+If the user chooses a pipeline skill, pass the discussion record file path as the input context for that skill. The file path becomes the `$ARGUMENTS` equivalent — the next skill should read the file and treat it as its starting brief/description.
 
 ## State Management
 
 Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-discussion.
 
-**Create** the file after roster loading and topic confirmation (before the first orchestration turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion summary has been presented and any pipeline handoff is complete — never before. If compaction fires between deletion and a pending output, all session state is lost.
+**Create** the file after roster loading and topic confirmation (before the first orchestration turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — never before. If compaction fires between deletion and a pending output, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
