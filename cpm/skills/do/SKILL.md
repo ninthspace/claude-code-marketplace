@@ -254,18 +254,25 @@ After the verification gate passes (all acceptance criteria met in Step 5), perf
 - Call `TaskUpdate` to set the task status to `completed`.
 
 **Part B — Capture observations (retro)**:
-Self-assess whether anything **noteworthy** happened during this task. Only record an observation when something surprising, unexpected, or valuable was learned. Most tasks will have nothing to record, and that's fine.
 
-Ask yourself: "Did anything happen during this task that would change how I'd plan similar work in the future?" If no, skip Part B.
+> **THIS STEP IS MANDATORY FOR VERIFICATION GATES. DO NOT SKIP IT.**
+>
+> Every completed story must produce a `**Retro**:` field — this is the only input `/cpm:retro` has to work with. If no observations are captured, the retro skill has nothing to synthesise and the feedback loop between execution and planning is broken. A retro observation is not optional bookkeeping — it is the bridge between execution and learning.
+
+**For verification gate tasks**: You MUST record an observation. Reflect on the story as a whole — all the tasks you just verified. Ask: "What's worth remembering about this story?" Pick the most fitting category below and write one sentence. If nothing went wrong, use `Smooth delivery` — that's valuable data too.
+
+**For implementation tasks**: Observation is optional. If something noteworthy happened during this specific task, record it. Otherwise, skip Part B — the mandatory verification gate observation will cover the story.
 
 Observation categories (use exactly one per observation):
-- **Scope surprise**: The task was larger or smaller than the story suggested
+- **Smooth delivery**: Story delivered as planned with no surprises — well-scoped and well-estimated
+- **Scope surprise**: The story was larger or smaller than expected
 - **Criteria gap**: Acceptance criteria missed something important that only became clear during implementation
 - **Complexity underestimate**: The implementation was harder than expected due to technical factors
 - **Codebase discovery**: Found something unexpected in the codebase (pattern, convention, limitation) that affected the work
 - **Testing gap**: Tests revealed issues that acceptance criteria didn't anticipate, or criteria proved untestable with the available test infrastructure
+- **Pattern worth reusing**: Discovered an approach, abstraction, or technique during implementation that should be applied elsewhere
 
-If noteworthy, use the Edit tool to append a `**Retro**:` field to the completed story in the epic doc, immediately after the last existing field for that story (before the `---` separator). Format: `**Retro**: [{category}] {One-sentence observation}`
+Use the Edit tool to append a `**Retro**:` field to the completed story in the epic doc, immediately after the last existing field for that story (before the `---` separator). Format: `**Retro**: [{category}] {One-sentence observation}`
 
 **Part C — Write progress file**:
 
@@ -300,6 +307,9 @@ When the work loop finishes (no more pending unblocked tasks):
 ```markdown
 ## Lessons
 
+### Smooth Deliveries
+- {observation from story N}
+
 ### Scope Surprises
 - {observation from story N}
 
@@ -313,6 +323,9 @@ When the work loop finishes (no more pending unblocked tasks):
 - {observation from story N}
 
 ### Testing Gaps
+- {observation from story N}
+
+### Patterns Worth Reusing
 - {observation from story N}
 ```
 

@@ -30,8 +30,8 @@ Before Step 1, display:
 Read the resolved epic doc with the Read tool. Identify:
 
 - Total number of stories and their statuses (Pending, In Progress, Complete)
-- Any `**Retro**:` fields on completed stories (these are per-task observations captured by `cpm:do` step 6.5)
-- Any `## Lessons` section already present (batch summary from `cpm:do` step 9)
+- Any `**Retro**:` fields on completed stories (these are per-story observations captured by `cpm:do` Step 6, Part B — mandatory on verification gates)
+- Any `## Lessons` section already present (batch summary from `cpm:do` Step 8)
 - The overall completion state of the batch
 
 Present a brief summary to the user: how many stories, how many complete, how many observations found.
@@ -43,13 +43,19 @@ Present a brief summary to the user: how many stories, how many complete, how ma
 Analyse the collected observations and story outcomes. Build the retro content:
 
 **If `**Retro**:` fields exist**, group them by observation category:
-- **Scope Surprises**: Tasks that were larger or smaller than expected
+- **Smooth Deliveries**: Stories that went as planned — useful for identifying what good scoping looks like
+- **Scope Surprises**: Stories that were larger or smaller than expected
 - **Criteria Gaps**: Acceptance criteria that missed something important
-- **Complexity Underestimates**: Tasks harder than expected due to technical factors
+- **Complexity Underestimates**: Stories harder than expected due to technical factors
 - **Codebase Discoveries**: Unexpected findings in the codebase
 - **Testing Gaps**: Tests that revealed issues acceptance criteria didn't anticipate, or acceptance criteria that proved untestable with the available test infrastructure
+- **Patterns Worth Reusing**: Approaches or abstractions discovered during implementation that should be applied elsewhere
 
-**If no `**Retro**:` fields exist**, produce a summary from story status alone:
+**If a `## Lessons` section exists but no `**Retro**:` fields** (e.g. fields were lost during editing, or an older `cpm:do` run synthesised them away), use the `## Lessons` section as input — it contains the same observations in pre-grouped form.
+
+**If both `**Retro**:` fields and `## Lessons` exist**, use the `**Retro**:` fields as primary input (they are the raw observations). Reference the `## Lessons` grouping structure but don't double-count observations that appear in both places.
+
+**If neither `**Retro**:` fields nor `## Lessons` exist**, produce a summary from story status alone:
 - Which stories completed, which didn't
 - Any stories that were blocked or stuck
 - Overall batch outcome
@@ -80,6 +86,9 @@ Format:
 
 ## Observations
 
+### Smooth Deliveries
+- {observation from story N}: {synthesis}
+
 ### Scope Surprises
 - {observation from story N}: {synthesis}
 
@@ -93,6 +102,9 @@ Format:
 - {observation from story N}: {synthesis}
 
 ### Testing Gaps
+- {observation from story N}: {synthesis}
+
+### Patterns Worth Reusing
 - {observation from story N}: {synthesis}
 
 ## Recommendations
