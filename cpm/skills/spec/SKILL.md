@@ -144,8 +144,11 @@ Present the test approach tag vocabulary to the user:
 - `[integration]` — Verified by integration tests that exercise boundaries between components (API contracts, event flows, data layer interactions)
 - `[feature]` — Verified by feature/end-to-end tests that exercise complete user-facing workflows
 - `[manual]` — Verified by manual inspection, observation, or user confirmation (no automated test)
+- `[tdd]` — Workflow mode: task follows a red-green-refactor loop. Composable with any level tag above (e.g. `[tdd] [unit]`, `[tdd] [integration]`). Orthogonal — describes *how* to work, not *what kind* of test. When present, `cpm:do` writes a failing test first, then implements to pass it, then refactors. `[tdd]` without a level tag defaults to `[tdd] [unit]`.
 
-These tags will flow downstream: `cpm:epics` propagates them onto story acceptance criteria, and `cpm:do` uses them to determine verification approach (run tests vs. self-assess). Use AskUserQuestion to confirm the vocabulary or let the user adjust it for their project.
+The first four tags describe *test level* — what kind of verification proves the criterion. `[tdd]` describes *workflow mode* — how the implementation should proceed. These are orthogonal dimensions: a criterion can carry both (e.g. `[tdd] [unit]`).
+
+These tags will flow downstream: `cpm:epics` propagates them onto story acceptance criteria, and `cpm:do` uses them to determine verification approach (run tests vs. self-assess) and workflow mode (standard post-implementation vs. TDD red-green-refactor). Use AskUserQuestion to confirm the vocabulary or let the user adjust it for their project.
 
 **Graceful fallback**: If the user prefers not to tag criteria (e.g. for a small project where tagging adds ceremony without value), skip tag assignment and proceed with the current lightweight behaviour — acceptance criteria mapping without tags. The rest of Section 6 still runs.
 
@@ -250,6 +253,7 @@ Test approach tags used in this spec:
 - `[integration]` — Integration tests exercising boundaries between components
 - `[feature]` — Feature/end-to-end tests exercising complete user-facing workflows
 - `[manual]` — Manual inspection, observation, or user confirmation
+- `[tdd]` — Workflow mode: task follows red-green-refactor loop. Composable with any level tag (e.g. `[tdd] [unit]`). Orthogonal — describes how to work, not what kind of test.
 
 ### Acceptance Criteria Coverage
 

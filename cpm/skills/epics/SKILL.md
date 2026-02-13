@@ -89,9 +89,9 @@ Each story should have:
 **Test approach tag propagation** (when the input spec has a Testing Strategy section with tagged criteria):
 
 1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
-2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tag from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, or `[manual]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments.
+2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tags from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, `[manual]`, and `[tdd]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments. The `[tdd]` tag is a workflow mode tag (orthogonal to level tags) — propagate it alongside any level tag when present (e.g. `[tdd] [unit]`).
 3. If a story's criteria don't map directly to a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), propose a tag based on the criterion's nature and confirm with the user.
-4. Tags appear at the end of the acceptance criteria line, e.g.: `- User can log in via OAuth [integration]`
+4. Tags appear at the end of the acceptance criteria line, e.g.: `- User can log in via OAuth [integration]` or `- Payment processor validates card [tdd] [integration]`
 
 **Graceful degradation**: If the spec has no Testing Strategy section, no Acceptance Criteria Coverage table, or no tags, skip tag propagation entirely — write acceptance criteria without tags. The skill must work without `cpm:spec`'s enhanced Section 6 having been used.
 
@@ -117,9 +117,10 @@ Not every story needs multiple tasks. If a story is straightforward enough to be
 **Auto-generated testing tasks**: After identifying implementation tasks for a story, check whether any of the story's acceptance criteria carry `[unit]`, `[integration]`, or `[feature]` tags. If at least one automated test tag is present:
 
 1. Auto-generate a testing task titled "Write tests for {story title}".
-2. Place it **after** all implementation tasks (as the last task in the story, before the verification gate that `cpm:do` will create).
+2. **Placement depends on `[tdd]`**:
+   - If the story's acceptance criteria include `[tdd]`, place the testing task **before** all implementation tasks (as the first task in the story). This enables the TDD red-green-refactor workflow — tests are written first, then implementation makes them pass. The testing task gets dot-notation number `{story}.1`, and implementation tasks follow sequentially.
+   - If the story does **not** carry `[tdd]`, place the testing task **after** all implementation tasks (as the last task in the story, before the verification gate that `cpm:do` will create). The testing task's dot-notation number follows the last implementation task (e.g. if implementation tasks are 1.1, 1.2, 1.3, the testing task is 1.4).
 3. Give it a description: "Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`."
-4. The testing task's dot-notation number follows the last implementation task (e.g. if implementation tasks are 1.1, 1.2, 1.3, the testing task is 1.4).
 
 If **all** of a story's criteria are tagged `[manual]` (or have no tags), do **not** generate a testing task — there's nothing to automate.
 
@@ -275,5 +276,6 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {nn}-epic-{slug}` for cross-epic dependencies. Don't create cross-story task dependencies — if tasks in different stories are interdependent, the stories themselves should have the dependency.
 - **One epic, one document.** Each epic produces its own markdown file. This keeps documents focused and allows parallel work on independent epics.
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
+- **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
 - **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.

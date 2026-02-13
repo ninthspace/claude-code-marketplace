@@ -71,6 +71,17 @@ After the Template Hint and before story hydration, discover the project's test 
 
 **Skip conditions**: If the epic doc has no acceptance criteria with `[unit]`, `[integration]`, or `[feature]` tags, skip test runner discovery entirely — it won't be needed.
 
+### Framework Detection (Startup)
+
+After Test Runner Discovery and before story hydration, detect the project's framework to enable framework-specific tooling (e.g. refactoring agents).
+
+**Detection**:
+
+1. **Laravel**: Check for an `artisan` file in the project root **and** `composer.json` containing `laravel/framework` in its `require` or `require-dev` dependencies. If both are present, the project is Laravel.
+2. **Other frameworks**: No special detection needed at this stage. Additional frameworks can be added here as framework-specific tooling becomes available.
+
+**Cache the result**: Store the detected framework in the progress file as `**Framework**: laravel` or `**Framework**: none`. This persists across the entire session — do not re-detect between tasks.
+
 ## Story Hydration
 
 When `cpm:do` needs work and no pending unblocked Claude Code tasks exist, it hydrates the next story from the epic doc into Claude Code's task system. This is the bridge between planning artifacts (epic docs) and execution state (Claude Code tasks).
@@ -139,6 +150,7 @@ For each task, follow these steps in order.
 - Call `TaskGet` to read the full task description. The description includes the `Epic doc:`, `Story:`, and `Task:` fields set during hydration.
 - If an epic doc was resolved during Input, read it with the Read tool. Use the `Story:` and `Task:` fields from the task description to locate the matching entry — search for the `**Story**: {N}` or `**Task**: {N.M}` field that matches. For verification gate tasks, match the `##` story heading. For implementation tasks, match the `###` task heading. Note the parent story's acceptance criteria — for `###` tasks, look up to the nearest `##` story heading above the matched task. If the matched `###` task has a `**Description**:` field, read it — this scopes the task within its parent story and clarifies which acceptance criteria it addresses.
 - **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
+- **Determine workflow mode**: Scan the parent story's acceptance criteria for the `[tdd]` tag. If any criterion carries `[tdd]`, this story uses TDD workflow mode — record this for use in Step 4. If no `[tdd]` tag is found, the story uses the standard post-implementation workflow.
 - If no epic doc is available, proceed without epic doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress
@@ -173,9 +185,30 @@ When using plan mode: explore the codebase, design the approach, and get user ap
 
 Proceed to step 5 with your assessment.
 
-**If this is an implementation task** (no `Type: verification`): Execute the task as described. This is the actual implementation — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
+**If this is an implementation task in TDD mode** (no `Type: verification`, and the story carries `[tdd]` as determined in Step 1): Replace the standard implementation approach with the **red-green-refactor sub-loop**. This is the core TDD discipline — do not skip or compress these phases.
 
-**ADR awareness**: Before starting implementation, check if this task touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the task involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
+**Phase 1 — Red (write a failing test)**:
+1. Derive a test from the parent story's acceptance criteria and the current task's description. Write a test file (or add test cases to an existing test file) that describes the expected behaviour.
+2. Construct a **targeted test command** — run only the specific test file just written, not the full test suite. Derive the command from the cached test runner and the test file path (e.g. `pest tests/Feature/MyTest.php`, `jest path/to/test.spec.ts`, `pytest tests/test_my_feature.py`).
+3. Run the targeted test. It **must fail** — this confirms the test is actually testing something that doesn't exist yet.
+4. If the test **passes unexpectedly**: stop. Something is wrong — either the test isn't testing what you think, or the behaviour already exists. Use AskUserQuestion to present the situation: "Red phase: test passed unexpectedly. This means the expected behaviour may already exist, or the test isn't verifying the right thing." Options: "Investigate and fix the test", "Skip TDD for this task (fall back to standard workflow)", "Stop and discuss".
+
+**Phase 2 — Green (minimum implementation)**:
+1. Write the **minimum code** needed to make the failing test pass. Do not add extra features, handle edge cases not covered by the test, or refactor. Just make the test pass.
+2. Run the targeted test command again. It **must pass**.
+3. If the test **still fails**: the implementation isn't sufficient. Continue working on the implementation until the test passes. If stuck after a reasonable attempt, use AskUserQuestion: "Green phase: test still failing after implementation." Options: "Continue working on it", "Skip TDD for this task (fall back to standard workflow)", "Stop and investigate".
+
+**Phase 3 — Refactor (clean up within task scope)**:
+1. Review the code just written in Phases 1 and 2. Clean up: improve naming, extract methods, remove duplication, improve readability.
+2. **Scope constraint**: Only refactor code touched by the current task. Do not restructure surrounding code, reorganise files, or make changes beyond the immediate scope. The refactor phase is about the code you just wrote, not the broader codebase.
+3. Run the targeted test command again. It **must still pass** — refactoring must not change behaviour.
+4. If the test **fails after refactoring**: you changed behaviour, not just structure. Undo the refactoring change that broke the test and try again.
+
+Proceed to step 5 after the sub-loop completes.
+
+**If this is an implementation task in standard mode** (no `Type: verification`, and the story does **not** carry `[tdd]`): Execute the task as described. This is the existing approach — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
+
+**ADR awareness** (both modes): Before starting implementation, check if this task touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the task involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
 
 ### 5. Verify Acceptance Criteria
 
@@ -187,6 +220,26 @@ Before marking the task complete:
   - **`[manual]` or no tag**: Self-assess by inspecting the codebase, checking files, or reviewing outputs. This is the existing approach.
 - If all criteria are met (by test results or self-assessment), proceed to step 6.
 - If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as done anyway. Use AskUserQuestion for this gate.
+
+### 5b. Story Refactoring Pass (verification gates only)
+
+After the verification gate passes (all acceptance criteria met in Step 5), perform a focused refactoring pass on the code produced by the story. This step **only applies to verification gate tasks** — skip it for implementation tasks.
+
+**Identify scope**: Review the tasks completed in this story (listed in the progress file's Completed Tasks section). Identify the files that were created or modified during the story's implementation tasks. These files — and only these files — are the refactoring target.
+
+**Run the refactoring pass**:
+
+- **Laravel project with `laravel-simplifier`**: If `**Framework**` in the progress file is `laravel`, use the Task tool with `subagent_type: "laravel-simplifier"` to refactor the touched files. Pass the agent a prompt listing the files modified by this story and instruct it to simplify and refine for clarity, consistency, and maintainability. If the agent is not available in the current session (tool call fails), fall back to the self-directed approach below.
+- **All other projects** (or fallback): Perform a self-directed refactoring review of the files touched by this story. Focus on: naming clarity, duplication removal, method extraction, readability improvements. Keep changes minimal — this is a polish pass, not a restructuring.
+
+**Retest**: After refactoring, run the cached test command (if not `none`) to confirm nothing broke.
+
+- If tests **pass**: proceed to Step 6.
+- If tests **fail**: revert the refactoring changes that caused failures and proceed to Step 6 without them. Do not block the work loop on a failed refactoring pass.
+
+**Scope constraint**: Start with the files touched by the current story, but look outward for consolidation opportunities — duplicate code, similar patterns, extraction candidates, and abstractions that span touched and non-touched code. If the story introduced logic that already exists elsewhere, merge it. If a pattern appears in both new and existing code, extract it. The refactoring may touch files beyond the story's direct scope when there's a clear consolidation or deduplication benefit. However, do not pursue unrelated refactoring — every change should connect back to the code the story produced.
+
+**Skip conditions**: If the story had no implementation tasks (e.g. pure documentation or configuration), skip the refactoring pass — there's nothing to refactor.
 
 ### 6. Complete and Update State
 
@@ -275,6 +328,8 @@ The skill should work even without an epic doc:
 - **Test command fails to execute** (command not found, timeout, permission error): Report the error to the user via AskUserQuestion. Do not retry automatically. Offer options: "Provide a different test command", "Continue without tests (self-assessment only)", "Stop and investigate". If the user provides a new command, update `**Test command**` in the progress file. Never block the work loop on a broken test command.
 - **Test command returns failures** (tests run but some fail): This is not an error — it's information. Report which tests failed and let the user decide how to proceed (see Step 4 verification gate logic). The work loop continues regardless of the user's choice.
 - **No test command cached** (`**Test command**: none`): All verification uses self-assessment. This is the default fallback and is always available.
+- **No test command + `[tdd]` story**: If the story carries `[tdd]` but `**Test command**` is `none`, the TDD sub-loop cannot run (it requires test execution at every phase). Fall back to the standard post-implementation workflow for this story and warn the user: "TDD mode requires a test runner, but none is available. Falling back to standard workflow for this story." The warning should be visible — use AskUserQuestion to let the user either provide a test command or acknowledge the fallback.
+- **`laravel-simplifier` agent not available**: If the project is Laravel but the `laravel-simplifier` agent is not available in the current session (Task tool call fails or the subagent type is unrecognised), fall back to self-directed refactoring in Step 5b. Log a note: "laravel-simplifier not available, using self-directed refactoring." Do not block the work loop.
 
 ## State Management
 
@@ -295,6 +350,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Current task**: {task ID} — {task subject}
 **Epic doc**: {path to epic doc, or "none"}
 **Test command**: {discovered test command, or "none" if no runner found}
+**Framework**: {detected framework, e.g. "laravel" or "none"}
 **Tasks remaining**: {count of pending unblocked tasks}
 
 ## Completed Tasks
@@ -319,4 +375,5 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Acceptance criteria are the definition of done.** Don't mark a task complete if criteria aren't met unless the user explicitly approves.
 - **Keep momentum.** Move through tasks efficiently. Don't over-explain between tasks — just pick up the next one and go.
 - **One task at a time.** Complete each task fully before starting the next. Don't interleave work across tasks.
-- **Task ordering enables TDD.** Tasks are hydrated and executed in the order they appear in the epic doc. When `cpm:epics` places a "Write tests" task before implementation tasks (rather than the default after), `cpm:do` naturally follows that sequence — tests first, then implementation. No special logic needed; the ordering convention is enough.
+- **`[tdd]` activates the red-green-refactor sub-loop.** When a story's acceptance criteria carry the `[tdd]` tag, Step 4 switches from standard implementation to a three-phase TDD loop: write a failing test (Red), write minimum code to pass (Green), clean up within task scope (Refactor). Each phase runs a targeted test — the specific test file, not the full suite. The full suite runs at the story verification gate. Stories without `[tdd]` use the standard post-implementation workflow unchanged. Both modes can coexist in the same epic.
+- **Story refactoring pass polishes before moving on.** When a verification gate passes, Step 5b performs a refactoring pass starting from the files touched by the story — then retests. For Laravel projects, this uses the `laravel-simplifier` agent if available; for all other projects, it's a self-directed review. The pass starts with the story's code but looks outward for consolidation opportunities — deduplication, extraction, and abstraction across touched and existing code. If refactoring breaks tests, the changes are reverted.
