@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "1.13.0",
+  "version": "1.13.1",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -62,7 +62,7 @@
       "name": "cpm",
       "source": "./cpm",
       "description": "Claude Planning Method — facilitated planning with multi-perspective party mode for Claude Code. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-      "version": "1.13.0",
+      "version": "1.13.1",
       "keywords": [
         "planning",
         "discovery",

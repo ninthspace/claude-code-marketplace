@@ -82,6 +82,8 @@ After Test Runner Discovery and before story hydration, detect the project's fra
 
 **Cache the result**: Store the detected framework in the progress file as `**Framework**: laravel` or `**Framework**: none`. This persists across the entire session — do not re-detect between tasks.
 
+**Permission check**: If the framework is `laravel`, check whether the `laravel-simplifier:laravel-simplifier` agent is available by reviewing the session's tool permissions. The story refactoring pass (Step 5b) invokes this agent via the Task tool, which requires `Task(laravel-simplifier:laravel-simplifier)` in the user's permission allow list. If unsure whether it's pre-authorised, warn the user early: "Laravel detected — the story refactoring pass uses the `laravel-simplifier` agent. If you haven't already, add `Task(laravel-simplifier:laravel-simplifier)` to your permission allow list (in `.claude/settings.json` under `permissions.allow`) to avoid permission prompts that may not surface during the work loop." This is advisory — do not block startup on it.
+
 ## Story Hydration
 
 When `cpm:do` needs work and no pending unblocked Claude Code tasks exist, it hydrates the next story from the epic doc into Claude Code's task system. This is the bridge between planning artifacts (epic docs) and execution state (Claude Code tasks).
@@ -229,7 +231,7 @@ After the verification gate passes (all acceptance criteria met in Step 5), perf
 
 **Run the refactoring pass**:
 
-- **Laravel project with `laravel-simplifier`**: If `**Framework**` in the progress file is `laravel`, use the Task tool with `subagent_type: "laravel-simplifier"` to refactor the touched files. Pass the agent a prompt listing the files modified by this story and instruct it to simplify and refine for clarity, consistency, and maintainability. If the agent is not available in the current session (tool call fails), fall back to the self-directed approach below.
+- **Laravel project with `laravel-simplifier`**: If `**Framework**` in the progress file is `laravel`, use the Task tool with `subagent_type: "laravel-simplifier:laravel-simplifier"` to refactor the touched files. Pass the agent a prompt listing the files modified by this story and instruct it to simplify and refine for clarity, consistency, and maintainability. If the agent is not available in the current session (tool call fails), fall back to the self-directed approach below.
 - **All other projects** (or fallback): Perform a self-directed refactoring review of the files touched by this story. Focus on: naming clarity, duplication removal, method extraction, readability improvements. Keep changes minimal — this is a polish pass, not a restructuring.
 
 **Retest**: After refactoring, run the cached test command (if not `none`) to confirm nothing broke.
@@ -329,7 +331,7 @@ The skill should work even without an epic doc:
 - **Test command returns failures** (tests run but some fail): This is not an error — it's information. Report which tests failed and let the user decide how to proceed (see Step 4 verification gate logic). The work loop continues regardless of the user's choice.
 - **No test command cached** (`**Test command**: none`): All verification uses self-assessment. This is the default fallback and is always available.
 - **No test command + `[tdd]` story**: If the story carries `[tdd]` but `**Test command**` is `none`, the TDD sub-loop cannot run (it requires test execution at every phase). Fall back to the standard post-implementation workflow for this story and warn the user: "TDD mode requires a test runner, but none is available. Falling back to standard workflow for this story." The warning should be visible — use AskUserQuestion to let the user either provide a test command or acknowledge the fallback.
-- **`laravel-simplifier` agent not available**: If the project is Laravel but the `laravel-simplifier` agent is not available in the current session (Task tool call fails or the subagent type is unrecognised), fall back to self-directed refactoring in Step 5b. Log a note: "laravel-simplifier not available, using self-directed refactoring." Do not block the work loop.
+- **`laravel-simplifier` agent not available**: If the project is Laravel but the `laravel-simplifier:laravel-simplifier` agent is not available in the current session (Task tool call fails, the subagent type is unrecognised, or the permission prompt is not approved), fall back to self-directed refactoring in Step 5b. Log a note: "laravel-simplifier not available, using self-directed refactoring." Do not block the work loop.
 
 ## State Management
 
