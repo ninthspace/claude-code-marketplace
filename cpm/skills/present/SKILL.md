@@ -62,7 +62,7 @@ Present the audience options using AskUserQuestion:
 - **Team onboarding** — New team members getting up to speed. Provides context, explains decisions, and maps the landscape.
 - **Custom** — Let the user describe their audience. Ask follow-up questions to understand their knowledge level, what they care about, and what tone to use.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Select Format
 
@@ -74,7 +74,7 @@ Present the format options using AskUserQuestion. Not all formats suit all audie
 - **Changelog** — What changed and why. Best for technical stakeholders and team onboarding.
 - **Onboarding guide** — Comprehensive context document. Best for team onboarding.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary before continuing.
 
 ### Step 3: Generate Derived Content
 
@@ -88,7 +88,7 @@ Read the selected source artifacts fully. Then generate content that is **derive
 
 Present the draft to the user for review using AskUserQuestion. Refine based on feedback.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
 
 ### Step 4: Save Output
 
@@ -129,9 +129,17 @@ If `$ARGUMENTS` is provided, use it as the starting context. If it references fi
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final communication has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

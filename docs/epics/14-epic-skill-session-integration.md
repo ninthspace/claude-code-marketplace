@@ -2,12 +2,12 @@
 
 **Source spec**: docs/specifications/17-spec-parallel-sessions.md
 **Date**: 2026-02-15
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Epic 13-epic-session-hooks
 
 ## Update State Management sections for session-scoped filenames
 **Story**: 1
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 **Satisfies**: Req 1 (Session-scoped progress files), Req 6 (SKILL.md updates)
 
@@ -20,23 +20,25 @@
 ### Update State Management in core pipeline skills
 **Task**: 1.1
 **Description**: Update `discover`, `brief`, `architect`, `spec`, `epics` SKILL.md files to use `CPM_SESSION_ID` in the progress file path.
-**Status**: Pending
+**Status**: Complete
 
 ### Update State Management in execution and review skills
 **Task**: 1.2
 **Description**: Update `do`, `review`, `retro`, `pivot` SKILL.md files. These have more complex state patterns (e.g., `do` tracks test commands, frameworks, task counts).
-**Status**: Pending
+**Status**: Complete
 
 ### Update State Management in auxiliary skills
 **Task**: 1.3
 **Description**: Update `party`, `present`, `archive`, `library`, `templates` SKILL.md files. Verify whether `templates` needs a progress file; skip if not.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] All 13 stateful skills had identical State Management structure — replace_all plus a standard paragraph insertion handled every file with no edge cases beyond the `do` skill's unique callout blocks and `templates` being stateless.
 
 ---
 
 ## Add session ID adoption for resume scenario
 **Story**: 2
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 1
 **Satisfies**: Req 5 (Session ID adoption on resume)
 
@@ -48,9 +50,17 @@
 ### Draft the resume adoption paragraph
 **Task**: 2.1
 **Description**: Write the standard instruction text that tells Claude how to detect a mismatched session ID, create a new file with the current ID, and delete the old one atomically.
-**Status**: Pending
+**Status**: Complete
 
 ### Add resume adoption to all 14 SKILL.md files
 **Task**: 2.2
 **Description**: Insert the resume adoption paragraph into each skill's State Management section after the progress file path instructions.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] Resume adoption paragraph was identical across all 13 stateful skills — same three-step atomic process (read, write new, delete old) inserted consistently with no skill-specific variations needed.
+
+## Lessons
+
+### Smooth Deliveries
+- Story 1: All 13 stateful skills had identical State Management structure — `replace_all` plus a standard paragraph insertion handled every file with no edge cases beyond the `do` skill's unique callout blocks and `templates` being stateless.
+- Story 2: Resume adoption paragraph was identical across all 13 stateful skills — same three-step atomic process (read, write new, delete old) inserted consistently with no skill-specific variations needed.

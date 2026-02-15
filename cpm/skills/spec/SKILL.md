@@ -69,7 +69,7 @@ After startup checks and before Section 1, display:
 
 Briefly summarise the problem from the input (brief or description). Confirm understanding with the user. If starting from a brief, this should be quick — just verify nothing has changed.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 1 summary before continuing.
 
 ### Section 2: Functional Requirements
 
@@ -82,7 +82,7 @@ Facilitate conversation about what the system must do. Use MoSCoW prioritisation
 
 Present a draft list and refine with the user. Don't try to capture everything at once — iterate.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 2 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 2 summary before continuing.
 
 ### Section 3: Non-Functional Requirements
 
@@ -95,7 +95,7 @@ Areas to consider:
 - Reliability (uptime, error handling, data integrity)
 - Usability (accessibility, device support)
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 3 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 3 summary before continuing.
 
 ### Section 4: Architecture Decisions
 
@@ -119,7 +119,7 @@ Areas to cover as relevant:
 
 **Perspectives**: Before presenting each major architecture decision to the user (whether referencing an existing ADR or facilitating a new one), have 2-3 agents weigh in with competing trade-offs. The architect might advocate for one approach, the developer might flag implementation cost, DevOps might raise deployment concerns, and QA might highlight testability. Present these as brief agent perspectives (1-2 sentences each) using the format: `{icon} **{name}**: {perspective}`. This surfaces trade-offs the user should consider before deciding.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 4 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 4 summary before continuing.
 
 ### Section 5: Scope Boundary
 
@@ -130,7 +130,7 @@ Consolidate from the conversation:
 
 **Perspectives**: Before finalising scope, have 2-3 agents weigh in on what should be in or out. The PM might push to keep scope tight for delivery, the architect might argue for including foundational work, and the developer might flag dependencies that force certain items in. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 5 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 5 summary before continuing.
 
 ### Section 6: Testing Strategy
 
@@ -184,7 +184,7 @@ If infrastructure is needed, capture it — these become stories in `cpm:epics`.
 
 Present the complete testing strategy to the user: tagged criteria, integration boundaries, and infrastructure needs. Refine with AskUserQuestion before proceeding.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Section 6 summary (including tag assignments per requirement and infrastructure needs) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 6 summary (including tag assignments per requirement and infrastructure needs) before continuing.
 
 ### Section 7: Review
 
@@ -281,9 +281,17 @@ After saving, suggest next steps:
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Section 1 (ensure `docs/plans/` exists). **Update** it after each section completes. **Delete** it only after the final spec has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

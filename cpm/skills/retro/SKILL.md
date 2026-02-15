@@ -36,7 +36,7 @@ Read the resolved epic doc with the Read tool. Identify:
 
 Present a brief summary to the user: how many stories, how many complete, how many observations found.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Synthesise Observations
 
@@ -62,7 +62,7 @@ Analyse the collected observations and story outcomes. Build the retro content:
 
 For each category with observations, write a brief synthesis — not just a list, but a sentence or two about what the pattern means and what to do differently next time.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary before continuing.
 
 ### Step 3: Write Retro File
 
@@ -116,7 +116,7 @@ Only include observation categories that have entries. If no `**Retro**:` fields
 
 Tell the user the retro file path after saving.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
 
 ### Step 3.5: Library Write-Back
 
@@ -159,7 +159,7 @@ After writing the retro file, check if any retro observations should be fed back
 - If no `**Retro**:` fields were captured (status-only retro), skip this step entirely.
 - Never block the retro workflow for write-back failures.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3.5 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3.5 summary before continuing.
 
 ### Step 4: Pipeline Handoff
 
@@ -176,9 +176,17 @@ Delete the progress file after handoff or exit.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final retro file has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

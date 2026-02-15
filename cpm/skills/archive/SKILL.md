@@ -48,7 +48,7 @@ Scan the four planning directories for documents and group them into artifact ch
 
 5. If no documents are found in any directory, tell the user there's nothing to archive and stop.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Evaluate Staleness
 
@@ -64,7 +64,7 @@ For each chain (or individual document), evaluate staleness using four signals. 
 
 For each chain, record which signals fired. Chains with no signals are still presented as candidates — the user may want to archive them for other reasons — but they are not flagged.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary before continuing.
 
 ### Step 3: Present Candidates
 
@@ -89,7 +89,7 @@ Present the discovered chains and documents to the user, grouped by chain with s
 
 5. Build the final list of files to move based on user selections.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary (selected files list) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary (selected files list) before continuing.
 
 ### Step 4: Archive Execution
 
@@ -108,7 +108,7 @@ Move the selected files to `docs/archive/` with mirrored subdirectory structure.
    - Which files failed and why (if any)
    - The archive paths where files were moved
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary, then delete the progress file.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 4 summary, then delete the progress file.
 
 ## Output
 
@@ -116,9 +116,17 @@ Files are moved to `docs/archive/{subdirectory}/` preserving the mirrored direct
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all archive operations have completed — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

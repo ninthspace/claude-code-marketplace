@@ -53,7 +53,7 @@ After the Template Hint and before Step 1, discover existing Architecture Decisi
 
 Read and understand the source document. Summarise the key work areas to the user.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Identify Epics
 
@@ -74,7 +74,7 @@ Keep epics practical:
 
 **Production loop**: After epics are confirmed, Steps 3 and 3b iterate per epic — break each epic into stories, then each story into tasks, before moving to the next epic. Save each epic document after its stories and tasks are finalised (before moving to the next epic). This means epic docs are written incrementally, not all at once at the end.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary (epic names, numbers, slugs, and output paths) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (epic names, numbers, slugs, and output paths) before continuing.
 
 ### Step 3: Break into Stories
 
@@ -99,7 +99,7 @@ Each story should have:
 
 Present the stories for each epic to the user using AskUserQuestion. Refine before moving to the next epic.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary (including which tags were propagated to which stories) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary (including which tags were propagated to which stories) before continuing.
 
 ### Step 3b: Identify Tasks within Stories
 
@@ -128,7 +128,7 @@ If **all** of a story's criteria are tagged `[manual]` (or have no tags), do **n
 
 Present the tasks for each story using AskUserQuestion. Refine before moving to the next story.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3b summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3b summary before continuing.
 
 ### Step 3c: Integration Testing Story (when warranted)
 
@@ -150,7 +150,7 @@ After all implementation stories and their tasks are defined for an epic, assess
 
 **Graceful degradation**: If no tags were propagated during Step 3, skip this step entirely.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3c summary (integration story generated or skipped, with rationale) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3c summary (integration story generated or skipped, with rationale) before continuing.
 
 ### Step 4: Confirm
 
@@ -214,9 +214,17 @@ When starting implementation of a task, read the relevant epic document first to
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final epic documents have been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

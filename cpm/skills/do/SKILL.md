@@ -143,7 +143,7 @@ Parse stories and tasks by their heading structure (`##` for stories, `###` for 
 
 **State tracking**: Before starting the first task, create the progress file (see State Management below). After the work loop finishes, delete the file.
 
-> **HARD RULE — PROGRESS FILE UPDATE**: After completing EVERY task, you MUST call the Write tool on `docs/plans/.cpm-progress.md` BEFORE doing anything else. This is not optional. This is not deferrable. This has the same priority as saving a file after editing it. A task is NOT done until the progress file reflects it. Historically this step gets silently dropped when momentum is high — that is a bug, not an optimisation. If compaction fires and this file is stale, the user loses all session context with no recovery path.
+> **HARD RULE — PROGRESS FILE UPDATE**: After completing EVERY task, you MUST call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` BEFORE doing anything else. This is not optional. This is not deferrable. This has the same priority as saving a file after editing it. A task is NOT done until the progress file reflects it. Historically this step gets silently dropped when momentum is high — that is a bug, not an optimisation. If compaction fires and this file is stale, the user loses all session context with no recovery path.
 
 For each task, follow these steps in order.
 
@@ -278,14 +278,14 @@ Use the Edit tool to append a `**Retro**:` field to the completed story in the e
 
 > **YOU ARE ABOUT TO SKIP THIS. DO NOT SKIP THIS.**
 >
-> Call the Write tool on `docs/plans/.cpm-progress.md` RIGHT NOW. Not later. Not after the next task. NOW. Every time you have completed Part A, you must immediately do Part C. There is no scenario where skipping this is acceptable. A skipped progress file write is a data loss bug — the user loses their entire session if compaction fires.
+> Call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` RIGHT NOW. Not later. Not after the next task. NOW. Every time you have completed Part A, you must immediately do Part C. There is no scenario where skipping this is acceptable. A skipped progress file write is a data loss bug — the user loses their entire session if compaction fires.
 
 The file must reflect:
 - The task just completed (added to Completed Tasks section)
 - The next action (which task to pick up next, or "work loop complete")
 - The current tasks remaining count
 
-**Step 6 is not complete until the Write tool call for `.cpm-progress.md` has returned. Do not call TaskList, TaskGet, Read, or any other tool until the Write has succeeded. The very next tool call after Part A's TaskUpdate (and Part B's Edit if applicable) MUST be the Write call for the progress file.**
+**Step 6 is not complete until the Write tool call for `.cpm-progress-{session_id}.md` has returned. Do not call TaskList, TaskGet, Read, or any other tool until the Write has succeeded. The very next tool call after Part A's TaskUpdate (and Part B's Edit if applicable) MUST be the Write call for the progress file.**
 
 ### 7. Next Task
 
@@ -348,9 +348,17 @@ The skill should work even without an epic doc:
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 > **KNOWN FAILURE MODE**: The progress file update is the single most skipped instruction in this skill. It gets silently dropped when task momentum is high. Every time it is skipped, it creates a window where compaction would destroy the session with no recovery. Treat the Write call for this file with the same urgency as saving user code — it is not bookkeeping, it is the only thing standing between the user and total context loss.
 

@@ -106,7 +106,7 @@ Read the target artifact (full epic or specific story) and build a structured un
 
 Present a brief summary to the user: what's being reviewed, how many stories/tasks, current status. If a spec or ADRs were found, note that they'll be used as review context.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Conduct Adversarial Review
 
@@ -165,7 +165,7 @@ Format each finding as:
 
 After all agents have reviewed, present the findings to the user grouped by concern type (not by agent). Within each concern type, order by severity (critical first, then warning, then suggestion).
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary (concern types found, finding counts by severity) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (concern types found, finding counts by severity) before continuing.
 
 ### Step 3: Write Review File
 
@@ -231,7 +231,7 @@ Step 4 may append a `## Remediation` section to this file — see Autofix below.
 
 Tell the user the review file path after saving.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
 
 ### Step 4: Autofix
 
@@ -361,7 +361,7 @@ When the epic is complete or no epic doc exists, create Claude Code tasks direct
 
    Include one row per finding that generated a task. The Task column uses the Claude Code task subject.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 4 summary before continuing.
 
 ### Step 5: Pipeline Handoff
 
@@ -393,9 +393,17 @@ Delete the progress file after handoff or exit.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final review file has been saved and any autofix/handoff is complete — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

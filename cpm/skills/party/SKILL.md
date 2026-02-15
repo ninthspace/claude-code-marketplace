@@ -120,7 +120,7 @@ Briefly acknowledge the end of the discussion. Keep it natural — one sentence,
 
 Save the progress file's content as a permanent discussion artifact. This preserves the full fidelity of decisions, key points, and context accumulated during the conversation — no summarisation, no information loss.
 
-1. **Read the current progress file** (`docs/plans/.cpm-progress.md`).
+1. **Read the current progress file** (`docs/plans/.cpm-progress-{session_id}.md`).
 2. **Determine the output path**: Save to `docs/discussions/{nn}-discussion-{slug}.md`.
    - `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/discussions/[0-9]*-discussion-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
    - `{slug}` is a short kebab-case name derived from the discussion topic.
@@ -154,9 +154,17 @@ If the user chooses a pipeline skill, pass the discussion record file path as th
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-discussion.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-discussion.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file after roster loading and topic confirmation (before the first orchestration turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — never before. If compaction fires between deletion and a pending output, all session state is lost.
 

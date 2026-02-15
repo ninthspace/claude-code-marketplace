@@ -76,7 +76,7 @@ Also summarise the product context from the input (product brief or description)
 
 Confirm understanding with the user.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Phase 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 1 summary before continuing.
 
 ### Phase 2: Identify Architectural Decisions
 
@@ -93,7 +93,7 @@ Present the decision list to the user with AskUserQuestion. Refine — they may 
 
 **Perspectives**: After identifying decisions, have 2-3 agents weigh in. The architect might flag missing structural decisions, the DevOps engineer might raise operational concerns, or the developer might question whether a decision is premature. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Phase 2 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 2 summary before continuing.
 
 ### Phase 3: Explore Trade-offs (per decision)
 
@@ -113,7 +113,7 @@ For each decision:
 
 Use AskUserQuestion after each decision to confirm the chosen option and rationale before moving to the next.
 
-**Update progress file now** — write the full `.cpm-progress.md` after each decision is resolved.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` after each decision is resolved.
 
 ### Phase 4: Operational Architecture
 
@@ -131,7 +131,7 @@ Present findings with AskUserQuestion. Some of these may produce additional ADRs
 
 **Perspectives**: Have the DevOps engineer and QA engineer weigh in on operational concerns they see. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Phase 4 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 4 summary before continuing.
 
 ### Phase 5: Decision Dependencies
 
@@ -141,7 +141,7 @@ If any circular dependencies or conflicts emerge, flag them and work through res
 
 Use AskUserQuestion for confirmation before proceeding to output.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Phase 5 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 5 summary before continuing.
 
 ### Phase 6: Produce ADRs
 
@@ -213,9 +213,17 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final ADRs have been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 

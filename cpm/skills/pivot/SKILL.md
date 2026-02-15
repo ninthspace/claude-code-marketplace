@@ -45,7 +45,7 @@ Discover existing planning artefacts and their relationships. Skip this step if 
 
 5. **Present to user**: Show the discovered chains and individual documents. Use AskUserQuestion to let the user select which document to amend. Group by chain where possible, list orphan documents separately.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Surgical Amendment
 
@@ -63,7 +63,7 @@ Read and amend the selected document.
    - What changed (section-level, not line-level)
    - What the downstream implications are (which dependent documents might need updating)
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 2 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary before continuing.
 
 ### Step 3: Cascading Update Facilitation
 
@@ -92,7 +92,7 @@ Walk downstream documents and facilitate updates. Skip this step if no downstrea
 
 5. **Graceful skip**: If no downstream documents exist, skip this step entirely and proceed to Step 4.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 3 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
 
 ### Step 4: Task Impact Flagging
 
@@ -108,13 +108,21 @@ Identify tasks that may be affected by the changes. Skip this step if no tasks e
 
 4. **Graceful skip**: If no tasks are matched, or if no epic stories were modified, skip this step silently.
 
-**Update progress file now** — write the full `.cpm-progress.md` with Step 4 summary, then delete the progress file.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 4 summary, then delete the progress file.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
 **Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+
+**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+
+**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+1. Read the old file's contents (already visible in context from hook injection).
+2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
+3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
+Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all amended artifacts have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
