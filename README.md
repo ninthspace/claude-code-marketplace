@@ -156,17 +156,18 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.11.0)
+### Claude Planning Method (v1.15.0)
 
-**Facilitated planning with multi-perspective party mode for Claude Code**
+**Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
-Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots. Inspired by the BMAD-METHOD.
+Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots — and consult mode for focused one-to-one expert dialogue with dynamic membership. Inspired by the BMAD-METHOD.
 
-**Fourteen skills forming a pipeline:**
+**Fifteen skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
 | `/cpm:party` | Multi-perspective discussion with agent personas | Discussion summary + optional pipeline handoff |
+| `/cpm:consult` | Focused one-to-one consultation with a chosen expert | `docs/discussions/{nn}-discussion-{slug}.md` |
 | `/cpm:discover` | Facilitated problem discovery | `docs/plans/01-plan-{slug}.md` |
 | `/cpm:brief` | Product ideation — vision, features, user journeys | `docs/briefs/01-brief-{slug}.md` |
 | `/cpm:architect` | Architecture exploration — ADRs with trade-offs | `docs/architecture/01-adr-{slug}.md` |
@@ -185,6 +186,9 @@ Structured discovery, product ideation, architecture exploration, specification,
 ```bash
 # Brainstorm with your team of agent personas
 /cpm:party should we use a monorepo or separate repos?
+
+# Focused consultation with one expert
+/cpm:consult Margot
 
 # Full pipeline: discover → brief → architect → spec → epics → do → retro
 /cpm:discover build a customer portal for our booking system
@@ -220,6 +224,7 @@ Structured discovery, product ideation, architecture exploration, specification,
 
 **Key Features:**
 - Party mode — named agent personas discuss, debate, and disagree constructively
+- Consult mode — focused one-to-one expert dialogue with invite/dismiss and lead transfer
 - Multi-perspective insights woven into discover and spec phases
 - Product ideation — explore vision, value propositions, and user journeys before requirements
 - Architecture exploration — facilitated ADRs with trade-off analysis and dependency mapping
