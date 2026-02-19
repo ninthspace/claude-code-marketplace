@@ -493,6 +493,20 @@
       <h2>The planning pipeline</h2>
       <div class="pipeline">
         <div class="pipeline-stage">
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+            <div class="pipeline-node" style="border-color: #f778ba;padding:6px 10px;font-size:13px;">
+              <span class="icon">&#x1F4AC;</span>
+              <span class="label">Party</span>
+            </div>
+            <div class="pipeline-node" style="border-color: #e879a0;padding:6px 10px;font-size:13px;">
+              <span class="icon">&#x1F9D1;&#x200D;&#x1F4BC;</span>
+              <span class="label">Consult</span>
+            </div>
+          </div>
+          <span class="pipeline-desc">Explore ideas</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
           <div class="pipeline-node" style="border-color: var(--rose);">
             <span class="icon">&#x1F50D;</span>
             <span class="label">Discover</span>
@@ -553,6 +567,10 @@
         <div class="support-card">
           <div class="card-cmd">/cpm:party</div>
           <p>Multi-perspective brainstorming with simulated team personas</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:consult</div>
+          <p>Focused one-to-one consultation with a chosen expert — invite others as needed</p>
         </div>
         <div class="support-card">
           <div class="card-cmd">/cpm:review</div>
@@ -725,6 +743,7 @@
       <h2>Where things live</h2>
       <div class="file-tree">
         <div><span class="dir">docs/</span></div>
+        <div class="indent"><span class="dir">discussions/</span> <span class="comment">&#8592; discussion records from /cpm:party and /cpm:consult</span></div>
         <div class="indent"><span class="dir">plans/</span> <span class="comment">&#8592; problem briefs from /cpm:discover</span></div>
         <div class="indent"><span class="dir">briefs/</span> <span class="comment">&#8592; product briefs from /cpm:brief</span></div>
         <div class="indent"><span class="dir">architecture/</span> <span class="comment">&#8592; ADRs from /cpm:architect</span></div>

@@ -9,21 +9,22 @@ Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Meth
 After installation, use any skill independently or as a pipeline:
 
 ```
-/cpm:party → /cpm:discover → /cpm:brief → /cpm:architect → /cpm:spec → /cpm:epics → /cpm:do → /cpm:retro
-                                                                               ↕            ↕
-                                                                        /cpm:review    /cpm:pivot
-                                                                                                   ↓
-                                                                                            /cpm:archive
+/cpm:party   → /cpm:discover → /cpm:brief → /cpm:architect → /cpm:spec → /cpm:epics → /cpm:do → /cpm:retro
+/cpm:consult ↗                                                                  ↕            ↕
+                                                                          /cpm:review    /cpm:pivot
+                                                                                                     ↓
+                                                                                              /cpm:archive
 /cpm:library (import reference docs used by all skills)
 /cpm:templates (explore and customise artifact templates)
 /cpm:present (transform artifacts for different audiences)
 ```
 
-`/cpm:review` sits between planning and execution — review an epic before or after `/cpm:do`. `/cpm:pivot` amends any artefact mid-flow. `/cpm:archive` cleans up completed artefacts. `/cpm:present` transforms artifacts for stakeholder consumption. `/cpm:templates` helps you explore and customise the output formats.
+`/cpm:consult` and `/cpm:party` both feed into the planning pipeline — consult for focused one-to-one conversations, party for multi-perspective discussions. `/cpm:review` sits between planning and execution — review an epic before or after `/cpm:do`. `/cpm:pivot` amends any artefact mid-flow. `/cpm:archive` cleans up completed artefacts. `/cpm:present` transforms artifacts for stakeholder consumption. `/cpm:templates` helps you explore and customise the output formats.
 
 Each step is optional. Use what fits your situation:
 
 - Want diverse perspectives on an idea? Start with `/cpm:party`
+- Need focused consultation with one expert? Use `/cpm:consult`
 - Starting a new product? Begin with `/cpm:discover`
 - Problem is clear, need product vision? Jump to `/cpm:brief`
 - Need architectural decisions before requirements? Use `/cpm:architect`
@@ -52,6 +53,28 @@ The default roster includes 9 personas: Jordan (PM), Margot (Architect), Kai (De
 **On exit**: Produces a structured discussion summary (key points, agreements, open questions, recommendations) and offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` with the summary as input.
 
 **Custom roster**: To customise personas, create `docs/agents/roster.yaml` in your project. This completely replaces the default roster. See `agents/roster.yaml` in the plugin for the schema.
+
+### `/cpm:consult` — Focused Consultation
+
+Start a one-to-one conversation with a chosen agent persona for focused problem-solving, expert Q&A, or guided exploration. Unlike party mode's multi-perspective panel, consult gives you a deep dialogue with one expert — and you control the room.
+
+```
+/cpm:consult Margot                    # consult with Margot directly
+/cpm:consult architect                 # consult by role
+/cpm:consult                           # pick from the roster
+```
+
+**Mid-conversation commands** (natural language):
+- **Invite**: "invite Bella" or "bring in the architect" — add agents to the conversation
+- **Dismiss**: "dismiss Bella" — remove agents from the conversation
+- **Lead transfer**: "Margot, take the lead" — hand facilitation to an agent who will drive the conversation with probing questions and structured exploration
+- **Exit**: "exit", "done", "quit" — end the consultation
+
+**User leads by default**. When you hand the lead to an agent, they shift to a probing, structured style — challenging assumptions and driving exploration. Reclaim the lead naturally by asking a direct question or giving a directive.
+
+**On exit**: Saves a discussion record to `docs/discussions/` and offers pipeline handoff to `/cpm:discover`, `/cpm:spec`, or `/cpm:epics`.
+
+**Custom roster**: Same roster as party mode — `docs/agents/roster.yaml` in your project, or the plugin default.
 
 ### `/cpm:discover` — Problem Discovery
 
@@ -358,6 +381,8 @@ cpm/
 ├── skills/
 │   ├── party/
 │   │   └── SKILL.md         # Multi-perspective discussion skill
+│   ├── consult/
+│   │   └── SKILL.md         # Focused consultation skill
 │   ├── discover/
 │   │   └── SKILL.md         # Problem discovery skill (with perspectives)
 │   ├── brief/

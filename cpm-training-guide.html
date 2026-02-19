@@ -423,6 +423,23 @@ const SKILLS = [
     next: ['discover', 'spec', 'epics']
   },
   {
+    id: 'consult',
+    name: '/cpm:consult',
+    label: 'Consult',
+    icon: '🧑‍💼',
+    color: '#e879a0',
+    category: 'planning',
+    short: 'Focused one-to-one consultation',
+    description: 'Start a deep one-to-one conversation with a chosen agent persona. You lead by default — invite others as needed, transfer the facilitation lead to an agent for probing questions and structured exploration, or reclaim it naturally. Same roster as party mode.',
+    input: 'Agent name, role, or no argument (pick from roster)',
+    output: 'Discussion record with key points, decisions, and context',
+    outputFile: 'docs/discussions/{nn}-discussion-{slug}.md',
+    phases: ['Select agent (by name, role, or from roster)', 'Library check for relevant docs', 'Conversation loop: user-led by default', 'Mid-session: invite, dismiss, transfer lead', 'Agent-led mode: probing, structured exploration', 'Exit with discussion record and pipeline handoff'],
+    tip: 'Use consult when you want focused depth with one expert. Use party when you want breadth from multiple perspectives. You can invite more agents mid-conversation if the topic broadens.',
+    personas: 'Same roster as party — Jordan (PM), Margot (Architect), Bella (Dev), Priya (UX), Tomas (QA), Casey (Test Engineer), Sable (DevOps), Elli (Writer), Ren (Scrum Master)',
+    next: ['discover', 'spec', 'epics']
+  },
+  {
     id: 'discover',
     name: '/cpm:discover',
     label: 'Discover',
@@ -634,6 +651,7 @@ const SKILLS = [
 
 const EDGES = [
   { from: 'party', to: 'discover', label: 'informs', style: 'dashed' },
+  { from: 'consult', to: 'discover', label: 'informs', style: 'dashed' },
   { from: 'discover', to: 'brief', label: 'produces brief for', style: 'solid' },
   { from: 'brief', to: 'architect', label: 'informs decisions', style: 'solid' },
   { from: 'architect', to: 'spec', label: 'ADRs referenced by', style: 'solid' },
@@ -651,14 +669,15 @@ const EDGES = [
   { from: 'library', to: 'discover', label: 'context for', style: 'dotted' },
   { from: 'library', to: 'spec', label: 'context for', style: 'dotted' },
   { from: 'library', to: 'party', label: 'context for', style: 'dotted' },
+  { from: 'library', to: 'consult', label: 'context for', style: 'dotted' },
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive'], knowledge: {} },
-  quick: { highlight: ['discover','brief','spec','epics','do'], knowledge: { party:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  planning: { highlight: ['party','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know' } },
-  execution: { highlight: ['do','pivot','review','retro'], knowledge: { party:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know' } },
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know' } },
+  execution: { highlight: ['do','pivot','review','retro'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────
@@ -681,8 +700,9 @@ SKILLS.forEach(s => state.knowledge[s.id] = 'unknown');
 // ── Node positions (arranged as a pipeline flow) ────────────────────────
 
 const NODE_POSITIONS = {
-  party:     { x: 60,   y: 220 },
-  discover:  { x: 190,  y: 220 },
+  party:     { x: 60,   y: 150 },
+  consult:   { x: 60,   y: 290 },
+  discover:  { x: 210,  y: 220 },
   brief:     { x: 320,  y: 220 },
   architect: { x: 450,  y: 220 },
   spec:      { x: 580,  y: 220 },
