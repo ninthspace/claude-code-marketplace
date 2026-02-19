@@ -106,9 +106,16 @@ Present the stories for each epic to the user using AskUserQuestion. Refine befo
 For each story, identify the **tasks** — concrete implementation steps needed to deliver the story. Each task should have:
 - A clear, actionable title (imperative form: "Create hooks.json configuration")
 - A dot-notation number linking it to its parent story (e.g. Task 1.1, 1.2, 1.3 for Story 1)
-- An optional one-sentence **description** that scopes the task within its parent story — clarifying which acceptance criteria or concern the task addresses
+- A one-sentence **description** that scopes the task within its parent story — which acceptance criteria or concern this task addresses
 
-**Task descriptions**: Descriptions help implementers understand task scope without a three-hop lookup (title → story criteria → spec), especially after context compaction or in a new session. Write a description when the task's scope isn't obvious from the title alone — e.g. when a story has multiple tasks that divide its acceptance criteria between them. Omit the description when the title is self-evident, such as single-task stories or tasks with unambiguous titles. This is a judgement call, not a mandatory field.
+**Task descriptions**: Write a description for every task in stories with multiple tasks. Descriptions eliminate the three-hop lookup (title → story criteria → spec) by anchoring each task to the acceptance criteria it addresses — e.g. "Covers the error handling criteria for roster loading" or "Produces the interface that Task 2.3 consumes." For single-task stories, omit the description when the title is self-evident — but when in doubt, write one.
+
+Descriptions should state **scope boundaries**, not implementation steps. Good descriptions reference criteria, relationships, or constraints; bad descriptions prescribe how to build it.
+
+- Good: "Add roster loading section — project override (`docs/agents/roster.yaml`) then plugin default (`../../agents/roster.yaml`), error if neither found. Present selected agent to the user."
+- Good: "Addresses the error handling path, not the happy path — covers criteria 3 and 4."
+- Bad: "Edit SKILL.md line 45 to add a YAML parsing block with error handling."
+- Bad: "Create a function called loadRoster() that reads the file and returns an array."
 
 Tasks are the actual work items. They should be specific enough that an implementer knows exactly what to do.
 
@@ -188,12 +195,12 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 
 ### {Task Title}
 **Task**: {N.1}
-**Description**: {One-sentence scope within parent story — which acceptance criteria or concern this task addresses}
+**Description**: {Scope within parent story — which acceptance criteria this task covers, or what constraint/boundary it addresses}
 **Status**: Pending
 
 ### {Task Title}
 **Task**: {N.2}
-**Description**: {One-sentence scope within parent story — which acceptance criteria or concern this task addresses}
+**Description**: {Scope within parent story — which acceptance criteria this task covers, or what constraint/boundary it addresses}
 **Status**: Pending
 
 ---
