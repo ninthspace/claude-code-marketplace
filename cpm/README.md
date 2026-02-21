@@ -14,6 +14,7 @@ After installation, use any skill independently or as a pipeline:
                                                                           /cpm:review    /cpm:pivot
                                                                                                      ↓
                                                                                               /cpm:archive
+/cpm:quick (lightweight execution for small, well-defined changes)
 /cpm:library (import reference docs used by all skills)
 /cpm:templates (explore and customise artifact templates)
 /cpm:present (transform artifacts for different audiences)
@@ -35,7 +36,8 @@ Each step is optional. Use what fits your situation:
 - Need to share planning artifacts with stakeholders? `/cpm:present` transforms them for any audience
 - Want to explore or customise artifact templates? `/cpm:templates` lists, previews, and scaffolds overrides
 - Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
-- Small bug fix? Skip planning entirely — Claude Code's native plan mode is enough
+- Small, well-defined change? `/cpm:quick` gives you traceability without ceremony
+- Trivial one-liner? Skip CPM entirely — Claude Code's native plan mode is enough
 
 ## Skills
 
@@ -300,6 +302,21 @@ Move completed or stale planning artifacts out of the active `docs/` directories
 
 Staleness signals: epic complete, orphaned plan (no downstream spec), completed retro, spec fully implemented. Files are moved to `docs/archive/` with mirrored subdirectory structure — never deleted.
 
+### `/cpm:quick` — Quick Execution
+
+Execute small, well-defined changes with minimal ceremony. Bypasses the full pipeline — accept a description, assess scope, confirm the plan, do the work, and produce a completion record for traceability. Use it when the change is clear and the overhead of structured planning would exceed the value it provides.
+
+If the scope turns out larger than expected, `/cpm:quick` offers to escalate to `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` — but only once, then honours your decision.
+
+**Input**: A change description, a file path, or no arguments (prompts interactively).
+**Output**: `docs/quick/{nn}-quick-{slug}.md` (auto-numbered completion record)
+
+```
+/cpm:quick add a --verbose flag to the deploy script
+/cpm:quick fix the broken date format in invoice emails
+/cpm:quick          # describe the change interactively
+```
+
 ## Compaction Resilience
 
 CPM skills run long, multi-phase conversations that can trigger Claude Code's auto-compaction. When that happens, mid-skill state (current phase, user decisions, facilitation progress) would normally be lost.
@@ -407,8 +424,10 @@ cpm/
 │   │   └── SKILL.md         # Template discoverability & scaffolding skill
 │   ├── library/
 │   │   └── SKILL.md         # Project reference library skill
-│   └── archive/
-│       └── SKILL.md         # Archive planning documents skill
+│   ├── archive/
+│   │   └── SKILL.md         # Archive planning documents skill
+│   └── quick/
+│       └── SKILL.md         # Quick execution skill
 ├── README.md
 └── LICENSE
 ```

@@ -600,6 +600,10 @@
           <div class="card-cmd">/cpm:archive</div>
           <p>Move completed artifacts to docs/archive/</p>
         </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:quick</div>
+          <p>Lightweight execution for small changes — skip the full pipeline</p>
+        </div>
       </div>
     </div>
   </div>
@@ -612,7 +616,7 @@
       <div class="decision-grid">
         <div class="decision-card">
           <h3>&#x26A1; Quick fix</h3>
-          <p>Typo, one-liner, small bug. <strong>Don't use CPM.</strong> Just do it, or use Claude Code's native <code>/plan</code>.</p>
+          <p>Small, well-defined change. <strong>Use <code>/cpm:quick</code></strong> for traceability without ceremony, or skip CPM entirely for trivial one-liners.</p>
         </div>
         <div class="decision-card">
           <h3>&#x1F3AF; Known scope</h3>
@@ -754,6 +758,7 @@
         <div class="indent"><span class="dir">communications/</span> <span class="comment">&#8592; presentations from /cpm:present</span></div>
         <div class="indent"><span class="dir">library/</span> <span class="comment">&#8592; reference docs from /cpm:library</span></div>
         <div class="indent"><span class="dir">templates/</span> <span class="comment">&#8592; project-level template overrides</span></div>
+        <div class="indent"><span class="dir">quick/</span> <span class="comment">&#8592; completion records from /cpm:quick</span></div>
         <div class="indent"><span class="dir">archive/</span> <span class="comment">&#8592; completed artifacts from /cpm:archive</span></div>
       </div>
       <p style="color:var(--text-dim);font-size:14px;margin-top:16px;">All files are markdown. Commit them to your repo — the whole team can see what was decided and why.</p>

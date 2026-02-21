@@ -646,6 +646,22 @@ const SKILLS = [
     phases: ['Scan docs/ for all planning artifacts', 'Group by slug into artifact chains', 'Evaluate 4 staleness signals', 'Present candidates for user approval', 'Move to docs/archive/ preserving structure'],
     tip: 'Archive detects: completed epics, orphaned plans, completed retros, and fully implemented specs. It groups by chain so related artifacts move together.',
     next: []
+  },
+  {
+    id: 'quick',
+    name: '/cpm:quick',
+    label: 'Quick',
+    icon: '⚡',
+    color: '#f59e0b',
+    category: 'support',
+    short: 'Lightweight execution for small changes',
+    description: 'Execute small, well-defined changes with minimal ceremony. Bypasses the full pipeline — accept a description, assess scope, confirm the plan, do the work, and produce a completion record for traceability.',
+    input: 'Change description or file path',
+    output: 'Implemented change + completion record',
+    outputFile: 'docs/quick/{nn}-quick-{slug}.md',
+    phases: ['Scope Assessment — explore codebase, evaluate fit', 'Propose & Confirm — present plan with acceptance criteria', 'Execute — create tasks, implement the change', 'Completion Record — verify criteria, write record'],
+    tip: 'Use quick when the change is clear and the full pipeline would add more ceremony than value. If scope turns out larger than expected, quick offers to escalate to discover/spec/epics.',
+    next: []
   }
 ];
 
@@ -673,11 +689,11 @@ const EDGES = [
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive'], knowledge: {} },
-  quick: { highlight: ['discover','brief','spec','epics','do'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know' } },
-  execution: { highlight: ['do','pivot','review','retro'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know' } },
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive','quick'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know', quick:'know' } },
+  execution: { highlight: ['do','pivot','review','retro','quick'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know', quick:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────
@@ -715,6 +731,7 @@ const NODE_POSITIONS = {
   templates: { x: 190,  y: 370 },
   library:   { x: 120,  y: 90 },
   archive:   { x: 970,  y: 370 },
+  quick:     { x: 580,  y: 370 },
 };
 
 const NODE_RADIUS = 34;
