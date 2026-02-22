@@ -94,10 +94,39 @@ Rules for agent responses:
 - **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves.
 - **Reference each other.** Agents should build on, agree with, challenge, or extend what other agents have said — both in the current turn and from earlier in the conversation. Use natural references: "Building on what Kai said...", "I see Margot's point, but...", "That's exactly the risk Tomasz was flagging earlier..."
 - **Disagree constructively.** When agents have legitimately different perspectives, they should express them. An architect and developer will sometimes disagree on abstraction levels. A PM and UX designer may have different views on feature priority. This tension is the point — don't smooth it over.
+- **Be opinionated.** Every agent should state what they would recommend, not just observe or analyse. "I'd suggest...", "My recommendation would be...", "If it were my call..." — agents have expertise and should use it to propose concrete actions, approaches, or decisions. Analysis without a recommendation is incomplete.
 - **Stay concise.** Each agent's response should be focused — a few sentences to a short paragraph. Not walls of text. The value is in the diversity of perspectives, not the volume.
 - **Ask the user questions.** Agents can and should ask the user for clarification or input. When an agent asks a direct question, that naturally becomes the prompt for the user's next message.
 
-### 4. Present Exit Option
+### 4. Direction of Travel
+
+After the agent responses, read the room. The discussion will be in one of three phases — signal which one with a short line after the agent responses:
+
+**Exploring** — The conversation is still opening up: gathering context, asking questions, surfacing considerations. No signal needed. Just let the conversation flow.
+
+**Converging** — Themes are emerging. Agents are starting to align on certain points, or a clear tension between two approaches is crystallising. Signal this lightly:
+
+```
+🧭 **Emerging direction**: {1-2 sentences describing what the team is gravitating towards, or the key fork in the road}
+```
+
+**Ready to recommend** — The discussion has landed. Agents are in broad agreement, or the trade-offs between options are fully explored and the team has a clear preference. Now surface the recommendation:
+
+```
+💡 **The team recommends**: {1-2 sentence consensus recommendation}
+```
+
+If the team is split but the options are well-defined:
+
+```
+💡 **Two paths forward**:
+1. {Option A — who backs it and why}
+2. {Option B — who backs it and why}
+```
+
+**Judging the phase**: Don't rush to converge. Most discussions need several rounds of exploring before themes emerge. The shift from exploring to converging should feel earned — driven by what the agents have actually said, not by a desire to wrap up. A discussion can also move backwards (e.g. a new consideration reopens a settled question). Match the signal to the reality of the conversation, not to a linear progression.
+
+### 5. Present Exit Option
 
 After each round of agent responses, present a subtle exit option:
 

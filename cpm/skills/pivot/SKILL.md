@@ -69,6 +69,23 @@ Read and amend the selected document.
 
 Walk downstream documents and facilitate updates. Skip this step if no downstream documents exist.
 
+#### Completion-Aware Preamble
+
+Before walking the cascade, check whether all downstream epic documents are fully complete:
+
+1. **Detect completion**: For each downstream epic doc, scan for completion markers — `[x]` checkboxes on all story tasks, or `**Status**:` fields containing "done" or "complete" (case-insensitive). An epic is fully complete when every story within it is marked complete.
+
+2. **All epics complete — ask intent**: If every downstream epic is fully complete, the user is pivoting a spec whose work has already been delivered. Use AskUserQuestion to determine intent:
+   - **Amend the historical record** — Continue with the normal cascade. The user wants to correct or update the existing documents to reflect reality or clarify what was built.
+   - **Pivot forward (new epics)** — Skip the cascade entirely. The completed epics stay untouched as a historical record of what shipped. Instead, offer to hand off to `cpm:epics` with the amended spec as input, generating fresh epic docs for the new work.
+   - **Raise a new spec** — Skip the cascade entirely. The amendment is substantial enough that it warrants a fresh specification rather than new epics from the amended document. Hand off to `cpm:spec` with the amended spec as input context. Only offer this option when the amended document is a spec (not a brief or ADR).
+
+   If the user chooses "Pivot forward", save the progress file, then tell the user to run `/cpm:epics {amended-spec-path}` to generate new epics. If the user chooses "Raise a new spec", save the progress file, then tell the user to run `/cpm:spec {amended-spec-path}` to create a new specification. In both cases, proceed directly to Step 4 (skip the cascade walk below).
+
+3. **Partial or no completion**: If some epics are incomplete, or completion markers are absent, proceed with the normal cascade below. Individual story completion is handled per-story during the walk.
+
+#### Cascade Walk
+
 1. **Identify downstream documents**: Using the chain discovered in Step 1 (or built from the direct file path), find documents that depend on the one just amended:
    - If a problem brief was amended → its product briefs, ADRs, specs, and epics are downstream
    - If a product brief was amended → its ADRs, specs, and epics are downstream
@@ -80,13 +97,15 @@ Walk downstream documents and facilitate updates. Skip this step if no downstrea
 
 3. **For each downstream document**:
    a. Read the document with the Read tool.
-   b. Compare against the upstream changes made in Step 2. Identify sections that are affected — requirements that reference changed scope, epic stories that implement changed requirements, etc.
-   c. Propose specific updates with clear rationale for each. Explain what changed upstream and how it affects this section.
-   d. Gate each proposed change with AskUserQuestion:
+   b. **Detect per-story completion**: For epic documents, check each story for completion markers — `[x]` on all task checkboxes, or a `**Status**:` field containing "done" or "complete" (case-insensitive). If neither marker is present, treat the story as in-progress.
+   c. Compare against the upstream changes made in Step 2. Identify sections that are affected — requirements that reference changed scope, epic stories that implement changed requirements, etc.
+   d. **Flag completed stories**: When proposing a change to a story that is marked complete, prepend a visible warning: "⚠️ This story is marked complete — editing it changes the record of delivered work." This gives the user clear context for their apply/skip decision.
+   e. Propose specific updates with clear rationale for each. Explain what changed upstream and how it affects this section.
+   f. Gate each proposed change with AskUserQuestion:
       - **Apply this change** — Make the edit as proposed
       - **Modify the change** — Ask the user how to adjust, then apply their version
       - **Skip this change** — Leave this section as-is
-   e. Apply approved or user-modified edits using the Edit tool (not Write).
+   g. Apply approved or user-modified edits using the Edit tool (not Write).
 
 4. **Preserve upstream work**: If the cascade fails midway (user exits, error occurs), all already-saved upstream edits are preserved — they were written to disk immediately in Step 2.
 
