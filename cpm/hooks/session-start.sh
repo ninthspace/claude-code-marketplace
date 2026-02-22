@@ -3,9 +3,9 @@
 #
 # Fires on SessionStart source: "startup", "resume", or "clear".
 # Reads session_id from JSON on stdin and echoes CPM_SESSION_ID.
-# Globs all session-scoped progress files and injects each with
-# delimiters and readable labels extracted from file headers.
-# Detects orphaned files (>48h old) and suggests cleanup.
+# Globs all session-scoped progress files and classifies each by
+# session ID: current-session files are injected as active state,
+# other-session files are collected as orphan candidates for cleanup.
 # Stdout is injected into the session context.
 
 INPUT=$(cat)
@@ -17,15 +17,19 @@ if [ -n "$SESSION_ID" ]; then
 fi
 
 STATE_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
-STALE_THRESHOLD=$((48 * 60 * 60))  # 48 hours in seconds
 NOW=$(date +%s)
+STALE_HOURS=24  # Files older than this get a STALE marker
 
 # Collect all session-scoped progress files
 found=0
-stale_files=""
+orphan_count=0
+orphan_output=""
 for f in "$STATE_DIR"/.cpm-progress-*.md; do
   [ -f "$f" ] || continue
   found=1
+
+  # Extract session ID from filename: .cpm-progress-{session_id}.md
+  file_session_id=$(basename "$f" | sed 's/^\.cpm-progress-//; s/\.md$//')
 
   # Extract skill and phase from file header for a readable label
   skill=$(grep -m1 '^\*\*Skill\*\*:' "$f" 2>/dev/null | sed 's/\*\*Skill\*\*: *//')
@@ -35,20 +39,36 @@ for f in "$STATE_DIR"/.cpm-progress-*.md; do
     label="$label — $phase"
   fi
 
-  # Check if file is stale (>48h old)
+  # Calculate file age
   file_mtime=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null)
+  age=0
+  age_label="unknown age"
   if [ -n "$file_mtime" ]; then
     age=$((NOW - file_mtime))
-    if [ "$age" -gt "$STALE_THRESHOLD" ]; then
-      stale_files="${stale_files}STALE: $label — file: $f ($(( age / 3600 ))h old). To remove: delete $f\n"
-      continue
+    age_hours=$((age / 3600))
+    if [ "$age_hours" -ge "$STALE_HOURS" ]; then
+      age_days=$((age_hours / 24))
+      age_label="${age_days}d old — STALE"
+    elif [ "$age_hours" -ge 1 ]; then
+      age_label="${age_hours}h old"
+    else
+      age_minutes=$((age / 60))
+      age_label="${age_minutes}m old"
     fi
   fi
 
-  echo ""
-  echo "--- CPM SESSION STATE ($label) [$(basename "$f")] ---"
-  cat "$f"
-  echo "--- END ---"
+  # Classify: current session vs. orphan (by session ID matching)
+  if [ -n "$SESSION_ID" ] && [ "$file_session_id" = "$SESSION_ID" ]; then
+    # Current session — inject as active state
+    echo ""
+    echo "--- CPM SESSION STATE ($label) [$(basename "$f")] ---"
+    cat "$f"
+    echo "--- END ---"
+  else
+    # Other session — orphan candidate
+    orphan_count=$((orphan_count + 1))
+    orphan_output="${orphan_output}--- ORPHAN FILE ${orphan_count} ---\nSkill: ${skill:-unknown}\nPhase: ${phase:-unknown}\nAge: ${age_label}\nFile: ${f}\n--- END ORPHAN ---\n\n"
+  fi
 done
 
 # Legacy support: check for old single-file format
@@ -62,20 +82,22 @@ if [ "$found" -eq 0 ] && [ -f "$STATE_DIR/.cpm-progress.md" ]; then
   found=1
 fi
 
-# Report stale files separately
-if [ -n "$stale_files" ]; then
+# Report orphan files for cleanup — each as a separate block
+if [ "$orphan_count" -gt 0 ]; then
   echo ""
-  echo "WARNING: The following CPM session files appear to be orphaned (older than 48 hours)."
-  echo "These are likely from sessions that were interrupted or abandoned."
-  echo "Ask the user if they want to delete them."
+  echo "ORPHANED SESSION FILES: Found ${orphan_count} progress file(s) from other sessions."
+  echo "These may be from sessions that were interrupted, abandoned, or completed without cleanup."
+  echo "Each file is listed below with its skill, phase, age, and path."
+  echo "Present each file individually to the user and ask which ones to delete."
+  echo "Do NOT delete any files without user confirmation."
   echo ""
-  printf "%b" "$stale_files"
+  printf "%b" "$orphan_output"
 fi
 
-if [ "$found" -gt 0 ] && [ -z "$stale_files" ]; then
+if [ "$found" -gt 0 ] && [ "$orphan_count" -eq 0 ]; then
   echo ""
   echo "NOTE: Found CPM session state from a previous session. Review the state above and ask the user whether they want to continue where they left off or discard it."
-elif [ "$found" -gt 0 ] && [ -n "$stale_files" ]; then
+elif [ "$found" -gt 0 ] && [ "$orphan_count" -gt 0 ]; then
   echo ""
-  echo "NOTE: Found CPM session state from a previous session (some files are stale — see warnings above). Review the active state and ask the user about continuation and cleanup."
+  echo "NOTE: Found CPM session state from a previous session (some files are orphaned — see above). Review the active state and ask the user about continuation and cleanup."
 fi

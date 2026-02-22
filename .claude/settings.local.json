@@ -16,7 +16,11 @@
       "Bash(zip:*)",
       "Bash(fi:*)",
       "Bash(done)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(git checkout:*)",
+      "Bash(bash:*)",
+      "Bash(git:*)"
     ],
     "deny": [],
     "ask": []

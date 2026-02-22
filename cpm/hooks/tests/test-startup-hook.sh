@@ -68,12 +68,13 @@ create_progress_file "$PROJECT" "sess-2" "cpm:party" "Discussion in progress"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" "cpm:do"
 
-test_start "Injects all files, not just matching session"
+test_start "Other-session files are classified as orphans, not injected"
 PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
 create_progress_file "$PROJECT" "sess-2" "cpm:party" "Discussion in progress"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
-assert_contains "$OUTPUT" "cpm:party"
+assert_not_contains "$OUTPUT" "--- CPM SESSION STATE (cpm:party"
+assert_contains "$OUTPUT" "ORPHAN"
 
 test_start "Each file has delimiter markers"
 PROJECT=$(setup_project_dir)
@@ -115,11 +116,11 @@ PROJECT=$(setup_project_dir)
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"startup"}')
 assert_not_contains "$OUTPUT" "--- CPM SESSION STATE"
 
-test_start "Handles malformed JSON gracefully"
+test_start "Handles malformed JSON gracefully — files still visible"
 PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" 'not valid json')
-assert_contains "$OUTPUT" "cpm:do"
+assert_contains "$OUTPUT" "cpm:do"  # File appears somewhere (orphan section when no session ID parsed)
 
 test_start "Legacy support: injects .cpm-progress.md when no session files exist"
 PROJECT=$(setup_project_dir)
