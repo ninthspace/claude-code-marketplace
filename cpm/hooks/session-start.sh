@@ -85,11 +85,22 @@ fi
 # Report orphan files for cleanup — each as a separate block
 if [ "$orphan_count" -gt 0 ]; then
   echo ""
-  echo "ORPHANED SESSION FILES: Found ${orphan_count} progress file(s) from other sessions."
-  echo "These may be from sessions that were interrupted, abandoned, or completed without cleanup."
-  echo "Each file is listed below with its skill, phase, age, and path."
-  echo "Present each file individually to the user and ask which ones to delete."
-  echo "Do NOT delete any files without user confirmation."
+  echo "BLOCKING — ORPHAN CLEANUP REQUIRED"
+  echo "==================================="
+  echo "Found ${orphan_count} orphaned progress file(s) from other sessions."
+  echo "These are from sessions that were interrupted, abandoned, or completed without cleanup."
+  echo ""
+  echo "IMPORTANT: You MUST stop and resolve this cleanup BEFORE doing anything else."
+  echo "Do NOT proceed with the user's request until orphan cleanup is complete."
+  echo "Do NOT mention the orphans and then carry on — the user must actively decide."
+  echo ""
+  echo "ACTION REQUIRED:"
+  echo "1. Present each orphaned file to the user (skill, phase, age)."
+  echo "2. Ask which ones to delete. Wait for their answer."
+  echo "3. Delete only the files the user confirms."
+  echo "4. Only THEN proceed with whatever the user originally asked."
+  echo ""
+  echo "Do NOT delete any files without explicit user confirmation."
   echo ""
   printf "%b" "$orphan_output"
 fi
@@ -99,5 +110,5 @@ if [ "$found" -gt 0 ] && [ "$orphan_count" -eq 0 ]; then
   echo "NOTE: Found CPM session state from a previous session. Review the state above and ask the user whether they want to continue where they left off or discard it."
 elif [ "$found" -gt 0 ] && [ "$orphan_count" -gt 0 ]; then
   echo ""
-  echo "NOTE: Found CPM session state from a previous session (some files are orphaned — see above). Review the active state and ask the user about continuation and cleanup."
+  echo "NOTE: Found both active CPM session state and orphaned files (see above). Handle the BLOCKING orphan cleanup first, then ask the user about continuation."
 fi

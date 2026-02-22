@@ -104,7 +104,7 @@ test_start "No cleanup guidance when no orphan files exist"
 PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "my-session" "cpm:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"my-session","source":"startup"}')
-assert_not_contains "$OUTPUT" "ORPHANED SESSION FILES"
+assert_not_contains "$OUTPUT" "ORPHAN CLEANUP REQUIRED"
 
 test_start "No cleanup guidance when no files exist at all"
 PROJECT=$(setup_project_dir)
@@ -125,6 +125,19 @@ PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "Do NOT delete"
+
+test_start "Orphan output is marked as BLOCKING"
+PROJECT=$(setup_project_dir)
+create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
+assert_contains "$OUTPUT" "BLOCKING"
+
+test_start "Orphan output instructs to stop before proceeding"
+PROJECT=$(setup_project_dir)
+create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
+assert_contains "$OUTPUT" "MUST stop"
+assert_contains "$OUTPUT" "Do NOT proceed"
 
 # --- Per-file blocks ---
 
