@@ -23,6 +23,8 @@ The change description is the seed for everything that follows — scope assessm
 
 **State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the completion record, delete the file.
 
+> **HARD RULE — PROGRESS FILE UPDATE**: After completing EVERY step, you MUST call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` BEFORE doing anything else. This is not optional. This is not deferrable. This has the same priority as saving a file after editing it. A step is NOT done until the progress file reflects it. Historically this step gets silently dropped when momentum is high — that is a bug, not an optimisation. If compaction fires and this file is stale, the user loses all session context with no recovery path.
+
 ### Library Check (Startup)
 
 Before Step 1, check the project library for reference documents:
@@ -35,6 +37,25 @@ Before Step 1, check the project library for reference documents:
 **Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block execution due to a malformed library document.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+
+### Test Runner Discovery (Startup)
+
+After the Library Check and before Step 1, discover the project's test runner command. This command is used during Step 4 verification to run tests against acceptance criteria.
+
+**Discovery priority**:
+
+1. **Library documents**: Check any library documents scoped to `quick` (found during Library Check) for testing instructions. Look for explicit test commands, framework references, or testing conventions. If found, use the specified command.
+2. **Project config files**: If no library document provides a test command, inspect project configuration files:
+   - `composer.json` — check `scripts.test` (e.g. `composer test`, `./vendor/bin/pest`, `./vendor/bin/phpunit`)
+   - `package.json` — check `scripts.test` (e.g. `npm test`, `npx jest`)
+   - `Makefile` — check for a `test` target (e.g. `make test`)
+   - `pyproject.toml` or `pytest.ini` — check for pytest configuration (e.g. `pytest`)
+   - `Cargo.toml` — check for Rust project (e.g. `cargo test`)
+3. **Ask the user**: If no test command is discoverable from steps 1-2, use AskUserQuestion to ask: "No test runner found automatically. What command runs your tests?" with options for common runners and a freeform option.
+
+**Cache the result**: Store the discovered test command in the progress file as `**Test command**: {command}` or `**Test command**: none` if the user declines or no runner is found. This persists across the entire session — do not re-discover between steps.
+
+**Graceful degradation**: If no test runner is discoverable and the user chooses not to provide one, set `**Test command**: none`. Step 4 verification will fall back to self-assessment only.
 
 ### Step 1: Scope Assessment
 
@@ -88,11 +109,49 @@ Use AskUserQuestion to confirm: "Ready to execute this change?" with options:
 
 If the user adjusts, incorporate their feedback and re-present the proposal. Iterate until confirmed.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (the confirmed proposal) before continuing.
+#### Write the Spec File
+
+**This is mandatory — do not skip it.** After the user confirms the proposal, write it to a tracked file before proceeding to Step 3. This creates a hard gate: implementation cannot begin without a written spec.
+
+Determine the record number and slug using the same convention as the completion record:
+
+1. **Number** (`{nn}`): Glob `docs/quick/[0-9]*-quick-*.md` to find existing records. Extract the highest number and increment by 1. If no records exist, start at `01`. Zero-pad to 2 digits.
+2. **Slug** (`{slug}`): Derive a kebab-case slug from the change description (e.g. "add verbose flag to deploy script" → `add-verbose-flag-deploy-script`). Keep it concise — 3-6 words.
+
+Create the `docs/quick/` directory if it doesn't exist. Write the spec file using the Write tool:
+
+```markdown
+# {Title}
+
+**Date**: {today's date}
+**Status**: Confirmed — awaiting execution
+
+## Change
+
+{one-sentence summary of what will change}
+
+## Files Affected
+
+- `{path/to/file1}` — {what changes}
+- `{path/to/file2}` — {what changes}
+
+## Acceptance Criteria
+
+- {criterion 1 — observable outcome}
+- {criterion 2 — observable outcome}
+```
+
+The spec file path is `docs/quick/{nn}-quick-{slug}-spec.md`. Tell the user the spec file path after saving.
+
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (the confirmed proposal and spec file path) before continuing.
 
 ### Step 3: Execute
 
 Do the work. Create Claude Code tasks and implement the change directly.
+
+**Hard gate — read the spec file first.** Before creating any tasks, read the spec file written in Step 2 (`docs/quick/{nn}-quick-{slug}-spec.md`) using the Read tool. If the spec file does not exist, **stop and go back to Step 2** — do not proceed without a written spec. Extract the acceptance criteria from the file; these are the source of truth for what to implement.
+
+**ADR awareness**: Before starting implementation, check if this change touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the change involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
 
 1. **Create tasks**: Break the confirmed proposal into implementation tasks. Use TaskCreate for each:
    ```
@@ -107,6 +166,7 @@ Do the work. Create Claude Code tasks and implement the change directly.
 2. **Execute tasks sequentially**: For each task:
    - Call TaskUpdate to set status to `in_progress`.
    - Do the work — write code, edit files, create resources, whatever is needed. Use the full range of tools: Read, Edit, Write, Bash, Glob, Grep.
+   - **Write or update tests** if the task modifies behaviour. Follow existing test patterns in the project — look for nearby test files and match their style, framework, and conventions. If no test patterns exist, skip. This is not TDD — write the implementation first, then cover it with a test. If `**Test command**` in the progress file is not `none`, run the tests after writing them to confirm they pass.
    - When the task is done, call TaskUpdate to set status to `completed`.
 
 3. **Keep momentum**: Move through tasks efficiently. Don't over-explain between tasks. The proposal was already confirmed — now execute it.
@@ -119,9 +179,15 @@ After execution, verify acceptance criteria and write the completion record.
 
 #### Verify Acceptance Criteria
 
-Re-read the acceptance criteria from the confirmed proposal (Step 2). For each criterion, self-assess against the current state of the codebase:
+Re-read the acceptance criteria from the spec file written in Step 2. Verify each criterion against the current state of the codebase using two methods:
 
-- Inspect the relevant files using Read, Glob, or Grep to confirm each criterion is met.
+**Run tests first**: If `**Test command**` in the progress file is not `none`, run the cached test command using the Bash tool before self-assessment.
+- If tests **pass**: note the pass and continue to self-assessment of each criterion.
+- If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". Do not block — let the user decide.
+- If `**Test command**` is `none`: skip test execution and rely on self-assessment only.
+
+**Self-assess each criterion**: Inspect the relevant files using Read, Glob, or Grep to confirm each criterion is met. Test results (if available) serve as supporting evidence but do not replace criterion-by-criterion assessment.
+
 - If all criteria are met, proceed to write the completion record.
 - If any criteria are **not** met, flag them to the user. Use AskUserQuestion: "Some acceptance criteria are not met:" with the unmet items listed, and options:
   - **Fix now** — Continue working on the unmet criteria
@@ -132,12 +198,7 @@ If the user chooses "Fix now", address the gaps and re-verify. Iterate until cri
 
 #### Write Completion Record
 
-Determine the record number and slug:
-
-1. **Number** (`{nn}`): Glob `docs/quick/[0-9]*-quick-*.md` to find existing records. Extract the highest number and increment by 1. If no records exist, start at `01`. Zero-pad to 2 digits.
-2. **Slug** (`{slug}`): Derive a kebab-case slug from the change description (e.g. "add verbose flag to deploy script" → `add-verbose-flag-deploy-script`). Keep it concise — 3-6 words.
-
-Create the `docs/quick/` directory if it doesn't exist. Write the record using the Write tool:
+The completion record **replaces** the spec file written in Step 2. Use the same path (`docs/quick/{nn}-quick-{slug}-spec.md`) and update it in-place using the Write tool — changing the status from "Confirmed — awaiting execution" to "Complete" and adding the execution details:
 
 ```markdown
 # {Title}
@@ -162,7 +223,22 @@ Create the `docs/quick/` directory if it doesn't exist. Write the record using t
 ## Verification
 
 {Brief summary of how criteria were verified — what was inspected, what confirmed the change is correct}
+
+## Retro
+
+**{category}**: {One-sentence observation}
 ```
+
+The **Retro** field is mandatory. Reflect on the change as a whole and pick the most fitting category:
+- **Smooth delivery**: Change delivered as planned with no surprises
+- **Scope surprise**: The change was larger or smaller than expected
+- **Criteria gap**: Acceptance criteria missed something important that only became clear during implementation
+- **Complexity underestimate**: The implementation was harder than expected due to technical factors
+- **Codebase discovery**: Found something unexpected in the codebase that affected the work
+- **Testing gap**: Tests revealed issues that acceptance criteria didn't anticipate
+- **Pattern worth reusing**: Discovered an approach or technique worth applying elsewhere
+
+If nothing went wrong, use "Smooth delivery" — that's valuable data too. This feeds into `/cpm:retro` for cross-session learning.
 
 Tell the user the record path after saving.
 
@@ -170,7 +246,7 @@ Tell the user the record path after saving.
 
 ## Output
 
-Completion records are saved to `docs/quick/{nn}-quick-{slug}.md`. Create the `docs/quick/` directory if it doesn't exist.
+Spec files are written during Step 2 and promoted to completion records during Step 4. Both use the path `docs/quick/{nn}-quick-{slug}-spec.md`. Create the `docs/quick/` directory if it doesn't exist.
 
 ## State Management
 
@@ -186,6 +262,8 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
 Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
 
+> **KNOWN FAILURE MODE**: The progress file update is the single most skipped instruction in this skill. It gets silently dropped when task momentum is high. Every time it is skipped, it creates a window where compaction would destroy the session with no recovery. Treat the Write call for this file with the same urgency as saving user code — it is not bookkeeping, it is the only thing standing between the user and total context loss.
+
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the completion record has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
@@ -196,6 +274,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Skill**: cpm:quick
 **Step**: {N} of 4 — {Step Name}
 **Change description**: {the original change description}
+**Test command**: {discovered test command, or "none" if no runner found}
 
 ## Library Check
 {Files found, scope matches, or "No library documents found"}
