@@ -111,6 +111,8 @@ Before walking the cascade, check whether all downstream epic documents are full
 
 5. **Graceful skip**: If no downstream documents exist, skip this step entirely and proceed to Step 4.
 
+6. **Coverage matrix invalidation**: After applying changes to an epic doc, check for a companion coverage matrix at `docs/epics/{nn}-coverage-{slug}.md` (same number and slug as the epic). If it exists and the cascade modified any story acceptance criteria in the epic doc, read the coverage matrix and clear the `✓` from the Verified column for rows whose "Story Criterion (verbatim)" text was changed by the cascade. Rows whose criteria were not modified retain their `✓` status. Use the Edit tool to replace `| ✓ |` with `| |` for affected rows. If no coverage matrix exists, skip this step.
+
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
 
 ### Step 4: Task Impact Flagging

@@ -152,6 +152,7 @@ For each task, follow these steps in order.
 - Call `TaskGet` to read the full task description. The description includes the `Epic doc:`, `Story:`, and `Task:` fields set during hydration.
 - If an epic doc was resolved during Input, read it with the Read tool. Use the `Story:` and `Task:` fields from the task description to locate the matching entry — search for the `**Story**: {N}` or `**Task**: {N.M}` field that matches. For verification gate tasks, match the `##` story heading. For implementation tasks, match the `###` task heading. Note the parent story's acceptance criteria — for `###` tasks, look up to the nearest `##` story heading above the matched task. If the matched `###` task has a `**Description**:` field, read it — this scopes the task within its parent story and clarifies which acceptance criteria it addresses.
 - **Coverage matrix**: Check for a companion coverage matrix alongside the epic doc. If the epic is `docs/epics/{nn}-epic-{slug}.md`, look for `docs/epics/{nn}-coverage-{slug}.md`. If it exists, read it — it provides side-by-side verbatim text from the source spec and the story's acceptance criteria. This gives you requirement-level traceability: the spec's exact wording for each requirement this epic covers, so you can verify implementation against the spec's intent, not just the story's paraphrase.
+- **Drift detection**: If a coverage matrix was loaded and any of its rows have `✓` in the Verified column, compare the "Story Criterion (verbatim)" text in those verified rows against the corresponding acceptance criteria in the epic doc. If the text differs — indicating the epic doc was modified after verification — flag the mismatch to the user: "Coverage matrix drift detected: Story {N} criterion text has changed since verification. The `✓` marker may be stale." This catches out-of-band edits that bypassed `/cpm:pivot`'s invalidation logic. If no verified rows exist or no coverage matrix is present, skip this check.
 - **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
 - **Determine workflow mode**: Scan the parent story's acceptance criteria for the `[tdd]` tag. If any criterion carries `[tdd]`, this story uses TDD workflow mode — record this for use in Step 4. If no `[tdd]` tag is found, the story uses the standard post-implementation workflow.
 - If no epic doc is available, proceed without epic doc integration — the task still gets done.
@@ -223,6 +224,14 @@ Before marking the task complete:
   - **`[manual]` or no tag**: Self-assess by inspecting the codebase, checking files, or reviewing outputs. This is the existing approach.
 - If all criteria are met (by test results or self-assessment), proceed to step 6.
 - If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as done anyway. Use AskUserQuestion for this gate.
+
+**Coverage matrix proof recording** (verification gates only): When a verification gate passes (all criteria met), update the companion coverage matrix to record proof. Check for `docs/epics/{nn}-coverage-{slug}.md` alongside the epic doc. If it exists:
+
+1. Read the coverage matrix and identify rows where the "Covered by" column matches the current story (e.g. `Story {N}`).
+2. For each matching row, use the Edit tool to replace the empty Verified cell with `✓`. The edit targets the specific row's trailing `| |` (empty Verified cell) and replaces it with `| ✓ |`.
+3. Only update rows matching the current story — rows for other stories must remain untouched.
+
+If the coverage matrix file doesn't exist, log a note ("No coverage matrix found — skipping proof recording") and continue. Proof recording is additive; it must never block task execution. If an Edit call fails (e.g. the row text doesn't match the expected pattern), flag the failure to the user via AskUserQuestion with options: "Continue without recording proof for this row" or "Stop and investigate". Do not silently skip a failed write.
 
 ### 5b. Story Refactoring Pass (verification gates only)
 
@@ -301,6 +310,8 @@ When the work loop finishes (no more pending unblocked tasks):
 
 1. **Epic-level verification**: If the epic doc has a `**Source spec**:` field, read the referenced spec. Also read the epic's coverage matrix (`docs/epics/{nn}-coverage-{slug}.md`) if it exists — it provides the side-by-side verbatim spec text vs story criteria, making it straightforward to verify each requirement was implemented with the spec's specificity intact. Check whether the completed epic, taken as a whole, satisfies the spec's requirements that fall within this epic's scope. This is an integration-level check — individual story criteria may all pass while the epic as a whole misses something (e.g. a requirement that spans multiple stories, or an integration point between stories). Report the assessment to the user. If gaps are found, flag them — they may warrant additional work or a `cpm:pivot`. If no spec exists, skip this step.
 
+   **Epic-level proof recording**: After the epic-level verification passes (no gaps found), update the coverage matrix to mark any remaining unverified rows with `✓`. These are rows that passed story-level verification but may not have been marked during Step 5 (e.g. requirements that span multiple stories, or rows that only became fully verified at the integration level). If the epic-level check identified gaps, do **not** mark those gap-flagged rows — they represent unproven requirements. If no coverage matrix exists, skip this step.
+
 2. **Check for observations**: Read the epic doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the lessons step.
 
 3. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the epic doc using the Edit tool. Group observations by category:
@@ -332,7 +343,7 @@ When the work loop finishes (no more pending unblocked tasks):
 
 Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
 
-4. **Report and stop**: Report a summary of what was completed across the work loop, and delete the progress file.
+4. **Report and stop**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain"). Then delete the progress file.
 
 ## Graceful Degradation
 

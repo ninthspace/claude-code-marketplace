@@ -184,16 +184,20 @@ If the spec's Testing Strategy section includes test approach tags, add a **Spec
 Present the coverage matrix to the user:
 
 ```
-| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach |
-|---|------------------|----------------------|----------------------------|------------|--------------------|
-| 1 | {requirement label} | {exact text from spec requirements section} | {exact criterion text from story} | Story {N} | `[tag]` |
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
+|---|------------------|----------------------|----------------------------|------------|--------------------|----------|
+| 1 | {requirement label} | {exact text from spec requirements section} | {exact criterion text from story} | Story {N} | `[tag]` | |
 ```
+
+The "Verified" column is empty for all rows at creation time — it is populated later by `/cpm:do` during verification gates.
 
 Where a single spec requirement maps to multiple story criteria, include one row per criterion so each mapping is independently visible.
 
 If the user identifies a fidelity problem (story criterion is weaker than or contradicts spec text), update the affected story's acceptance criteria in the epic doc before proceeding.
 
 **Persist the matrix**: After the user confirms, save the coverage matrix as `docs/epics/{nn}-coverage-{slug}.md` — using the same number and slug as the epic it covers (see Output section). Save the epic doc and coverage matrix together before moving to the next epic.
+
+**Regeneration awareness**: Before saving, check whether a coverage matrix file already exists at the target path (e.g. from a previous `/cpm:epics` run). If an existing matrix is found and contains `✓` markers in the Verified column, the new matrix must clear verification for any rows whose "Story Criterion (verbatim)" text has changed — replace `✓` with empty for those rows. Rows whose criterion text is unchanged retain their `✓` status. If the existing matrix has no `✓` markers, or if no existing matrix is found, save the new matrix directly.
 
 **Graceful degradation**: If the input is not a spec (e.g. a brief or description without structured requirements), skip this step — there's no requirement list to verify against.
 
@@ -271,8 +275,10 @@ Each epic gets a companion coverage matrix file saved alongside it during the pr
 **Epic**: {path to epic doc}
 **Date**: {today's date}
 
-| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach |
-|---|------------------|----------------------|----------------------------|------------|--------------------|
+> **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
+
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
+|---|------------------|----------------------|----------------------------|------------|--------------------|----------|
 | {rows from confirmed Step 3d matrix for this epic} |
 ```
 
