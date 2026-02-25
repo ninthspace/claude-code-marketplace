@@ -72,7 +72,7 @@ Keep epics practical:
 - 5-10 for a larger project
 - Don't create epics for the sake of it
 
-**Production loop**: After epics are confirmed, Steps 3 and 3b iterate per epic — break each epic into stories, then each story into tasks, before moving to the next epic. Save each epic document after its stories and tasks are finalised (before moving to the next epic). This means epic docs are written incrementally, not all at once at the end.
+**Production loop**: After epics are confirmed, Steps 3, 3b, 3c, and 3d iterate per epic — break each epic into stories, then tasks, then assess integration testing, then verify requirement coverage. Save each epic document and its coverage matrix after they are finalised (before moving to the next epic). This means epic docs are written incrementally, not all at once at the end.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (epic names, numbers, slugs, and output paths) before continuing.
 
@@ -171,44 +171,43 @@ After all implementation stories and their tasks are defined for an epic, assess
 
 ### Step 3d: Requirement Coverage Matrix (when input is a spec)
 
-After all stories and tasks are defined across all epics, verify that the spec's functional requirements are fully covered. This step gates Step 4 — unresolved gaps block confirmation.
+After stories, tasks, and integration testing are defined for the current epic, verify that the spec requirements this epic claims to satisfy are properly covered. This runs per-epic as part of the production loop (after Step 3c, before saving the epic doc and moving to the next epic).
 
-1. **Read the source spec's "Must Have" functional requirements.** Extract each requirement as a distinct line item.
-2. **Build a coverage table.** For each must-have requirement, find which story's `**Satisfies**` field references it. Assess whether the story's acceptance criteria preserve the requirement's specificity (per the fidelity standard in Step 3).
+The coverage matrix is **procedural, not evaluative**. Your job is to extract and present verbatim text from both the spec and the stories so the user can judge fidelity. Do not assess whether criteria are "exact" or "partial" — present the side-by-side text and let the human decide.
+
+1. **Identify which spec requirements this epic covers.** Scan the epic's stories' `**Satisfies**` fields to find all referenced spec requirements.
+2. **Read the source spec's requirement text.** For each referenced requirement, extract the number, label, and the specific text that defines thresholds, values, or behaviours. Quote from the **requirements section**, not the testing strategy table (these can differ — the requirements text is authoritative).
+3. **Build a side-by-side coverage table.** For each referenced requirement, quote both the spec's requirement text and the matching story acceptance criterion text **verbatim** — do not summarise, paraphrase, or abbreviate either side.
+
+If the spec's Testing Strategy section includes test approach tags, add a **Spec Test Approach** column showing the tag(s) from the spec's Acceptance Criteria Coverage table. This lets the user verify tag propagation in the same view.
 
 Present the coverage matrix to the user:
 
 ```
-| Spec Requirement | Covered by | Criteria match |
-|------------------|------------|----------------|
-| {requirement text} | Story {N} (Epic {nn}) | Exact — criterion {N.N} |
-| {requirement text} | Story {N} (Epic {nn}) | Partial — missing {detail} |
-| {requirement text} | — | **GAP** |
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach |
+|---|------------------|----------------------|----------------------------|------------|--------------------|
+| 1 | {requirement label} | {exact text from spec requirements section} | {exact criterion text from story} | Story {N} | `[tag]` |
 ```
 
-The "Criteria match" column has three levels:
-- **Exact** — the story's acceptance criteria fully capture the requirement's specificity
-- **Partial** — the story references the requirement but its criteria are vaguer than the spec (identify what's missing)
-- **GAP** — no story addresses this requirement
+Where a single spec requirement maps to multiple story criteria, include one row per criterion so each mapping is independently visible.
 
-3. **Resolve gaps and partials.** Any row marked **GAP** or **Partial** is a blocker. For each:
-   - **GAP**: The user must either add a new story to an existing epic, extend an existing story's criteria, or explicitly defer the requirement (moving it to "Won't Have" with justification).
-   - **Partial**: The story's acceptance criteria must be tightened to match the spec's specificity. Update the affected story's criteria in the epic doc before proceeding.
+If the user identifies a fidelity problem (story criterion is weaker than or contradicts spec text), update the affected story's acceptance criteria in the epic doc before proceeding.
 
-4. **Re-present after resolution.** Once all gaps and partials are addressed, show the clean matrix for confirmation. Only proceed to Step 4 when every must-have requirement shows **Exact** coverage.
-
-**Should-have requirements**: Optionally include should-have requirements in the matrix if the user requested them in scope. Use the same gap/partial/exact assessment but treat gaps as warnings rather than blockers.
+**Persist the matrix**: After the user confirms, save the coverage matrix as `docs/epics/{nn}-coverage-{slug}.md` — using the same number and slug as the epic it covers (see Output section). Save the epic doc and coverage matrix together before moving to the next epic.
 
 **Graceful degradation**: If the input is not a spec (e.g. a brief or description without structured requirements), skip this step — there's no requirement list to verify against.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3d summary (coverage matrix results, gaps found and how they were resolved) before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3d summary (coverage matrix presented, any fidelity issues identified and corrected, user confirmation) before continuing.
 
 ### Step 4: Confirm
+
+**Cross-epic gap check** (when input is a spec): Before presenting the task tree, read all per-epic coverage matrices produced in Step 3d. Compare the union of covered requirements against the spec's full "Must Have" list. Any must-have requirement that doesn't appear in any coverage matrix is a **GAP** — flag it to the user. Gaps must be resolved (add to an existing epic, create a new story, or defer with justification) before proceeding. Should-have requirements not covered are warnings, not blockers.
 
 Present the full task tree to the user showing:
 - All epics with their stories and tasks (using story numbers and task dot-notation)
 - Dependencies between epics (cross-epic) and between stories (cross-story)
 - Suggested implementation order
+- Cross-epic gap check result (all must-haves covered, or list unresolved gaps)
 
 Use AskUserQuestion for final confirmation.
 
@@ -261,7 +260,25 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 
 After saving each epic doc, tell the user the document path so they can reference it later.
 
-When starting implementation of a task, read the relevant epic document first to understand the full context: all stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan.
+### Coverage Matrix Artifacts
+
+Each epic gets a companion coverage matrix file saved alongside it during the production loop (Step 3d). The file uses the same number and slug as its epic: `docs/epics/{nn}-coverage-{slug}.md`.
+
+```markdown
+# Coverage Matrix: {Epic Name}
+
+**Source spec**: {path to spec}
+**Epic**: {path to epic doc}
+**Date**: {today's date}
+
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach |
+|---|------------------|----------------------|----------------------------|------------|--------------------|
+| {rows from confirmed Step 3d matrix for this epic} |
+```
+
+Save each coverage matrix at the same time as its epic doc. Tell the user both file paths together.
+
+When starting implementation of a task, read the relevant epic document first to understand the full context: all stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan. Also read the epic's coverage matrix (`docs/epics/{nn}-coverage-{slug}.md`) when available — it provides requirement-level traceability that connects each task back to the spec.
 
 ## State Management
 
@@ -315,7 +332,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 {Integration testing story generated or skipped, with rationale. If generated: story title, blocked-by list, acceptance criteria summary.}
 
 ### Step 3d: Requirement Coverage Matrix
-{Coverage matrix results — requirements checked, gaps found, how gaps were resolved. Final state: all must-haves at Exact coverage, or list any deferred requirements.}
+{Per-epic: coverage matrix presented to user — requirements this epic covers, fidelity issues identified and corrected. Matrix saved to docs/epics/{nn}-coverage-{slug}.md.}
 
 {...include only completed steps...}
 
@@ -340,5 +357,5 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
 - **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
-- **Coverage matrix catches what decomposition misses.** Step 3d exists because decomposition is lossy — every time a spec is broken into stories, nuance can evaporate. The coverage matrix is a forcing function that verifies every must-have requirement survived the journey from spec to stories with its specificity intact. Don't treat it as a formality; it's the quality gate.
+- **Coverage matrix is procedural, not evaluative.** Step 3d runs per-epic and quotes spec text and story criterion text side-by-side — verbatim, not summarised. Your job is extraction and presentation; the user judges fidelity. Don't assess "exact" vs "partial" — that's a subjective call the human makes by reading the two columns. Each matrix is saved as `docs/epics/{nn}-coverage-{slug}.md` alongside its epic. Step 4 then runs a cross-epic gap check to catch requirements that no epic covers.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.
