@@ -86,6 +86,16 @@ Each story should have:
 - An activeForm for progress display (present continuous: "Setting up compaction hook infrastructure")
 - **Spec traceability** (when input is a spec): Which functional requirements from the spec this story satisfies. Use the requirement text or a short label. This enables verification that the spec is fully covered across all epics — every must-have requirement should appear in at least one story.
 
+**Acceptance criteria fidelity** (when input is a spec): When deriving acceptance criteria from a spec, use the spec's language verbatim where it provides specific thresholds, values, or behaviours. Do not generalise, paraphrase, or soften. If the spec says "concurrent session limit of 3 per user", the story criterion says "concurrent session limit of 3 per user" — not "handles concurrent sessions appropriately." The spec's specificity must survive intact into the stories.
+
+**Testability standard**: Each acceptance criterion must be **testable as written** — it describes a specific, observable, verifiable outcome. Flag any criterion that relies on subjective judgement or cannot be verified through code, tests, or inspection. Criteria that fail this standard must be rewritten before the story is finalised.
+
+Examples:
+- **Fails**: "Users can log in" — no observable outcome defined
+- **Passes**: "User with valid credentials receives a 200 response with a session token and is redirected to /dashboard"
+- **Fails**: "Error handling works correctly" — subjective and unverifiable
+- **Passes**: "Invalid OAuth token returns 401 with error body `{\"error\": \"invalid_token\"}` and no session is created"
+
 **Test approach tag propagation** (when the input spec has a Testing Strategy section with tagged criteria):
 
 1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
@@ -158,6 +168,40 @@ After all implementation stories and their tasks are defined for an epic, assess
 **Graceful degradation**: If no tags were propagated during Step 3, skip this step entirely.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3c summary (integration story generated or skipped, with rationale) before continuing.
+
+### Step 3d: Requirement Coverage Matrix (when input is a spec)
+
+After all stories and tasks are defined across all epics, verify that the spec's functional requirements are fully covered. This step gates Step 4 — unresolved gaps block confirmation.
+
+1. **Read the source spec's "Must Have" functional requirements.** Extract each requirement as a distinct line item.
+2. **Build a coverage table.** For each must-have requirement, find which story's `**Satisfies**` field references it. Assess whether the story's acceptance criteria preserve the requirement's specificity (per the fidelity standard in Step 3).
+
+Present the coverage matrix to the user:
+
+```
+| Spec Requirement | Covered by | Criteria match |
+|------------------|------------|----------------|
+| {requirement text} | Story {N} (Epic {nn}) | Exact — criterion {N.N} |
+| {requirement text} | Story {N} (Epic {nn}) | Partial — missing {detail} |
+| {requirement text} | — | **GAP** |
+```
+
+The "Criteria match" column has three levels:
+- **Exact** — the story's acceptance criteria fully capture the requirement's specificity
+- **Partial** — the story references the requirement but its criteria are vaguer than the spec (identify what's missing)
+- **GAP** — no story addresses this requirement
+
+3. **Resolve gaps and partials.** Any row marked **GAP** or **Partial** is a blocker. For each:
+   - **GAP**: The user must either add a new story to an existing epic, extend an existing story's criteria, or explicitly defer the requirement (moving it to "Won't Have" with justification).
+   - **Partial**: The story's acceptance criteria must be tightened to match the spec's specificity. Update the affected story's criteria in the epic doc before proceeding.
+
+4. **Re-present after resolution.** Once all gaps and partials are addressed, show the clean matrix for confirmation. Only proceed to Step 4 when every must-have requirement shows **Exact** coverage.
+
+**Should-have requirements**: Optionally include should-have requirements in the matrix if the user requested them in scope. Use the same gap/partial/exact assessment but treat gaps as warnings rather than blockers.
+
+**Graceful degradation**: If the input is not a spec (e.g. a brief or description without structured requirements), skip this step — there's no requirement list to verify against.
+
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3d summary (coverage matrix results, gaps found and how they were resolved) before continuing.
 
 ### Step 4: Confirm
 
@@ -270,6 +314,9 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ### Step 3c: Integration Testing Story
 {Integration testing story generated or skipped, with rationale. If generated: story title, blocked-by list, acceptance criteria summary.}
 
+### Step 3d: Requirement Coverage Matrix
+{Coverage matrix results — requirements checked, gaps found, how gaps were resolved. Final state: all must-haves at Exact coverage, or list any deferred requirements.}
+
 {...include only completed steps...}
 
 ## Next Action
@@ -293,4 +340,5 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
 - **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
+- **Coverage matrix catches what decomposition misses.** Step 3d exists because decomposition is lossy — every time a spec is broken into stories, nuance can evaporate. The coverage matrix is a forcing function that verifies every must-have requirement survived the journey from spec to stories with its specificity intact. Don't treat it as a formality; it's the quality gate.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.
