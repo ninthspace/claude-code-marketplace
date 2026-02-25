@@ -132,12 +132,14 @@ After each round of agent responses, present a subtle exit option:
 
 ```
 ---
-*Type **exit** to end the discussion, or continue the conversation.*
+*Type **wrap up** to end the discussion, or continue the conversation.*
 ```
+
+**Important**: Do not use "exit" or "quit" as trigger words — these are reserved by the Claude Code CLI and will terminate the session entirely, orphaning the progress file. Use "wrap up" as the primary trigger.
 
 ## Exit Handling
 
-The user can exit party mode at any time by typing "exit", "done", "end", "quit", or "goodbye".
+The user can end party mode at any time by typing "wrap up", "done", "end discussion", or "goodbye".
 
 When an exit is triggered, follow this sequence:
 
@@ -177,7 +179,7 @@ After saving the discussion record, offer the user options for what to do next. 
 - **Continue to /cpm:discover** — Use the discussion record as starting context for problem discovery
 - **Continue to /cpm:spec** — Use the discussion record as starting context for requirements specification
 - **Continue to /cpm:epics** — Use the discussion record as starting context for work breakdown
-- **Just exit** — End the session, no handoff
+- **Done for now** — End the session, no handoff
 
 If the user chooses a pipeline skill, pass the discussion record file path as the input context for that skill. The file path becomes the `$ARGUMENTS` equivalent — the next skill should read the file and treat it as its starting brief/description.
 

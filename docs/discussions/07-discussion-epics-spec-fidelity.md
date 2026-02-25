@@ -1,4 +1,4 @@
-# Discussion: Improving spec-to-stories fidelity in /cpm:epics
+# Discussion: Improving CPM execution quality — epics fidelity and quick fix mode
 
 **Date**: 2026-02-25
 **Agents**: Jordan, Margot, Bella, Tomas, Casey, Ren
@@ -38,3 +38,37 @@
 - Present as a table: Spec Requirement | Covered by | Criteria match
 - Any row with "GAP" is a blocker — user must add a story, extend an existing story, or explicitly defer
 - Gates Step 4 confirmation — no unresolved gaps allowed
+
+---
+
+## Part 2: Fix Mode for /cpm:quick
+
+### Key points
+- `/cpm:quick` assumes you already know what to change — it's optimised for additions and modifications, not fixes
+- Fixes start with a symptom, not a change description — they need diagnosis before a proposal
+- The diagnostic feedback loop (investigate → hypothesise → confirm with user) is what makes `/cpm:consult` effective for fixes
+- Diagnosis should only apply to fix-like inputs — additions don't benefit and it would add wasted ceremony
+- Fix acceptance criteria need two categories: fix criteria (correct behaviour) and regression criteria (original bug is gone)
+
+### Decisions
+1. Adaptive Step 1 — classify input as fix or change using simple keyword heuristic, tell user which path, allow override
+2. Step 1a (Diagnose) for fix path only — investigate root cause, present hypothesis, confirm with user before proposing
+3. Fix-specific acceptance criteria — split into fix criteria + regression criteria in Step 2
+4. No separate "fix mode" toggle — classification is automatic and correctable
+
+### Implementation spec
+
+**Input classification (top of Step 1):**
+- Simple keyword heuristic: "fix", "broken", "doesn't work", "fails", "bug", "wrong", "error", "issue", "not working", "regression", or symptom language
+- One-line signal to user: "This looks like a fix" / "This looks like a straightforward change"
+- User can override immediately
+
+**Step 1a: Diagnose (fix path only):**
+- Reproduce/confirm symptom, form hypothesis, verify, present to user
+- AskUserQuestion with Confirmed/Partially right/Wrong options
+- Iterate until confirmed, then proceed to Step 1b (scope assessment)
+
+**Fix-specific acceptance criteria (Step 2):**
+- Fix criteria: the broken behaviour is resolved
+- Regression criteria: the original bug cannot recur
+- Regression criteria should map to test cases when test runner available

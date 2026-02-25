@@ -57,9 +57,49 @@ After the Library Check and before Step 1, discover the project's test runner co
 
 **Graceful degradation**: If no test runner is discoverable and the user chooses not to provide one, set `**Test command**: none`. Step 4 verification will fall back to self-assessment only.
 
-### Step 1: Scope Assessment
+### Step 1: Classify and Assess
 
-Explore the codebase to understand what the change involves, then assess whether it's appropriate for quick execution.
+#### Input Classification
+
+Read the change description and classify it as a **fix** or a **change**:
+
+- **Fix**: The input describes a symptom, bug, or broken behaviour. Look for signals: "fix", "broken", "doesn't work", "fails", "bug", "wrong", "error", "issue", "not working", "regression", or language describing unexpected behaviour ("should X but does Y", "used to work").
+- **Change**: Everything else — additions, enhancements, refactors, configuration updates, feature work.
+
+Tell the user which path you're taking in one line:
+- Fix: "This looks like a fix — I'll investigate the root cause before proposing changes."
+- Change: "This looks like a straightforward change — proceeding to scope assessment."
+
+If the user disagrees with the classification, switch immediately. The heuristic is simple by design — the user corrects it when it's wrong.
+
+#### Step 1a: Diagnose (fix path only)
+
+When the input is classified as a fix, investigate the root cause *before* assessing scope or proposing changes. This is the step that `/cpm:consult` does naturally through conversation — `/cpm:quick` must replicate it explicitly.
+
+1. **Reproduce or confirm the symptom**: Read the relevant code, trace the execution path, and if possible run the failing case. Understand *what* is broken from the code's perspective, not just the user's description.
+2. **Form a hypothesis**: Based on your investigation, identify the most likely root cause. Be specific — "the config loader silently returns null when the file is missing" not "config handling has issues."
+3. **Verify the hypothesis**: Trace through the code path to confirm. Check for edge cases, related code that might also be affected, and whether the root cause has downstream consequences.
+4. **Present the diagnosis**: Use AskUserQuestion to confirm with the user before proceeding:
+
+```
+**Symptom**: {what the user reported}
+**Investigation**: {what was explored, what was found}
+**Root cause**: {what is broken and why}
+**Confidence**: {High/Medium/Low}
+```
+
+Options:
+- **Confirmed** — Proceed to scope assessment
+- **Partially right** — Let me refine the diagnosis
+- **Wrong** — Let me dig deeper
+
+If the user says "partially right" or "wrong", incorporate their feedback and re-investigate. Iterate until the diagnosis is confirmed. Only then proceed to Step 1b.
+
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1a summary (diagnosis, confidence, user confirmation) before continuing.
+
+#### Step 1b: Scope Assessment
+
+Explore the codebase to understand what the change involves, then assess whether it's appropriate for quick execution. When preceded by Step 1a (fix path), the diagnosis provides the foundation — scope assessment now evaluates the *fix*, not the original symptom.
 
 1. **Explore**: Use Glob, Grep, and Read tools to understand the change. Identify which files would be affected, what patterns exist, and whether there are hidden dependencies. Spend enough time to form a genuine opinion — a superficial scan isn't sufficient.
 
@@ -83,7 +123,7 @@ Explore the codebase to understand what the change involves, then assess whether
 
    If the user chooses to continue, honour their decision and proceed to Step 2. Do not raise the scope concern again.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
+**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1b summary before continuing.
 
 ### Step 2: Propose and Confirm
 
@@ -102,6 +142,21 @@ Format the proposal as:
 ```
 
 Keep it tight — the proposal should be scannable in 10 seconds. Acceptance criteria should describe observable outcomes, not implementation steps. "Config file includes the new key" not "Edit the config file to add a key".
+
+**Fix-specific acceptance criteria** (when Step 1a diagnosed a fix): Split acceptance criteria into two categories:
+
+```
+**Fix criteria** (the broken behaviour is resolved):
+- {criterion — what now works correctly}
+**Regression criteria** (the original bug cannot recur):
+- {criterion — what was broken and proof it's gone}
+```
+
+Fix criteria describe the correct behaviour. Regression criteria describe the *absence* of the bug — they verify the specific failure mode is resolved, not just that the happy path works. Example:
+- **Fix**: "Session hook fires on startup and logs the session ID to stdout"
+- **Regression**: "When config file is missing, hook produces a clear error message instead of failing silently"
+
+If the test runner is available, regression criteria should ideally map to a test case in Step 3.
 
 Use AskUserQuestion to confirm: "Ready to execute this change?" with options:
 - **Execute** — Proceed with the change as described
@@ -274,6 +329,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Skill**: cpm:quick
 **Step**: {N} of 4 — {Step Name}
 **Change description**: {the original change description}
+**Classification**: {fix | change}
 **Test command**: {discovered test command, or "none" if no runner found}
 
 ## Library Check
@@ -281,7 +337,10 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Completed Steps
 
-### Step 1: Scope Assessment
+### Step 1a: Diagnose (fix path only)
+{Symptom, investigation summary, root cause hypothesis, confidence level, user confirmation. Omit this section entirely for change-path inputs.}
+
+### Step 1b: Scope Assessment
 {Summary — what was explored, scope assessment result, escalation offered/declined}
 
 ### Step 2: Propose and Confirm
@@ -304,4 +363,5 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 - **Fast by default.** The whole point of `/cpm:quick` is speed. Don't add ceremony. One confirmation, then execute.
 - **Scope honesty.** If a change is too big for quick execution, say so — but only once. The user decides.
 - **Traceability without overhead.** The completion record is the minimum artifact needed to know what happened and why.
+- **Fixes need diagnosis, changes don't.** The input classification exists because fixes and additions have fundamentally different first steps. A fix starts with a symptom that needs investigation; a change starts with a known modification. Don't run diagnosis on additions (wasted ceremony) and don't skip diagnosis on fixes (that's how you get surface-level patches that don't address root causes).
 - **Do the work.** This skill implements changes, not just plans them. Write code, edit files, run tests.
