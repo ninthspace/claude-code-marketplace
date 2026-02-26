@@ -351,7 +351,16 @@ When the work loop finishes (no more pending unblocked tasks):
 
 Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
 
-4. **Report and stop**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain"). Then delete the progress file.
+4. **Report**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain").
+
+5. **Next epic check**: After reporting, check if other epics are available to work on:
+   a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
+   b. Read each file's `**Status**:` field. Filter to epics that are not `Complete` (excluding the epic just finished).
+   c. If **no remaining epics** have work: delete the progress file and stop.
+   d. If **one or more epics** have remaining work: present the choice using AskUserQuestion — "Epic {name} is complete. What would you like to do?" with options:
+      - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic)
+      - **Stop here** — delete the progress file and end the session
+      If multiple epics have remaining work, show the lowest-numbered one as the "Continue to..." option.
 
 ## Graceful Degradation
 
