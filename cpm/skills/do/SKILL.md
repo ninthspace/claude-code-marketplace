@@ -176,6 +176,14 @@ Skip plan mode for straightforward tasks — config changes, documentation updat
 
 When using plan mode: explore the codebase, design the approach, and get user approval before writing any code. Then exit plan mode and proceed to step 4.
 
+**Keep execution plans concise.** The epic doc already defines *what* to build — stories, tasks, acceptance criteria, and description fields provide the specification. Your plan should only add what the epic doc doesn't say:
+
+1. **Order of operations** — which files to create/modify and in what sequence
+2. **Implementation decisions** — choices not already captured in the epic (e.g. which design pattern, which library API to use)
+3. **Risk flags** — edge cases or complications you've spotted during exploration
+
+Do not restate acceptance criteria, enumerate test cases already implied by `[unit]`/`[tdd]` tags, or spell out file contents that will be written during implementation. A bulleted list of 5-15 lines is the target — not a design document. Context is finite; every token spent on the plan is a token unavailable for implementation.
+
 ### 4. Do the Work
 
 **If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase.
@@ -366,7 +374,7 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the work loop for
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
-**Resume adoption**: When a session is resumed (`--resume`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context on startup — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
+**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.

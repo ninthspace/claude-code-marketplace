@@ -96,6 +96,15 @@ echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
 assert_contains "$OUTPUT" "# Legacy state"
 
+test_start "Handles clear source identically to compact (silent injection, no orphan detection)"
+PROJECT=$(setup_project_dir)
+echo "# State for old-session" > "$PROJECT/docs/plans/.cpm-progress-old-session.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"new-session","source":"clear"}')
+assert_contains "$OUTPUT" "CPM_SESSION_ID: new-session"
+assert_contains "$OUTPUT" "# State for old-session"
+assert_not_contains "$OUTPUT" "ORPHAN"
+assert_not_contains "$OUTPUT" "BLOCKING"
+
 test_start "Legacy file ignored when session-scoped files exist"
 PROJECT=$(setup_project_dir)
 echo "# Session state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"

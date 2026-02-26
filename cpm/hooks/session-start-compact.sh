@@ -1,7 +1,7 @@
 #!/bin/bash
 # session-start-compact.sh — Re-inject CPM state after compaction
 #
-# Fires after compaction completes (SessionStart source: "compact").
+# Fires on SessionStart source: "compact" or "clear".
 # Reads session_id from JSON on stdin and injects the matching
 # session-scoped progress file. Falls back to injecting all progress
 # files if no match is found or JSON parsing fails.

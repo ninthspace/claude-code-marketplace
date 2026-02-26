@@ -1,7 +1,7 @@
 #!/bin/bash
 # session-start.sh — Re-inject CPM state on session startup/resume
 #
-# Fires on SessionStart source: "startup", "resume", or "clear".
+# Fires on SessionStart source: "startup" or "resume".
 # Reads session_id from JSON on stdin and echoes CPM_SESSION_ID.
 # Globs all session-scoped progress files and classifies each by
 # session ID: current-session files are injected as active state,
