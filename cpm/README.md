@@ -15,6 +15,7 @@ After installation, use any skill independently or as a pipeline:
                                                                                                      ↓
                                                                                               /cpm:archive
 /cpm:quick (lightweight execution for small, well-defined changes)
+/cpm:status (project status reconnaissance and next-step recommendations)
 /cpm:library (import reference docs used by all skills)
 /cpm:templates (explore and customise artifact templates)
 /cpm:present (transform artifacts for different audiences)
@@ -37,6 +38,7 @@ Each step is optional. Use what fits your situation:
 - Want to explore or customise artifact templates? `/cpm:templates` lists, previews, and scaffolds overrides
 - Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
 - Small, well-defined change? `/cpm:quick` gives you traceability without ceremony
+- Coming back after a break? `/cpm:status` gives you a narrative briefing and recommends next steps
 - Trivial one-liner? Skip CPM entirely — Claude Code's native plan mode is enough
 
 ## Skills
@@ -317,6 +319,21 @@ If the scope turns out larger than expected, `/cpm:quick` offers to escalate to 
 /cpm:quick          # describe the change interactively
 ```
 
+### `/cpm:status` — Project Status Reconnaissance
+
+Scan the current project's CPM artifacts and git history to produce a narrative status report with recommended next steps. Read-only and ephemeral — prints to stdout, no files created or modified.
+
+The report orients someone picking up the project for the first time: what it is, what's been built, what happened recently, and what needs attention now. Recommended next steps include copy-pasteable CPM commands based on the current project state.
+
+**Input**: Optional focus context — a file path to emphasise a specific artifact, or a description to guide the report.
+**Output**: Ephemeral — printed to stdout, no file saved.
+
+```
+/cpm:status                                    # full project status
+/cpm:status docs/epics/02-epic-auth.md         # focus on a specific epic
+/cpm:status what's the state of auth work?     # guided emphasis
+```
+
 ## Compaction Resilience
 
 CPM skills run long, multi-phase conversations that can trigger Claude Code's auto-compaction. When that happens, mid-skill state (current phase, user decisions, facilitation progress) would normally be lost.
@@ -426,8 +443,10 @@ cpm/
 │   │   └── SKILL.md         # Project reference library skill
 │   ├── archive/
 │   │   └── SKILL.md         # Archive planning documents skill
-│   └── quick/
-│       └── SKILL.md         # Quick execution skill
+│   ├── quick/
+│   │   └── SKILL.md         # Quick execution skill
+│   └── status/
+│       └── SKILL.md         # Project status reconnaissance skill
 ├── README.md
 └── LICENSE
 ```

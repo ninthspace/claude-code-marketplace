@@ -156,13 +156,13 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.16.0)
+### Claude Planning Method (v1.18.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
 Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots — and consult mode for focused one-to-one expert dialogue with dynamic membership. Inspired by the BMAD-METHOD.
 
-**Sixteen skills forming a pipeline:**
+**Seventeen skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -182,6 +182,7 @@ Structured discovery, product ideation, architecture exploration, specification,
 | `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
 | `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
 | `/cpm:quick` | Lightweight execution for small changes | `docs/quick/{nn}-quick-{slug}.md` |
+| `/cpm:status` | Project status reconnaissance and next-step recommendations | Ephemeral (stdout only) |
 
 **Quick Start:**
 ```bash
@@ -221,6 +222,9 @@ Structured discovery, product ideation, architecture exploration, specification,
 # Small change? Skip the full pipeline
 /cpm:quick add a --verbose flag to the deploy script
 
+# Check project status and get next-step recommendations
+/cpm:status
+
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management
 /cpm:do 3  # work on a specific task
@@ -251,6 +255,7 @@ Structured discovery, product ideation, architecture exploration, specification,
 - Two-tier template system — structural (fixed data contracts) and presentational (overridable)
 - Project reference library — import docs that skills auto-discover and use as context
 - Archive — clean up completed artefacts with staleness heuristics and chain detection
+- Project status reconnaissance — scan artifacts and git history, produce a narrative briefing with next steps
 - Customisable agent roster — override default personas per project
 - Compaction resilience — seamlessly survives Claude Code context compaction
 

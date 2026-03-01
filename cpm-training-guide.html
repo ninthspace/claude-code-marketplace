@@ -662,6 +662,22 @@ const SKILLS = [
     phases: ['Scope Assessment — explore codebase, evaluate fit', 'Propose & Confirm — present plan with acceptance criteria', 'Execute — create tasks, implement the change', 'Completion Record — verify criteria, write record'],
     tip: 'Use quick when the change is clear and the full pipeline would add more ceremony than value. If scope turns out larger than expected, quick offers to escalate to discover/spec/epics.',
     next: []
+  },
+  {
+    id: 'status',
+    name: '/cpm:status',
+    label: 'Status',
+    icon: '📊',
+    color: '#58a6ff',
+    category: 'support',
+    short: 'Project status reconnaissance',
+    description: 'Scan CPM artifacts and git history to produce a narrative status report. Orients someone picking up the project for the first time: what it is, what\'s been built, what happened recently, and what needs attention. Recommends concrete next steps with copy-pasteable CPM commands. Read-only and ephemeral — prints to stdout, no files created.',
+    input: 'Optional focus context (file path or description)',
+    output: 'Narrative status report with recommended next steps',
+    outputFile: '(ephemeral — stdout only)',
+    phases: ['Phase 1: Artifact inventory scan (Glob + Read)', 'Phase 2: Git activity scan (adaptive time window)', 'Phase 3: Narrative synthesis and recommendations'],
+    tip: 'Status is read-only and stateless — it never creates, modifies, or deletes files. The adaptive git time window widens automatically when there\'s been a gap since the last commit.',
+    next: ['do', 'retro', 'archive', 'discover']
   }
 ];
 
@@ -689,11 +705,11 @@ const EDGES = [
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive','quick'], knowledge: {} },
-  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know', quick:'know' } },
-  execution: { highlight: ['do','pivot','review','retro','quick'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know', quick:'know' } },
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive','quick','status'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know' } },
+  execution: { highlight: ['do','pivot','review','retro','quick','status'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────
@@ -732,6 +748,7 @@ const NODE_POSITIONS = {
   library:   { x: 120,  y: 90 },
   archive:   { x: 970,  y: 370 },
   quick:     { x: 580,  y: 370 },
+  status:    { x: 840,  y: 370 },
 };
 
 const NODE_RADIUS = 34;
