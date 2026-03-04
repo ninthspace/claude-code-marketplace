@@ -84,11 +84,11 @@ echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(run_hook "$PROJECT" '{"source":"compact"}')
 assert_contains "$OUTPUT" "# State for abc"
 
-test_start "Produces no output when no progress files exist"
+test_start "Produces no progress file output when no progress files exist"
 PROJECT=$(setup_project_dir)
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-# Should only have the CPM_SESSION_ID line, no file content
-assert_equals "CPM_SESSION_ID: abc-123" "$(echo "$OUTPUT" | tr -s '\n')"
+assert_contains "$OUTPUT" "CPM_SESSION_ID: abc-123"
+assert_not_contains "$OUTPUT" "CPM SESSION STATE"
 
 test_start "Legacy support: falls back to .cpm-progress.md when no session files exist"
 PROJECT=$(setup_project_dir)
@@ -111,5 +111,34 @@ echo "# Session state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
 assert_not_contains "$OUTPUT" "# Legacy state"
+
+# --- User name injection tests ---
+
+run_hook_with_env() {
+  local project_dir="$1"
+  local stdin_input="$2"
+  shift 2
+  echo "$stdin_input" | env "$@" CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT"
+}
+
+test_start "Outputs CPM_USER_NAME from env var when set"
+PROJECT=$(setup_project_dir)
+OUTPUT=$(run_hook_with_env "$PROJECT" '{"session_id":"abc-123","source":"compact"}' CPM_USER_NAME="Alice")
+assert_contains "$OUTPUT" "CPM_USER_NAME: Alice"
+
+test_start "Outputs behavioural directive with user name"
+PROJECT=$(setup_project_dir)
+OUTPUT=$(run_hook_with_env "$PROJECT" '{"session_id":"abc-123","source":"compact"}' CPM_USER_NAME="Alice")
+assert_contains "$OUTPUT" 'use their name "Alice"'
+
+test_start "Falls back to git config first name when env var is unset"
+PROJECT=$(setup_project_dir)
+OUTPUT=$(run_hook_with_env "$PROJECT" '{"session_id":"abc-123","source":"compact"}' CPM_USER_NAME=)
+GIT_FIRST=$(git config user.name 2>/dev/null | awk '{print $1}')
+if [ -n "$GIT_FIRST" ]; then
+  assert_contains "$OUTPUT" "CPM_USER_NAME: $GIT_FIRST"
+else
+  assert_not_contains "$OUTPUT" "CPM_USER_NAME"
+fi
 
 test_summary

@@ -15,6 +15,20 @@ if [ -n "$SESSION_ID" ]; then
   echo "CPM_SESSION_ID: $SESSION_ID"
 fi
 
+# Resolve user name: $CPM_USER_NAME env → git config first name → silent fallback
+if [ -n "$CPM_USER_NAME" ]; then
+  USER_NAME="$CPM_USER_NAME"
+else
+  GIT_NAME=$(git config user.name 2>/dev/null)
+  if [ -n "$GIT_NAME" ]; then
+    USER_NAME="${GIT_NAME%% *}"
+  fi
+fi
+if [ -n "$USER_NAME" ]; then
+  echo "CPM_USER_NAME: $USER_NAME"
+  echo "When addressing the user in conversation, use their name \"$USER_NAME\" instead of \"the user\"."
+fi
+
 STATE_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
 
 # Try exact match first
