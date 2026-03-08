@@ -155,6 +155,7 @@ For each task, follow these steps in order.
 - **Drift detection**: If a coverage matrix was loaded and any of its rows have `✓` in the Verified column, compare the "Story Criterion (verbatim)" text in those verified rows against the corresponding acceptance criteria in the epic doc. If the text differs — indicating the epic doc was modified after verification — flag the mismatch to the user: "Coverage matrix drift detected: Story {N} criterion text has changed since verification. The `✓` marker may be stale." This catches out-of-band edits that bypassed `/cpm:pivot`'s invalidation logic. If no verified rows exist or no coverage matrix is present, skip this check.
 - **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
 - **Determine workflow mode**: Scan the parent story's acceptance criteria for the `[tdd]` tag. If any criterion carries `[tdd]`, this story uses TDD workflow mode — record this for use in Step 4. If no `[tdd]` tag is found, the story uses the standard post-implementation workflow.
+- **Determine planning mode**: Check whether the parent story's `##` heading contains a `[plan]` tag (e.g. `## Set up OAuth provider integration [plan]`). If `[plan]` is present, this story uses formal plan mode in Step 3. If absent, Step 3 uses inline planning (the default). Record this for use in Step 3.
 - If no epic doc is available, proceed without epic doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress
@@ -166,17 +167,25 @@ For each task, follow these steps in order.
 
 ### 3. Plan (when warranted)
 
-Before jumping into implementation, assess whether this task warrants entering plan mode (`EnterPlanMode`). Use plan mode when any of these apply:
+Before jumping into implementation, assess whether this task warrants a planning step. The planning approach depends on whether the parent story carries a `[plan]` tag (detected in Step 1).
 
-- **Complex**: The task touches multiple files, requires architectural decisions, or has several moving parts
-- **Critical**: The task is core infrastructure that other tasks depend on
-- **Sensitive**: The task involves personal data, financial data, authentication, or other security-sensitive areas
+**Default: Inline planning (no `[plan]` tag)**
 
-Skip plan mode for straightforward tasks — config changes, documentation updates, simple additions to existing patterns.
+For most tasks, plan inline — explore the codebase, output a brief plan as text, and proceed directly to Step 4. No mode switch, no user approval gate, no loop disruption.
 
-When using plan mode: explore the codebase, design the approach, and get user approval before writing any code. Then exit plan mode and proceed to step 4.
+For complex, critical, or sensitive tasks: explore the codebase using Read, Glob, and Grep, then output a brief plan covering order of operations, implementation decisions, and risk flags. Then proceed to Step 4.
 
-**Keep execution plans concise.** The epic doc already defines *what* to build — stories, tasks, acceptance criteria, and description fields provide the specification. Your plan should only add what the epic doc doesn't say:
+Skip planning entirely for straightforward tasks — config changes, documentation updates, simple additions to existing patterns.
+
+**Formal plan mode (`[plan]` tag present)**
+
+When the parent story's heading carries a `[plan]` tag: enter `EnterPlanMode`, explore the codebase, design the approach, and get user approval before writing any code. Then exit plan mode and proceed to Step 4.
+
+Use formal plan mode for stories where the enforcement benefit (physically prevented from writing code while planning) and the approval gate (user reviews before implementation begins) justify the loop interruption. The `[plan]` tag is applied by `cpm:epics` to stories that touch architecture, security, or multi-system integration.
+
+**Note**: Formal plan mode creates an interaction boundary that pauses the task loop. After exiting plan mode and completing the task, you MUST continue the task loop — proceed to Step 5, then Step 6, then Step 7 (next task). The plan mode interaction is NOT a stopping point.
+
+**Keep execution plans concise** (both modes). The epic doc already defines *what* to build — stories, tasks, acceptance criteria, and description fields provide the specification. Your plan should only add what the epic doc doesn't say:
 
 1. **Order of operations** — which files to create/modify and in what sequence
 2. **Implementation decisions** — choices not already captured in the epic (e.g. which design pattern, which library API to use)

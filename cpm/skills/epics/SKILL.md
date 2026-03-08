@@ -105,6 +105,14 @@ Examples:
 
 **Graceful degradation**: If the spec has no Testing Strategy section, no Acceptance Criteria Coverage table, or no tags, skip tag propagation entirely — write acceptance criteria without tags. The skill must work without `cpm:spec`'s enhanced Section 6 having been used.
 
+**`[plan]` tag suggestion**: After defining a story's acceptance criteria, assess whether it warrants formal plan mode during execution. Append `[plan]` to the story's `##` heading (e.g. `## Set up OAuth provider integration [plan]`) when any of these apply:
+
+- **Architectural**: The story introduces new patterns, data models, or structural decisions that affect the broader codebase
+- **Security-sensitive**: The story involves authentication, authorization, personal data, financial data, or other security-critical areas
+- **Multi-system integration**: The story coordinates across multiple external systems, APIs, or services where the interaction design needs upfront thought
+
+Do not apply `[plan]` to straightforward stories — config changes, documentation, additions that follow existing patterns, or stories where the epic doc's acceptance criteria already fully specify the approach. When in doubt, omit it — inline planning (the default in `cpm:do`) handles most stories without the overhead of formal plan mode.
+
 **Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 
 Present the stories for each epic to the user using AskUserQuestion. Refine before moving to the next epic.
@@ -362,6 +370,7 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **One epic, one document.** Each epic produces its own markdown file. This keeps documents focused and allows parallel work on independent epics.
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
+- **`[plan]` opts into formal plan mode.** When a story heading carries `[plan]`, `cpm:do` enters formal plan mode (EnterPlanMode/ExitPlanMode) for that story's tasks — enforcing read-only exploration and user approval before implementation. Without `[plan]`, `cpm:do` uses inline planning (brief text plan, then straight to implementation) which keeps the task loop uninterrupted. Suggest `[plan]` for stories involving architectural decisions, security-sensitive areas, or multi-system integration. Most stories don't need it.
 - **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
 - **Coverage matrix is procedural, not evaluative.** Step 3d runs per-epic and quotes spec text and story criterion text side-by-side — verbatim, not summarised. Your job is extraction and presentation; the user judges fidelity. Don't assess "exact" vs "partial" — that's a subjective call the human makes by reading the two columns. Each matrix is saved as `docs/epics/{nn}-coverage-{slug}.md` alongside its epic. Step 4 then runs a cross-epic gap check to catch requirements that no epic covers.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.
