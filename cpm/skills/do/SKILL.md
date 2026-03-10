@@ -240,7 +240,7 @@ Before marking the task complete:
   - **`[unit]`, `[integration]`, `[feature]`**: If a test command is cached (`**Test command**` is not `none`), run it and use the pass/fail result as evidence. A passing test suite satisfies these criteria. A failing test suite means the criterion is not met — report the specific failures.
   - **`[manual]` or no tag**: Self-assess by inspecting the codebase, checking files, or reviewing outputs. This is the existing approach.
 - If all criteria are met (by test results or self-assessment), proceed to step 6.
-- If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as done anyway. Use AskUserQuestion for this gate.
+- If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as Complete anyway. Use AskUserQuestion for this gate.
 
 **Coverage matrix proof recording** (verification gates only): When a verification gate passes (all criteria met), update the companion coverage matrix to record proof. Check for `docs/epics/{nn}-coverage-{slug}.md` alongside the epic doc. If it exists:
 
@@ -433,7 +433,7 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 ## Guidelines
 
 - **Do the work.** This skill doesn't just plan — it implements. Write code, create files, run tests, whatever the task requires.
-- **Acceptance criteria are the definition of done.** Don't mark a task complete if criteria aren't met unless the user explicitly approves.
+- **Acceptance criteria gate completion.** Don't mark a task Complete if criteria aren't met unless the user explicitly approves.
 - **Keep momentum.** Move through tasks efficiently. Don't over-explain between tasks — just pick up the next one and go.
 - **One task at a time.** Complete each task fully before starting the next. Don't interleave work across tasks.
 - **`[tdd]` activates the red-green-refactor sub-loop.** When a story's acceptance criteria carry the `[tdd]` tag, Step 4 switches from standard implementation to a three-phase TDD loop: write a failing test (Red), write minimum code to pass (Green), clean up within task scope (Refactor). Each phase runs a targeted test — the specific test file, not the full suite. The full suite runs at the story verification gate. Stories without `[tdd]` use the standard post-implementation workflow unchanged. Both modes can coexist in the same epic.
