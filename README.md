@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for story-driven development, facilitated planning, note searching, and PHP code intelligence. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning, note searching, PHP code intelligence, and JavaScript/TypeScript code simplification. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -15,65 +15,13 @@ This marketplace contains plugins for story-driven development, facilitated plan
 /plugin marketplace add ninthspace/claude-code-marketplace
 
 # Install individual plugins
-/plugin install sdd@claude-code-marketplace
 /plugin install noteplan@claude-code-marketplace
 /plugin install php-lsp@claude-code-marketplace
 /plugin install cpm@claude-code-marketplace
+/plugin install js-simplifier@claude-code-marketplace
 ```
 
 ## Available Plugins
-
-### Story-Driven Development (v3.1.0)
-
-**30+ commands for complete agile development workflow**
-
-A comprehensive plugin providing:
-- Project setup and initialization
-- Story management and tracking
-- Development workflow automation
-- Code review and quality checks
-- Automated testing and QA
-- Deployment and rollback
-- Metrics and analysis
-- Daily workflow helpers
-
-**Key Features:**
-- Context-aware commands that adapt to your tech stack
-- Git integration for version control
-- Automated testing support
-- Browser testing (Playwright/Pest)
-- Progressive enhancement with project context
-- Works immediately, no configuration required
-
-**Tech Stack Support:**
-- Laravel/TALL stack
-- React/Next.js
-- Vue.js
-- Node.js/Express
-- Python/Django
-- Ruby on Rails
-- Any tech stack with adaptation
-
-**Quick Start:**
-```bash
-# Automated workflow (single command for entire lifecycle)
-/sdd:story-flow "Add user authentication"
-
-# Or use individual commands for more control
-/sdd:story-new "Add user authentication"
-/sdd:story-start STORY-2025-001
-/sdd:story-implement STORY-2025-001
-/sdd:story-save "Implement user authentication"
-/sdd:story-review STORY-2025-001
-/sdd:story-qa STORY-2025-001
-/sdd:story-validate STORY-2025-001
-/sdd:story-ship STORY-2025-001
-/sdd:story-complete STORY-2025-001
-```
-
-[View full documentation](./sdd/README.md)
-
----
 
 ### NotePlan Search (v1.0.0)
 
@@ -156,7 +104,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.18.0)
+### Claude Planning Method (v1.19.3)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
@@ -263,142 +211,52 @@ Structured discovery, product ideation, architecture exploration, specification,
 
 ---
 
-## Using the SDD Plugin
+### JS/TS Simplifier (v1.0.0)
 
-### Complete Workflow
+**Simplify and improve JavaScript and TypeScript code across an entire codebase**
 
-#### Getting Started: Project Setup (Optional but Recommended)
+A skill that scans all JS/TS files (or a configurable subset) and applies clarity, consistency, and maintainability improvements while preserving exact functionality. Unlike targeted simplification of recently changed files, this skill works across the whole codebase.
 
-Before creating stories, establish your project foundation:
+**Three parallel analysis agents:**
+- **Modern Syntax** — ES2015+ and ES2020+ upgrades (optional chaining, nullish coalescing, async/await, const/let)
+- **Code Quality** — Dead code removal, conditional simplification, naming improvements, error handling
+- **Structure & Reuse** — DRY violations, module organisation, function complexity, async patterns
 
-1. **Initialize Project**: `/sdd:project-init`
-   - Creates directory structure (`/docs/project-context/`, `/docs/stories/`)
-   - Sets up context documents (technical stack, coding standards, development process)
-   - Customizes templates based on your tech stack
-
-2. **Create Project Brief**: `/sdd:project-brief [title]`
-   - Defines project objectives and scope
-   - Breaks down features into multiple related stories
-   - Documents story dependencies and implementation order
-   - Provides comprehensive story definitions with acceptance criteria
-
-**Note**: These setup commands are optional. You can jump straight to story creation with smart defaults, but project setup provides better context-aware behavior.
-
-#### Iterative Phase Planning (Optional)
-
-For ongoing projects with multiple development cycles:
-
-**Plan Development Phases**: `/sdd:project-phase [phase_name]`
-- Interactive planning for next development phase
-- Gathers user input on desired features and improvements
-- Analyzes completed work and current project state
-- Creates phase-specific documentation and story queues
-- Organizes features by iteration, extension, and foundation categories
-- Requires user approval before creating documentation
-
-**When to use phases:**
-- Planning next iteration after completing initial stories
-- Organizing multiple related features into cohesive releases
-- Managing long-term projects with distinct development cycles
-- Coordinating feature rollout with dependencies
-
-#### Story Development Workflow (9 Steps)
-
-1. **Create Story**: Define what you're building
-2. **Start Development**: Create branch and setup
-3. **Implement**: Generate code with AI assistance
-4. **Save**: Commit with formatted messages
-5. **Review**: Quality checks and refactoring
-6. **QA**: Automated testing
-7. **Validate**: Final checks before shipping
-8. **Ship**: Deploy to production
-9. **Complete**: Archive story with retrospective and learnings
-
-### Workflow Automation with /sdd:story-flow
-
-The `/sdd:story-flow` command automates the entire story lifecycle, executing all 9 steps sequentially with a single command. This provides:
-
-- **Time Savings**: Run the complete workflow (new → start → implement → review → qa → validate → save → ship → complete) with one command
-- **Complete Documentation**: Automatically captures retrospective, lessons learned, and metrics after deployment
-- **Consistency**: Ensures all quality gates are executed in the correct order
-- **Flexibility**: Use `--start-at` and `--stop-at` to run specific portions of the workflow
-- **Control**: Interactive mode (default) pauses between steps; use `--auto` flag for full automation
-- **Resume Capability**: Resume from any step if interrupted or after fixing issues
-- **Error Handling**: Automatically halts on test or validation failures with clear recovery options
-
-**Examples:**
+**Quick Start:**
 ```bash
-# Full automated workflow from new story
-/sdd:story-flow "Add user authentication"
+# Simplify all JS/TS files in the project
+/js-simplify
 
-# Resume existing story from QA step in auto mode
-/sdd:story-flow STORY-2025-001 --start-at=qa --auto
+# Narrow to a specific directory
+/js-simplify src/
 
-# Partial workflow (stop before shipping)
-/sdd:story-flow "Fix responsive layout" --stop-at=review
+# Only git-modified files
+/js-simplify only changed
+
+# Focus on a specific pattern
+/js-simplify focus on async patterns
 ```
 
-### Command Categories
+**Key Features:**
+- Parallel three-agent analysis for comprehensive coverage
+- Respects project conventions (CLAUDE.md, ESLint, Prettier, tsconfig)
+- Configurable scope — all files, specific directories, globs, or git-changed only
+- Safety-first — never changes what the code does, only how it does it
+- Flags ambiguous cases for manual review rather than auto-applying
 
-- **📦 Project Setup** - Initialize projects, create project briefs, and manage context (run first)
-- **🔄 Phase Planning** - Plan iterative development phases with user-driven requirements (optional)
-- **📝 Story Management** - Create, track, and manage individual stories
-- **⚡ Workflow Automation** - Automate complete lifecycle with `/sdd:story-flow`
-- **🛠️ Development** - Start, implement, and save work
-- **🔍 Review** - Quality checks and refactoring
-- **✅ QA & Testing** - Automated testing and validation
-- **🚀 Shipping** - Deploy features and handle rollbacks
-- **📊 Analysis** - Metrics, patterns, and technical debt
-- **📅 Daily Workflow** - Daily standup and planning
+**Supported File Types:**
+- `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx`
 
-## Requirements
-
-- **Claude Code CLI** - Required for the plugin
-- **Git** - Required for version control commands
-- **Test Framework** - Required for QA commands (project-specific)
-
-## Project Context
-
-The plugin uses a `/docs/project-context/` directory for context-aware behavior. You can create this automatically or manually:
-
-**Automatic Setup (Recommended):**
-```bash
-# Initialize project structure with interactive setup
-/sdd:project-init
-
-# Create comprehensive project brief
-/sdd:project-brief [title]
-```
-
-**Files Created:**
-- `technical-stack.md` - Technology choices and versions
-- `coding-standards.md` - Code quality standards
-- `development-process.md` - Workflow stages and quality gates
-- `project-glossary.md` - Domain terminology
-- `project-brief.md` - Project overview and story breakdown
-- `story-relationships.md` - Story dependencies (if applicable)
-- `phases/[phase_name]/` - Phase-specific documentation (created by `/sdd:project-phase`)
-  - `phase-brief.md` - Phase goals, features, and timeline
-  - `story-queue.md` - Prioritized story backlog for the phase
-
-The plugin automatically reads these files and adapts its behavior to match your project's needs.
-
-## Key Principles
-
-- **No Prerequisites**: Commands work immediately with smart defaults
-- **Tech Stack Agnostic**: Adapts to your actual technology choices
-- **Context-Aware**: Reads project configuration when available
-- **Independent**: Each command works standalone
-- **Full Lifecycle**: From idea to production deployment
+[View full documentation](./js-simplifier/SKILL.md)
 
 ## Removing Plugins (when in Claude Code)
 
 ```bash
 # Uninstall individual plugins
-/plugin uninstall sdd@claude-code-marketplace
 /plugin uninstall noteplan@claude-code-marketplace
 /plugin uninstall php-lsp@claude-code-marketplace
 /plugin uninstall cpm@claude-code-marketplace
+/plugin uninstall js-simplifier@claude-code-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace

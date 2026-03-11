@@ -1,0 +1,21 @@
+{
+  "name": "js-simplifier",
+  "description": "Simplify and improve JavaScript and TypeScript code across an entire codebase — modern syntax, code quality, and structural improvements",
+  "version": "1.0.0",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "javascript",
+    "typescript",
+    "simplify",
+    "refactor",
+    "code-quality",
+    "modernise",
+    "es2020",
+    "cleanup",
+    "dead-code",
+    "async-await"
+  ]
+}

@@ -1,31 +1,12 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "1.19.3",
+  "version": "2.0.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
   },
   "plugins": [
-    {
-      "name": "sdd",
-      "source": "./sdd",
-      "description": "Comprehensive story-driven development workflow with 30+ commands for agile development, from ideation to production",
-      "version": "3.1.0",
-      "keywords": [
-        "story",
-        "agile",
-        "workflow",
-        "development",
-        "project-management",
-        "git",
-        "testing",
-        "qa",
-        "deployment",
-        "laravel",
-        "tall-stack"
-      ]
-    },
     {
       "name": "noteplan",
       "source": "./noteplan",
@@ -78,6 +59,24 @@
         "multi-perspective",
         "personas",
         "consult"
+      ]
+    },
+    {
+      "name": "js-simplifier",
+      "source": "./js-simplifier",
+      "description": "Simplify and improve JavaScript and TypeScript code across an entire codebase — modern syntax, code quality, and structural improvements",
+      "version": "1.0.0",
+      "keywords": [
+        "javascript",
+        "typescript",
+        "simplify",
+        "refactor",
+        "code-quality",
+        "modernise",
+        "es2020",
+        "cleanup",
+        "dead-code",
+        "async-await"
       ]
     }
   ]

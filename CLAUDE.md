@@ -2,7 +2,7 @@
 
 ## Critical: Source vs. Cache Paths
 
-This repository contains the source code for multiple plugins: `cpm`, `noteplan`, `php-lsp`, `sdd`.
+This repository contains the source code for multiple plugins: `cpm`, `noteplan`, `php-lsp`, `js-simplifier`.
 
 **NEVER read or write files in the plugin cache directory** (`~/.claude/plugins/cache/ninthspace-marketplace/`). That directory contains installed copies of plugins and is overwritten on updates. Changes made there are lost and not tracked by git.
 
@@ -13,7 +13,7 @@ This repository contains the source code for multiple plugins: `cpm`, `noteplan`
 | CPM | `cpm/` |
 | NotePlan | `noteplan/` |
 | PHP LSP | `php-lsp/` |
-| SDD | `sdd/` |
+| JS Simplifier | `js-simplifier/` |
 
 Common source locations (using CPM as an example — same pattern applies to all plugins):
 
