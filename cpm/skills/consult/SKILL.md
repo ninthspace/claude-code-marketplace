@@ -16,7 +16,7 @@ If `$ARGUMENTS` is provided, use it to determine the starting agent and/or topic
 - If it's a **file path**, read the file and use its contents as context. Ask the user to pick an agent.
 - If it's a **URL**, fetch the URL and use the content as context. Ask the user to pick an agent.
 - If it's a **name/role + topic** (e.g. `Margot docs/plans/my-plan.md`), start the conversation with that agent using the topic as context.
-- If it's a **description** that doesn't match an agent name or role, use it as the topic and ask the user to pick an agent.
+- If it's a **description** that doesn't match an agent name or role, use it as the topic, infer the most relevant agent from the roster based on topic alignment (e.g. a database question → architect or developer, a usability question → UX designer), confirm the selection with the user ("I'd suggest **{displayName}** ({role}) for this — start with them?"), and begin the conversation if confirmed. If the user picks someone else, use their choice instead.
 
 If no arguments are given, present the roster and ask the user to pick an agent and provide a topic.
 
