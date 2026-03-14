@@ -141,4 +141,57 @@ else
   assert_not_contains "$OUTPUT" "CPM_USER_NAME"
 fi
 
+# --- Compact summary injection tests ---
+
+test_start "Injects compact summary after progress file when both exist"
+PROJECT=$(setup_project_dir)
+echo "# Progress state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
+echo "# Compact Summary (PostCompact)" > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
+echo "This is the narrative." >> "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
+assert_contains "$OUTPUT" "# Progress state"
+assert_contains "$OUTPUT" "This is the narrative."
+
+test_start "Compact summary appears after progress file content"
+PROJECT=$(setup_project_dir)
+echo "# Progress state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
+echo "# Compact Summary (PostCompact)" > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
+# Progress content should come before the summary delimiter
+PROGRESS_POS=$(echo "$OUTPUT" | grep -n "# Progress state" | head -1 | cut -d: -f1)
+SUMMARY_POS=$(echo "$OUTPUT" | grep -n "CPM COMPACT SUMMARY" | head -1 | cut -d: -f1)
+if [ -n "$PROGRESS_POS" ] && [ -n "$SUMMARY_POS" ] && [ "$PROGRESS_POS" -lt "$SUMMARY_POS" ]; then
+  test_pass
+else
+  test_fail "Progress file should appear before compact summary"
+fi
+
+test_start "Compact summary injection uses clear header/separator"
+PROJECT=$(setup_project_dir)
+echo "# Progress state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
+echo "Summary content." > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
+assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
+assert_contains "$OUTPUT" "--- END COMPACT SUMMARY ---"
+
+test_start "Injects compact summary alone when no progress file exists"
+PROJECT=$(setup_project_dir)
+echo "Summary without progress." > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
+assert_contains "$OUTPUT" "Summary without progress."
+assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
+
+test_start "Skips compact summary when no summary file exists"
+PROJECT=$(setup_project_dir)
+echo "# Progress only" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
+assert_contains "$OUTPUT" "# Progress only"
+assert_not_contains "$OUTPUT" "CPM COMPACT SUMMARY"
+
+test_start "Falls back to unsuffixed compact summary file"
+PROJECT=$(setup_project_dir)
+echo "Fallback summary." > "$PROJECT/docs/plans/.cpm-compact-summary.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"no-match","source":"compact"}')
+assert_contains "$OUTPUT" "Fallback summary."
+
 test_summary

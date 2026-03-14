@@ -199,6 +199,8 @@ Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallb
 
 **Create** the file after roster loading and topic confirmation (before the first orchestration turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — never before. If compaction fires between deletion and a pending output, all session state is lost.
 
+**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
+
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
 ```markdown

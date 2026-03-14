@@ -32,7 +32,7 @@ CPM plugin users running discover, spec, or stories sessions long enough to trig
 - Must handle all three skills: discover, spec, stories
 - Focused on compaction resilience only (not broader session start/resume injection)
 - PreCompact stdout gets summarised (not preserved verbatim) — so the SessionStart hook is the primary re-injection point
-- No PostCompact hook exists — must work within PreCompact + SessionStart (compact) model
+- PostCompact hook now available — fires after compaction with `compact_summary` in stdin JSON. Used by `post-compact.sh` to save narrative context alongside structured progress files.
 - 60-second default timeout per hook
 
 ## Scope Boundaries

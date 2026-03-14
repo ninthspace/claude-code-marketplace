@@ -402,6 +402,8 @@ Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallb
 
 **Create** the file before starting the first task. **Update** it after EVERY task completes. **Delete** it only after all output artifacts (epic doc updates, batch summary) have been confirmed written — never before.
 
+**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
+
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
 ```markdown

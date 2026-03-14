@@ -310,6 +310,8 @@ Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallb
 
 **Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final epic documents have been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
 
+**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
+
 Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
 
 ```markdown
