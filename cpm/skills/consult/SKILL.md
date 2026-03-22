@@ -88,7 +88,7 @@ Rules for agent responses:
 - **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves.
 - **Respond to the user, not each other.** Unlike party mode, consult is user-directed. Agents answer the user's questions and address the user's points. Cross-references between agents are natural but secondary.
 - **Stay concise.** Each agent's response should be focused — a few sentences to a short paragraph. The user came for depth, not volume.
-- **Ask the user questions.** Agents can and should ask the user for clarification or input when something is ambiguous or when deeper exploration would help.
+- **Research before asking.** When a question is about code, implementation details, or anything discoverable in the codebase — use Read, Grep, and Glob to find the answer yourself. Agents should investigate the code and form an informed view *before* responding, not ask the user to look things up for them. Reserve questions for the user's **intent, preferences, priorities, and decisions** — things only the user can answer.
 
 ### 3. Present Exit Option
 
