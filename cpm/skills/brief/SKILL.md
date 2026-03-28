@@ -38,18 +38,13 @@ Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/
 
 If no retro files exist, skip this check silently and proceed to the Library Check.
 
+### Roster Loading (Startup)
+
+Follow the shared **Roster Loading** procedure (from the CPM Shared Skill Conventions loaded at session start). The roster is needed for Perspectives in Phases 2 and 5.
+
 ### Library Check (Startup)
 
-After the Retro Check and before Phase 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Phase 1.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `brief` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to product ideation: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during ideation phases when a library document's content is relevant — e.g. reading market research when discussing differentiation, or architecture docs when exploring technical feasibility of approaches.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the ideation process due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `brief`. Deep-read selectively during ideation phases — e.g. reading market research when discussing differentiation, or architecture docs when exploring technical feasibility of approaches.
 
 ### Template Hint (Startup)
 
@@ -81,7 +76,7 @@ For each approach, consider:
 
 Use AskUserQuestion to present the approaches and let the user discuss, combine, or refine them. The goal is to converge on a direction, not lock in every detail.
 
-**Perspectives**: After presenting approaches, have 2-3 agents weigh in from their domain. The PM might evaluate user impact, the architect might flag technical feasibility, or the UX designer might highlight interaction implications. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
+**Perspectives**: After presenting approaches, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Product Manager on user impact, the Software Architect on technical feasibility, or the UX Designer on interaction implications.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 2 summary before continuing.
 
@@ -122,7 +117,7 @@ Questions to explore:
 
 Present a feature list grouped by priority (essential vs. enhancing). Refine with the user.
 
-**Perspectives**: After features are drafted, have 2-3 agents weigh in. The developer might flag implementation complexity, the QA engineer might raise testability concerns, or the PM might challenge priority. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
+**Perspectives**: After features are drafted, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Senior Developer on implementation complexity, the QA Engineer on testability, or the Product Manager on priority.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 5 summary before continuing.
 
@@ -291,18 +286,6 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 The "Completed Phases" section grows as phases complete. Each summary should capture the user's key decisions and answers in 2-4 sentences — enough for seamless continuation, not a transcript.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
-
-## Perspectives
-
-Some phases include a **Perspectives** block where agent personas briefly weigh in. To use perspectives:
-
-1. Load the agent roster: check `docs/agents/roster.yaml` in the project first, then fall back to the plugin's `agents/roster.yaml` (at `../../agents/roster.yaml` relative to this file).
-2. Select 2-3 agents whose expertise is relevant to the current phase and topic.
-3. Each agent provides a brief perspective (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`.
-4. Perspectives should add value — surface blind spots, challenge assumptions, or highlight concerns the user might not have considered. If a perspective would just echo what the user already said, skip it.
-5. Present perspectives as a natural part of the facilitation, not as a separate section. Weave them in after the user's answer and before moving to the next phase.
-
-If the roster cannot be loaded, skip perspectives and continue the facilitation normally.
 
 ## Guidelines
 

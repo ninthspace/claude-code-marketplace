@@ -46,18 +46,13 @@ Before beginning Section 1, check for recent retro files using Glob: `docs/retro
 
 If no retro files exist, skip this check silently and proceed to the Library Check.
 
+### Roster Loading (Startup)
+
+Follow the shared **Roster Loading** procedure (from the CPM Shared Skill Conventions loaded at session start). The roster is needed for Perspectives in Sections 4 and 5.
+
 ### Library Check (Startup)
 
-After the Retro Check and before Section 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Section 1.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `spec` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to this spec: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during spec sections when a library document's content is relevant — especially during architecture decisions (Section 4) where architecture docs and coding standards directly inform choices, and during scope boundaries (Section 5) where existing constraints may affect what's feasible.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the spec process due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `spec`. Deep-read selectively during spec sections — especially architecture decisions (Section 4) where architecture docs and coding standards directly inform choices, and scope boundaries (Section 5) where existing constraints may affect what's feasible.
 
 ### Template Hint (Startup)
 
@@ -117,7 +112,7 @@ Areas to cover as relevant:
 - Deployment model
 - Major structural patterns
 
-**Perspectives**: Before presenting each major architecture decision to the user (whether referencing an existing ADR or facilitating a new one), have 2-3 agents weigh in with competing trade-offs. The architect might advocate for one approach, the developer might flag implementation cost, DevOps might raise deployment concerns, and QA might highlight testability. Present these as brief agent perspectives (1-2 sentences each) using the format: `{icon} **{name}**: {perspective}`. This surfaces trade-offs the user should consider before deciding.
+**Perspectives**: Before presenting each major architecture decision to the user, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Software Architect on structural trade-offs, the Senior Developer on implementation cost, the DevOps Engineer on deployment concerns, or the QA Engineer on testability. This surfaces trade-offs the user should consider before deciding.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 4 summary before continuing.
 
@@ -128,7 +123,7 @@ Consolidate from the conversation:
 - What's **explicitly out of scope**
 - What's **deferred** to future iterations
 
-**Perspectives**: Before finalising scope, have 2-3 agents weigh in on what should be in or out. The PM might push to keep scope tight for delivery, the architect might argue for including foundational work, and the developer might flag dependencies that force certain items in. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
+**Perspectives**: Before finalising scope, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Product Manager on keeping scope tight for delivery, the Software Architect on foundational work, or the Senior Developer on dependencies that force certain items in.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Section 5 summary before continuing.
 
@@ -331,18 +326,6 @@ Integration boundaries identified. Test infrastructure needs: {list or "none"}.}
 The "Completed Sections" section grows as sections complete. Each summary should capture the key decisions, requirements, and priorities in enough detail for seamless continuation — not a transcript, but enough that no question needs to be re-asked.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
-
-## Perspectives
-
-Some sections include a **Perspectives** block where agent personas briefly weigh in. To use perspectives:
-
-1. Load the agent roster: check `docs/agents/roster.yaml` in the project first, then fall back to the plugin's `agents/roster.yaml` (at `../../agents/roster.yaml` relative to this file).
-2. Select 2-3 agents whose expertise is relevant to the current section and topic.
-3. Each agent provides a brief perspective (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`.
-4. Perspectives should add value — surface trade-offs, challenge assumptions, or highlight concerns. If a perspective would just echo what's already been said, skip it.
-5. Present perspectives as a natural part of the facilitation, woven in before the user makes a decision.
-
-If the roster cannot be loaded, skip perspectives and continue the facilitation normally.
 
 ## Guidelines
 

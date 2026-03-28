@@ -30,6 +30,14 @@ if [ -n "$USER_NAME" ]; then
   echo "When addressing the user in conversation, use their name \"$USER_NAME\" instead of \"the user\"."
 fi
 
+# Load shared skill conventions into context
+PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CONVENTIONS_FILE="$PLUGIN_ROOT/shared/skill-conventions.md"
+if [ -f "$CONVENTIONS_FILE" ]; then
+  echo ""
+  cat "$CONVENTIONS_FILE"
+fi
+
 STATE_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
 NOW=$(date +%s)
 STALE_HOURS=24  # Files older than this get a STALE marker

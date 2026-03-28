@@ -41,18 +41,13 @@ Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/
 
 If no retro files exist, skip this check silently and proceed to the Library Check.
 
+### Roster Loading (Startup)
+
+Follow the shared **Roster Loading** procedure (from the CPM Shared Skill Conventions loaded at session start). The roster is needed for Perspectives in Phase 2.
+
 ### Library Check (Startup)
 
-After the Retro Check and before Phase 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Phase 1.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `architect` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to architecture exploration: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during exploration phases when a library document's content is relevant — especially architecture docs, infrastructure docs, or coding standards that constrain decisions.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the exploration process due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `architect`. Deep-read selectively during exploration phases — especially architecture docs, infrastructure docs, or coding standards that constrain decisions.
 
 ### Template Hint (Startup)
 
@@ -91,7 +86,7 @@ Present the decision list to the user with AskUserQuestion. Refine — they may 
 
 **Anti-pattern**: Decisions like "choose a database" or "pick a framework" without product-specific context are boilerplate. Instead: "How to handle booking availability with concurrent access" or "Where to run image processing given the latency requirements."
 
-**Perspectives**: After identifying decisions, have 2-3 agents weigh in. The architect might flag missing structural decisions, the DevOps engineer might raise operational concerns, or the developer might question whether a decision is premature. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
+**Perspectives**: After identifying decisions, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Software Architect on missing structural decisions, the DevOps Engineer on operational concerns, or the Senior Developer on whether a decision is premature.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 2 summary before continuing.
 
@@ -264,18 +259,6 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 The "Completed Phases" section grows as phases complete. Each summary should capture the user's key decisions in 2-4 sentences — enough for seamless continuation, not a transcript.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
-
-## Perspectives
-
-Some phases include a **Perspectives** block where agent personas briefly weigh in. To use perspectives:
-
-1. Load the agent roster: check `docs/agents/roster.yaml` in the project first, then fall back to the plugin's `agents/roster.yaml` (at `../../agents/roster.yaml` relative to this file).
-2. Select 2-3 agents whose expertise is relevant to the current phase and topic.
-3. Each agent provides a brief perspective (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`.
-4. Perspectives should add value — surface blind spots, challenge assumptions, or highlight concerns the user might not have considered. If a perspective would just echo what the user already said, skip it.
-5. Present perspectives as a natural part of the facilitation, not as a separate section. Weave them in after the user's answer and before moving to the next phase.
-
-If the roster cannot be loaded, skip perspectives and continue the facilitation normally.
 
 ## Guidelines
 

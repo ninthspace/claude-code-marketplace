@@ -25,18 +25,13 @@ Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/
 
 If no retro files exist, skip this check silently and proceed to the Library Check.
 
+### Roster Loading (Startup)
+
+Follow the shared **Roster Loading** procedure (from the CPM Shared Skill Conventions loaded at session start). The roster is needed for Perspectives in Phases 1 and 5.
+
 ### Library Check (Startup)
 
-After the Retro Check and before Phase 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Phase 1.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `discover` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to discovery: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during discovery phases when a library document's content is relevant to the current discussion — e.g. reading an architecture doc when discussing constraints, or a glossary when clarifying terminology.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context (e.g. "Found `coding-standards.md` in project library"). Never block the discovery process due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `discover`. Deep-read selectively during discovery phases — e.g. reading an architecture doc when discussing constraints, or a glossary when clarifying terminology.
 
 ### Template Hint (Startup)
 
@@ -53,7 +48,7 @@ Questions to explore:
 - Why does this matter now?
 - What happens if we don't solve this?
 
-**Perspectives**: After the user describes their problem, before moving to Phase 2, briefly present 2-3 agent perspectives on the problem statement. Load the agent roster (see Perspectives below) and have relevant agents weigh in — e.g. the PM might reframe the problem in terms of user value, the architect might flag technical implications, or the UX designer might highlight user experience concerns. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`. This enriches the discovery without slowing it down.
+**Perspectives**: After the user describes their problem, before moving to Phase 2, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Product Manager to reframe the problem in terms of user value, the Software Architect to flag technical implications, or the UX Designer to highlight user experience concerns.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 1 summary before continuing.
 
@@ -101,7 +96,7 @@ Questions to explore:
 - Business constraints (budget, timeline, compliance)?
 - What's explicitly out of scope?
 
-**Perspectives**: Before finalising constraints, have 2-3 agents weigh in on what constraints they see from their domain. The architect might flag scalability concerns, DevOps might raise deployment constraints, QA might identify testability challenges. This helps surface constraints the user might not have considered. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
+**Perspectives**: Before finalising constraints, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Software Architect on scalability concerns, the DevOps Engineer on deployment constraints, or the QA Engineer on testability challenges.
 
 **Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 5 summary before continuing.
 
@@ -197,18 +192,6 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 The "Completed Phases" section grows as phases complete. Each summary should capture the user's key decisions and answers in 2-4 sentences — enough for seamless continuation, not a transcript.
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
-
-## Perspectives
-
-Some phases include a **Perspectives** block where agent personas briefly weigh in. To use perspectives:
-
-1. Load the agent roster: check `docs/agents/roster.yaml` in the project first, then fall back to the plugin's `agents/roster.yaml` (at `../../agents/roster.yaml` relative to this file).
-2. Select 2-3 agents whose expertise is relevant to the current phase and topic.
-3. Each agent provides a brief perspective (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`.
-4. Perspectives should add value — surface blind spots, challenge assumptions, or highlight concerns the user might not have considered. If a perspective would just echo what the user already said, skip it.
-5. Present perspectives as a natural part of the facilitation, not as a separate section. Weave them in after the user's answer and before moving to the next phase.
-
-If the roster cannot be loaded, skip perspectives and continue the facilitation normally.
 
 ## Guidelines
 
