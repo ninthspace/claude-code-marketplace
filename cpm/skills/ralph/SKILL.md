@@ -39,10 +39,28 @@ For range-style references (e.g. `23 through 26`), expand to matching files: `do
 
 Check whether the Ralph Wiggum plugin is available in the current session:
 
-1. Check if the `/ralph-loop:ralph-loop` skill is available by scanning the session's skill list.
-2. If not detected, warn the user: "Ralph Wiggum plugin not detected. The `/ralph-loop:ralph-loop` command may not be available. Install the plugin from the Claude Code marketplace or ensure it's configured." Use AskUserQuestion with options: "Continue anyway" or "Stop".
+1. Check if the `/ralph-wiggum:ralph-loop` skill is available by scanning the session's skill list.
+2. If not detected, warn the user: "Ralph Wiggum plugin not detected. The `/ralph-wiggum:ralph-loop` command may not be available. Install the plugin from the Claude Code marketplace or ensure it's configured." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
-#### 1c. Test Runner Discovery
+#### 1c. Permissions Check
+
+Autonomous execution will stall if Claude Code prompts for tool approval mid-run. Check that common bash commands are pre-approved:
+
+1. Read `~/.claude/settings.json` and look for a `permissions.allow` array.
+2. Check for the presence of these baseline patterns: `Bash(find:*)`, `Bash(grep:*)`, `Bash(git:*)`, `Bash(bash:*)`, `Bash(php:*)`, `Bash(npm:*)`, `Bash(sed:*)`.
+3. Also check for the ralph-wiggum setup script pattern: `Bash(\"/Users/...ralph-wiggum/scripts/setup-ralph-loop.sh\":*)` (with the quoted path — the unquoted variant does not match).
+4. **If missing patterns are found**, warn the user:
+
+   "**Permissions warning**: Your user settings (`~/.claude/settings.json`) are missing some bash permissions that autonomous execution needs. Without these, the Ralph loop will stall on tool approval prompts."
+
+   List the missing patterns and use AskUserQuestion with options:
+   - "Add them for me" — use the Edit tool to add the missing patterns to `~/.claude/settings.json` `permissions.allow` array
+   - "I'll handle it" — continue without changes
+   - "Stop" — abort
+
+5. **If no permissions block exists at all**, offer to create one with the full set of recommended patterns.
+
+#### 1d. Test Runner Discovery
 
 Discover the project's test runner for inclusion in the generated prompt:
 
@@ -50,49 +68,52 @@ Discover the project's test runner for inclusion in the generated prompt:
 2. If found, report: "Discovered test runner: {command}. This will be referenced in the generated prompt."
 3. If not found, note: "No test runner discovered. The generated prompt will instruct `/cpm:do` to discover one at runtime."
 
-#### 1d. Resume Detection
+#### 1e. Resume Detection
 
 Check for evidence of a previous Ralph run:
 
-1. **Glob** `docs/plans/ralph-log-*.md` for existing execution logs. Also glob `docs/plans/ralph-prompt-*.md` for existing prompt files.
+1. **Glob** `docs/plans/ralph-log-*.md` for existing execution logs.
 2. If an execution log exists, read it and summarise the state: which epics completed, which are in progress, any skipped tasks.
 3. Read the target epic docs' `**Status**:` fields to confirm the current state.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
-5. If resuming and a `ralph-prompt-*.md` file exists, reuse that file path in Step 2b (update its contents if the prompt changed).
 
 ### Step 2: Prompt Assembly
 
-Assemble the Ralph prompt using the template (see Prompt Template below). Interpolate:
+Assemble the ralph-loop command as a single, short, plain-text string. The prompt **must not** contain markdown formatting, code fences, backticks, XML tags, or any shell-special characters beyond basic punctuation. Keep it concise — the detailed behaviour comes from `/cpm:do` itself; the prompt only needs to steer autonomous decisions.
 
-- `{epic_list}` — the resolved epic doc paths, space-separated
+Build the prompt by interpolating into the template below:
+
+- `{epic_count}` — number of epics
+- `{epic_range}` — human-readable range (e.g. "5-7")
+- `{epic_glob}` — glob pattern or explicit paths (e.g. `docs/epics/05-epic-*.md through 07-epic-*.md`)
 - `{max_iterations}` — from arguments or default (50)
-- `{completion_promise}` — fixed: `ALL_EPICS_COMPLETE`
-- `{stuck_threshold}` — fixed: 3 consecutive failures
-- `{log_file}` — `docs/plans/ralph-log-{timestamp}.md` (or the existing log file if resuming)
-- `{story_filter}` — from `--story-filter` argument, formatted as a "Story Filter" section in the prompt (e.g. "Only work on stories 1-3" or "Skip story 4"). If no filter provided, this slot is empty (no section generated).
-- `{resume_context}` — if resuming, instructions to skip completed work; otherwise empty
-- `{test_runner_hint}` — if a test runner was discovered, include it; otherwise empty
+- `{story_filter_clause}` — if `--story-filter` was provided, append a clause like "Only work on stories 1-3." or "Skip story 4." If no filter, omit entirely.
+- `{test_runner_clause}` — if a test runner was discovered, append "Use {command} to run tests." If not found, omit entirely.
+- `{resume_clause}` — if resuming, append "This is a resumed run — skip completed work and pick up where the previous run left off." If fresh, omit entirely.
 
-#### 2b. Write Prompt File
+### Prompt Template
 
-Write the assembled prompt to `docs/plans/ralph-prompt-{timestamp}.md` using the Write tool. This file is the single source of truth for what Ralph executes — it avoids passing complex multiline markdown through shell arguments, which breaks the ralph-loop plugin's shell permission checks.
+```
+Run /cpm:do. Work through epics {epic_range} sequentially ({epic_glob}). When an epic completes and offers the next epic choice, always continue to the next epic. Do NOT use AskUserQuestion -- make autonomous decisions: fix test failures yourself, use inline planning instead of formal plan mode, keep working until acceptance criteria pass, skip a task after 3 consecutive failures. Commit after each completed story.{story_filter_clause}{test_runner_clause}{resume_clause} When all {epic_count} epics are complete, output ALL_EPICS_COMPLETE.
+```
 
-If resuming and an existing `ralph-prompt-*.md` file was found alongside the execution log, reuse that file path instead of creating a new one (update its contents if the prompt changed).
+**CRITICAL — prompt hygiene rules:**
+- The entire prompt is passed as a double-quoted argument to `/ralph-wiggum:ralph-loop`. It must be safe inside double quotes.
+- No backticks, no markdown headers, no code fences, no XML/HTML tags.
+- Use `ALL_EPICS_COMPLETE` as the plain text marker in the prompt — must match the `--completion-promise` value exactly.
+- Use `--` instead of `—` for dashes in the prompt text.
+- Keep the total prompt under 500 characters where possible.
 
 ### Step 3: Two-Phase Launch
 
 #### 3a. Present (Dry-Run)
 
-Display the prompt file contents and the ralph-loop command to the user:
+Display the assembled command to the user:
 
 ```
-Here's the generated Ralph prompt (saved to {prompt_file}):
+Here's the generated Ralph loop command:
 
-{assembled_prompt}
-
-Command that will be executed:
-
-/ralph-loop:ralph-loop 'Read and execute the instructions in {prompt_file}' --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
+/ralph-wiggum:ralph-loop "{assembled_prompt}" --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
 ```
 
 If `--dry-run` was specified, stop here.
@@ -104,80 +125,9 @@ Use AskUserQuestion: "Ready to launch the Ralph loop?" Options:
 - "Edit first" — let the user modify the prompt before launching
 - "Save and exit" — save the command to a file for later use
 
-If "Launch it": output the `/ralph-loop:ralph-loop` command for execution.
-If "Edit first": present the prompt text for the user to modify, update the prompt file with the modified text, then re-present.
-If "Save and exit": the prompt file already exists — just inform the user of the path and the command to run later.
-
-## Prompt Template
-
-The following template is interpolated with values from Step 2. This is the prompt that Ralph feeds to Claude on each iteration.
-
-```
-Run /cpm:do. Work through the following epics sequentially: {epic_list}.
-
-{resume_context}
-
-## Autonomous Behaviour
-
-Do NOT use AskUserQuestion — make all decisions autonomously:
-
-- **Test failures**: Fix failing tests yourself. Read the error output, diagnose the issue, and implement a fix. If a test fails 3 times on the same issue, skip that task and log it.
-- **Unmet acceptance criteria**: Re-attempt the work. Read the criteria carefully, check what's missing, and implement it. Do not ask for guidance.
-- **Epic selection (multiple epics)**: When an epic completes and offers the next epic choice, always continue to the next epic in the list.
-- **Plan mode**: Use inline planning instead of formal plan mode. Do not enter EnterPlanMode.
-- **Verification gate failures**: If criteria are not met after implementation, continue working on them rather than asking.
-- **Test runner not found**: Proceed with self-assessment for verification.
-- **Coverage matrix errors**: Continue without recording proof for that row.
-
-## Multi-Epic Transitions
-
-When one epic completes, automatically continue to the next epic in the list. Do not stop between epics. The epic list is: {epic_list}.
-
-## Stuck Detection
-
-If the same task fails verification {stuck_threshold} times consecutively:
-1. Log the failure in the execution log with details of what was attempted.
-2. Skip the task and mark it as skipped in the execution log.
-3. Continue to the next task.
-
-Do not get stuck in an infinite retry loop on a single task.
-
-## Execution Log
-
-Maintain an append-only execution log at `{log_file}`. After each significant action, append an entry:
-
-```markdown
-## [{timestamp}] {action_type}
-**Epic**: {epic name}
-**Story**: {story number} — {story title}
-**Task**: {task number} — {task title}
-**Result**: {pass/fail/skip}
-**Details**: {brief description of what happened}
-```
-
-Action types: `task_start`, `task_complete`, `task_skip`, `verification_pass`, `verification_fail`, `epic_complete`, `error`.
-
-Never overwrite or truncate the log. Always append.
-
-## Commits
-
-Commit after each completed story using a descriptive message. Do not batch commits across stories.
-
-{story_filter}
-
-{test_runner_hint}
-
-## Iteration Awareness
-
-On each iteration, read the epic doc status fields and execution log to understand what has already been completed. Do not redo completed work. Pick up from where the previous iteration left off.
-
-## Completion
-
-When ALL epics in the list are complete, output:
-<promise>ALL_EPICS_COMPLETE</promise>
-
-If max iterations are reached before completion, output a summary of what was completed and what remains.
-```
+If "Launch it": output the `/ralph-wiggum:ralph-loop` command for execution.
+If "Edit first": present the prompt for the user to modify, then re-present.
+If "Save and exit": write the command to `docs/plans/ralph-command-{timestamp}.md`.
 
 ## State Management
 
@@ -188,8 +138,6 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` during the pre-flight phase 
 **Session ID**: Use `CPM_SESSION_ID` from context. Fall back to `.cpm-progress.md` if not present.
 
 **Resume adoption**: Follow the standard CPM resume adoption procedure — if an old progress file matches this skill's `**Skill**:` field but has a different session ID, adopt it.
-
-**Prompt file**: The prompt file (`docs/plans/ralph-prompt-{timestamp}.md`) is a persistent artifact — do NOT delete it after launch. Ralph re-reads it on every iteration, and the user may want to inspect or edit it mid-run.
 
 **Create** before Step 1. **Delete** after the Ralph loop is launched (or after dry-run output is presented).
 
@@ -208,7 +156,6 @@ Use the Write tool to write the full file each time. Format:
 - Ralph plugin: {detected/not detected}
 - Test runner: {command or "none"}
 - Resume: {yes — resuming from log {path} / no — fresh run}
-- Prompt file: {path to ralph-prompt file}
 
 ## Next Action
 {What to do next}
