@@ -533,7 +533,23 @@ const SKILLS = [
     outputFile: '(updates epic docs in place)',
     phases: ['Resolve epic doc + scan ADRs', 'Discover test runner (library → config → ask user)', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria — run tests for [unit]/[integration]/[feature], self-assess for [manual]', 'Mark complete + capture retro observation (including testing gaps)', 'Loop until story done → hydrate next', 'Epic-level verification against source spec'],
     tip: 'Test runner discovery is convention-based: library docs → project config files (composer.json, package.json, Makefile, pyproject.toml, Cargo.toml) → ask user. The cached command is used in all verification gates. TDD is supported by task ordering — place testing tasks before implementation tasks in the epic doc.',
-    next: ['retro', 'review', 'pivot']
+    next: ['ralph', 'retro', 'review', 'pivot']
+  },
+  {
+    id: 'ralph',
+    name: '/cpm:ralph',
+    label: 'Ralph',
+    icon: '🔄',
+    color: '#f0883e',
+    category: 'execution',
+    short: 'Autonomous multi-epic execution via Ralph Wiggum',
+    description: 'Wraps /cpm:do in a Ralph Wiggum loop for autonomous, unsupervised multi-epic execution. Discovers epics, validates prerequisites (Ralph plugin installed, test runner available), generates a self-contained prompt with autonomous behaviour overrides (no AskUserQuestion gates), and launches the loop. Includes stuck detection (skip after N failures), append-only execution log, resume capability, and two-phase launch (dry-run then execute). Ideal for overnight runs or large batches of epics.',
+    input: 'Epic doc paths (explicit, range, or auto-discover). Optional --max-iterations, --story-filter, --dry-run.',
+    output: 'Ralph loop command + execution log',
+    outputFile: 'docs/plans/ralph-log-{timestamp}.md',
+    phases: ['Pre-flight: discover epics, detect Ralph plugin, find test runner', 'Resume detection: check for previous run logs and epic statuses', 'Prompt assembly: interpolate template with epic list, iterations, overrides', 'Present generated /ralph-loop:ralph-loop command for review', 'Launch on confirmation (or save for later)'],
+    tip: 'The generated prompt overrides all 10 AskUserQuestion gates in /cpm:do with autonomous fallback behaviour. A maintenance coupling table in the SKILL.md documents which gates are overridden — update it when /cpm:do changes.',
+    next: ['retro']
   },
   {
     id: 'review',
@@ -690,10 +706,12 @@ const EDGES = [
   { from: 'brief', to: 'spec', label: 'alternative path', style: 'dashed' },
   { from: 'spec', to: 'epics', label: 'produces spec for', style: 'solid' },
   { from: 'epics', to: 'do', label: 'produces epics for', style: 'solid' },
+  { from: 'epics', to: 'ralph', label: 'autonomous execution', style: 'dashed' },
   { from: 'epics', to: 'review', label: 'pre-execution review', style: 'dashed' },
   { from: 'review', to: 'do', label: 'cleared to execute', style: 'dashed' },
   { from: 'review', to: 'pivot', label: 'needs amendment', style: 'dashed' },
   { from: 'do', to: 'retro', label: 'observations feed into', style: 'solid' },
+  { from: 'ralph', to: 'retro', label: 'observations feed into', style: 'solid' },
   { from: 'do', to: 'pivot', label: 'mid-flight correction', style: 'dashed' },
   { from: 'pivot', to: 'do', label: 'resume execution', style: 'dashed' },
   { from: 'retro', to: 'discover', label: 'feed forward', style: 'dashed' },
@@ -708,7 +726,7 @@ const PRESETS = {
   full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive','quick','status'], knowledge: {} },
   quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know' } },
   planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know' } },
-  execution: { highlight: ['do','pivot','review','retro','quick','status'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
   review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know' } },
 };
 
