@@ -32,6 +32,7 @@ Show all CPM artifact-producing skills with their template metadata. Present as 
 | `cpm:architect` | ADR | Presentational | `docs/templates/architect.md` |
 | `cpm:epics` | Epic doc | Structural | — (fixed) |
 | `cpm:do` | Epic doc updates | Structural | — (fixed) |
+| `cpm:ralph` | Ralph loop command | Structural | — (fixed) |
 | `cpm:present` | Communication | Presentational | `docs/templates/present/{format}.md` |
 | `cpm:review` | Review file | Structural | — (fixed) |
 | `cpm:retro` | Retro file | Structural | — (fixed) |

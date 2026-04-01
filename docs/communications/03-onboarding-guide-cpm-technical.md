@@ -34,6 +34,7 @@ Here's what each skill does:
 | `/cpm:spec` | Build requirements — functional (MoSCoW prioritised), non-functional, scope boundaries, testing strategy with test approach tags | `docs/specifications/01-spec-{slug}.md` |
 | `/cpm:epics` | Break work into epic docs — stories with acceptance criteria (tagged for test approach), auto-generated testing tasks, and integration testing stories | `docs/epics/01-epic-{slug}.md` (one per epic) |
 | `/cpm:do` | Execute — discovers test runner, picks up tasks one by one, implements, runs tests in verification gates, updates status | Updates the epic doc in place |
+| `/cpm:ralph` | Autonomous execution — wraps `/cpm:do` in a Ralph Wiggum loop for unsupervised multi-epic execution with stuck detection and execution logging | Ralph loop command + execution log |
 
 ### Supporting Skills
 
@@ -171,6 +172,12 @@ Agents challenge the epic. Findings are severity-tagged, including test coverage
 /cpm:do
 ```
 Claude discovers the project's test runner at startup (from config files or by asking you), then picks up the next unblocked task, implements it, runs tests in verification gates for criteria tagged `[unit]`/`[integration]`/`[feature]`, updates the epic doc, and moves to the next task. Repeat until done.
+
+**Alternative: Autonomous execution with `/cpm:ralph`**
+```
+/cpm:ralph
+```
+Wraps `/cpm:do` in a Ralph Wiggum loop for autonomous, unsupervised multi-epic execution. Discovers incomplete epics, generates a self-contained prompt with autonomous behaviour overrides (no user interaction needed), and launches a Ralph loop. Includes stuck detection, execution logging, and resume capability. Ideal for overnight runs or large batches of epics. Requires the [Ralph Wiggum plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum).
 
 **8. Retrospective**
 ```

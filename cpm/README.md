@@ -14,6 +14,7 @@ After installation, use any skill independently or as a pipeline:
                                                                           /cpm:review    /cpm:pivot
                                                                                                      ↓
                                                                                               /cpm:archive
+/cpm:ralph (autonomous multi-epic execution via Ralph Wiggum plugin)
 /cpm:quick (lightweight execution for small, well-defined changes)
 /cpm:status (project status reconnaissance and next-step recommendations)
 /cpm:library (import reference docs used by all skills)
@@ -33,6 +34,7 @@ Each step is optional. Use what fits your situation:
 - Ready for requirements? Jump to `/cpm:spec`
 - Have a plan, need epics? Go straight to `/cpm:epics`
 - Ready to implement? `/cpm:do` works through tasks one by one
+- Want autonomous overnight execution? `/cpm:ralph` wraps `/cpm:do` in a Ralph Wiggum loop
 - Want a critical review before starting? `/cpm:review` runs adversarial review of epics/stories
 - Need to share planning artifacts with stakeholders? `/cpm:present` transforms them for any audience
 - Want to explore or customise artifact templates? `/cpm:templates` lists, previews, and scaffolds overrides
@@ -189,6 +191,25 @@ When ADRs exist in `docs/architecture/`, tasks that touch architectural boundari
 The epic doc is updated as work progresses — statuses move from Pending -> In Progress -> Complete. Acceptance criteria are checked before marking any task done.
 
 During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps). These feed into `/cpm:retro`.
+
+### `/cpm:ralph` — Autonomous Multi-Epic Execution
+
+Wraps `/cpm:do` in a [Ralph Wiggum](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) loop for autonomous, unsupervised multi-epic execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction.
+
+The generated prompt replaces all `/cpm:do` interaction gates (AskUserQuestion) with autonomous fallback behaviour: fix test failures, retry unmet criteria, skip stuck tasks, and auto-continue between epics. Includes stuck detection (skip after N consecutive failures), an append-only execution log, and a completion promise that signals when all epics are done.
+
+**Requires**: The [Ralph Wiggum plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) installed in Claude Code.
+
+**Input**: Epic doc paths (explicit, range, or auto-discover). Optional `--max-iterations`, `--story-filter`, `--dry-run`.
+
+```
+/cpm:ralph                                    # auto-discover all incomplete epics
+/cpm:ralph docs/epics/23-epic-*.md docs/epics/24-epic-*.md   # specific epics
+/cpm:ralph 23 through 26 --max-iterations 100 # range with iteration limit
+/cpm:ralph --dry-run                          # generate prompt without launching
+```
+
+The skill always presents the generated `/ralph-loop:ralph-loop` command for review before executing (two-phase launch). Resume capability detects previous runs via execution logs and epic doc statuses.
 
 ### `/cpm:review` — Adversarial Review
 
@@ -395,6 +416,11 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
    - Runs tests in verification gates for automated criteria
    - Implements each task, verifies criteria, updates status
    - Loops until all stories are complete
+
+   **Or** `/cpm:ralph` — Autonomous multi-epic execution
+   - Wraps `/cpm:do` in a Ralph Wiggum loop for unsupervised execution
+   - Auto-discovers epics, generates autonomous prompt, launches the loop
+   - Includes stuck detection, execution logging, and resume capability
 
 8. `/cpm:present` (optional) — Share results with stakeholders
    - Transform specs or briefs into executive summaries, team updates, etc.
