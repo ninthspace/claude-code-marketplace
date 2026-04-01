@@ -92,7 +92,7 @@ Here's the generated Ralph prompt (saved to {prompt_file}):
 
 Command that will be executed:
 
-/ralph-loop:ralph-loop "Read and execute the instructions in {prompt_file}" --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
+/ralph-loop:ralph-loop 'Read and execute the instructions in {prompt_file}' --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
 ```
 
 If `--dry-run` was specified, stop here.
