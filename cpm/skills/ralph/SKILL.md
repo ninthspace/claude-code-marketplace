@@ -54,10 +54,11 @@ Discover the project's test runner for inclusion in the generated prompt:
 
 Check for evidence of a previous Ralph run:
 
-1. **Glob** `docs/plans/ralph-log-*.md` for existing execution logs.
+1. **Glob** `docs/plans/ralph-log-*.md` for existing execution logs. Also glob `docs/plans/ralph-prompt-*.md` for existing prompt files.
 2. If an execution log exists, read it and summarise the state: which epics completed, which are in progress, any skipped tasks.
 3. Read the target epic docs' `**Status**:` fields to confirm the current state.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
+5. If resuming and a `ralph-prompt-*.md` file exists, reuse that file path in Step 2b (update its contents if the prompt changed).
 
 ### Step 2: Prompt Assembly
 
@@ -72,16 +73,26 @@ Assemble the Ralph prompt using the template (see Prompt Template below). Interp
 - `{resume_context}` — if resuming, instructions to skip completed work; otherwise empty
 - `{test_runner_hint}` — if a test runner was discovered, include it; otherwise empty
 
+#### 2b. Write Prompt File
+
+Write the assembled prompt to `docs/plans/ralph-prompt-{timestamp}.md` using the Write tool. This file is the single source of truth for what Ralph executes — it avoids passing complex multiline markdown through shell arguments, which breaks the ralph-loop plugin's shell permission checks.
+
+If resuming and an existing `ralph-prompt-*.md` file was found alongside the execution log, reuse that file path instead of creating a new one (update its contents if the prompt changed).
+
 ### Step 3: Two-Phase Launch
 
 #### 3a. Present (Dry-Run)
 
-Display the assembled `/ralph-loop:ralph-loop` command to the user:
+Display the prompt file contents and the ralph-loop command to the user:
 
 ```
-Here's the generated Ralph loop command:
+Here's the generated Ralph prompt (saved to {prompt_file}):
 
-/ralph-loop:ralph-loop "{assembled_prompt}" --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
+{assembled_prompt}
+
+Command that will be executed:
+
+/ralph-loop:ralph-loop "Read and execute the instructions in {prompt_file}" --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
 ```
 
 If `--dry-run` was specified, stop here.
@@ -94,8 +105,8 @@ Use AskUserQuestion: "Ready to launch the Ralph loop?" Options:
 - "Save and exit" — save the command to a file for later use
 
 If "Launch it": output the `/ralph-loop:ralph-loop` command for execution.
-If "Edit first": present the prompt text for the user to modify, then re-assemble and re-present.
-If "Save and exit": write the command to `docs/plans/ralph-command-{timestamp}.md`.
+If "Edit first": present the prompt text for the user to modify, update the prompt file with the modified text, then re-present.
+If "Save and exit": the prompt file already exists — just inform the user of the path and the command to run later.
 
 ## Prompt Template
 
@@ -178,6 +189,8 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` during the pre-flight phase 
 
 **Resume adoption**: Follow the standard CPM resume adoption procedure — if an old progress file matches this skill's `**Skill**:` field but has a different session ID, adopt it.
 
+**Prompt file**: The prompt file (`docs/plans/ralph-prompt-{timestamp}.md`) is a persistent artifact — do NOT delete it after launch. Ralph re-reads it on every iteration, and the user may want to inspect or edit it mid-run.
+
 **Create** before Step 1. **Delete** after the Ralph loop is launched (or after dry-run output is presented).
 
 Use the Write tool to write the full file each time. Format:
@@ -195,6 +208,7 @@ Use the Write tool to write the full file each time. Format:
 - Ralph plugin: {detected/not detected}
 - Test runner: {command or "none"}
 - Resume: {yes — resuming from log {path} / no — fresh run}
+- Prompt file: {path to ralph-prompt file}
 
 ## Next Action
 {What to do next}

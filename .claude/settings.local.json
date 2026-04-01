@@ -25,7 +25,8 @@
       "Bash(unzip -p /Users/chris/Downloads/js-simplifier-skill.skill js-simplifier-skill/SKILL.md)",
       "Bash(unzip -p /Users/chris/Downloads/js-simplifier-skill.skill js-simplifier-skill/agents/modern-syntax.md && echo \"===SEPARATOR===\" && unzip -p /Users/chris/Downloads/js-simplifier-skill.skill js-simplifier-skill/agents/code-quality.md && echo \"===SEPARATOR===\" && unzip -p /Users/chris/Downloads/js-simplifier-skill.skill js-simplifier-skill/agents/structure-reuse.md)",
       "Bash(unzip -o /Users/chris/Downloads/js-simplifier-skill.skill -d /tmp/js-simplifier-extract && cp /tmp/js-simplifier-extract/js-simplifier-skill/SKILL.md js-simplifier/SKILL.md && cp /tmp/js-simplifier-extract/js-simplifier-skill/agents/modern-syntax.md js-simplifier/agents/modern-syntax.md && cp /tmp/js-simplifier-extract/js-simplifier-skill/agents/code-quality.md js-simplifier/agents/code-quality.md && cp /tmp/js-simplifier-extract/js-simplifier-skill/agents/structure-reuse.md js-simplifier/agents/structure-reuse.md && rm -rf /tmp/js-simplifier-extract)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "mcp__ray-app__send_custom_html_output"
     ],
     "deny": [],
     "ask": []
