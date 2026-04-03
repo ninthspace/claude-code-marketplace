@@ -25,7 +25,7 @@ Check for input in this order:
 Before Step 1, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `epics` or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `epics` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to work breakdown: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during epic breakdown when a library document's content is relevant — e.g. reading architecture docs to inform epic grouping or dependency identification.
 

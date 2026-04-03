@@ -18,7 +18,7 @@ Resolve the epic doc first, then select a task.
    a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
    b. If no epic files found, proceed without one (tasks still work via their descriptions).
    c. If only one epic file exists, use it — no need to ask.
-   d. If multiple epic files exist, read each file's `**Status**:` field (top-level, near the `#` heading). Filter to epics that are not `Complete`. If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
+   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Do not use Bash loops with shell variables for this — use Grep and Read tools. If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
    e. If all epics are `Complete`, tell the user there's nothing to do.
 3. If no epic docs exist, proceed without one (tasks still work via their descriptions).
 
@@ -36,7 +36,7 @@ The epic doc, once resolved, applies to the entire work loop — don't re-parse 
 After resolving the epic doc and before starting the per-task workflow, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `do` or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `do` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to task execution: {titles}. I'll reference these during implementation." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during task execution (step 4 of the per-task workflow) when a library document's content is directly relevant to the current task — e.g. reading coding standards before writing code, or architecture docs before making structural decisions.
 
@@ -362,14 +362,16 @@ Only include categories that have observations. Each bullet should reference whi
 
 4. **Report**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain").
 
-5. **Next epic check**: After reporting, check if other epics are available to work on:
-   a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
-   b. Read each file's `**Status**:` field. Filter to epics that are not `Complete` (excluding the epic just finished).
-   c. If **no remaining epics** have work: delete the progress file and stop.
-   d. If **one or more epics** have remaining work: present the choice using AskUserQuestion — "Epic {name} is complete. What would you like to do?" with options:
-      - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic)
-      - **Stop here** — delete the progress file and end the session
-      If multiple epics have remaining work, show the lowest-numbered one as the "Continue to..." option.
+5. **Next epic check**: After reporting, decide whether to look for more work:
+   a. **If the epic was specified explicitly** (a file path was passed via `$ARGUMENTS`, not auto-discovered): the user asked for this specific epic. Delete the progress file and stop — do not scan for other epics.
+   b. **If the epic was auto-discovered** (resolved via smart discovery, not an explicit path): check if other epics are available to work on:
+      i. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
+      ii. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete` (excluding the epic just finished). Do not use Bash loops with shell variables for this — use Grep and Read tools.
+      iii. If **no remaining epics** have work: delete the progress file and stop.
+      iv. If **one or more epics** have remaining work: present the choice using AskUserQuestion — "Epic {name} is complete. What would you like to do?" with options:
+         - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic)
+         - **Stop here** — delete the progress file and end the session
+         If multiple epics have remaining work, show the lowest-numbered one as the "Continue to..." option.
 
 ## Graceful Degradation
 

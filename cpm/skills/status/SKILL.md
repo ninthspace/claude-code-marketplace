@@ -43,7 +43,7 @@ Scan CPM documentation directories for artifacts. For each directory, use the Gl
 
 **For each directory**, count the files found. Do not list individual files — just the count.
 
-**Epic deep-read:** For each epic file, read it and extract the `**Status**:` field and story completion counts. Only report epics that have **remaining work** (Status is not Complete). Completed epics are summarised as a single count (e.g. "17 epics complete"). Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
+**Epic deep-read:** For each epic file, use the Read tool to extract the `**Status**:` field and story completion counts. Read each file individually — do not use Bash loops with shell variables for this. Only report epics that have **remaining work** (Status is not Complete). Completed epics are summarised as a single count (e.g. "17 epics complete"). Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
 
 **Progress files:** Glob `docs/plans/.cpm-progress-*.md`. If any exist, read the first few lines to extract `**Skill**:` and `**Current task**:`/`**Phase**:` fields. Report which skills have active sessions.
 

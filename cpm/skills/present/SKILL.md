@@ -30,7 +30,7 @@ Check for input in this order:
 Before artifact selection, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found. Filter to documents whose `scope` array includes `present` or `all`.
+2. **Read front-matter** of each file found using the Read tool. Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `present` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to presentations: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
 4. **Deep-read selectively** when generating content — e.g. brand guidelines when formatting for clients, or glossaries when writing for non-technical audiences.
 

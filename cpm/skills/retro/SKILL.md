@@ -124,7 +124,7 @@ After writing the retro file, check if any retro observations should be fed back
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip this step silently and proceed to Step 4.
 
-2. **Read front-matter** of each library document. Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
+2. **Read front-matter** of each library document using the Read tool. Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
 
 3. **Match observations to library documents**: For each retro observation (from the `**Retro**:` fields collected in Step 1), assess whether it's relevant to any library document. Use the observation category and content to match:
    - **Codebase discoveries** → likely relevant to architecture or coding standards docs

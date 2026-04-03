@@ -29,18 +29,18 @@ Before generating the prompt, validate all prerequisites.
 If explicit epic paths were provided in arguments, resolve them (expand globs). Otherwise, auto-discover:
 
 1. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
-2. Read each file's `**Status**:` field. Filter to epics that are not `Complete`.
+2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Do not use Bash loops with shell variables for this — use Grep and Read tools.
 3. If no incomplete epics found, report to the user and stop: "No incomplete epics found. Nothing to run."
 4. Present the discovered epics and confirm with AskUserQuestion.
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.
 
-#### 1b. Ralph Wiggum Plugin Detection
+#### 1b. Ralph Wiggum Stop Hook Detection
 
-Check whether the Ralph Wiggum plugin is available in the current session:
+The ralph-wiggum plugin's stop hook is the only external dependency — it intercepts session exit and feeds the prompt back to continue the loop. `cpm:ralph` writes the state file directly (no dependency on the setup script).
 
-1. Check if the `/ralph-wiggum:ralph-loop` skill is available by scanning the session's skill list.
-2. If not detected, warn the user: "Ralph Wiggum plugin not detected. The `/ralph-wiggum:ralph-loop` command may not be available. Install the plugin from the Claude Code marketplace or ensure it's configured." Use AskUserQuestion with options: "Continue anyway" or "Stop".
+1. Check if the ralph-wiggum stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-wiggum` or `stop-hook.sh`.
+2. If not detected, warn the user: "Ralph Wiggum stop hook not detected. The loop mechanism requires the ralph-wiggum plugin to be installed — without the stop hook, writing the state file will have no effect. Install the plugin from the Claude Code marketplace." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
 #### 1c. Permissions Check
 
@@ -48,8 +48,7 @@ Autonomous execution will stall if Claude Code prompts for tool approval mid-run
 
 1. Read `~/.claude/settings.json` and look for a `permissions.allow` array.
 2. Check for the presence of these baseline patterns: `Bash(find:*)`, `Bash(grep:*)`, `Bash(git:*)`, `Bash(bash:*)`, `Bash(php:*)`, `Bash(npm:*)`, `Bash(sed:*)`.
-3. Also check for the ralph-wiggum setup script pattern: `Bash(\"/Users/...ralph-wiggum/scripts/setup-ralph-loop.sh\":*)` (with the quoted path — the unquoted variant does not match).
-4. **If missing patterns are found**, warn the user:
+3. **If missing patterns are found**, warn the user:
 
    "**Permissions warning**: Your user settings (`~/.claude/settings.json`) are missing some bash permissions that autonomous execution needs. Without these, the Ralph loop will stall on tool approval prompts."
 
@@ -58,7 +57,7 @@ Autonomous execution will stall if Claude Code prompts for tool approval mid-run
    - "I'll handle it" — continue without changes
    - "Stop" — abort
 
-5. **If no permissions block exists at all**, offer to create one with the full set of recommended patterns.
+4. **If no permissions block exists at all**, offer to create one with the full set of recommended patterns.
 
 #### 1d. Test Runner Discovery
 
@@ -74,7 +73,7 @@ Check for evidence of a previous Ralph run:
 
 1. **Glob** `docs/plans/ralph-log-*.md` for existing execution logs.
 2. If an execution log exists, read it and summarise the state: which epics completed, which are in progress, any skipped tasks.
-3. Read the target epic docs' `**Status**:` fields to confirm the current state.
+3. Use Grep to check the target epic docs' `**Status**:` fields to confirm the current state. Do not use Bash loops for this.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
 
 ### Step 2: Prompt Assembly
@@ -94,40 +93,80 @@ Build the prompt by interpolating into the template below:
 ### Prompt Template
 
 ```
-Run /cpm:do. Work through epics {epic_range} sequentially ({epic_glob}). When an epic completes and offers the next epic choice, always continue to the next epic. Do NOT use AskUserQuestion -- make autonomous decisions: fix test failures yourself, use inline planning instead of formal plan mode, keep working until acceptance criteria pass, skip a task after 3 consecutive failures. Commit after each completed story.{story_filter_clause}{test_runner_clause}{resume_clause} When all {epic_count} epics are complete, output ALL_EPICS_COMPLETE.
+Run /cpm:do. Work through epics {epic_range} sequentially ({epic_glob}). When an epic completes and offers the next epic choice, always continue to the next epic. Only work on the specified epics -- do not scan for or continue to other epics beyond this list. Do NOT use AskUserQuestion -- make autonomous decisions: fix test failures yourself, use inline planning instead of formal plan mode, keep working until acceptance criteria pass, skip a task after 3 consecutive failures. Commit after each completed story.{story_filter_clause}{test_runner_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
 ```
 
 **CRITICAL — prompt hygiene rules:**
-- The entire prompt is passed as a double-quoted argument to `/ralph-wiggum:ralph-loop`. It must be safe inside double quotes.
+- The prompt is written into the body of `.claude/ralph-loop.local.md` (after the YAML frontmatter). It is fed back verbatim by the stop hook on each iteration.
 - No backticks, no markdown headers, no code fences, no XML/HTML tags.
-- Use `ALL_EPICS_COMPLETE` as the plain text marker in the prompt — must match the `--completion-promise` value exactly.
+- Use `ALL_EPICS_COMPLETE` as the plain text marker in the prompt — must match the `completion_promise` frontmatter value exactly.
 - Use `--` instead of `—` for dashes in the prompt text.
 - Keep the total prompt under 500 characters where possible.
 
-### Step 3: Two-Phase Launch
+### Step 3: State File Write and Launch
 
-#### 3a. Present (Dry-Run)
+#### 3a. Existing State File Guard
 
-Display the assembled command to the user:
+Before writing, check if `.claude/ralph-loop.local.md` already exists using the Read tool:
+
+1. If the file exists, read it and present a warning: "An active ralph loop state file already exists. Iteration: {iteration}, prompt: {first 80 chars of prompt text}..." Use AskUserQuestion with options:
+   - "Overwrite" — proceed with writing the new state file
+   - "Abort" — stop without writing (leave existing file untouched)
+2. If the file does not exist, proceed directly to Step 3b.
+
+#### 3b. Present (Dry-Run)
+
+Display the state file content that would be written:
 
 ```
-Here's the generated Ralph loop command:
+Here's the ralph loop state file that will be written to .claude/ralph-loop.local.md:
 
-/ralph-wiggum:ralph-loop "{assembled_prompt}" --completion-promise "ALL_EPICS_COMPLETE" --max-iterations {max_iterations}
+---
+active: true
+iteration: 1
+max_iterations: {max_iterations}
+completion_promise: "{completion_promise}" (or null)
+started_at: "{ISO 8601 UTC timestamp}"
+---
+
+{assembled_prompt}
 ```
 
 If `--dry-run` was specified, stop here.
 
-#### 3b. Confirm and Execute
+#### 3c. Confirm and Execute
 
 Use AskUserQuestion: "Ready to launch the Ralph loop?" Options:
-- "Launch it" — execute the command
+- "Launch it" — write the state file and start
 - "Edit first" — let the user modify the prompt before launching
-- "Save and exit" — save the command to a file for later use
+- "Save and exit" — save the state file content to `docs/plans/ralph-command-{timestamp}.md` for later use
 
-If "Launch it": output the `/ralph-wiggum:ralph-loop` command for execution.
-If "Edit first": present the prompt for the user to modify, then re-present.
-If "Save and exit": write the command to `docs/plans/ralph-command-{timestamp}.md`.
+If "Launch it":
+1. Write `.claude/ralph-loop.local.md` using the Write tool with the exact content shown in the dry-run. The file must use the frontmatter schema the stop hook expects:
+   - `active: true`
+   - `iteration: 1`
+   - `max_iterations: {value from arguments or default}`
+   - `completion_promise: "{text}"` (quoted) or `null` (unquoted)
+   - `started_at: "{current UTC time in ISO 8601 format}"`
+   - Followed by `---` and then the assembled prompt text
+2. Output an activation message:
+
+```
+Ralph loop activated!
+
+Iteration: 1
+Max iterations: {N or "unlimited"}
+Completion promise: {text or "none"}
+
+The stop hook is now active. When you try to exit, the same prompt will be
+fed back to you. You'll see your previous work in files, creating a
+self-referential loop where you iteratively improve on the same task.
+```
+
+3. Then output the assembled prompt text so Claude begins working on it immediately.
+
+If "Edit first": present the prompt for the user to modify, then re-present from 3b.
+If "Save and exit": write the state file content to `docs/plans/ralph-command-{timestamp}.md`.
 
 ## State Management
 
@@ -165,7 +204,39 @@ Use the Write tool to write the full file each time. Format:
 
 ## Maintenance Coupling
 
-> **This section documents the dependency between `cpm:ralph` and `cpm:do`.** Changes to `cpm:do`'s interaction gates may require updates to this skill's prompt template.
+> **This section documents dependencies between `cpm:ralph` and external components.** Changes to `cpm:do`'s interaction gates or the ralph-wiggum plugin's state file format may require updates to this skill.
+
+### Ralph Wiggum State File Schema
+
+`cpm:ralph` writes `.claude/ralph-loop.local.md` directly instead of invoking the ralph-wiggum plugin's `setup-ralph-loop.sh` script. The stop hook (`stop-hook.sh`) parses this file to drive the loop. The file format is the implicit contract between `cpm:ralph` and the stop hook.
+
+**State file path**: `.claude/ralph-loop.local.md`
+
+**Expected format** (YAML frontmatter + markdown body):
+
+```markdown
+---
+active: true
+iteration: 1
+max_iterations: {integer, 0 = unlimited}
+completion_promise: "{text}" or null
+started_at: "{ISO 8601 UTC, e.g. 2026-04-03T12:00:00Z}"
+---
+
+{prompt text}
+```
+
+| Field | Type | Stop Hook Usage |
+|---|---|---|
+| `active` | boolean | Not currently checked by stop hook (presence of file implies active) |
+| `iteration` | integer | Compared against `max_iterations`; incremented each loop |
+| `max_iterations` | integer | Loop stops when `iteration >= max_iterations` (0 = unlimited) |
+| `completion_promise` | string or null | Matched against `<promise>` tags in assistant output |
+| `started_at` | ISO 8601 string | Informational; not parsed by stop hook |
+
+**When to update**: If the ralph-wiggum plugin changes the state file path, frontmatter field names, or parsing logic in `stop-hook.sh`, this skill's Step 3c must be updated to match. The stop hook uses `sed`, `grep`, and `awk` to parse the frontmatter — any format change that breaks these parsers will break the loop.
+
+### cpm:do Interaction Gates
 
 The prompt template's "Autonomous Behaviour" section overrides the following `AskUserQuestion` locations in `cpm:do`:
 
@@ -178,7 +249,7 @@ The prompt template's "Autonomous Behaviour" section overrides the following `As
 | Step 4 — TDD Green phase still failing | Ask user: continue, skip TDD, or stop | Continue working on implementation |
 | Step 5 — Unmet acceptance criteria | Ask user: continue working or mark complete | Continue working; skip after stuck threshold |
 | Step 5 — Coverage matrix edit failure | Ask user: continue or stop | Continue without recording proof |
-| Step 8 — Next epic check | Ask user: continue to next epic or stop | Always continue to next epic |
+| Step 8 — Next epic check | Ask user: continue to next epic or stop | Handled natively: `cpm:do` skips the scan when an explicit epic path is provided |
 | Graceful Degradation — Test command fails | Ask user: new command, continue, or stop | Continue without tests |
 | Graceful Degradation — No test + TDD | Ask user: provide runner or acknowledge | Fall back to standard workflow |
 

@@ -31,7 +31,7 @@ If the roster cannot be loaded, skip perspectives and continue the facilitation 
 Check the project library for reference documents relevant to the current skill. Each skill specifies its own scope keyword (e.g., `spec`, `brief`, `architect`, `discover`).
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes the current skill's scope keyword or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes the current skill's scope keyword or `all`.
 3. **Report to user**: "Found {N} library documents relevant to this session: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during the skill's phases/sections when a library document's content is relevant.
 

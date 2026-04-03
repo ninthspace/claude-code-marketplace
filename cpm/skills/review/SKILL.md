@@ -43,7 +43,7 @@ Review roster loaded: {N} agents available. I'll select the most relevant review
 After roster loading and before starting the review, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found (the YAML block between `---` delimiters, typically the first ~10 lines). Filter to documents whose `scope` array includes `review` or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `review` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to this review: {titles}. Agents will reference these during their review." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during the review step when an agent's review would benefit from referencing library content — e.g. an architect referencing architecture docs when reviewing structural decisions, or a developer citing coding standards when reviewing implementation tasks.
 
