@@ -38,6 +38,29 @@ if [ -f "$CONVENTIONS_FILE" ]; then
   cat "$CONVENTIONS_FILE"
 fi
 
+# Check for active ralph loop state file
+RALPH_STATE="$CLAUDE_PROJECT_DIR/.claude/ralph-loop.local.md"
+if [ -f "$RALPH_STATE" ]; then
+  ralph_iteration=$(grep -m1 '^iteration:' "$RALPH_STATE" 2>/dev/null | sed 's/iteration: *//')
+  ralph_max=$(grep -m1 '^max_iterations:' "$RALPH_STATE" 2>/dev/null | sed 's/max_iterations: *//')
+  ralph_promise=$(grep -m1 '^completion_promise:' "$RALPH_STATE" 2>/dev/null | sed 's/completion_promise: *//' | sed 's/^"\(.*\)"$/\1/')
+  echo ""
+  echo "WARNING — ACTIVE RALPH LOOP DETECTED"
+  echo "====================================="
+  echo "A ralph loop is active on this repo (.claude/ralph-loop.local.md)."
+  echo "Iteration: ${ralph_iteration:-unknown}, Max: ${ralph_max:-unknown}, Promise: ${ralph_promise:-unknown}"
+  echo ""
+  echo "The ralph-wiggum stop hook will intercept ALL session exits on this repo,"
+  echo "not just the session that started the loop. Any work in this session will"
+  echo "be hijacked by the ralph loop when you try to exit."
+  echo ""
+  echo "IMPORTANT: Warn the user about this immediately. Recommend either:"
+  echo "  1. Work in a different repo until the loop completes"
+  echo "  2. Delete .claude/ralph-loop.local.md to deactivate the loop (will stop the running loop too)"
+  echo "  3. Continue at your own risk — the stop hook WILL intercept your session exit"
+  echo ""
+fi
+
 STATE_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
 NOW=$(date +%s)
 STALE_HOURS=24  # Files older than this get a STALE marker
