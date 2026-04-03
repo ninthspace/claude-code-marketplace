@@ -35,6 +35,15 @@ If explicit epic paths were provided in arguments, resolve them (expand globs). 
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.
 
+#### 1a-ii. Strip `[plan]` Tags
+
+Formal plan mode (`EnterPlanMode`) creates an interactive approval gate that stalls autonomous execution. Strip `[plan]` tags from epic docs before launching the loop so `/cpm:do` uses inline planning for all stories.
+
+1. After resolving epic paths, use Grep to search for `\[plan\]` across the resolved epic docs.
+2. For each match, use the Edit tool to remove the `[plan]` tag from the story heading (e.g. `## Set up OAuth integration [plan]` → `## Set up OAuth integration`). Trim any trailing whitespace left by the removal.
+3. Track which stories were modified. Log a line per stripped tag for inclusion in the execution log: "Stripped `[plan]` from Story {N}: {heading text}".
+4. If no `[plan]` tags are found, skip silently.
+
 #### 1b. Ralph Wiggum Stop Hook Detection
 
 The ralph-wiggum plugin's stop hook is the only external dependency — it intercepts session exit and feeds the prompt back to continue the loop. `cpm:ralph` writes the state file directly (no dependency on the setup script).
