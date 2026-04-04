@@ -35,23 +35,25 @@ If explicit epic paths were provided in arguments, resolve them (expand globs). 
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.
 
-#### 1a-ii. Strip `[plan]` Tags
+#### 1b. Strip `[plan]` Tags
 
 Formal plan mode (`EnterPlanMode`) creates an interactive approval gate that stalls autonomous execution. Strip `[plan]` tags from epic docs before launching the loop so `/cpm:do` uses inline planning for all stories.
 
-1. After resolving epic paths, use Grep to search for `\[plan\]` across the resolved epic docs.
-2. For each match, use the Edit tool to remove the `[plan]` tag from the story heading (e.g. `## Set up OAuth integration [plan]` → `## Set up OAuth integration`). Trim any trailing whitespace left by the removal.
+**Do not skip this step.** It must run after epic discovery and before any other pre-flight checks.
+
+1. For each resolved epic path, use the Read tool to read the file. Scan the content for any heading line (lines starting with `##` or `###`) that contains the literal text `[plan]`. Do not use Grep for this — reading each file directly avoids regex escaping issues with square brackets.
+2. For each heading that contains `[plan]`, use the Edit tool to remove the `[plan]` tag and any trailing whitespace it leaves behind (e.g. `## Set up OAuth integration [plan]` → `## Set up OAuth integration`).
 3. Track which stories were modified. Log a line per stripped tag for inclusion in the execution log: "Stripped `[plan]` from Story {N}: {heading text}".
 4. If no `[plan]` tags are found, skip silently.
 
-#### 1b. Ralph Wiggum Stop Hook Detection
+#### 1c. Ralph Wiggum Stop Hook Detection
 
 The ralph-wiggum plugin's stop hook is the only external dependency — it intercepts session exit and feeds the prompt back to continue the loop. `cpm:ralph` writes the state file directly (no dependency on the setup script).
 
 1. Check if the ralph-wiggum stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-wiggum` or `stop-hook.sh`.
 2. If not detected, warn the user: "Ralph Wiggum stop hook not detected. The loop mechanism requires the ralph-wiggum plugin to be installed — without the stop hook, writing the state file will have no effect. Install the plugin from the Claude Code marketplace." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
-#### 1c. Permissions Check
+#### 1d. Permissions Check
 
 Autonomous execution will stall if Claude Code prompts for tool approval mid-run. Check that common bash commands are pre-approved:
 
@@ -68,7 +70,7 @@ Autonomous execution will stall if Claude Code prompts for tool approval mid-run
 
 4. **If no permissions block exists at all**, offer to create one with the full set of recommended patterns.
 
-#### 1d. Test Runner Discovery
+#### 1e. Test Runner Discovery
 
 Discover the project's test runner for inclusion in the generated prompt:
 
@@ -76,7 +78,7 @@ Discover the project's test runner for inclusion in the generated prompt:
 2. If found, report: "Discovered test runner: {command}. This will be referenced in the generated prompt."
 3. If not found, note: "No test runner discovered. The generated prompt will instruct `/cpm:do` to discover one at runtime."
 
-#### 1e. Resume Detection
+#### 1f. Resume Detection
 
 Check for evidence of a previous Ralph run:
 
@@ -125,6 +127,8 @@ Before writing, check if `.claude/ralph-loop.local.md` already exists using the 
 
 #### 3b. Present (Dry-Run)
 
+**Capture the current UTC time** before displaying or writing the state file. Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via the Bash tool and store the output as `{utc_timestamp}`. Do not generate the timestamp yourself — LLM-generated times are unreliable.
+
 Display the state file content that would be written:
 
 ```
@@ -135,7 +139,7 @@ active: true
 iteration: 1
 max_iterations: {max_iterations}
 completion_promise: "{completion_promise}" (or null)
-started_at: "{ISO 8601 UTC timestamp}"
+started_at: "{utc_timestamp}"
 ---
 
 {assembled_prompt}
@@ -156,7 +160,7 @@ If "Launch it":
    - `iteration: 1`
    - `max_iterations: {value from arguments or default}`
    - `completion_promise: "{text}"` (quoted) or `null` (unquoted)
-   - `started_at: "{current UTC time in ISO 8601 format}"`
+   - `started_at: "{utc_timestamp}"` (the value captured via Bash in Step 3b)
    - Followed by `---` and then the assembled prompt text
 2. Output an activation message:
 
@@ -229,7 +233,7 @@ active: true
 iteration: 1
 max_iterations: {integer, 0 = unlimited}
 completion_promise: "{text}" or null
-started_at: "{ISO 8601 UTC, e.g. 2026-04-03T12:00:00Z}"
+started_at: "{utc_timestamp from Bash: date -u +\"%Y-%m-%dT%H:%M:%SZ\"}"
 ---
 
 {prompt text}
