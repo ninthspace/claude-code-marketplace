@@ -104,7 +104,7 @@ Build the prompt by interpolating into the template below:
 ### Prompt Template
 
 ```
-Run /cpm:do. Work through epics {epic_range} sequentially ({epic_glob}). When an epic completes and offers the next epic choice, always continue to the next epic. Only work on the specified epics -- do not scan for or continue to other epics beyond this list. Do NOT use AskUserQuestion -- make autonomous decisions: fix test failures yourself, use inline planning instead of formal plan mode, keep working until acceptance criteria pass, skip a task after 3 consecutive failures. Commit after each completed story.{story_filter_clause}{test_runner_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
+Run /cpm:do. Work through epics {epic_range} sequentially ({epic_glob}). When an epic completes and offers the next epic choice, always continue to the next epic. Only work on the specified epics -- do not scan for or continue to other epics beyond this list. Do NOT use AskUserQuestion -- make autonomous decisions: fix test failures yourself, use inline planning instead of formal plan mode, keep working until acceptance criteria pass, skip a task after 3 consecutive failures. Commit after each completed story but NEVER push to remote.{story_filter_clause}{test_runner_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
 ```
 
 **CRITICAL — prompt hygiene rules:**
