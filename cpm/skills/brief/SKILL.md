@@ -160,7 +160,7 @@ After confirmation, suggest next steps:
 
 Save the product brief to `docs/briefs/{nn}-brief-{slug}.md` in the current project.
 
-- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/briefs/[0-9]*-brief-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 - `{slug}` is a short kebab-case name derived from the product (e.g., `planning-plugin`, `booking-platform`).
 
 Create the `docs/briefs/` directory if it doesn't exist.

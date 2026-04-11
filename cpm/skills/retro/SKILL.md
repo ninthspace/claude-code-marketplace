@@ -68,7 +68,7 @@ For each category with observations, write a brief synthesis — not just a list
 
 Save the retro file to `docs/retros/{nn}-retro-{slug}.md`. Create the `docs/retros/` directory if it doesn't exist.
 
-- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/retros/[0-9]*-retro-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 - `{slug}` is derived from the epic doc name (e.g. epic doc `01-epic-auth.md` produces retro slug `auth`).
 
 Format:

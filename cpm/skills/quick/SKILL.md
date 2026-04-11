@@ -170,7 +170,7 @@ If the user adjusts, incorporate their feedback and re-present the proposal. Ite
 
 Determine the record number and slug using the same convention as the completion record:
 
-1. **Number** (`{nn}`): Glob `docs/quick/[0-9]*-quick-*.md` to find existing records. Extract the highest number and increment by 1. If no records exist, start at `01`. Zero-pad to 2 digits.
+1. **Number** (`{nn}`): Assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 2. **Slug** (`{slug}`): Derive a kebab-case slug from the change description (e.g. "add verbose flag to deploy script" → `add-verbose-flag-deploy-script`). Keep it concise — 3-6 words.
 
 Create the `docs/quick/` directory if it doesn't exist. Write the spec file using the Write tool:

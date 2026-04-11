@@ -189,7 +189,7 @@ Present the complete spec to the user for review. Use AskUserQuestion to confirm
 
 Save the spec to `docs/specifications/{nn}-spec-{slug}.md` in the current project.
 
-- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/specifications/[0-9]*-spec-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 - `{slug}` matches the brief slug if one was used as input, or is derived from the project name.
 
 Create the `docs/specifications/` directory if it doesn't exist.

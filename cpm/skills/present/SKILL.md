@@ -94,7 +94,7 @@ Present the draft to the user for review using AskUserQuestion. Refine based on 
 
 Save the communication to `docs/communications/{nn}-{format}-{slug}.md`.
 
-- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/communications/[0-9]*-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 - `{format}` is the kebab-case format name (e.g., `summary-memo`, `status-update`, `presentation-outline`, `changelog`, `onboarding-guide`).
 - `{slug}` is a short kebab-case name derived from the content (e.g., `q1-progress`, `auth-system-overview`).
 

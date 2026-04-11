@@ -108,7 +108,7 @@ Produce a problem brief document. Present it to the user for confirmation using 
 
 Save the brief to `docs/plans/{nn}-plan-{slug}.md` in the current project.
 
-- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/plans/[0-9]*-plan-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 - `{slug}` is a short kebab-case name derived from the problem (e.g., `user-onboarding`).
 
 Create the `docs/plans/` directory if it doesn't exist.

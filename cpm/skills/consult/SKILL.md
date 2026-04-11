@@ -117,7 +117,7 @@ Save the progress file's content as a permanent discussion artifact. This preser
 
 1. **Read the current progress file** (`docs/plans/.cpm-progress-{session_id}.md`).
 2. **Determine the output path**: Save to `docs/discussions/{nn}-discussion-{slug}.md`.
-   - `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/discussions/[0-9]*-discussion-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+   - `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
    - `{slug}` is a short kebab-case name derived from the consultation topic.
    - Create the `docs/discussions/` directory if it doesn't exist.
 3. **Write the discussion record**: Transform the progress file into the output artifact by replacing the session state header with a discussion record header. Format:

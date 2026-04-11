@@ -30,10 +30,14 @@ Scan the four planning directories for documents and group them into artifact ch
 
    **Explicitly exclude** `docs/library/` — library documents have their own lifecycle via `/cpm:library`.
 
-2. **Extract slugs**: For each document found, extract the slug from the filename. The slug is everything after the number-prefix and type identifier: `{NN}-{type}-{slug}.md`. For example:
-   - `01-plan-compaction-resilience.md` → slug: `compaction-resilience`
-   - `03-spec-party-mode.md` → slug: `party-mode`
-   - `01-retro-auth.md` → slug: `auth`
+2. **Extract slugs**: For each document found, extract the slug from the filename by anchoring on the **type identifier**, not on positional numerics. The slug is everything after the type identifier (`-plan-`, `-spec-`, `-epic-`, `-retro-`, `-review-`, `-adr-`, `-quick-`, `-discussion-`, `-coverage-`, `-brief-`). This rule is shape-agnostic — it works for both legacy flat filenames (`{nn}-{type}-{slug}.md`) and new two-part epic filenames (`{parent}-{seq}-epic-{slug}.md`). For example:
+   - `01-plan-compaction-resilience.md` → slug: `compaction-resilience` (legacy flat)
+   - `03-spec-party-mode.md` → slug: `party-mode` (legacy flat)
+   - `01-retro-auth.md` → slug: `auth` (legacy flat)
+   - `28-01-epic-doc-numbering-scheme.md` → slug: `doc-numbering-scheme` (new two-part epic)
+   - `28-01-coverage-doc-numbering-scheme.md` → slug: `doc-numbering-scheme` (new two-part coverage)
+
+   Do not attempt to parse the numeric prefix as a fixed-width string — the width may be one or two integer fields depending on the artifact type and shape. Always find the type identifier substring first, then take everything after it as the slug.
 
 3. **Group into chains**: Match documents across directories by slug. A chain is the set of all documents sharing the same slug. For example, slug `compaction-resilience` might have:
    - `docs/plans/01-plan-compaction-resilience.md`

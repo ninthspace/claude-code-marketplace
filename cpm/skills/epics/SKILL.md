@@ -57,11 +57,11 @@ Read and understand the source document. Summarise the key work areas to the use
 
 ### Step 2: Identify Epics
 
-Analyse the source to identify major work areas. Each epic will become its own document at `docs/epics/{nn}-epic-{slug}.md`.
+Analyse the source to identify major work areas. Each epic will become its own document at `docs/epics/{parent}-{seq}-epic-{slug}.md`. See the **Epic Filename Convention** subsection below for the parent-extraction and sub-number rules.
 
 For each epic, determine:
 - **Name**: A concise label for the work area (e.g. "Authentication System", "API Layer")
-- **Number** (`{nn}`): Zero-padded sequential number starting at `01`. Use the Glob tool to list existing `docs/epics/[0-9]*-epic-*.md` files, find the highest number, and continue from there. If none exist, start at `01`.
+- **Filename prefix** (`{parent}-{seq}`): Assigned per the **Epic Filename Convention** subsection below — `{parent}` comes from the source spec number (or `00` for orphans), `{seq}` increments within that parent.
 - **Slug** (`{slug}`): Kebab-case derived from the epic name (e.g. "authentication-system", "api-layer")
 - **Summary**: One-sentence description of what this epic covers
 
@@ -71,6 +71,35 @@ Keep epics practical:
 - 2-5 epics for a small feature
 - 5-10 for a larger project
 - Don't create epics for the sake of it
+
+### Epic Filename Convention
+
+Epic documents use a **two-part numeric prefix**: `{parent}-{seq}-epic-{slug}.md`. This makes the parent spec discoverable at the filename level — a reader scanning `ls docs/epics/` can identify an epic's source without opening the file.
+
+> **Transition note**: Epics created before the numbering update used flat `{nn}-epic-{slug}.md`. New epics use parent-scoped `{parent}-{seq}-epic-{slug}.md`. Both shapes coexist permanently — old epics are not migrated. Readers must handle both shapes; writers produce only the two-part shape.
+
+**Parent extraction**:
+
+- **Spec-linked epics** (the default — input is a spec): `{parent}` is the numeric prefix of the source spec's filename. For example, input `docs/specifications/28-spec-foo.md` yields `{parent} = 28`, producing `28-01-epic-foo.md`, `28-02-epic-bar.md`, and so on.
+- **Orphan epics** (input is a brief, discussion, description, or bare prompt — no parent spec): `{parent}` is the literal string `00`. Orphan epics are written as `00-{seq}-epic-{slug}.md`. The skill never produces a flat-shape epic — every new epic has two parts.
+
+**Sub-number assignment** (`{seq}`):
+
+The sub-number is assigned per parent, via a **scoped glob** that naturally excludes flat-shape epics:
+
+1. Glob `docs/epics/{parent}-[0-9]*-epic-*.md` in the active directory.
+2. Glob `docs/archive/epics/{parent}-[0-9]*-epic-*.md` in the archive mirror. If the archive directory does not exist, treat this set as empty.
+3. Extract the **second numeric field** from each matched filename (the part immediately after `{parent}-`). Parse it as an integer — per the shared Numbering invariant, never as a string.
+4. Take the union of the two sets and compute `max + 1`. If both sets are empty, the first epic under this parent gets `{seq} = 01`.
+5. Format `{seq}` using the shared Numbering width rule — minimum 2 digits, zero-padded.
+
+Flat-shape files like `15-epic-consult-skill-core.md` are naturally excluded from this glob because they have no second numeric field to match. They remain in the directory untouched and are invisible to sub-number assignment.
+
+**Immutability of sub-numbers**:
+
+Sub-numbers are **identifiers**, not ordinals. If epic `28-02-epic-foo.md` is later deleted during a pivot, the next new epic under spec 28 is `28-04-epic-baz.md` — not `28-03-epic-baz.md`. Gaps from deleted sub-numbers are preserved; the max-lookup simply skips missing integers. This is modelled on ticket IDs (JIRA-123 is never reissued when JIRA-122 is deleted) and keeps cross-references stable.
+
+**General epic listings**: Operations that enumerate *all* epics (for dependency resolution, batch status checks, cross-epic references) must use the general glob `docs/epics/[0-9]*-epic-*.md`, which matches both flat and two-part shapes. Only the sub-number assignment above uses the scoped glob. Never narrow the general glob to the two-part shape — that would hide legacy epics from readers.
 
 **Production loop**: After epics are confirmed, Steps 3, 3b, 3c, and 3d iterate per epic — break each epic into stories, then tasks, then assess integration testing, then verify requirement coverage. Save each epic document and its coverage matrix after they are finalised (before moving to the next epic). This means epic docs are written incrementally, not all at once at the end.
 
@@ -203,7 +232,7 @@ Where a single spec requirement maps to multiple story criteria, include one row
 
 If the user identifies a fidelity problem (story criterion is weaker than or contradicts spec text), update the affected story's acceptance criteria in the epic doc before proceeding.
 
-**Persist the matrix**: After the user confirms, save the coverage matrix as `docs/epics/{nn}-coverage-{slug}.md` — using the same number and slug as the epic it covers (see Output section). Save the epic doc and coverage matrix together before moving to the next epic.
+**Persist the matrix**: After the user confirms, save the coverage matrix as `docs/epics/{parent}-{seq}-coverage-{slug}.md` — using the same two-part prefix and slug as the epic it covers (see Output section). Save the epic doc and coverage matrix together before moving to the next epic.
 
 **Regeneration awareness**: Before saving, check whether a coverage matrix file already exists at the target path (e.g. from a previous `/cpm:epics` run). If an existing matrix is found and contains `✓` markers in the Verified column, the new matrix must clear verification for any rows whose "Story Criterion (verbatim)" text has changed — replace `✓` with empty for those rows. Rows whose criterion text is unchanged retain their `✓` status. If the existing matrix has no `✓` markers, or if no existing matrix is found, save the new matrix directly.
 
@@ -225,9 +254,9 @@ Use AskUserQuestion for final confirmation.
 
 ## Output
 
-Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/epics/` directory if it doesn't exist.
+Save each epic document to `docs/epics/{parent}-{seq}-epic-{slug}.md`. Create the `docs/epics/` directory if it doesn't exist.
 
-- `{nn}` is the zero-padded number assigned during Step 2.
+- `{parent}-{seq}` is the two-part numeric prefix assigned during Step 2 — see the Epic Filename Convention subsection.
 - `{slug}` is the kebab-case name derived from the epic name.
 
 ```markdown
@@ -264,7 +293,7 @@ Save each epic document to `docs/epics/{nn}-epic-{slug}.md`. Create the `docs/ep
 **Epic-level metadata**:
 - `**Source spec**`: Back-reference to the specification that produced this epic. Enables traceability from implementation back to requirements.
 - `**Status**`: Derived from stories — `Pending` when no stories are started, `In Progress` when any story is in progress, `Complete` when all stories are complete.
-- `**Blocked by**`: Cross-epic dependency. References another epic by its filename slug (e.g. `Epic 01-epic-setup`). Leave as `—` when the epic has no upstream dependencies. Multiple dependencies are comma-separated (e.g. `Epic 01-epic-setup, Epic 02-epic-data-model`).
+- `**Blocked by**`: Cross-epic dependency. References another epic by its filename prefix (e.g. `Epic 28-01-epic-setup` for new two-part epics or `Epic 15-epic-data-model` for legacy flat epics — both shapes are valid). Leave as `—` when the epic has no upstream dependencies. Multiple dependencies are comma-separated (e.g. `Epic 28-01-epic-setup, Epic 15-epic-data-model`).
 
 **Story numbers** are sequential per epic document, starting at 1. They provide stable references within the doc that don't depend on Claude Code's task system. The `**Blocked by**` field on stories references story numbers for intra-epic deps (e.g. `Story 1` or `Story 1, Story 2`).
 
@@ -274,7 +303,7 @@ After saving each epic doc, tell the user the document path so they can referenc
 
 ### Coverage Matrix Artifacts
 
-Each epic gets a companion coverage matrix file saved alongside it during the production loop (Step 3d). The file uses the same number and slug as its epic: `docs/epics/{nn}-coverage-{slug}.md`.
+Each epic gets a companion coverage matrix file saved alongside it during the production loop (Step 3d). The file uses the same two-part prefix and slug as its epic: `docs/epics/{parent}-{seq}-coverage-{slug}.md`. For legacy flat-shape epics, the coverage file retains the flat shape it was created with (`docs/epics/{nn}-coverage-{slug}.md`); both shapes coexist in the directory.
 
 ```markdown
 # Coverage Matrix: {Epic Name}
@@ -292,7 +321,7 @@ Each epic gets a companion coverage matrix file saved alongside it during the pr
 
 Save each coverage matrix at the same time as its epic doc. Tell the user both file paths together.
 
-When starting implementation of a task, read the relevant epic document first to understand the full context: all stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan. Also read the epic's coverage matrix (`docs/epics/{nn}-coverage-{slug}.md`) when available — it provides requirement-level traceability that connects each task back to the spec.
+When starting implementation of a task, read the relevant epic document first to understand the full context: all stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan. Also read the epic's coverage matrix when available — its path follows the epic doc's own shape (`docs/epics/{parent}-{seq}-coverage-{slug}.md` for new two-part epics, or `docs/epics/{nn}-coverage-{slug}.md` for legacy flat epics). It provides requirement-level traceability that connects each task back to the spec.
 
 ## State Management
 
@@ -325,8 +354,8 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 | # | Slug | Path | Status |
 |---|------|------|--------|
-| 01 | {slug} | docs/epics/01-epic-{slug}.md | {Pending/Written} |
-| 02 | {slug} | docs/epics/02-epic-{slug}.md | {Pending/Written} |
+| 28-01 | {slug} | docs/epics/28-01-epic-{slug}.md | {Pending/Written} |
+| 28-02 | {slug} | docs/epics/28-02-epic-{slug}.md | {Pending/Written} |
 
 ## Completed Steps
 
@@ -348,7 +377,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 {Integration testing story generated or skipped, with rationale. If generated: story title, blocked-by list, acceptance criteria summary.}
 
 ### Step 3d: Requirement Coverage Matrix
-{Per-epic: coverage matrix presented to user — requirements this epic covers, fidelity issues identified and corrected. Matrix saved to docs/epics/{nn}-coverage-{slug}.md.}
+{Per-epic: coverage matrix presented to user — requirements this epic covers, fidelity issues identified and corrected. Matrix saved to docs/epics/{parent}-{seq}-coverage-{slug}.md.}
 
 {...include only completed steps...}
 
@@ -368,11 +397,11 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Right-sized stories.** Each story should be completable in a focused session. Not too big (vague multi-day effort), not too small (a single trivial change). A story with 2-5 tasks is typical.
 - **Acceptance criteria live on stories.** Tasks don't have their own acceptance criteria — they inherit meaning from their parent story. The story is done when its acceptance criteria pass, not necessarily when every task checkbox is ticked.
 - **Don't over-decompose tasks.** Not every story needs multiple tasks. If the work is straightforward, one task is fine. The value of task-level breakdown is making complex stories manageable, not adding bureaucracy to simple ones.
-- **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {nn}-epic-{slug}` for cross-epic dependencies. Don't create cross-story task dependencies — if tasks in different stories are interdependent, the stories themselves should have the dependency.
+- **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {filename-prefix}-epic-{slug}` for cross-epic dependencies — e.g. `Epic 28-01-epic-foo` for new two-part epics, or `Epic 15-epic-bar` for legacy flat epics (both shapes are valid). Don't create cross-story task dependencies — if tasks in different stories are interdependent, the stories themselves should have the dependency.
 - **One epic, one document.** Each epic produces its own markdown file. This keeps documents focused and allows parallel work on independent epics.
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
 - **`[plan]` opts into formal plan mode.** When a story heading carries `[plan]`, `cpm:do` enters formal plan mode (EnterPlanMode/ExitPlanMode) for that story's tasks — enforcing read-only exploration and user approval before implementation. Without `[plan]`, `cpm:do` uses inline planning (brief text plan, then straight to implementation) which keeps the task loop uninterrupted. Suggest `[plan]` for stories involving architectural decisions, security-sensitive areas, or multi-system integration. Most stories don't need it.
 - **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
-- **Coverage matrix is procedural, not evaluative.** Step 3d runs per-epic and quotes spec text and story criterion text side-by-side — verbatim, not summarised. Your job is extraction and presentation; the user judges fidelity. Don't assess "exact" vs "partial" — that's a subjective call the human makes by reading the two columns. Each matrix is saved as `docs/epics/{nn}-coverage-{slug}.md` alongside its epic. Step 4 then runs a cross-epic gap check to catch requirements that no epic covers.
+- **Coverage matrix is procedural, not evaluative.** Step 3d runs per-epic and quotes spec text and story criterion text side-by-side — verbatim, not summarised. Your job is extraction and presentation; the user judges fidelity. Don't assess "exact" vs "partial" — that's a subjective call the human makes by reading the two columns. Each matrix is saved as `docs/epics/{parent}-{seq}-coverage-{slug}.md` alongside its epic. Step 4 then runs a cross-epic gap check to catch requirements that no epic covers.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.

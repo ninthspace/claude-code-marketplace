@@ -171,7 +171,7 @@ After all agents have reviewed, present the findings to the user grouped by conc
 
 Save the review to `docs/reviews/{nn}-review-{slug}.md`. Create the `docs/reviews/` directory if it doesn't exist.
 
-- `{nn}` is a zero-padded auto-incrementing number. Use the Glob tool to list existing `docs/reviews/[0-9]*-review-*.md` files, find the highest number, and increment by 1. If none exist, start at `01`.
+- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
 - `{slug}` is derived from the epic doc name (e.g. epic doc `01-epic-auth.md` produces review slug `auth`). For story-level reviews, append the story number: `auth-s2`.
 
 Format:

@@ -38,3 +38,36 @@ Check the project library for reference documents relevant to the current skill.
 **Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the skill's process due to a malformed library document.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+
+## Numbering
+
+Assign the next numeric prefix when a skill creates a new numbered artifact (`docs/specifications/`, `docs/epics/`, `docs/plans/`, `docs/briefs/`, `docs/reviews/`, `docs/retros/`, `docs/architecture/`, `docs/quick/`, `docs/discussions/`, etc.). The same rule applies to every artifact type — skills reference this procedure rather than restating the logic inline.
+
+> **Invariant**: Numeric prefix is an integer identifier, not a fixed-width string. Never pad existing files to match new widths.
+
+### Procedure
+
+For a given artifact type with directory `docs/{type}/` and filename pattern `{nn}-{type}-{slug}.md`:
+
+1. **Glob the active directory**: `docs/{type}/[0-9]*-{type}-*.md`.
+2. **Glob the archive mirror**: `docs/archive/{type}/[0-9]*-{type}-*.md`. If the archive directory does not exist (fresh project, nothing ever archived), treat this set as empty and continue — the lookup degrades cleanly to active-only.
+3. **Extract the leading numeric prefix** from each matched filename. Parse it as an **integer**, not a string. Lexical comparison is forbidden: `"100"` must compare as greater than `"99"`, which only works under integer comparison.
+4. **Take the union** of the two sets and compute `max + 1`. If both sets are empty, start at `1`.
+5. **Format the new number** with a **minimum of 2 digits**, zero-padded. Numbers `< 100` render as `01`, `02`, …, `99`. Numbers `≥ 100` use their natural width: `100`, `101`, and so on. Do not pad beyond 2 digits; do not truncate or reformat existing files.
+
+### Rules
+
+- **Numbers are retired on archive, never reused.** Because the glob unions active and archived directories, a number that has ever been assigned remains reserved even after its artifact is moved to `docs/archive/`. New artifacts always receive `max(active ∪ archived) + 1`.
+- **Integer comparison, not lexical.** Any implementation detail that sorts or compares filenames by string ordering will break the moment a directory crosses `99 → 100`. Parse the prefix as an integer before comparing.
+- **No bulk renaming.** Existing 2-digit files are never re-padded to 3 digits when a directory crosses `99 → 100`. The new file is written at its natural width (`100-…`) next to the existing 2-digit files. Mixed-width coexistence is a permanent invariant the glob handles natively via integer comparison.
+- **No auto-widening migration.** There is no "renumber on save of #100" operation. Growth past 99 is transparent to the user.
+- **Archive must preserve the mirrored directory structure** (`docs/archive/{type}/`) for the archive-side glob to find retired numbers. This is a load-bearing contract with `cpm:archive`.
+
+### Scenarios
+
+- **Fresh project, nothing in active or archive**: next number is `1`, rendered as `01`.
+- **Active contains `01-…` through `27-…`, archive empty**: next number is `28`, rendered as `28`.
+- **Active empty, archive contains `27-…`**: next number is `28` (never `01`). The retired number stays retired.
+- **Active contains `99-…`, archive empty**: next number is `100`, rendered as `100` (no padding beyond 2 digits, no renaming of `99-…`).
+- **Active contains `99-…` and `100-…`, archive contains `50-…`**: next number is `101`. Integer comparison correctly yields `max(99, 100, 50) + 1 = 101`.
+- **Archive directory does not exist** (fresh project): the archive-side glob returns empty and the lookup continues using only the active directory.
