@@ -28,7 +28,13 @@
       "Bash(chmod:*)",
       "mcp__ray-app__send_custom_html_output",
       "Bash(claude --version)",
-      "mcp__superconductor__set_tab_title"
+      "mcp__superconductor__set_tab_title",
+      "Bash(ls docs/library/*.md)",
+      "Read(//Users/chris/Work/git/**)",
+      "Bash(ls docs/discussions/[0-9]*-discussion-*.md)",
+      "Bash(ls docs/archive/discussions/[0-9]*-discussion-*.md)",
+      "Bash(ls /Users/chris/Work/git/planwise/docs/discussions/[0-9]*-discussion-*.md)",
+      "Bash(ls /Users/chris/Work/git/planwise/docs/archive/discussions/[0-9]*-discussion-*.md)"
     ],
     "deny": [],
     "ask": []

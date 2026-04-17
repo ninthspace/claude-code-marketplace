@@ -71,3 +71,21 @@ For a given artifact type with directory `docs/{type}/` and filename pattern `{n
 - **Active contains `99-…`, archive empty**: next number is `100`, rendered as `100` (no padding beyond 2 digits, no renaming of `99-…`).
 - **Active contains `99-…` and `100-…`, archive contains `50-…`**: next number is `101`. Integer comparison correctly yields `max(99, 100, 50) + 1 = 101`.
 - **Archive directory does not exist** (fresh project): the archive-side glob returns empty and the lookup continues using only the active directory.
+
+## Implementation Guidelines
+
+Cross-cutting rules for all CPM skills that edit files during execution (do, quick, review autofix, pivot cascade, etc.). Skills that reference this document inherit these guidelines automatically.
+
+### No bulk programmatic edits
+
+Never use `sed`, `perl`, `awk`, or other stream-processing tools via the Bash tool to edit files. Always use the **Edit tool**, applied file-by-file, so that each change is visible, reviewable, and reversible.
+
+- **Why**: Bulk programmatic edits are opaque — they bypass the tool's diffing and review affordances, risk corrupting files on partial matches, and make it impossible to audit what changed after the fact. The Edit tool produces a clear before/after for every change.
+- **Scope**: This applies to *editing existing files*. Using Bash for read-only operations (`grep`, `find`, `git`) or running build/test commands is unaffected. Writing *new* files with the Write tool is also fine — the constraint is about modifying existing content.
+
+### Clarity and correctness over speed
+
+Prefer clarity and correctness over speed in all implementation work. Getting it right matters more than getting it done fast.
+
+- **Why**: Momentum-driven shortcuts — skipping verification, batching unrelated changes, or rushing through edits — create subtle bugs and rework. A correct implementation delivered methodically is faster end-to-end than a quick implementation that needs debugging.
+- **How this interacts with skill-level guidelines**: Individual skills may emphasise efficiency or momentum (e.g. "keep momentum", "fast by default"). Those guidelines mean *don't add unnecessary ceremony* — they do not mean *sacrifice correctness for speed*. When the two are in tension, correctness wins.

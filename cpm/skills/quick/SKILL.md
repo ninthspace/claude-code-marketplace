@@ -362,7 +362,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **Fast by default.** The whole point of `/cpm:quick` is speed. Don't add ceremony. One confirmation, then execute.
+- **Lean by default, correct by design.** `/cpm:quick` avoids unnecessary ceremony — one confirmation, then execute. But lean means *no wasted steps*, not *rush through steps*. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
 - **Scope honesty.** If a change is too big for quick execution, say so — but only once. The user decides.
 - **Traceability without overhead.** The completion record is the minimum artifact needed to know what happened and why.
 - **Fixes need diagnosis, changes don't.** The input classification exists because fixes and additions have fundamentally different first steps. A fix starts with a symptom that needs investigation; a change starts with a known modification. Don't run diagnosis on additions (wasted ceremony) and don't skip diagnosis on fixes (that's how you get surface-level patches that don't address root causes).

@@ -190,7 +190,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **Lighter than re-running.** The whole point of pivot is speed. If amending a brief takes longer than re-running cpm:discover, the skill has failed.
+- **Lighter than re-running, but correct.** Pivot should be more efficient than re-running a full skill — but not at the cost of correctness. Surgical edits must be precise and verified. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
 - **Surgical edits only.** Always use Edit, never Write, for document amendments. This minimises risk of accidental content loss.
 - **Human-in-the-loop for cascade.** Never auto-update downstream documents. Every downstream change goes through the user.
 - **No auto-modification of tasks.** Flag affected tasks, present the information, let the user decide.
