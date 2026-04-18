@@ -25,16 +25,7 @@ The change description is the seed for everything that follows — scope assessm
 
 ### Library Check (Startup)
 
-Before Step 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `quick` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to quick execution: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during execution when a library document's content is relevant — e.g. reading coding standards before writing code.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Execution always continues — a malformed library document is skipped, not blocking.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `quick`. Deep-read selectively during execution when library content affects the requested change — e.g. coding standards before writing code.
 
 ### Test Runner Discovery (Startup)
 

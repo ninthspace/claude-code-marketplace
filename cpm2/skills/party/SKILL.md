@@ -19,45 +19,11 @@ If no arguments are given, ask the user what they'd like to discuss.
 
 ## Roster Loading
 
-Load the agent roster at session start. Check for a project-level override first:
-
-1. **Project override**: Read `docs/agents/roster.yaml` in the current project directory. If it exists, use it as the complete roster (no merging with defaults).
-2. **Plugin default**: If no project override exists, read the plugin's `agents/roster.yaml` (located in the same plugin directory as this skill, at `../../agents/roster.yaml` relative to this file).
-
-If neither file can be found, tell the user and stop — party mode requires a roster.
-
-After loading, briefly introduce the available agents. Present them as a compact roster:
-
-```
-Your team for this session:
-
-📋 **Jordan** — Product Manager
-🏗️ **Margot** — Software Architect
-💻 **Kai** — Senior Developer
-🎨 **Priya** — UX Designer
-🔍 **Tomasz** — QA Engineer
-🧪 **Casey** — Test Engineer
-🚀 **Sable** — DevOps Engineer
-📝 **Ellis** — Technical Writer
-🔄 **Ren** — Scrum Master
-
-What would you like to discuss? (Or address any agent by name.)
-```
-
-Adapt the roster display to whatever agents are actually loaded.
+Follow the shared **Roster Loading** procedure. After loading, introduce the available agents as a compact roster listing each agent's icon, name, and role. Adapt the display to whatever agents are actually loaded. End with: "What would you like to discuss? (Or address any agent by name.)"
 
 ## Library Check
 
-After roster loading and before the first orchestration round, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `party` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to this discussion: {titles}. Agents can reference these." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during the orchestration loop when an agent's response would benefit from referencing library content — e.g. an architect referencing architecture docs, or a developer citing coding standards.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The discussion always continues — a malformed library document is skipped, not blocking.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `party`. Deep-read selectively during the orchestration loop when agent personas cite documented constraints or prior decisions.
 
 ## Orchestration Loop
 

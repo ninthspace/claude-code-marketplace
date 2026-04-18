@@ -149,21 +149,15 @@ Present the test approach tag vocabulary to the user:
 - `[manual]` — Verified by manual inspection, observation, or user confirmation (no automated test)
 - `[tdd]` — Workflow mode: task follows a red-green-refactor loop. Composable with any level tag above (e.g. `[tdd] [unit]`, `[tdd] [integration]`). Orthogonal — describes *how* to work, not *what kind* of test. When present, `cpm2:do` writes a failing test first, then implements to pass it, then refactors. `[tdd]` without a level tag defaults to `[tdd] [unit]`.
 
-The first four tags describe *test level* — what kind of verification proves the criterion. `[tdd]` describes *workflow mode* — how the implementation should proceed. These are orthogonal dimensions: a criterion can carry both (e.g. `[tdd] [unit]`).
+**Tag propagation**: When present, these tags flow downstream — `cpm2:epics` propagates them onto story acceptance criteria and `cpm2:do` uses them to select verification approach (run tests vs. self-assess) and workflow mode (standard vs. TDD). When a story introduces criteria beyond the spec, `cpm2:epics` proposes tags based on the criterion's nature. If the spec has no Testing Strategy (user opts out below), downstream skills treat all criteria as untagged and verify by self-assessment. Use AskUserQuestion to confirm the vocabulary or let the user adjust it.
 
-These tags will flow downstream: `cpm2:epics` propagates them onto story acceptance criteria, and `cpm2:do` uses them to determine verification approach (run tests vs. self-assess) and workflow mode (standard post-implementation vs. TDD red-green-refactor). Use AskUserQuestion to confirm the vocabulary or let the user adjust it for their project.
-
-**Graceful fallback**: If the user prefers not to tag criteria (e.g. for a small project where tagging adds ceremony without value), skip tag assignment and proceed with the current lightweight behaviour — acceptance criteria mapping without tags. The rest of Section 6 still runs.
+**Graceful fallback**: If the user prefers not to tag criteria, skip tag assignment and proceed — acceptance criteria mapping without tags. The rest of Section 6 still runs.
 
 #### Step 6b: Tag Acceptance Criteria
 
-For each must-have functional requirement from Section 2, review its acceptance criteria and assign a test approach tag:
+For each must-have functional requirement from Section 2, propose a test approach tag for each acceptance criterion based on its nature (boundary-crossing → `[integration]`, isolated logic → `[unit]`, user-visible workflow → `[feature]`, non-automatable → `[manual]`). Use AskUserQuestion to confirm or adjust. Flag any criterion too vague to tag and ask the user to refine it.
 
-1. Present the requirement and its criteria.
-2. Propose a tag for each criterion based on its nature — boundary-crossing behaviour suggests `[integration]`, isolated logic suggests `[unit]`, user-visible workflow suggests `[feature]`, and non-automatable checks suggest `[manual]`.
-3. Use AskUserQuestion to confirm or adjust the proposed tags.
-4. **Flag incomplete criteria**: Any acceptance criterion that cannot be assigned a tag because it's too vague or subjective to verify should be flagged. Present the flagged criteria and ask the user to refine them until they're testable.
-5. **Probe for must-NOT clauses**: For each criterion, ask: "Are there behaviours this criterion explicitly allows that you would reject?" If the user identifies rejected behaviours, capture them as paired `must NOT` lines alongside the positive criterion — e.g. if the criterion says "User can reset their password via email", a must-NOT might be "must NOT allow password reset without rate limiting". These defensive boundaries catch assumptions that positive criteria leave implicit. Include must-NOT lines in the Acceptance Criteria Coverage table with their own tags (typically matching the parent criterion's tag).
+**Probe for must-NOT clauses**: For each criterion, ask: "Are there behaviours this criterion explicitly allows that you would reject?" Capture rejected behaviours as paired `must NOT` lines alongside the positive criterion (e.g. "must NOT allow password reset without rate limiting"). Include must-NOT lines in the Acceptance Criteria Coverage table with their own tags.
 
 Work through requirements one at a time — present tags and must-NOT probes incrementally.
 

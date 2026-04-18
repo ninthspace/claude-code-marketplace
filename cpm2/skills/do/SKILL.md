@@ -33,16 +33,7 @@ The epic doc, once resolved, applies to the entire work loop. Parse it once and 
 
 ## Library Check
 
-After resolving the epic doc and before starting the per-task workflow, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `do` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to task execution: {titles}. I'll reference these during implementation." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during task execution (step 4 of the per-task workflow) when a library document's content is directly relevant to the current task — e.g. reading coding standards before writing code, or architecture docs before making structural decisions.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context and continue task execution.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file. Reuse these results for all tasks in the session. Re-scan only if the progress file is missing (post-compaction recovery).
+Follow the shared **Library Check** procedure with scope keyword `do`. Deep-read selectively during task execution when a library document's content directly affects the current task — e.g. coding standards before writing code, or architecture docs before structural decisions.
 
 ### Template Hint (Startup)
 
@@ -201,18 +192,15 @@ Include only what the epic doc omits: order of operations, implementation decisi
 
 **If this is a verification gate** (`Type: verification` in the task description): Read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase. The gate's purpose is assessment only — all implementation happens in prior tasks.
 
-**Test execution in verification gates**: Scan the story's acceptance criteria for test approach tags (`[unit]`, `[integration]`, `[feature]`). If any automated tags are present and `**Test command**` in the progress file is not `none`:
+**Test execution in verification gates**: For criteria tagged `[unit]`, `[integration]`, or `[feature]`, run the cached test command and use pass/fail as evidence — a failing test means the criterion is not met. For `[manual]` or untagged criteria, self-assess by inspecting the codebase. If `**Test command**` is `none`, all verification uses self-assessment.
 
-1. Run the cached test command using the Bash tool.
-2. If tests **pass**: report the pass and continue verification of remaining criteria (including `[manual]` ones via self-assessment).
-3. If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". Present options and let the user decide how to proceed.
-4. If `**Test command**` is `none` or all criteria are tagged `[manual]`, use the existing self-assessment approach — inspect files, check outputs, and assess each criterion manually.
-
-**Verification round limit**: If a fix-and-recheck cycle has run 2 times and criteria remain unmet, stop cycling. Use AskUserQuestion to present the remaining failures: "Verification gate: {N} criteria still unmet after 2 fix attempts." Options: "Continue trying (1 more round)", "Mark unmet criteria as known issues and proceed", "Stop the work loop". This prevents unbounded verification loops.
+**Stalled verification**: If a fix-and-recheck cycle fails to reduce the count of unmet criteria after a fix attempt, stop cycling and use AskUserQuestion: "Verification not converging — {N} criteria still unmet." Options: "Continue trying", "Mark unmet criteria as known issues and proceed", "Stop the work loop".
 
 Proceed to step 5 with your assessment.
 
 **If this is an implementation task in TDD mode** (no `Type: verification`, and the story carries `[tdd]` as determined in Step 1): Replace the standard implementation approach with the **red-green-refactor sub-loop**. This is the core TDD discipline — execute all three phases in sequence, each producing a distinct outcome.
+
+> **Intentionally preserved**: The three-phase structure below is a behavioural lock that enforces test-before-implementation ordering — it is not instructional verbosity. Compressing it risks losing the ordering guarantee that is the whole point of TDD mode.
 
 **Phase 1 — Red (write a failing test)**:
 1. Derive a test from the parent story's acceptance criteria and the current task's description. Write a test file (or add test cases to an existing test file) that describes the expected behaviour.

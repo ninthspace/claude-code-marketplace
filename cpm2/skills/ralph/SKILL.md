@@ -53,24 +53,9 @@ The ralph-wiggum plugin's stop hook is the only external dependency — it inter
 1. Check if the ralph-wiggum stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-wiggum` or `stop-hook.sh`.
 2. If not detected, warn the user: "Ralph Wiggum stop hook not detected. The loop mechanism requires the ralph-wiggum plugin to be installed — without the stop hook, writing the state file will have no effect. Install the plugin from the Claude Code marketplace." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
-#### 1d. Permissions Check
+**Permissions note**: The loop will pause on permission denials at runtime; the stop hook re-invokes after the user grants them. To avoid mid-loop stalls, users can pre-add common Bash permissions (`Bash(git:*)`, `Bash(bash:*)`, `Bash(find:*)`, `Bash(grep:*)`) to `~/.claude/settings.json` before launching.
 
-Autonomous execution will stall if Claude Code prompts for tool approval mid-run. Check that common bash commands are pre-approved:
-
-1. Read `~/.claude/settings.json` and look for a `permissions.allow` array.
-2. Check for the presence of these baseline patterns: `Bash(find:*)`, `Bash(grep:*)`, `Bash(git:*)`, `Bash(bash:*)`, `Bash(php:*)`, `Bash(npm:*)`, `Bash(sed:*)`.
-3. **If missing patterns are found**, warn the user:
-
-   "**Permissions warning**: Your user settings (`~/.claude/settings.json`) are missing some bash permissions that autonomous execution needs. Without these, the Ralph loop will stall on tool approval prompts."
-
-   List the missing patterns and use AskUserQuestion with options:
-   - "Add them for me" — use the Edit tool to add the missing patterns to `~/.claude/settings.json` `permissions.allow` array
-   - "I'll handle it" — continue without changes
-   - "Stop" — abort
-
-4. **If no permissions block exists at all**, offer to create one with the full set of recommended patterns.
-
-#### 1e. Test Runner Discovery
+#### 1d. Test Runner Discovery
 
 Discover the project's test runner for inclusion in the generated prompt:
 
@@ -78,7 +63,7 @@ Discover the project's test runner for inclusion in the generated prompt:
 2. If found, report: "Discovered test runner: {command}. This will be referenced in the generated prompt."
 3. If not found, note: "No test runner discovered. The generated prompt will instruct `/cpm2:do` to discover one at runtime."
 
-#### 1f. Resume Detection
+#### 1e. Resume Detection
 
 Check for evidence of a previous Ralph run:
 
@@ -89,31 +74,18 @@ Check for evidence of a previous Ralph run:
 
 ### Step 2: Prompt Assembly
 
-Assemble the ralph-loop command as a single, short, plain-text string. The prompt **must not** contain markdown formatting, code fences, backticks, XML tags, or any shell-special characters beyond basic punctuation. Keep it concise — the detailed behaviour comes from `/cpm2:do` itself; the prompt only needs to steer autonomous decisions.
+Assemble the ralph-loop prompt as plain text — no markdown, code fences, backticks, or XML tags (the stop hook feeds the prompt back verbatim on each iteration). Interpolate these variables into the template:
 
-Build the prompt by interpolating into the template below:
-
-- `{epic_count}` — number of epics
-- `{epic_range}` — human-readable range (e.g. "5-7")
-- `{epic_glob}` — glob pattern or explicit paths (e.g. `docs/epics/05-epic-*.md through 07-epic-*.md`)
+- `{epic_count}`, `{epic_range}`, `{epic_glob}` — from Step 1 pre-flight
 - `{max_iterations}` — from arguments or default (50)
-- `{story_filter_clause}` — if `--story-filter` was provided, append a clause like "Only work on stories 1-3." or "Skip story 4." If no filter, omit entirely.
-- `{test_runner_clause}` — if a test runner was discovered, append "Use {command} to run tests." If not found, omit entirely.
-- `{resume_clause}` — if resuming, append "This is a resumed run -- skip completed work and pick up where the previous run left off." If fresh, omit entirely.
-- `{task_budget_clause}` — computed from task count across target epics: "Task budget: {task_count} tasks, estimate ~2000 tokens per task." Derive `{task_count}` by counting `###` task headings in the target epic docs during Step 1 pre-flight.
+- `{story_filter_clause}`, `{test_runner_clause}`, `{resume_clause}` — include when applicable, omit otherwise
+- `{task_budget_clause}` — "Task budget: {N} tasks, estimate ~2000 tokens per task." Count `###` task headings in target epic docs.
 
-### Prompt Template
+**Template** (written into `.claude/ralph-loop.local.md` body; use `--` for dashes; `ALL_EPICS_COMPLETE` must match `completion_promise` frontmatter; keep under 800 chars):
 
 ```
 Run /cpm2:do on epics {epic_range} sequentially ({epic_glob}). Continue to each next epic automatically. Make all decisions autonomously -- choose the most reasonable option for every AskUserQuestion. Use inline planning for all stories. Task complete means: all tagged criteria ([unit]/[integration]/[feature]) have passing test results, and all [manual] criteria have self-assessment lines in the progress file. A failure (for the 3-strike skip rule) is a test command exit code != 0 after a code change attempt -- tool errors and permission denials are retries, not failures. If acceptance criteria are ambiguous and completion cannot be determined, mark the story Blocked -- criteria ambiguous and continue to the next story. Commit after each completed story. Keep all commits local.{story_filter_clause}{test_runner_clause}{task_budget_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
 ```
-
-**Prompt hygiene rules** (substantive — the stop hook parses this prompt back):
-- The prompt is written into the body of `.claude/ralph-loop.local.md` (after the YAML frontmatter). It is fed back verbatim by the stop hook on each iteration.
-- No backticks, no markdown headers, no code fences, no XML/HTML tags.
-- Use `ALL_EPICS_COMPLETE` as the plain text marker in the prompt — must match the `completion_promise` frontmatter value exactly.
-- Use `--` instead of `—` for dashes in the prompt text.
-- Keep the total prompt under 800 characters where possible. The spec-required additions (task completion definition, failure definition, budget, ambiguity fallback) justify the increase from the previous 500-character guideline.
 
 ### Step 3: State File Write and Launch
 

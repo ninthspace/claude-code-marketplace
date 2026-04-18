@@ -25,31 +25,11 @@ For story-level review, present the list of stories from the epic doc and let th
 
 ## Roster Loading
 
-Load the agent roster at session start. Check for a project-level override first:
-
-1. **Project override**: Read `docs/agents/roster.yaml` in the current project directory. If it exists, use it as the complete roster (no merging with defaults).
-2. **Plugin default**: If no project override exists, read the plugin's `agents/roster.yaml` (located in the same plugin directory as this skill, at `../../agents/roster.yaml` relative to this file).
-
-If neither file can be found, proceed without agent personas — fall back to a single-perspective review and note the limitation to the user.
-
-After loading, briefly introduce the review team. Confirm the roster is loaded and how many agents are available (a count, not a full list):
-
-```
-Review roster loaded: {N} agents available. I'll select the most relevant reviewers based on the content.
-```
+Follow the shared **Roster Loading** procedure. After loading, confirm the roster and how many agents are available: "Review roster loaded: {N} agents available. I'll select the most relevant reviewers based on the content."
 
 ## Library Check
 
-After roster loading and before starting the review, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `review` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to this review: {titles}. Agents will reference these during their review." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during the review step when an agent's review would benefit from referencing library content — e.g. an architect referencing architecture docs when reviewing structural decisions, or a developer citing coding standards when reviewing implementation tasks.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The review always continues — a malformed library document is skipped, not blocking.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `review`. Deep-read selectively when reviewer personas need context from architecture or coding-standards docs — e.g. an architect reviewing structural decisions, or a developer citing coding standards.
 
 ### Template Hint (Startup)
 

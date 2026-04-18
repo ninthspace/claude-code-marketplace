@@ -30,16 +30,7 @@ Check for input in this order:
 
 ### Library Check (Startup)
 
-Before Step 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `epics` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to work breakdown: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during epic breakdown when a library document's content is relevant — e.g. reading architecture docs to inform epic grouping or dependency identification.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context and continue the epics process.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `epics`. Deep-read selectively during Step 2 epic grouping when architecture or coding-standards docs affect epic boundaries or dependency identification.
 
 ### Template Hint (Startup)
 
@@ -91,19 +82,9 @@ Epic documents use a **two-part numeric prefix**: `{parent}-{seq}-epic-{slug}.md
 
 **Sub-number assignment** (`{seq}`):
 
-The sub-number is assigned per parent, via a **scoped glob** that naturally excludes flat-shape epics:
+Assign `{seq}` per parent using the shared Numbering procedure — glob both `docs/epics/{parent}-[0-9]*-epic-*.md` and `docs/archive/epics/{parent}-[0-9]*-epic-*.md`, extract the second numeric field from each match, parse as integer (always integer comparison, never lexical), take `max + 1` across the union. If both sets are empty, start at `01`. Format using the shared Numbering width rule. Flat-shape files (e.g. `15-epic-consult-skill-core.md`) are naturally excluded from the scoped glob.
 
-1. Glob `docs/epics/{parent}-[0-9]*-epic-*.md` in the active directory.
-2. Glob `docs/archive/epics/{parent}-[0-9]*-epic-*.md` in the archive mirror. If the archive directory does not exist, treat this set as empty.
-3. Extract the **second numeric field** from each matched filename (the part immediately after `{parent}-`). Parse it as an integer — per the shared Numbering invariant, always use integer comparison.
-4. Take the union of the two sets and compute `max + 1`. If both sets are empty, the first epic under this parent gets `{seq} = 01`.
-5. Format `{seq}` using the shared Numbering width rule — minimum 2 digits, zero-padded.
-
-Flat-shape files like `15-epic-consult-skill-core.md` are naturally excluded from this glob because they have no second numeric field to match. They remain in the directory untouched and are invisible to sub-number assignment.
-
-**Immutability of sub-numbers**:
-
-Sub-numbers are **identifiers**, not ordinals. If epic `28-02-epic-foo.md` is later deleted during a pivot, the next new epic under spec 28 is `28-04-epic-baz.md` — not `28-03-epic-baz.md`. Gaps from deleted sub-numbers are preserved; the max-lookup simply skips missing integers. This is modelled on ticket IDs (JIRA-123 is never reissued when JIRA-122 is deleted) and keeps cross-references stable.
+Sub-numbers are **identifiers**, not ordinals — gaps from deleted sub-numbers are preserved (the max-lookup skips them), keeping cross-references stable.
 
 **General epic listings**: Operations that enumerate *all* epics (for dependency resolution, batch status checks, cross-epic references) must use the general glob `docs/epics/[0-9]*-epic-*.md`, which matches both flat and two-part shapes. Only the sub-number assignment above uses the scoped glob. Always use the general glob for listings — narrowing to the two-part shape would hide legacy epics from readers.
 
@@ -157,13 +138,13 @@ Propose 1-2 must-NOT clauses per relevant criterion. Present them via AskUserQue
 
 **Graceful degradation**: If the spec has no must-NOT lines and the story does not touch security, data integrity, or external systems, skip must-NOT suggestion entirely.
 
-**`[plan]` tag suggestion**: After defining a story's acceptance criteria, assess whether it warrants formal plan mode during execution. Append `[plan]` to the story's `##` heading (e.g. `## Set up OAuth provider integration [plan]`) when any of these apply:
+**`[plan]` tag suggestion**: After defining a story's acceptance criteria, assess whether it warrants formal plan mode during execution. The `[plan]` tag forces an EnterPlanMode pause before implementation — it's a workflow lock, not a signal that the story is hard. Append `[plan]` to the story's `##` heading (e.g. `## Set up OAuth provider integration [plan]`) when the story involves:
 
-- **Architectural**: The story introduces new patterns, data models, or structural decisions that affect the broader codebase
-- **Security-sensitive**: The story involves authentication, authorization, personal data, financial data, or other security-critical areas
-- **Multi-system integration**: The story coordinates across multiple external systems, APIs, or services where the interaction design needs upfront thought
+- **Data model changes**: New or modified database schemas, entity relationships, or data structures that affect persistence
+- **API contract changes**: New or modified public APIs, webhook schemas, or inter-service contracts where the design needs upfront agreement
+- **Cross-system integration**: Coordination across multiple external systems, APIs, or services where the interaction design needs upfront thought
 
-Reserve `[plan]` for stories that genuinely benefit from enforced read-only exploration and user approval. Straightforward stories — config changes, documentation, additions that follow existing patterns, or stories where acceptance criteria already fully specify the approach — use inline planning (the default in `cpm2:do`) which handles them without the overhead of formal plan mode.
+These are the default assignment categories. The user can also add `[plan]` manually to any story they want gated — these categories are defaults, not restrictions. Stories that follow existing patterns, are fully specified by their acceptance criteria, or are straightforward config/documentation changes use inline planning (the default in `cpm2:do`).
 
 **Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 

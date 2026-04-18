@@ -22,38 +22,7 @@ If no arguments are given, present the roster and ask the user to pick an agent 
 
 ## Roster Loading
 
-Load the agent roster at session start. Check for a project-level override first:
-
-1. **Project override**: Read `docs/agents/roster.yaml` in the current project directory. If it exists, use it as the complete roster (no merging with defaults).
-2. **Plugin default**: If no project override exists, read the plugin's `agents/roster.yaml` (located in the same plugin directory as this skill, at `../../agents/roster.yaml` relative to this file).
-
-If neither file can be found, tell the user and stop — consult mode requires a roster.
-
-After loading, present the roster so the user can choose an agent (unless one was already selected via `$ARGUMENTS`). Present them as a compact roster:
-
-```
-Available agents:
-
-📋 **Jordan** — Product Manager
-🏗️ **Margot** — Software Architect
-💻 **Bella** — Senior Developer
-🎨 **Priya** — UX Designer
-🔍 **Tomas** — QA Engineer
-🧪 **Casey** — Test Engineer
-🚀 **Sable** — DevOps Engineer
-📝 **Elli** — Technical Writer
-🔄 **Ren** — Scrum Master
-
-Who would you like to consult? (Name or role.)
-```
-
-Adapt the roster display to whatever agents are actually loaded. If the user already selected an agent via `$ARGUMENTS`, skip the selection prompt and confirm the choice:
-
-```
-Starting consultation with {icon} **{displayName}** ({role}).
-
-What would you like to discuss?
-```
+Follow the shared **Roster Loading** procedure. After loading, present the available agents as a compact roster (icon, name, role) and ask: "Who would you like to consult? (Name or role.)" If the user already selected an agent via `$ARGUMENTS`, skip the selection prompt and confirm: "Starting consultation with {icon} **{displayName}** ({role}). What would you like to discuss?"
 
 ## Conversation Loop
 
@@ -354,16 +323,7 @@ The "Discussion Highlights" section is the critical part — it captures enough 
 
 ## Library Check
 
-After roster loading and before the first conversation turn, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `party` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to this consultation: {titles}. Agents can reference these." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during the conversation loop when an agent's response would benefit from referencing library content — e.g. an architect referencing architecture docs, or a developer citing coding standards.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The consultation always continues — a malformed library document is skipped, not blocking.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `consult`. Deep-read selectively during the conversation loop when the chosen expert's domain intersects with documented constraints or prior decisions.
 
 ## Guidelines
 

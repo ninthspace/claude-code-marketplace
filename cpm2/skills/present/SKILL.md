@@ -27,16 +27,7 @@ Check for input in this order:
 
 ### Library Check (Startup)
 
-Before artifact selection, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `present` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to presentations: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** when generating content — e.g. brand guidelines when formatting for clients, or glossaries when writing for non-technical audiences.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The process always continues — a malformed library document is skipped, not blocking.
-
-**Compaction resilience**: Include library scan results in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `present`. Deep-read selectively when audience or format choices depend on library context — e.g. brand guidelines when formatting for clients, or glossaries when writing for non-technical audiences.
 
 ### Template Hint (Startup)
 
