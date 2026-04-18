@@ -1,0 +1,34 @@
+{
+  "name": "cpm",
+  "description": "Claude Planning Method — facilitated planning skills with multi-perspective party mode for Claude Code",
+  "version": "1.24.0",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "planning",
+    "discovery",
+    "requirements",
+    "specification",
+    "architecture",
+    "facilitation",
+    "agile",
+    "stories",
+    "tasks",
+    "bmad",
+    "party-mode",
+    "multi-perspective",
+    "personas",
+    "consult",
+    "retrospective",
+    "retro",
+    "pivot",
+    "course-correction",
+    "library",
+    "reference",
+    "artifacts",
+    "review",
+    "adversarial"
+  ]
+}
