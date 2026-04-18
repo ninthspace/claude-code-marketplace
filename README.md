@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning, note searching, PHP code intelligence, and JavaScript/TypeScript code simplification. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM and CPM2), note searching, PHP code intelligence, and JavaScript/TypeScript code simplification. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -18,10 +18,29 @@ This marketplace contains plugins for facilitated planning, note searching, PHP 
 /plugin install noteplan@claude-code-marketplace
 /plugin install php-lsp@claude-code-marketplace
 /plugin install cpm@claude-code-marketplace
+/plugin install cpm2@claude-code-marketplace
 /plugin install js-simplifier@claude-code-marketplace
 ```
 
 ## Available Plugins
+
+### Claude Planning Method 2 (cpm2)
+
+**Opus 4.7-optimised fork of CPM — facilitated planning with multi-perspective discussion and focused consultation**
+
+A 4.7-tuned version of the Claude Planning Method plugin. All skills rewritten with positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and reduced token footprint. Ships as a separate plugin so users can choose the version that matches their model.
+
+Same 18-skill pipeline as CPM (discover → brief → architect → spec → epics → do → retro, plus party, consult, review, pivot, ralph, quick, status, library, archive, present, templates). See the CPM section below for the full skill table — `cpm2` skills work identically, just invoked as `/cpm2:skill` instead of `/cpm:skill`.
+
+**When to use cpm2 vs cpm**: Use `cpm2` when running on Opus 4.7 or later. Use `cpm` on earlier models (Opus 4.6, Sonnet).
+
+```bash
+/plugin install cpm2@claude-code-marketplace
+```
+
+[View full documentation](./cpm2/README.md)
+
+---
 
 ### NotePlan Search (v1.0.0)
 
@@ -256,6 +275,7 @@ A skill that scans all JS/TS files (or a configurable subset) and applies clarit
 /plugin uninstall noteplan@claude-code-marketplace
 /plugin uninstall php-lsp@claude-code-marketplace
 /plugin uninstall cpm@claude-code-marketplace
+/plugin uninstall cpm2@claude-code-marketplace
 /plugin uninstall js-simplifier@claude-code-marketplace
 
 # Remove the entire marketplace
