@@ -63,46 +63,46 @@ assert_equals "CPM_SESSION_ID: abc-123" "$FIRST_LINE"
 
 test_start "Globs all session-scoped progress files"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
-create_progress_file "$PROJECT" "sess-2" "cpm:party" "Discussion in progress"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
+create_progress_file "$PROJECT" "sess-2" "cpm2:party" "Discussion in progress"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
-assert_contains "$OUTPUT" "cpm:do"
+assert_contains "$OUTPUT" "cpm2:do"
 
 test_start "Other-session files are classified as orphans, not injected"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
-create_progress_file "$PROJECT" "sess-2" "cpm:party" "Discussion in progress"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
+create_progress_file "$PROJECT" "sess-2" "cpm2:party" "Discussion in progress"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
-assert_not_contains "$OUTPUT" "--- CPM SESSION STATE (cpm:party"
+assert_not_contains "$OUTPUT" "--- CPM SESSION STATE (cpm2:party"
 assert_contains "$OUTPUT" "ORPHAN"
 
 test_start "Each file has delimiter markers"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" "--- CPM SESSION STATE"
 
 test_start "Each file has END delimiter"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" "--- END ---"
 
 test_start "Label includes skill name"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
-assert_contains "$OUTPUT" "(cpm:do"
+assert_contains "$OUTPUT" "(cpm2:do"
 
 test_start "Label includes phase"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" "Task execution"
 
 test_start "Label includes filename for identification"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" ".cpm-progress-sess-1.md"
 
@@ -119,9 +119,9 @@ assert_not_contains "$OUTPUT" "--- CPM SESSION STATE"
 
 test_start "Handles malformed JSON gracefully — files still visible"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" 'not valid json')
-assert_contains "$OUTPUT" "cpm:do"  # File appears somewhere (orphan section when no session ID parsed)
+assert_contains "$OUTPUT" "cpm2:do"  # File appears somewhere (orphan section when no session ID parsed)
 
 test_start "Legacy support: injects .cpm-progress.md when no session files exist"
 PROJECT=$(setup_project_dir)
@@ -131,14 +131,14 @@ assert_contains "$OUTPUT" "# Legacy state"
 
 test_start "Legacy file ignored when session-scoped files exist"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_not_contains "$OUTPUT" "# Legacy state"
 
 test_start "Shows continuation note when files are found"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "sess-1" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" "NOTE: Found CPM session state"
 

@@ -1,6 +1,6 @@
 ---
-name: cpm:consult
-description: Focused one-to-one consultation with a chosen agent persona. Start a deep conversation with one expert, invite others as needed, and transfer the facilitation lead. Use for focused problem-solving, expert Q&A, or guided exploration. Triggers on "/cpm:consult".
+name: cpm2:consult
+description: Focused one-to-one consultation with a chosen agent persona. Start a deep conversation with one expert, invite others as needed, and transfer the facilitation lead. Use for focused problem-solving, expert Q&A, or guided exploration. Triggers on "/cpm2:consult".
 ---
 
 # Consult Mode
@@ -99,7 +99,7 @@ After each round of agent responses, present a subtle exit option:
 *Type **wrap up** to end the consultation, or continue the conversation.*
 ```
 
-**Important**: Do not use "exit" or "quit" as trigger words — these are reserved by the Claude Code CLI and will terminate the session entirely, orphaning the progress file. Use "wrap up" as the primary trigger.
+**Important**: Use "wrap up" as the primary trigger — "exit" and "quit" are reserved by the Claude Code CLI and will terminate the session entirely, orphaning the progress file.
 
 ## Exit Handling
 
@@ -134,15 +134,15 @@ Save the progress file's content as a permanent discussion artifact. This preser
 4. **Tell the user** the saved file path.
 5. **Delete the progress file** after the discussion record has been confirmed written.
 
-**Do not summarise.** The progress file already contains curated, structured content — decisions with numbered objectives, key points, rationale. Summarising loses this detail. The discussion record is the artifact.
+**Preserve verbatim.** The progress file already contains curated, structured content — decisions with numbered objectives, key points, rationale. Summarising loses this detail. The discussion record is the artifact.
 
 ### 3. Pipeline Handoff
 
 After saving the discussion record, offer the user options for what to do next. Use AskUserQuestion:
 
-- **Continue to /cpm:discover** — Use the discussion record as starting context for problem discovery
-- **Continue to /cpm:spec** — Use the discussion record as starting context for requirements specification
-- **Continue to /cpm:epics** — Use the discussion record as starting context for work breakdown
+- **Continue to /cpm2:discover** — Use the discussion record as starting context for problem discovery
+- **Continue to /cpm2:spec** — Use the discussion record as starting context for requirements specification
+- **Continue to /cpm2:epics** — Use the discussion record as starting context for work breakdown
 - **Done for now** — End the session, no handoff
 
 If the user chooses a pipeline skill, pass the discussion record file path as the input context for that skill. The file path becomes the `$ARGUMENTS` equivalent — the next skill should read the file and treat it as its starting brief/description.
@@ -165,7 +165,7 @@ Resolve references by **display name** (case-insensitive) or by **role** (match 
 ### Behaviour
 
 1. **Look up the agent** in the roster by name or role.
-2. **Check if already active**: If the agent is already in the active agents list, respond with a no-op confirmation: `"{displayName} is already in the conversation."` Do not add them again.
+2. **Check if already active**: If the agent is already in the active agents list, respond with a no-op confirmation: `"{displayName} is already in the conversation."` Keep the existing entry as-is.
 3. **Add to active agents**: Append the agent to the active agents list.
 4. **Announce**: The newly invited agent introduces themselves briefly, in character, and responds to the current topic. Format:
 
@@ -214,7 +214,7 @@ Active agents respond in **roster order** (the order they appear in the roster Y
 ### Interaction Style
 
 - **Agents respond to the user**, not to each other. The user is always the focal point. Cross-references between agents ("Building on what Margot said...") are natural but secondary to addressing the user's question.
-- **Agents stay in their lane.** Each agent contributes from their domain expertise. They don't repeat what another agent already said — they add their unique perspective.
+- **Agents stay in their lane.** Each agent contributes from their domain expertise. Each agent adds their unique perspective rather than echoing what another agent already said.
 - **Conciseness increases with group size.** With one agent, responses can be a paragraph. With two or three, each response should be shorter — a few sentences. The value is in the diversity, not the volume.
 - **Agents can disagree.** When agents have genuinely different perspectives, they should express them constructively. This is one reason to invite multiple agents — to surface trade-offs.
 
@@ -273,7 +273,7 @@ When an agent has the lead, their responses shift qualitatively. This is the key
 - The lead agent **suggests structure** — "Let me walk through three dimensions of this...", "I think we need to separate two concerns here..."
 - The lead agent **challenges assumptions** — "I'm not sure that follows. Here's why..."
 - The lead agent **drives toward conclusions** — "Based on what you've said, I think the key decision is..."
-- Other active agents **defer to the lead** — they speak only when they have something genuinely additive, and they frame their contribution relative to the lead's direction. They don't compete for airtime.
+- Other active agents **defer to the lead** — they speak only when they have something genuinely additive, and they frame their contribution relative to the lead's direction. They yield airtime to the lead.
 
 ### Natural Lead Reclaim
 
@@ -288,7 +288,7 @@ Signals that the user is reclaiming the lead:
 When the agent detects a reclaim signal:
 1. **Set lead state** back to `user`.
 2. **Defer naturally** — the agent answers the user's question or follows their direction. No announcement needed. The lead indicator simply disappears from subsequent responses.
-3. **Don't fight it.** If the user wants to lead, let them. The agent can always offer to take the lead back later if the conversation stalls.
+3. **Yield gracefully.** If the user wants to lead, let them. The agent can always offer to take the lead back later if the conversation stalls.
 
 ### Agent-to-Agent Handover
 
@@ -312,7 +312,7 @@ If the user declines (e.g. "no", "keep going", "you continue"):
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-consultation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -320,9 +320,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file after roster loading and agent selection (before the first conversation turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — never before. If compaction fires between deletion and a pending output, all session state is lost.
+**Create** the file after roster loading and agent selection (before the first conversation turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — always after, because early deletion loses state if compaction fires. If compaction fires between deletion and a pending output, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -331,7 +331,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:consult
+**Skill**: cpm2:consult
 **Phase**: Consultation in progress
 **Topic**: {the consultation topic}
 **Active agents**: {ordered comma-separated list of active agent display names}
@@ -357,11 +357,11 @@ The "Discussion Highlights" section is the critical part — it captures enough 
 After roster loading and before the first conversation turn, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `party` or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `party` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to this consultation: {titles}. Agents can reference these." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during the conversation loop when an agent's response would benefit from referencing library content — e.g. an architect referencing architecture docs, or a developer citing coding standards.
 
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the consultation due to a malformed library document.
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The consultation always continues — a malformed library document is skipped, not blocking.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
@@ -371,5 +371,5 @@ After roster loading and before the first conversation turn, check the project l
 - **Depth over breadth.** Consult mode exists for focused exploration. One sharp, deep perspective is better than three surface-level ones.
 - **Natural disagreement.** When multiple agents are active and have different perspectives, let them disagree constructively. This tension surfaces trade-offs.
 - **Match depth to topic.** A quick question gets a quick response. A complex architectural decision gets deeper analysis and follow-up questions.
-- **Respect the lead.** When an agent is leading, let them drive. When the user reclaims the lead, defer immediately. Don't fight for control.
+- **Respect the lead.** When an agent is leading, let them drive. When the user reclaims the lead, defer immediately and yield control.
 - **Commands over conversation.** When the user's intent is clearly a command (invite, dismiss, handover), execute it. When it's ambiguous, treat it as conversation.

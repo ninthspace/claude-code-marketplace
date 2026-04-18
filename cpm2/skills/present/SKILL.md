@@ -1,6 +1,6 @@
 ---
-name: cpm:present
-description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content. Regenerable when source artifacts change. Triggers on "/cpm:present".
+name: cpm2:present
+description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content. Regenerable when source artifacts change. Triggers on "/cpm2:present".
 ---
 
 # Audience-Aware Artifact Transformation
@@ -30,11 +30,11 @@ Check for input in this order:
 Before artifact selection, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool. Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `present` or `all`.
+2. **Read front-matter** of each file found using the Read tool. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `present` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to presentations: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
 4. **Deep-read selectively** when generating content — e.g. brand guidelines when formatting for clients, or glossaries when writing for non-technical audiences.
 
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the process due to a malformed library document.
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The process always continues — a malformed library document is skipped, not blocking.
 
 **Compaction resilience**: Include library scan results in the progress file so post-compaction continuation doesn't re-scan.
 
@@ -77,7 +77,7 @@ Present the format options using AskUserQuestion. Not all formats suit all audie
 Read the selected source artifacts fully. Then generate content that is **derived from** the artifacts — transforming, summarising, and reframing their content for the selected audience and format.
 
 **Derivation rules**:
-- Every claim, number, status, and decision in the output must trace back to a source artifact. Do not invent information.
+- Every claim, number, status, and decision in the output must trace back to a source artifact. Only include information present in the sources.
 - Adapt language and detail level for the audience. An executive summary omits technical specifics; an onboarding guide includes them.
 - Adapt structure for the format. A presentation outline uses slide headings with bullet points; a changelog uses chronological entries.
 - Reference source artifacts in the output metadata so the reader knows where to find detail.
@@ -111,11 +111,11 @@ Use this format:
 {Derived content appropriate to audience and format}
 ```
 
-The `**Source artifacts**` field enables regeneration — when source artifacts change, re-running `cpm:present` with the same sources and audience/format selections produces an updated output.
+The `**Source artifacts**` field enables regeneration — when source artifacts change, re-running `cpm2:present` with the same sources and audience/format selections produces an updated output.
 
 After saving, tell the user the document path.
 
-**Regeneration**: If the user runs `cpm:present` and an existing communication already exists for the same source artifacts, audience, and format, offer to update it in place rather than creating a new file. Use AskUserQuestion to confirm.
+**Regeneration**: If the user runs `cpm2:present` and an existing communication already exists for the same source artifacts, audience, and format, offer to update it in place rather than creating a new file. Use AskUserQuestion to confirm.
 
 ## Arguments
 
@@ -125,7 +125,7 @@ If `$ARGUMENTS` is provided, use it as the starting context. If it references fi
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -133,9 +133,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final communication has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final communication has been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -144,7 +144,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:present
+**Skill**: cpm2:present
 **Step**: {N} of 4 — {Step Name}
 **Output target**: docs/communications/{nn}-{format}-{slug}.md
 
@@ -172,8 +172,8 @@ The "Completed Steps" section grows as steps complete.
 
 ## Guidelines
 
-- **Derive, don't invent.** Every statement in the output must trace back to a source artifact. If you can't point to where something came from, don't include it.
-- **Transform, don't copy.** The value is in reframing — adapting language, structure, and detail level for the audience. A straight copy-paste of the source is not a transformation.
+- **Derive, always trace.** Every statement in the output must trace back to a source artifact. Only include content that maps to a specific source.
+- **Transform, always reframe.** The value is in reframing — adapting language, structure, and detail level for the audience. A straight copy-paste of the source is not a transformation.
 - **Audience dictates tone.** An executive summary is crisp and outcome-focused. An onboarding guide is thorough and explanatory. Let the audience drive every writing decision.
 - **Format dictates structure.** A presentation outline needs slide headings. A changelog needs chronological entries. Follow the format's conventions.
 - **Source traceability enables regeneration.** Always record which artifacts were used so the output can be updated when sources change.

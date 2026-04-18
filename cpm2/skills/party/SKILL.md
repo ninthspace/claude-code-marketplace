@@ -1,6 +1,6 @@
 ---
-name: cpm:party
-description: Multi-perspective discussion with named agent personas. Bring your whole team into one conversation — PM, Architect, Developer, UX Designer, Test Engineer, and more. Use for brainstorming, decision-making, or exploring trade-offs from diverse viewpoints. Triggers on "/cpm:party".
+name: cpm2:party
+description: Multi-perspective discussion with named agent personas. Bring your whole team into one conversation — PM, Architect, Developer, UX Designer, Test Engineer, and more. Use for brainstorming, decision-making, or exploring trade-offs from diverse viewpoints. Triggers on "/cpm2:party".
 ---
 
 # Party Mode
@@ -51,11 +51,11 @@ Adapt the roster display to whatever agents are actually loaded.
 After roster loading and before the first orchestration round, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `party` or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `party` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to this discussion: {titles}. Agents can reference these." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during the orchestration loop when an agent's response would benefit from referencing library content — e.g. an architect referencing architecture docs, or a developer citing coding standards.
 
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the discussion due to a malformed library document.
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. The discussion always continues — a malformed library document is skipped, not blocking.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
@@ -76,11 +76,11 @@ Pick **2-3 agents** to respond:
 
 - **Primary agent**: Best domain expertise match for the current topic.
 - **Secondary agent**: Complementary or contrasting viewpoint.
-- **Tertiary agent** (optional): Only include a third when the topic genuinely benefits from an additional perspective. Don't force it.
+- **Tertiary agent** (optional): Only include a third when the topic genuinely benefits from an additional perspective. Let the topic earn the third voice.
 
 **Named agent priority**: If the user addresses an agent by name (e.g. "Margot, what do you think?"), that agent **must** respond, plus 1-2 complementary agents.
 
-**Rotation awareness**: Track which agents have participated recently. If an agent hasn't spoken in several turns and their expertise is even tangentially relevant, favour including them. Don't let the same 2-3 agents dominate every turn.
+**Rotation awareness**: Track which agents have participated recently. If an agent hasn't spoken in several turns and their expertise is even tangentially relevant, favour including them. Rotate so every agent gets airtime over multiple turns.
 
 ### 3. Generate Responses
 
@@ -93,7 +93,7 @@ Each agent responds in character. Format:
 Rules for agent responses:
 - **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves.
 - **Reference each other.** Agents should build on, agree with, challenge, or extend what other agents have said — both in the current turn and from earlier in the conversation. Use natural references: "Building on what Kai said...", "I see Margot's point, but...", "That's exactly the risk Tomasz was flagging earlier..."
-- **Disagree constructively.** When agents have legitimately different perspectives, they should express them. An architect and developer will sometimes disagree on abstraction levels. A PM and UX designer may have different views on feature priority. This tension is the point — don't smooth it over.
+- **Disagree constructively.** When agents have legitimately different perspectives, they should express them. An architect and developer will sometimes disagree on abstraction levels. A PM and UX designer may have different views on feature priority. This tension is the point — preserve it.
 - **Be opinionated.** Every agent should state what they would recommend, not just observe or analyse. "I'd suggest...", "My recommendation would be...", "If it were my call..." — agents have expertise and should use it to propose concrete actions, approaches, or decisions. Analysis without a recommendation is incomplete.
 - **Stay concise.** Each agent's response should be focused — a few sentences to a short paragraph. Not walls of text. The value is in the diversity of perspectives, not the volume.
 - **Research before asking.** When a question is about code, implementation details, or anything discoverable in the codebase — use Read, Grep, and Glob to find the answer yourself. Agents should investigate the code and form an informed view *before* responding, not ask the user to look things up for them. Reserve questions for the user's **intent, preferences, priorities, and decisions** — things only the user can answer.
@@ -124,7 +124,7 @@ If the team is split but the options are well-defined:
 2. {Option B — who backs it and why}
 ```
 
-**Judging the phase**: Don't rush to converge. Most discussions need several rounds of exploring before themes emerge. The shift from exploring to converging should feel earned — driven by what the agents have actually said, not by a desire to wrap up. A discussion can also move backwards (e.g. a new consideration reopens a settled question). Match the signal to the reality of the conversation, not to a linear progression.
+**Judging the phase**: Let convergence emerge naturally. Most discussions need several rounds of exploring before themes emerge. The shift from exploring to converging should feel earned — driven by what the agents have actually said, not by a desire to wrap up. A discussion can also move backwards (e.g. a new consideration reopens a settled question). Match the signal to the reality of the conversation, not to a linear progression.
 
 ### 5. Present Exit Option
 
@@ -135,7 +135,7 @@ After each round of agent responses, present a subtle exit option:
 *Type **wrap up** to end the discussion, or continue the conversation.*
 ```
 
-**Important**: Do not use "exit" or "quit" as trigger words — these are reserved by the Claude Code CLI and will terminate the session entirely, orphaning the progress file. Use "wrap up" as the primary trigger.
+**Important**: Use "wrap up" as the primary trigger — "exit" and "quit" are reserved by the Claude Code CLI and will terminate the session entirely, orphaning the progress file.
 
 ## Exit Handling
 
@@ -170,15 +170,15 @@ Save the progress file's content as a permanent discussion artifact. This preser
 4. **Tell the user** the saved file path.
 5. **Delete the progress file** after the discussion record has been confirmed written.
 
-**Do not summarise.** The progress file already contains curated, structured content — decisions with numbered objectives, key points, rationale. Summarising loses this detail. The discussion record is the artifact.
+**Preserve verbatim.** The progress file already contains curated, structured content — decisions with numbered objectives, key points, rationale. Summarising loses this detail. The discussion record is the artifact.
 
 ### 3. Pipeline Handoff
 
 After saving the discussion record, offer the user options for what to do next. Use AskUserQuestion:
 
-- **Continue to /cpm:discover** — Use the discussion record as starting context for problem discovery
-- **Continue to /cpm:spec** — Use the discussion record as starting context for requirements specification
-- **Continue to /cpm:epics** — Use the discussion record as starting context for work breakdown
+- **Continue to /cpm2:discover** — Use the discussion record as starting context for problem discovery
+- **Continue to /cpm2:spec** — Use the discussion record as starting context for requirements specification
+- **Continue to /cpm2:epics** — Use the discussion record as starting context for work breakdown
 - **Done for now** — End the session, no handoff
 
 If the user chooses a pipeline skill, pass the discussion record file path as the input context for that skill. The file path becomes the `$ARGUMENTS` equivalent — the next skill should read the file and treat it as its starting brief/description.
@@ -187,7 +187,7 @@ If the user chooses a pipeline skill, pass the discussion record file path as th
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-discussion.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -195,9 +195,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file after roster loading and topic confirmation (before the first orchestration turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — never before. If compaction fires between deletion and a pending output, all session state is lost.
+**Create** the file after roster loading and topic confirmation (before the first orchestration turn). **Update** it after every 2-3 substantive exchanges (not every single turn — use judgement). **Delete** it only after the discussion record has been saved to `docs/discussions/` and any pipeline handoff is complete — always after, because early deletion loses state if compaction fires. If compaction fires between deletion and a pending output, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -206,7 +206,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:party
+**Skill**: cpm2:party
 **Phase**: Discussion in progress
 **Topic**: {the discussion topic}
 **Agents loaded**: {comma-separated list of agent display names}
@@ -227,7 +227,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 Continue the party mode discussion. The user's last message was about {brief description}. Resume the orchestration loop.
 ```
 
-The "Discussion Highlights" section is the critical part — it captures enough of the conversation's substance that post-compaction continuation feels seamless. Don't try to capture everything; focus on key insights, decisions, and the current thread.
+The "Discussion Highlights" section is the critical part — it captures enough of the conversation's substance that post-compaction continuation feels seamless. Focus on key insights, decisions, and the current thread — breadth of substance over completeness.
 
 ## Arguments
 
@@ -235,9 +235,9 @@ If `$ARGUMENTS` provides a topic, skip the "what would you like to discuss?" que
 
 ## Guidelines
 
-- **Facilitate, don't dominate.** The agents serve the user's thinking, not the other way around. If the user wants to steer the conversation, let them.
+- **Facilitate first.** The agents serve the user's thinking, not the other way around. If the user wants to steer the conversation, let them.
 - **Quality over quantity.** Two sharp, distinct perspectives are better than three that all say roughly the same thing.
-- **Natural disagreement.** Don't manufacture conflict, but don't suppress it either. Real teams disagree — that's where good decisions come from.
+- **Natural disagreement.** Let genuine conflict surface organically and let it stand. Real teams disagree — that's where good decisions come from.
 - **Match depth to topic.** A quick question gets quick responses. A complex architectural decision gets deeper analysis.
 - **Keep it moving.** If the conversation is going in circles, have Ren (Scrum Master) notice and suggest a decision or direction change.
 - **Respect the user's focus.** If the user is clearly interested in one agent's perspective, let that agent take the lead for a few turns. Others can chime in when they have something genuinely additive.

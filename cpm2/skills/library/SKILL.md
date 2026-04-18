@@ -1,6 +1,6 @@
 ---
-name: cpm:library
-description: Curate a project reference library. Import external documents with structured front-matter so other CPM skills can discover and use them as context. Triggers on "/cpm:library".
+name: cpm2:library
+description: Curate a project reference library. Import external documents with structured front-matter so other CPM skills can discover and use them as context. Triggers on "/cpm2:library".
 ---
 
 # Project Reference Library
@@ -63,7 +63,7 @@ Present the suggested scope to the user with AskUserQuestion. Show the suggested
 - **Accept suggested scope** — Use the suggested scope values
 - **Adjust scope** — Let the user modify the list
 
-Valid scope values: `discover`, `spec`, `stories`, `do`, `party`, `all`. The value `all` is a shorthand that matches every skill — don't combine it with individual skill names.
+Valid scope values: `discover`, `spec`, `stories`, `do`, `party`, `all`. The value `all` is a shorthand that matches every skill — use it alone, without individual skill names.
 
 Present the complete generated front-matter to the user for confirmation before proceeding.
 
@@ -98,7 +98,7 @@ summary: >
 
 Reconcile accumulated amendments on a library document into a clean, updated version.
 
-This action is invoked as `/cpm:library consolidate <file-path>`.
+This action is invoked as `/cpm2:library consolidate <file-path>`.
 
 ### Step 1: Read and Analyse
 
@@ -134,7 +134,7 @@ This action is invoked as `/cpm:library consolidate <file-path>`.
 
 ## Batch Front-Matter Workflow
 
-Scan the library for documents missing front-matter and add it. This action is invoked as `/cpm:library consolidate` (with no file path argument).
+Scan the library for documents missing front-matter and add it. This action is invoked as `/cpm2:library consolidate` (with no file path argument).
 
 **State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once all documents have been processed.
 
@@ -171,7 +171,7 @@ For each bare document in the queue, process one at a time:
 3. Present the generated front-matter to the user with AskUserQuestion:
    - **Accept suggested scope** — Use the suggested scope values
    - **Adjust scope** — Let the user modify the list
-4. If a document's content can't be meaningfully analysed, skip it with a warning to the user and move to the next document. Do not abort the batch.
+4. If a document's content can't be meaningfully analysed, skip it with a warning to the user and move to the next document. Always continue the batch.
 
 *Progress note: record which documents have been processed and which remain.*
 
@@ -181,7 +181,7 @@ For each document that was approved in Step 3:
 
 1. Prepend the front-matter block (with `---` delimiters) to the existing file content. Use the Write tool with the complete file contents — front-matter followed by the original body. The original body content must not be modified.
 2. Tell the user the updated file path.
-3. If a document can't be written, skip it with a warning to the user and continue to the next document. Do not abort the batch.
+3. If a document can't be written, skip it with a warning to the user and continue to the next document. Always continue the batch.
 
 After all documents are processed, tell the user how many were updated and delete the progress file.
 
@@ -189,7 +189,7 @@ After all documents are processed, tell the user how many were updated and delet
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` during the intake and batch front-matter workflows for compaction resilience.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -197,9 +197,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` during the intake and batch 
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it only after all output artifacts (library documents, batch results) have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Step 1. **Update** it after each step completes. **Delete** it only after all output artifacts (library documents, batch results) have been confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -210,7 +210,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:library
+**Skill**: cpm2:library
 **Action**: {intake or consolidate}
 **Step**: {N} of 3 — {Step Name}
 **Source**: {file path or URL being imported, or file being consolidated}
@@ -238,7 +238,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:library
+**Skill**: cpm2:library
 **Action**: batch-front-matter
 **Step**: {N} of 4 — {Step Name}
 **Documents found**: {total count}
@@ -276,14 +276,14 @@ summary: >                      # CPM-oriented actionable distillation
 ```
 
 **Consistency rules**:
-- All fields are required — never omit any.
+- All fields are required — always include every field.
 - Date format is always `YYYY-MM-DD`.
-- Scope values are lowercase skill names. `all` is a shorthand for every skill — don't combine with individual names.
+- Scope values are lowercase skill names. `all` is a shorthand for every skill — use it alone, without individual names.
 - Summary focuses on actionable constraints, decisions, and rules — not a description of what the document is about.
 
 ## Amendment Format Reference
 
-When `/cpm:retro` amends a library document, it appends blocks in this format:
+When `/cpm2:retro` amends a library document, it appends blocks in this format:
 
 ```markdown
 ## Amendment — {YYYY-MM-DD} (via retro)
@@ -296,10 +296,29 @@ When `/cpm:retro` amends a library document, it appends blocks in this format:
 
 The consolidation action reads and reconciles these blocks. This format is the contract between retro write-back and consolidation.
 
+## Graceful Degradation
+
+Every scenario below specifies an explicit action sequence ending with a visible result. No silent fallbacks.
+
+- **Source file not found** (intake) → **Action**: Stop the intake workflow. **Result**: Report to the user: "File not found at {path} — verify the path and try again."
+
+- **URL fetch fails** (intake) → **Action**: Stop the intake workflow. **Result**: Report to the user: "Could not fetch content from {URL} — check the URL and try again."
+
+- **Library directory empty or missing** (batch front-matter) → **Action**: Stop the batch workflow. **Result**: Report to the user: "No library documents found in docs/library/ — nothing to process."
+
+- **All documents already have front-matter** (batch front-matter) → **Action**: Stop the batch workflow. **Result**: Report to the user: "All library documents already have front-matter. Nothing to do."
+
+- **Consolidation target not found** → **Action**: Stop the consolidation workflow. **Result**: Report to the user: "File not found at {path} — verify the path and try again."
+
+- **No amendments to consolidate** → **Action**: Stop the consolidation workflow. **Result**: Report to the user: "No amendment blocks found in {path} — nothing to consolidate."
+
+- **Document content unanalysable** (batch front-matter) → **Action**: Skip the document and continue to the next in the batch. **Result**: Report to the user: "Could not analyse {filename} — skipping. Continuing with remaining documents."
+
+- **Document write fails** (batch front-matter) → **Action**: Skip the document and continue to the next in the batch. **Result**: Report to the user: "Could not write front-matter to {filename} — skipping. Continuing with remaining documents."
+
 ## Guidelines
 
 - **Low friction intake.** The user provides a path or URL; CPM does the rest. Minimise questions — auto-suggest, then confirm.
 - **Summaries are for machines.** The front-matter summary is read by other CPM skills during triage, not by humans browsing a docs folder. Write it as actionable constraints: "PSR-12 with Pint enforcement. Repository pattern for data access. No inline SQL outside migrations." Not: "This document describes the team's PHP coding standards."
-- **One document, one file.** Don't split or merge source documents. Import them as-is with front-matter prepended.
-- **Graceful on failure.** If a URL can't be fetched or a file doesn't exist, tell the user and stop. Don't partially import.
-- **Consolidation is user-controlled.** Never auto-consolidate. The user decides when amendment accumulation warrants a clean-up pass.
+- **One document, one file.** Keep each source document intact — import as-is with front-matter prepended.
+- **Consolidation is user-controlled.** The user decides when amendment accumulation warrants a clean-up pass — always wait for an explicit request.

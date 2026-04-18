@@ -1,6 +1,6 @@
 ---
-name: cpm:templates
-description: Template discoverability and scaffolding. Lists all CPM artifact templates showing each skill, its output format, whether structural or presentational, and the override path if applicable. Previews any template skeleton. Scaffolds override files for presentational templates. Triggers on "/cpm:templates".
+name: cpm2:templates
+description: Template discoverability and scaffolding. Lists all CPM artifact templates showing each skill, its output format, whether structural or presentational, and the override path if applicable. Previews any template skeleton. Scaffolds override files for presentational templates. Triggers on "/cpm2:templates".
 ---
 
 # Template Discoverability & Scaffolding
@@ -26,16 +26,16 @@ Show all CPM artifact-producing skills with their template metadata. Present as 
 
 | Skill | Output Format | Type | Override Path |
 |-------|--------------|------|---------------|
-| `cpm:discover` | Problem brief | Structural | — (fixed) |
-| `cpm:brief` | Product brief | Presentational | `docs/templates/brief.md` |
-| `cpm:spec` | Specification | Structural | — (fixed) |
-| `cpm:architect` | ADR | Presentational | `docs/templates/architect.md` |
-| `cpm:epics` | Epic doc | Structural | — (fixed) |
-| `cpm:do` | Epic doc updates | Structural | — (fixed) |
-| `cpm:ralph` | Ralph loop command | Structural | — (fixed) |
-| `cpm:present` | Communication | Presentational | `docs/templates/present/{format}.md` |
-| `cpm:review` | Review file | Structural | — (fixed) |
-| `cpm:retro` | Retro file | Structural | — (fixed) |
+| `cpm2:discover` | Problem brief | Structural | — (fixed) |
+| `cpm2:brief` | Product brief | Presentational | `docs/templates/brief.md` |
+| `cpm2:spec` | Specification | Structural | — (fixed) |
+| `cpm2:architect` | ADR | Presentational | `docs/templates/architect.md` |
+| `cpm2:epics` | Epic doc | Structural | — (fixed) |
+| `cpm2:do` | Epic doc updates | Structural | — (fixed) |
+| `cpm2:ralph` | Ralph loop command | Structural | — (fixed) |
+| `cpm2:present` | Communication | Presentational | `docs/templates/present/{format}.md` |
+| `cpm2:review` | Review file | Structural | — (fixed) |
+| `cpm2:retro` | Retro file | Structural | — (fixed) |
 
 After showing the table, check for existing overrides:
 1. **Glob** `docs/templates/*.md` and `docs/templates/present/*.md`.
@@ -44,12 +44,12 @@ After showing the table, check for existing overrides:
 
 ## Preview
 
-Usage: `/cpm:templates preview {skill}`
+Usage: `/cpm2:templates preview {skill}`
 
 Show the template skeleton for the specified skill. This displays the embedded default template — the markdown structure the skill uses when no project override exists.
 
 To preview a template:
-1. Parse `{skill}` from `$ARGUMENTS` (e.g. `brief`, `architect`, `present`). Accept with or without the `cpm:` prefix.
+1. Parse `{skill}` from `$ARGUMENTS` (e.g. `brief`, `architect`, `present`). Accept with or without the `cpm2:` prefix.
 2. Read the corresponding SKILL.md file from the skill directory.
 3. Find the output format section (usually under `## Output`) and extract the template from the markdown code block.
 4. Display the template to the user.
@@ -58,17 +58,17 @@ This works for both structural and presentational templates — users can previe
 
 ## Scaffold
 
-Usage: `/cpm:templates scaffold {skill}`
+Usage: `/cpm2:templates scaffold {skill}`
 
 Create a project-level override file for a presentational template. This copies the embedded default template to `docs/templates/` where the user can customise it.
 
 To scaffold a template:
 1. Parse `{skill}` from `$ARGUMENTS`.
-2. **Check if the template is presentational**. If it's structural, tell the user: "The {skill} template is structural (used as a data contract by downstream skills) and cannot be overridden. Run `/cpm:templates preview {skill}` to view the format."
+2. **Check if the template is presentational**. If it's structural, tell the user: "The {skill} template is structural (used as a data contract by downstream skills) and cannot be overridden. Run `/cpm2:templates preview {skill}` to view the format."
 3. Determine the override path:
-   - `cpm:brief` → `docs/templates/brief.md`
-   - `cpm:architect` → `docs/templates/architect.md`
-   - `cpm:present` → Ask which format to scaffold, then `docs/templates/present/{format}.md`
+   - `cpm2:brief` → `docs/templates/brief.md`
+   - `cpm2:architect` → `docs/templates/architect.md`
+   - `cpm2:present` → Ask which format to scaffold, then `docs/templates/present/{format}.md`
 4. Check if the override file already exists. If so, tell the user and ask whether to overwrite.
 5. Read the embedded default template from the skill's SKILL.md.
 6. Create the `docs/templates/` directory (and `present/` subdirectory if needed) if it doesn't exist.
@@ -79,4 +79,4 @@ To scaffold a template:
 
 - **No state management needed.** This skill is stateless — it doesn't produce planning artifacts or run multi-phase facilitation. No progress file required.
 - **Fast and informational.** List, preview, and scaffold should each complete in a single response. No AskUserQuestion gating needed for list or preview.
-- **Respect the two-tier boundary.** Never scaffold a structural template override. The distinction exists to protect data contracts between skills.
+- **Respect the two-tier boundary.** Only scaffold presentational template overrides — structural templates are data contracts between skills and must remain fixed.

@@ -1,6 +1,6 @@
 ---
-name: cpm:discover
-description: Facilitated problem discovery. Understand the problem before proposing solutions. Produces a problem brief through guided conversation. Use when starting a new product, complex feature, or any work where the problem isn't well-defined yet. Triggers on "/cpm:discover".
+name: cpm2:discover
+description: Facilitated problem discovery. Understand the problem before proposing solutions. Produces a problem brief through guided conversation. Use when starting a new product, complex feature, or any work where the problem isn't well-defined yet. Triggers on "/cpm2:discover".
 ---
 
 # Facilitated Problem Discovery
@@ -9,7 +9,7 @@ Guide the user through understanding their problem before jumping to solutions. 
 
 ## Process
 
-Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
+Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — present only one phase of questions per turn.
 
 **State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final brief has been saved.
 
@@ -37,7 +37,17 @@ Follow the shared **Library Check** procedure with scope keyword `discover`. Dee
 
 After startup checks and before Phase 1, display:
 
-> Output format is fixed (used by downstream skills). Run `/cpm:templates preview discover` to see the format.
+> Output format is fixed (used by downstream skills). Run `/cpm2:templates preview discover` to see the format.
+
+### Codebase Grounding (Startup)
+
+Before facilitating discovery, explore the existing codebase to ground the conversation in what already exists:
+
+1. Use Glob and Grep to survey the project structure — key directories, configuration files, and existing code patterns.
+2. Read key files to understand the current implementation state, technology choices, and domain model.
+3. Carry these findings into all phases — Phase 3 (Current State) benefits most directly, but codebase context informs every phase from problem framing to constraint identification.
+
+If the project has no existing codebase (greenfield), note that and proceed. For projects with code, grounding ensures discovery builds on real technical context rather than assumptions.
 
 ### Phase 1: Why
 
@@ -130,8 +140,8 @@ Use this format:
 ```
 
 After saving, suggest next steps:
-- `/cpm:brief` to explore product ideation — vision, value propositions, and key features (recommended for most problems)
-- `/cpm:spec` to jump straight to requirements if the solution approach is already clear
+- `/cpm2:brief` to explore product ideation — vision, value propositions, and key features (recommended for most problems)
+- `/cpm2:spec` to jump straight to requirements if the solution approach is already clear
 - `/plan` (native plan mode) if the scope is small enough to skip planning artifacts entirely
 
 ## Arguments
@@ -142,7 +152,7 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -150,9 +160,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -161,7 +171,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:discover
+**Skill**: cpm2:discover
 **Phase**: {N} of 6 — {Phase Name}
 **Output target**: docs/plans/{nn}-plan-{slug}.md
 
@@ -185,8 +195,8 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
-- **Facilitate, don't interrogate.** These are conversations, not forms.
+- **Facilitate, stay conversational.** These are conversations, not forms.
 - **Build on answers.** Each question should respond to what the user just said.
 - **Skip what's obvious.** If the user's initial description already covers a phase, acknowledge it and move on.
 - **Stay curious.** Ask follow-up questions when answers are vague or assumptions seem risky.
-- **One phase at a time.** Never combine phases into a single question block.
+- **One phase at a time.** Present only one phase of questions per turn.

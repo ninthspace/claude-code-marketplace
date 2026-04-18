@@ -9,65 +9,65 @@ Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Meth
 After installation, use any skill independently or as a pipeline:
 
 ```
-/cpm:party   → /cpm:discover → /cpm:brief → /cpm:architect → /cpm:spec → /cpm:epics → /cpm:do → /cpm:retro
-/cpm:consult ↗                                                                  ↕            ↕
-                                                                          /cpm:review    /cpm:pivot
+/cpm2:party   → /cpm2:discover → /cpm2:brief → /cpm2:architect → /cpm2:spec → /cpm2:epics → /cpm2:do → /cpm2:retro
+/cpm2:consult ↗                                                                  ↕            ↕
+                                                                          /cpm2:review    /cpm2:pivot
                                                                                                      ↓
-                                                                                              /cpm:archive
-/cpm:ralph (autonomous multi-epic execution via Ralph Wiggum plugin)
-/cpm:quick (lightweight execution for small, well-defined changes)
-/cpm:status (project status reconnaissance and next-step recommendations)
-/cpm:library (import reference docs used by all skills)
-/cpm:templates (explore and customise artifact templates)
-/cpm:present (transform artifacts for different audiences)
+                                                                                              /cpm2:archive
+/cpm2:ralph (autonomous multi-epic execution via Ralph Wiggum plugin)
+/cpm2:quick (lightweight execution for small, well-defined changes)
+/cpm2:status (project status reconnaissance and next-step recommendations)
+/cpm2:library (import reference docs used by all skills)
+/cpm2:templates (explore and customise artifact templates)
+/cpm2:present (transform artifacts for different audiences)
 ```
 
-`/cpm:consult` and `/cpm:party` both feed into the planning pipeline — consult for focused one-to-one conversations, party for multi-perspective discussions. `/cpm:review` sits between planning and execution — review an epic before or after `/cpm:do`. `/cpm:pivot` amends any artefact mid-flow. `/cpm:archive` cleans up completed artefacts. `/cpm:present` transforms artifacts for stakeholder consumption. `/cpm:templates` helps you explore and customise the output formats.
+`/cpm2:consult` and `/cpm2:party` both feed into the planning pipeline — consult for focused one-to-one conversations, party for multi-perspective discussions. `/cpm2:review` sits between planning and execution — review an epic before or after `/cpm2:do`. `/cpm2:pivot` amends any artefact mid-flow. `/cpm2:archive` cleans up completed artefacts. `/cpm2:present` transforms artifacts for stakeholder consumption. `/cpm2:templates` helps you explore and customise the output formats.
 
 Each step is optional. Use what fits your situation:
 
-- Want diverse perspectives on an idea? Start with `/cpm:party`
-- Need focused consultation with one expert? Use `/cpm:consult`
-- Starting a new product? Begin with `/cpm:discover`
-- Problem is clear, need product vision? Jump to `/cpm:brief`
-- Need architectural decisions before requirements? Use `/cpm:architect`
-- Ready for requirements? Jump to `/cpm:spec`
-- Have a plan, need epics? Go straight to `/cpm:epics`
-- Ready to implement? `/cpm:do` works through tasks one by one
-- Want autonomous overnight execution? `/cpm:ralph` wraps `/cpm:do` in a Ralph Wiggum loop
-- Want a critical review before starting? `/cpm:review` runs adversarial review of epics/stories
-- Need to share planning artifacts with stakeholders? `/cpm:present` transforms them for any audience
-- Want to explore or customise artifact templates? `/cpm:templates` lists, previews, and scaffolds overrides
-- Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
-- Small, well-defined change? `/cpm:quick` gives you traceability without ceremony
-- Coming back after a break? `/cpm:status` gives you a narrative briefing and recommends next steps
+- Want diverse perspectives on an idea? Start with `/cpm2:party`
+- Need focused consultation with one expert? Use `/cpm2:consult`
+- Starting a new product? Begin with `/cpm2:discover`
+- Problem is clear, need product vision? Jump to `/cpm2:brief`
+- Need architectural decisions before requirements? Use `/cpm2:architect`
+- Ready for requirements? Jump to `/cpm2:spec`
+- Have a plan, need epics? Go straight to `/cpm2:epics`
+- Ready to implement? `/cpm2:do` works through tasks one by one
+- Want autonomous overnight execution? `/cpm2:ralph` wraps `/cpm2:do` in a Ralph Wiggum loop
+- Want a critical review before starting? `/cpm2:review` runs adversarial review of epics/stories
+- Need to share planning artifacts with stakeholders? `/cpm2:present` transforms them for any audience
+- Want to explore or customise artifact templates? `/cpm2:templates` lists, previews, and scaffolds overrides
+- Have reference docs (coding standards, architecture decisions)? `/cpm2:library` imports them for all skills
+- Small, well-defined change? `/cpm2:quick` gives you traceability without ceremony
+- Coming back after a break? `/cpm2:status` gives you a narrative briefing and recommends next steps
 - Trivial one-liner? Skip CPM entirely — Claude Code's native plan mode is enough
 
 ## Skills
 
-### `/cpm:party` — Multi-Perspective Discussion
+### `/cpm2:party` — Multi-Perspective Discussion
 
 Launch a team discussion where named agent personas respond in character, building on each other's ideas and constructively disagreeing. Useful for brainstorming, decision-making, or exploring trade-offs before committing to a direction.
 
 The default roster includes 9 personas: Jordan (PM), Margot (Architect), Kai (Developer), Priya (UX Designer), Tomasz (QA), Casey (Test Engineer), Sable (DevOps), Ellis (Tech Writer), and Ren (Scrum Master). Each has a distinct personality and communication style.
 
 ```
-/cpm:party should we use a monorepo or separate repos?
-/cpm:party docs/plans/customer-portal.md
+/cpm2:party should we use a monorepo or separate repos?
+/cpm2:party docs/plans/customer-portal.md
 ```
 
-**On exit**: Produces a structured discussion summary (key points, agreements, open questions, recommendations) and offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` with the summary as input.
+**On exit**: Produces a structured discussion summary (key points, agreements, open questions, recommendations) and offers to hand off into `/cpm2:discover`, `/cpm2:spec`, or `/cpm2:epics` with the summary as input.
 
 **Custom roster**: To customise personas, create `docs/agents/roster.yaml` in your project. This completely replaces the default roster. See `agents/roster.yaml` in the plugin for the schema.
 
-### `/cpm:consult` — Focused Consultation
+### `/cpm2:consult` — Focused Consultation
 
 Start a one-to-one conversation with a chosen agent persona for focused problem-solving, expert Q&A, or guided exploration. Unlike party mode's multi-perspective panel, consult gives you a deep dialogue with one expert — and you control the room.
 
 ```
-/cpm:consult Margot                    # consult with Margot directly
-/cpm:consult architect                 # consult by role
-/cpm:consult                           # pick from the roster
+/cpm2:consult Margot                    # consult with Margot directly
+/cpm2:consult architect                 # consult by role
+/cpm2:consult                           # pick from the roster
 ```
 
 **Mid-conversation commands** (natural language):
@@ -78,11 +78,11 @@ Start a one-to-one conversation with a chosen agent persona for focused problem-
 
 **User leads by default**. When you hand the lead to an agent, they shift to a probing, structured style — challenging assumptions and driving exploration. Reclaim the lead naturally by asking a direct question or giving a directive.
 
-**On exit**: Saves a discussion record to `docs/discussions/` and offers pipeline handoff to `/cpm:discover`, `/cpm:spec`, or `/cpm:epics`.
+**On exit**: Saves a discussion record to `docs/discussions/` and offers pipeline handoff to `/cpm2:discover`, `/cpm2:spec`, or `/cpm2:epics`.
 
 **Custom roster**: Same roster as party mode — `docs/agents/roster.yaml` in your project, or the plugin default.
 
-### `/cpm:discover` — Problem Discovery
+### `/cpm2:discover` — Problem Discovery
 
 Guided conversation to understand the problem before proposing solutions. Works through six phases:
 
@@ -98,12 +98,12 @@ Guided conversation to understand the problem before proposing solutions. Works 
 At the **Why** and **Constraints** phases, agent personas briefly weigh in with diverse viewpoints to surface blind spots before you respond.
 
 ```
-/cpm:discover build a customer portal for our booking system
+/cpm2:discover build a customer portal for our booking system
 ```
 
-**On exit**: Suggests `/cpm:brief` as the primary next step for product ideation, with `/cpm:spec` and `/plan` as alternatives for simpler problems.
+**On exit**: Suggests `/cpm2:brief` as the primary next step for product ideation, with `/cpm2:spec` and `/plan` as alternatives for simpler problems.
 
-### `/cpm:brief` — Product Ideation
+### `/cpm2:brief` — Product Ideation
 
 Facilitated conversation to transform a problem brief into a product brief. Explores solution approaches, value propositions, key features, and user journeys. Bridges problem discovery and requirements specification by capturing *what* we're building and *why* this approach.
 
@@ -115,16 +115,16 @@ Works through five phases:
 4. **Differentiation** — How does it differ from alternatives?
 5. **User Journey Narratives** — Walk through key user flows
 
-**Input**: A problem brief from `/cpm:discover`, a file path, or a description.
+**Input**: A problem brief from `/cpm2:discover`, a file path, or a description.
 **Output**: `docs/briefs/01-brief-{slug}.md` (auto-numbered)
 
 ```
-/cpm:brief docs/plans/01-plan-customer-portal.md
+/cpm2:brief docs/plans/01-plan-customer-portal.md
 ```
 
-**On exit**: Suggests `/cpm:architect` for architecture exploration or `/cpm:spec` to jump straight to requirements.
+**On exit**: Suggests `/cpm2:architect` for architecture exploration or `/cpm2:spec` to jump straight to requirements.
 
-### `/cpm:architect` — Architecture Exploration
+### `/cpm2:architect` — Architecture Exploration
 
 Facilitated architecture exploration that derives decisions from the product's actual needs rather than boilerplate. For each key decision, explores options, trade-offs, and dependencies before capturing a rationale. Produces Architecture Decision Records (ADRs).
 
@@ -135,16 +135,16 @@ Works through four phases:
 3. **Dependency Mapping** — How do decisions affect each other?
 4. **ADR Production** — Capture each decision as a structured record
 
-**Input**: A product brief from `/cpm:brief`, a problem brief, or a description.
+**Input**: A product brief from `/cpm2:brief`, a problem brief, or a description.
 **Output**: `docs/architecture/01-adr-{slug}.md` (one per decision, auto-numbered)
 
 ```
-/cpm:architect docs/briefs/01-brief-customer-portal.md
+/cpm2:architect docs/briefs/01-brief-customer-portal.md
 ```
 
-**On exit**: Suggests `/cpm:spec` to continue with requirements specification.
+**On exit**: Suggests `/cpm2:spec` to continue with requirements specification.
 
-### `/cpm:spec` — Requirements & Architecture
+### `/cpm2:spec` — Requirements & Architecture
 
 Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, scope boundaries, testing strategy (with test approach tags per acceptance criterion: `[unit]`, `[integration]`, `[feature]`, `[manual]`), and a final review.
 
@@ -152,28 +152,28 @@ When product briefs exist in `docs/briefs/`, they're used as input context. When
 
 At the **Architecture Decisions** and **Scope Boundary** sections, agent personas present competing trade-offs to help you make informed choices.
 
-**Input**: A product brief from `/cpm:brief`, a problem brief from `/cpm:discover`, a file path, or a description.
+**Input**: A product brief from `/cpm2:brief`, a problem brief from `/cpm2:discover`, a file path, or a description.
 **Output**: `docs/specifications/01-spec-{slug}.md` (auto-numbered)
 
 ```
-/cpm:spec docs/briefs/01-brief-customer-portal.md
-/cpm:spec docs/plans/01-plan-customer-portal.md
+/cpm2:spec docs/briefs/01-brief-customer-portal.md
+/cpm2:spec docs/plans/01-plan-customer-portal.md
 ```
 
-**On exit**: Suggests `/cpm:architect` when no ADRs exist, otherwise `/cpm:epics`.
+**On exit**: Suggests `/cpm2:architect` when no ADRs exist, otherwise `/cpm2:epics`.
 
-### `/cpm:epics` — Work Breakdown
+### `/cpm2:epics` — Work Breakdown
 
 Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. Stories include traceability to spec requirements, showing which functional requirements each story satisfies. When the spec has a testing strategy, test approach tags are propagated to story acceptance criteria, testing tasks are auto-generated for stories with automated test tags, and integration testing stories are created for epics with significant cross-story interactions. When ADRs exist in `docs/architecture/`, they're referenced when breaking down architectural work.
 
-**Input**: A spec from `/cpm:spec`, a brief, or a description.
+**Input**: A spec from `/cpm2:spec`, a brief, or a description.
 **Output**: `docs/epics/{nn}-epic-{slug}.md` (one per epic)
 
 ```
-/cpm:epics docs/specifications/01-spec-customer-portal.md
+/cpm2:epics docs/specifications/01-spec-customer-portal.md
 ```
 
-### `/cpm:do` — Task Execution
+### `/cpm2:do` — Task Execution
 
 Works through stories and tasks defined in epic documents. Hydrates one story at a time into Claude Code's native task system, then for each task: reads the epic doc for context and acceptance criteria, does the implementation work, verifies criteria are met, updates the story's status, and moves on to the next unblocked task. Loops until all stories are done.
 
@@ -184,34 +184,34 @@ When ADRs exist in `docs/architecture/`, tasks that touch architectural boundari
 **Input**: An epic doc path, or auto-detects epics with remaining work. Optionally a task ID to start with.
 
 ```
-/cpm:do        # pick up the next task
-/cpm:do 3      # work on task #3 specifically
+/cpm2:do        # pick up the next task
+/cpm2:do 3      # work on task #3 specifically
 ```
 
 The epic doc is updated as work progresses — statuses move from Pending -> In Progress -> Complete. Acceptance criteria are checked before marking any task done.
 
-During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps). These feed into `/cpm:retro`.
+During execution, `/cpm2:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps). These feed into `/cpm2:retro`.
 
-### `/cpm:ralph` — Autonomous Multi-Epic Execution
+### `/cpm2:ralph` — Autonomous Multi-Epic Execution
 
-Wraps `/cpm:do` in a [Ralph Wiggum](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) loop for autonomous, unsupervised multi-epic execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction.
+Wraps `/cpm2:do` in a [Ralph Wiggum](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) loop for autonomous, unsupervised multi-epic execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction.
 
-The generated prompt replaces all `/cpm:do` interaction gates (AskUserQuestion) with autonomous fallback behaviour: fix test failures, retry unmet criteria, skip stuck tasks, and auto-continue between epics. Includes stuck detection (skip after N consecutive failures), an append-only execution log, and a completion promise that signals when all epics are done.
+The generated prompt replaces all `/cpm2:do` interaction gates (AskUserQuestion) with autonomous fallback behaviour: fix test failures, retry unmet criteria, skip stuck tasks, and auto-continue between epics. Includes stuck detection (skip after N consecutive failures), an append-only execution log, and a completion promise that signals when all epics are done.
 
 **Requires**: The [Ralph Wiggum plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) installed in Claude Code.
 
 **Input**: Epic doc paths (explicit, range, or auto-discover). Optional `--max-iterations`, `--story-filter`, `--dry-run`.
 
 ```
-/cpm:ralph                                    # auto-discover all incomplete epics
-/cpm:ralph docs/epics/23-epic-*.md docs/epics/24-epic-*.md   # specific epics
-/cpm:ralph 23 through 26 --max-iterations 100 # range with iteration limit
-/cpm:ralph --dry-run                          # generate prompt without launching
+/cpm2:ralph                                    # auto-discover all incomplete epics
+/cpm2:ralph docs/epics/23-epic-*.md docs/epics/24-epic-*.md   # specific epics
+/cpm2:ralph 23 through 26 --max-iterations 100 # range with iteration limit
+/cpm2:ralph --dry-run                          # generate prompt without launching
 ```
 
 The skill always presents the generated `/ralph-loop:ralph-loop` command for review before executing (two-phase launch). Resume capability detects previous runs via execution logs and epic doc statuses.
 
-### `/cpm:review` — Adversarial Review
+### `/cpm2:review` — Adversarial Review
 
 Run a critical review of an epic doc or a specific story using the party agent roster. Each persona examines the artifact through their professional lens — challenging assumptions, spotting gaps, and flagging risks. Produces a structured review document with severity-tagged findings (critical, warning, suggestion) and an optional autofix that generates remediation tasks.
 
@@ -221,9 +221,9 @@ Reviews check spec compliance, ADR compliance, and missing test coverage — fla
 **Output**: `docs/reviews/01-review-{slug}.md` (auto-numbered)
 
 ```
-/cpm:review docs/epics/01-epic-customer-portal.md        # review entire epic
-/cpm:review docs/epics/01-epic-customer-portal.md 2      # review story 2 only
-/cpm:review                                               # auto-detect most recent epic
+/cpm2:review docs/epics/01-epic-customer-portal.md        # review entire epic
+/cpm2:review docs/epics/01-epic-customer-portal.md 2      # review story 2 only
+/cpm2:review                                               # auto-detect most recent epic
 ```
 
 Agent selection is dynamic — 2-3 agents for single stories, 3-4 for full epics, chosen by content relevance. Every review includes at least one agent challenging business value and one challenging technical approach.
@@ -232,7 +232,7 @@ Agent selection is dynamic — 2-3 agents for single stories, 3-4 for full epics
 
 **On exit**: Adaptive pipeline handoff — pre-execution epics offer pivot/do/exit; post-execution epics offer retro/pivot/discover/spec/exit.
 
-### `/cpm:retro` — Lightweight Retrospective
+### `/cpm2:retro` — Lightweight Retrospective
 
 Reads a completed epic doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle. Observation categories include scope surprises, criteria gaps, complexity underestimates, codebase discoveries, and testing gaps. When library documents exist, relevant observations are offered as amendments back to the library — closing the feedback loop.
 
@@ -240,26 +240,26 @@ Reads a completed epic doc, synthesises observations captured during task execut
 **Output**: `docs/retros/01-retro-{slug}.md` (auto-numbered)
 
 ```
-/cpm:retro docs/epics/01-epic-customer-portal.md
-/cpm:retro        # auto-detect most recent epic doc
+/cpm2:retro docs/epics/01-epic-customer-portal.md
+/cpm2:retro        # auto-detect most recent epic doc
 ```
 
-**On exit**: Offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` with the retro as input context — closing the feedback loop for the next planning cycle.
+**On exit**: Offers to hand off into `/cpm2:discover`, `/cpm2:spec`, or `/cpm2:epics` with the retro as input context — closing the feedback loop for the next planning cycle.
 
-### `/cpm:pivot` — Course Correction
+### `/cpm2:pivot` — Course Correction
 
 Revisit any planning artefact (problem brief, product brief, ADR, spec, or epic), surgically amend it, and cascade changes through downstream documents. Lighter than re-running the original skill — edit what exists rather than starting over.
 
 **Input**: A file path to any planning document, or auto-discovers artefact chains for selection.
 
 ```
-/cpm:pivot docs/specifications/01-spec-customer-portal.md
-/cpm:pivot        # discover and select from existing artefacts
+/cpm2:pivot docs/specifications/01-spec-customer-portal.md
+/cpm2:pivot        # discover and select from existing artefacts
 ```
 
 The workflow: select a document, describe your changes in natural language, review a change summary, then walk downstream documents with guided per-section updates. The full cascade chain is: problem brief -> product brief -> ADRs -> spec -> epics. Tasks affected by changed epic stories are flagged (but never auto-modified).
 
-### `/cpm:present` — Audience-Aware Artifact Transformation
+### `/cpm2:present` — Audience-Aware Artifact Transformation
 
 Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering team, stakeholders, etc.) and format (memo, slide deck, email, etc.), and get derived content tailored to the readers.
 
@@ -267,14 +267,14 @@ Transform CPM planning artifacts into audience-appropriate communications. Selec
 **Output**: `docs/communications/{nn}-{format}-{slug}.md` (auto-numbered)
 
 ```
-/cpm:present docs/specifications/01-spec-customer-portal.md          # transform a spec
-/cpm:present docs/briefs/01-brief-customer-portal.md                 # transform a brief
-/cpm:present                                                          # discover and select artifacts
+/cpm2:present docs/specifications/01-spec-customer-portal.md          # transform a spec
+/cpm2:present docs/briefs/01-brief-customer-portal.md                 # transform a brief
+/cpm2:present                                                          # discover and select artifacts
 ```
 
 Content is derived from source artifacts — regenerable when sources change. Multiple presentations from the same sources are encouraged for different audiences.
 
-### `/cpm:templates` — Template Discoverability & Scaffolding
+### `/cpm2:templates` — Template Discoverability & Scaffolding
 
 Explore and customise the templates used by CPM artifact-producing skills. CPM uses a two-tier template system:
 
@@ -288,14 +288,14 @@ Three subcommands:
 - **scaffold {skill}** — Create an override file at the project level for presentational templates
 
 ```
-/cpm:templates                           # list all templates
-/cpm:templates preview brief             # preview the brief template
-/cpm:templates scaffold architect        # create an ADR template override
+/cpm2:templates                           # list all templates
+/cpm2:templates preview brief             # preview the brief template
+/cpm2:templates scaffold architect        # create an ADR template override
 ```
 
-### `/cpm:library` — Project Reference Library
+### `/cpm2:library` — Project Reference Library
 
-Import external documents (coding standards, architecture decisions, API contracts, business rules) into a curated `docs/library/` directory with structured YAML front-matter. Other CPM skills automatically discover and reference these documents during planning and execution — specs pick up architectural constraints, stories inherit coding standards, and `/cpm:do` reads relevant docs before implementing.
+Import external documents (coding standards, architecture decisions, API contracts, business rules) into a curated `docs/library/` directory with structured YAML front-matter. Other CPM skills automatically discover and reference these documents during planning and execution — specs pick up architectural constraints, stories inherit coding standards, and `/cpm2:do` reads relevant docs before implementing.
 
 Three actions:
 
@@ -304,43 +304,43 @@ Three actions:
 - **Batch front-matter** — Scan for library documents missing front-matter and add it
 
 ```
-/cpm:library docs/architecture-decisions.md    # import a file
-/cpm:library https://example.com/standards     # import from URL
-/cpm:library consolidate docs/library/coding-standards.md  # reconcile amendments
-/cpm:library consolidate                       # batch add front-matter
+/cpm2:library docs/architecture-decisions.md    # import a file
+/cpm2:library https://example.com/standards     # import from URL
+/cpm2:library consolidate docs/library/coding-standards.md  # reconcile amendments
+/cpm2:library consolidate                       # batch add front-matter
 ```
 
 **Scope tagging**: Each library document is tagged with which skills should reference it (`discover`, `spec`, `epics`, `do`, `party`, `review`, or `all`). Skills filter by scope during their library check phase — only reading documents relevant to the current workflow.
 
-### `/cpm:archive` — Archive Planning Documents
+### `/cpm2:archive` — Archive Planning Documents
 
 Move completed or stale planning artifacts out of the active `docs/` directories into `docs/archive/`. Scans for documents across plans, specifications, epics, and retros, groups them into artifact chains by slug, evaluates staleness heuristics, and lets you select which chains to archive.
 
 **Input**: Optional file path to archive a specific document and its chain. Without arguments, scans all planning directories.
 
 ```
-/cpm:archive                                          # scan and select
-/cpm:archive docs/specifications/01-spec-auth.md      # archive a specific chain
+/cpm2:archive                                          # scan and select
+/cpm2:archive docs/specifications/01-spec-auth.md      # archive a specific chain
 ```
 
 Staleness signals: epic complete, orphaned plan (no downstream spec), completed retro, spec fully implemented. Files are moved to `docs/archive/` with mirrored subdirectory structure — never deleted.
 
-### `/cpm:quick` — Quick Execution
+### `/cpm2:quick` — Quick Execution
 
 Execute small, well-defined changes with minimal ceremony. Bypasses the full pipeline — accept a description, assess scope, confirm the plan, do the work, and produce a completion record for traceability. Use it when the change is clear and the overhead of structured planning would exceed the value it provides.
 
-If the scope turns out larger than expected, `/cpm:quick` offers to escalate to `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` — but only once, then honours your decision.
+If the scope turns out larger than expected, `/cpm2:quick` offers to escalate to `/cpm2:discover`, `/cpm2:spec`, or `/cpm2:epics` — but only once, then honours your decision.
 
 **Input**: A change description, a file path, or no arguments (prompts interactively).
 **Output**: `docs/quick/{nn}-quick-{slug}.md` (auto-numbered completion record)
 
 ```
-/cpm:quick add a --verbose flag to the deploy script
-/cpm:quick fix the broken date format in invoice emails
-/cpm:quick          # describe the change interactively
+/cpm2:quick add a --verbose flag to the deploy script
+/cpm2:quick fix the broken date format in invoice emails
+/cpm2:quick          # describe the change interactively
 ```
 
-### `/cpm:status` — Project Status Reconnaissance
+### `/cpm2:status` — Project Status Reconnaissance
 
 Scan the current project's CPM artifacts and git history to produce a narrative status report with recommended next steps. Read-only and ephemeral — prints to stdout, no files created or modified.
 
@@ -350,9 +350,9 @@ The report orients someone picking up the project for the first time: what it is
 **Output**: Ephemeral — printed to stdout, no file saved.
 
 ```
-/cpm:status                                    # full project status
-/cpm:status docs/epics/02-epic-auth.md         # focus on a specific epic
-/cpm:status what's the state of auth work?     # guided emphasis
+/cpm2:status                                    # full project status
+/cpm2:status docs/epics/02-epic-auth.md         # focus on a specific epic
+/cpm2:status what's the state of auth work?     # guided emphasis
 ```
 
 ## Compaction Resilience
@@ -381,35 +381,35 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 **New feature with unclear scope:**
 
-1. `/cpm:discover` — "I want to add multi-tenancy to our app"
+1. `/cpm2:discover` — "I want to add multi-tenancy to our app"
    - Claude facilitates conversation about why, who, constraints
    - Produces `docs/plans/01-plan-multi-tenancy.md`
 
-2. `/cpm:brief` — Reads the problem brief, explores product vision
+2. `/cpm2:brief` — Reads the problem brief, explores product vision
    - Facilitates value propositions, key features, user journeys
    - Produces `docs/briefs/01-brief-multi-tenancy.md`
 
-3. `/cpm:architect` — Reads the product brief, explores key decisions
+3. `/cpm2:architect` — Reads the product brief, explores key decisions
    - Facilitates trade-off exploration for each architectural decision
    - Produces `docs/architecture/01-adr-multi-tenancy.md` (one per decision)
 
-4. `/cpm:spec` — Reads the brief and ADRs, builds requirements
+4. `/cpm2:spec` — Reads the brief and ADRs, builds requirements
    - Facilitates MoSCoW prioritisation, references existing ADRs
    - Defines testing strategy with test approach tags per criterion
    - Produces `docs/specifications/01-spec-multi-tenancy.md`
 
-5. `/cpm:epics` — Reads the spec, creates epic docs
+5. `/cpm2:epics` — Reads the spec, creates epic docs
    - Breaks into epics, stories, and tasks with dependencies
    - Stories trace back to spec requirements
    - Propagates test approach tags, generates testing tasks
    - Produces `docs/epics/01-epic-multi-tenancy.md` (one per epic)
 
-6. `/cpm:review` (optional) — Review before implementing
+6. `/cpm2:review` (optional) — Review before implementing
    - Agents challenge the epic from different perspectives
    - Checks spec compliance, ADR compliance, and test coverage
    - Produces `docs/reviews/01-review-multi-tenancy.md`
 
-7. `/cpm:do` — Works through tasks one by one
+7. `/cpm2:do` — Works through tasks one by one
    - Discovers test runner at startup, caches for the session
    - Hydrates stories into Claude Code tasks automatically
    - Reads ADRs when touching architectural boundaries
@@ -417,12 +417,12 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
    - Implements each task, verifies criteria, updates status
    - Loops until all stories are complete
 
-   **Or** `/cpm:ralph` — Autonomous multi-epic execution
-   - Wraps `/cpm:do` in a Ralph Wiggum loop for unsupervised execution
+   **Or** `/cpm2:ralph` — Autonomous multi-epic execution
+   - Wraps `/cpm2:do` in a Ralph Wiggum loop for unsupervised execution
    - Auto-discovers epics, generates autonomous prompt, launches the loop
    - Includes stuck detection, execution logging, and resume capability
 
-8. `/cpm:present` (optional) — Share results with stakeholders
+8. `/cpm2:present` (optional) — Share results with stakeholders
    - Transform specs or briefs into executive summaries, team updates, etc.
    - Produces `docs/communications/01-memo-multi-tenancy.md`
 

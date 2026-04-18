@@ -1,6 +1,6 @@
 ---
-name: cpm:architect
-description: Facilitated architecture exploration. Takes a product brief as input, identifies key architectural decisions derived from the product, explores trade-offs per decision, captures dependencies between decisions, and produces Architecture Decision Records (ADRs). Triggers on "/cpm:architect".
+name: cpm2:architect
+description: Facilitated architecture exploration. Takes a product brief as input, identifies key architectural decisions derived from the product, explores trade-offs per decision, captures dependencies between decisions, and produces Architecture Decision Records (ADRs). Triggers on "/cpm2:architect".
 ---
 
 # Facilitated Architecture Exploration
@@ -25,7 +25,7 @@ Check for input in this order:
 
 ## Process
 
-Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
+Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — present only one phase of questions per turn.
 
 **State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final ADRs have been saved.
 
@@ -57,6 +57,12 @@ After startup checks and before Phase 1, display the template hint:
 
 If a project-level override exists at `docs/templates/architect.md`, read it and use that format for the output ADRs instead of the embedded default. Full replacement — no merging.
 
+### Codebase Grounding (Startup)
+
+Architectural decisions must be grounded in the current codebase. Phase 1 (Context & Codebase Exploration) performs the detailed exploration — use Glob, Grep, and Read to survey project structure, frameworks, existing patterns, and infrastructure before proposing any decisions. Carry findings from Phase 1 into all subsequent phases.
+
+If the project has no existing codebase (greenfield), note that in Phase 1 and derive context from the product brief instead.
+
 ### Phase 1: Context & Codebase Exploration
 
 Before proposing any architecture, understand what already exists. If there's an existing codebase:
@@ -80,7 +86,7 @@ For each decision, capture:
 - **Why** this decision matters for this specific product
 - **Which features or requirements** drive it
 
-Present the decision list to the user with AskUserQuestion. Refine — they may add decisions you missed or remove ones that don't apply. Aim for 3-8 decisions for a typical product. Don't force decisions that aren't genuinely needed.
+Present the decision list to the user with AskUserQuestion. Refine — they may add decisions you missed or remove ones that apply. Aim for 3-8 decisions for a typical product. Only include decisions that are genuinely needed for this product.
 
 **Anti-pattern**: Decisions like "choose a database" or "pick a framework" without product-specific context are boilerplate. Instead: "How to handle booking availability with concurrent access" or "Where to run image processing given the latency requirements."
 
@@ -135,8 +141,8 @@ Use AskUserQuestion for confirmation before proceeding to output.
 Generate one ADR per architectural decision. Present each ADR to the user for confirmation using AskUserQuestion before saving.
 
 After all ADRs are saved, suggest next steps:
-- `/cpm:spec` to build requirements using these ADRs as architectural context
-- `/cpm:epics` if a spec already exists and needs architectural alignment
+- `/cpm2:spec` to build requirements using these ADRs as architectural context
+- `/cpm2:epics` if a spec already exists and needs architectural alignment
 
 ## Output
 
@@ -202,7 +208,7 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -210,9 +216,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final ADRs have been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final ADRs have been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -221,7 +227,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:architect
+**Skill**: cpm2:architect
 **Phase**: {N} of 6 — {Phase Name}
 **Output target**: docs/architecture/{nn}-adr-{slug}.md (one per decision)
 
@@ -252,12 +258,26 @@ The "Completed Phases" section grows as phases complete. Each summary should cap
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
 
+## Graceful Degradation
+
+Every scenario below specifies an explicit action sequence ending with a visible result. No silent fallbacks.
+
+- **No input resolved** (no briefs, plans, or description) → **Action**: Use AskUserQuestion to ask the user to describe the system they want to explore architecturally. **Result**: The user provides a description and exploration proceeds from that input.
+
+- **No existing codebase** (greenfield project) → **Action**: Skip codebase exploration in Phase 1. Note the greenfield context. **Result**: Report to the user: "No existing codebase found — starting architecture exploration from scratch."
+
+- **No retro files found** → **Action**: Skip the retro check. Proceed directly to the Library Check. **Result**: Report to the user: "No retro files found — proceeding without retro context."
+
+- **No roster found** → **Action**: Skip agent perspectives in Phases 2 and 4. Proceed with facilitation without persona-driven commentary. **Result**: Report to the user: "Agent roster not found — proceeding without perspectives."
+
+- **ADRs directory doesn't exist** → **Action**: Create `docs/architecture/` when saving the first ADR. **Result**: Report to the user: "Created docs/architecture/ for ADR output."
+
 ## Guidelines
 
 - **Explore before proposing.** Always understand the existing codebase and constraints before suggesting architecture.
 - **Product-derived decisions.** Every decision should trace back to a product need. If you can't explain why a decision matters for this specific product, it's boilerplate — skip it.
-- **Honest trade-offs.** Don't present a preferred option as having no downsides. Every choice has costs.
+- **Honest trade-offs.** Present every option with its genuine costs. Every choice has downsides worth acknowledging.
 - **Operational architecture is architecture.** Deployment, monitoring, failure handling, and security are not afterthoughts — they're architectural decisions that deserve the same rigour.
 - **Dependencies matter.** Architectural decisions don't exist in isolation. Capture what constrains what.
-- **Facilitate, don't lecture.** The user knows their domain. Present analysis, not prescriptions.
+- **Facilitate, let the user lead.** The user knows their domain. Present analysis, not prescriptions.
 - **One decision at a time.** In Phase 3, work through each decision individually with the user before moving to the next.

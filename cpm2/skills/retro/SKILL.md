@@ -1,6 +1,6 @@
 ---
-name: cpm:retro
-description: Lightweight retrospective. Reads a completed epic doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Triggers on "/cpm:retro".
+name: cpm2:retro
+description: Lightweight retrospective. Reads a completed epic doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Triggers on "/cpm2:retro".
 ---
 
 # Lightweight Retrospective
@@ -23,15 +23,15 @@ Check for input in this order:
 
 Before Step 1, display:
 
-> Output format is fixed (used by downstream skills). Run `/cpm:templates preview retro` to see the format.
+> Output format is fixed (used by downstream skills). Run `/cpm2:templates preview retro` to see the format.
 
 ### Step 1: Read Epic Doc
 
 Read the resolved epic doc with the Read tool. Identify:
 
 - Total number of stories and their statuses (Pending, In Progress, Complete)
-- Any `**Retro**:` fields on completed stories (these are per-story observations captured by `cpm:do` Step 6, Part B — mandatory on verification gates)
-- Any `## Lessons` section already present (batch summary from `cpm:do` Step 8)
+- Any `**Retro**:` fields on completed stories (these are per-story observations captured by `cpm2:do` Step 6, Part B — mandatory on verification gates)
+- Any `## Lessons` section already present (batch summary from `cpm2:do` Step 8)
 - The overall completion state of the batch
 
 Present a brief summary to the user: how many stories, how many complete, how many observations found.
@@ -49,9 +49,9 @@ Analyse the collected observations and story outcomes. Build the retro content:
 - **Testing Gaps**: Tests that revealed issues acceptance criteria didn't anticipate, or acceptance criteria that proved untestable with the available test infrastructure
 - **Patterns Worth Reusing**: Approaches or abstractions discovered during implementation that should be applied elsewhere
 
-**If a `## Lessons` section exists but no `**Retro**:` fields** (e.g. fields were lost during editing, or an older `cpm:do` run synthesised them away), use the `## Lessons` section as input — it contains the same observations in pre-grouped form.
+**If a `## Lessons` section exists but no `**Retro**:` fields** (e.g. fields were lost during editing, or an older `cpm2:do` run synthesised them away), use the `## Lessons` section as input — it contains the same observations in pre-grouped form.
 
-**If both `**Retro**:` fields and `## Lessons` exist**, use the `**Retro**:` fields as primary input (they are the raw observations). Reference the `## Lessons` grouping structure but don't double-count observations that appear in both places.
+**If both `**Retro**:` fields and `## Lessons` exist**, use the `**Retro**:` fields as primary input (they are the raw observations). Reference the `## Lessons` grouping structure but count each observation only once, even when it appears in both places.
 
 **If neither `**Retro**:` fields nor `## Lessons` exist**, produce a summary from story status alone:
 - Which stories completed, which didn't
@@ -105,7 +105,7 @@ Format:
 
 ## Recommendations
 
-{2-5 bullet points — concrete suggestions for the next planning cycle based on the observations. These should be actionable inputs for cpm:discover or cpm:spec.}
+{2-5 bullet points — concrete suggestions for the next planning cycle based on the observations. These should be actionable inputs for cpm2:discover or cpm2:spec.}
 ```
 
 Only include observation categories that have entries. If no `**Retro**:` fields exist, replace the Observations section with a simpler "Batch Outcome" section summarising story completion status.
@@ -118,7 +118,7 @@ After writing the retro file, check if any retro observations should be fed back
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip this step silently and proceed to Step 4.
 
-2. **Read front-matter** of each library document using the Read tool. Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
+2. **Read front-matter** of each library document using the Read tool. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
 
 3. **Match observations to library documents**: For each retro observation (from the `**Retro**:` fields collected in Step 1), assess whether it's relevant to any library document. Use the observation category and content to match:
    - **Codebase discoveries** → likely relevant to architecture or coding standards docs
@@ -141,7 +141,7 @@ After writing the retro file, check if any retro observations should be fed back
 5. **User approval gate**: Present all proposed amendments to the user, grouped by target library document. Use AskUserQuestion:
    - **Apply all amendments** — Write all proposed amendments
    - **Review individually** — Walk through each amendment one at a time
-   - **Skip write-back** — Don't amend any library documents
+   - **Skip write-back** — Leave all library documents unchanged
 
 6. **Write amendments**: For each approved amendment, use the Edit tool to:
    - Append the `## Amendment` block to the end of the library document
@@ -149,17 +149,17 @@ After writing the retro file, check if any retro observations should be fed back
 
 **Graceful degradation**:
 - If no library directory exists, skip silently.
-- If no observations match any library documents, skip silently — don't force amendments.
+- If no observations match any library documents, skip silently — only amend when there is a genuine match.
 - If no `**Retro**:` fields were captured (status-only retro), skip this step entirely.
-- Never block the retro workflow for write-back failures.
+- The retro workflow always continues past write-back failures.
 
 ### Step 4: Pipeline Handoff
 
 After presenting the retro file path, offer the user options for what to do next. Use AskUserQuestion:
 
-- **Continue to /cpm:discover** — Use the retro as starting context for problem discovery
-- **Continue to /cpm:spec** — Use the retro as starting context for requirements specification
-- **Continue to /cpm:epics** — Use the retro as starting context for work breakdown
+- **Continue to /cpm2:discover** — Use the retro as starting context for problem discovery
+- **Continue to /cpm2:spec** — Use the retro as starting context for requirements specification
+- **Continue to /cpm2:epics** — Use the retro as starting context for work breakdown
 - **Just exit** — End the session, no handoff
 
 If the user chooses a pipeline skill, pass the retro file path as the input context for that skill. The retro file becomes the `$ARGUMENTS` equivalent — the next skill should treat it as its starting context.
@@ -170,7 +170,7 @@ Delete the progress file after handoff or exit.
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -178,9 +178,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final retro file has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final retro file has been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -189,7 +189,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:retro
+**Skill**: cpm2:retro
 **Step**: {N} of 4 — {Step Name}
 **Output target**: docs/retros/{nn}-retro-{slug}.md
 **Input source**: {path to epic doc}
@@ -213,7 +213,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **Signal over noise.** A retro with 2 sharp observations is better than one with 10 vague ones. Synthesise, don't just reformat.
+- **Signal over noise.** A retro with 2 sharp observations is better than one with 10 vague ones. Synthesise into patterns, not just reformatted lists.
 - **Actionable recommendations.** Every recommendation should be something concrete that changes how the next cycle is planned or executed.
 - **Works without observations.** If no `**Retro**:` fields were captured, still produce a useful retro from story status — what completed, what didn't, what that implies.
 - **Scannable.** The entire retro file should be digestible in under a minute. Use bullet points and short paragraphs.

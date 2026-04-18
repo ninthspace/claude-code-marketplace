@@ -1,6 +1,6 @@
 ---
-name: cpm:brief
-description: Facilitated product ideation. Takes a problem brief as input, explores solution approaches, and produces a product brief artifact with vision, value propositions, key features, differentiation, and user journey narratives. Triggers on "/cpm:brief".
+name: cpm2:brief
+description: Facilitated product ideation. Takes a problem brief as input, explores solution approaches, and produces a product brief artifact with vision, value propositions, key features, differentiation, and user journey narratives. Triggers on "/cpm2:brief".
 ---
 
 # Facilitated Product Ideation
@@ -22,7 +22,7 @@ Check for input in this order:
 
 ## Process
 
-Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
+Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — present only one phase of questions per turn.
 
 **State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final brief has been saved.
 
@@ -65,7 +65,7 @@ Questions to explore:
 
 ### Phase 2: Solution Approaches
 
-Explore different approaches to solving the problem. Don't converge on a single solution yet — present 2-4 distinct approaches and discuss their trade-offs. Each approach should be a plausible path, not a strawman.
+Explore different approaches to solving the problem. Keep the field open at this stage — present 2-4 distinct approaches and discuss their trade-offs. Each approach should be a plausible path, not a strawman.
 
 For each approach, consider:
 - What would this look like in practice?
@@ -139,8 +139,8 @@ Present draft journeys and refine with the user. Journeys should feel like stori
 Produce the product brief document. Present it to the user for confirmation using AskUserQuestion before saving.
 
 After confirmation, suggest next steps:
-- `/cpm:architect` to explore architecture and produce ADRs (recommended for non-trivial products)
-- `/cpm:spec` to jump straight to requirements (for simpler products or when architecture is already clear)
+- `/cpm2:architect` to explore architecture and produce ADRs (recommended for non-trivial products)
+- `/cpm2:spec` to jump straight to requirements (for simpler products or when architecture is already clear)
 
 ## Output
 
@@ -217,7 +217,7 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -225,9 +225,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -236,7 +236,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:brief
+**Skill**: cpm2:brief
 **Phase**: {N} of 8 — {Phase Name}
 **Output target**: docs/briefs/{nn}-brief-{slug}.md
 
@@ -275,10 +275,10 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
-- **Facilitate, don't interrogate.** These are conversations, not forms.
+- **Facilitate, stay conversational.** These are conversations, not forms.
 - **Build on answers.** Each question should respond to what the user just said.
 - **Skip what's obvious.** If the input brief already covers a phase, acknowledge it and move on.
 - **Stay curious.** Ask follow-up questions when answers are vague or assumptions seem risky.
-- **One phase at a time.** Never combine phases into a single question block.
+- **One phase at a time.** Present only one phase of questions per turn.
 - **Product, not project.** Focus on what the product is and why it matters — not timelines, team structure, or delivery planning.
 - **Concrete over abstract.** Value propositions should be testable, features should be describable, differentiation should be honest.

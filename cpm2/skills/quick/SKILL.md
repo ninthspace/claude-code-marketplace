@@ -1,6 +1,6 @@
 ---
-name: cpm:quick
-description: Lightweight execution for small, well-defined changes. Bypasses the full CPM pipeline — accept a description, assess scope, confirm, execute, and produce a completion record. Use for changes that don't warrant discover/brief/spec/epics ceremony. Triggers on "/cpm:quick".
+name: cpm2:quick
+description: Lightweight execution for small, well-defined changes. Bypasses the full CPM pipeline — accept a description, assess scope, confirm, execute, and produce a completion record. Use for changes that skip discover/brief/spec/epics ceremony. Triggers on "/cpm2:quick".
 ---
 
 # Quick Execution
@@ -13,7 +13,7 @@ This is the lightweight alternative to the full pipeline (discover → brief →
 
 Parse `$ARGUMENTS` to determine the change description:
 
-1. If `$ARGUMENTS` contains a description (e.g. `/cpm:quick add a --verbose flag to the deploy script`), use that as the change description.
+1. If `$ARGUMENTS` contains a description (e.g. `/cpm2:quick add a --verbose flag to the deploy script`), use that as the change description.
 2. If `$ARGUMENTS` is a file path, read the file and use its contents as the change description.
 3. If no arguments provided, ask the user: "What change do you want to make?" Use AskUserQuestion with a freeform text option.
 
@@ -28,11 +28,11 @@ The change description is the seed for everything that follows — scope assessm
 Before Step 1, check the project library for reference documents:
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `quick` or `all`.
+2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually using the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `quick` or `all`.
 3. **Report to user**: "Found {N} library documents relevant to quick execution: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during execution when a library document's content is relevant — e.g. reading coding standards before writing code.
 
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block execution due to a malformed library document.
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Execution always continues — a malformed library document is skipped, not blocking.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
@@ -51,7 +51,7 @@ After the Library Check and before Step 1, discover the project's test runner co
    - `Cargo.toml` — check for Rust project (e.g. `cargo test`)
 3. **Ask the user**: If no test command is discoverable from steps 1-2, use AskUserQuestion to ask: "No test runner found automatically. What command runs your tests?" with options for common runners and a freeform option.
 
-**Cache the result**: Store the discovered test command in the progress file as `**Test command**: {command}` or `**Test command**: none` if the user declines or no runner is found. This persists across the entire session — do not re-discover between steps.
+**Cache the result**: Store the discovered test command in the progress file as `**Test command**: {command}` or `**Test command**: none` if the user declines or no runner is found. Reuse this cached value for the session — it persists across all steps.
 
 **Graceful degradation**: If no test runner is discoverable and the user chooses not to provide one, set `**Test command**: none`. Step 4 verification will fall back to self-assessment only.
 
@@ -72,7 +72,7 @@ If the user disagrees with the classification, switch immediately. The heuristic
 
 #### Step 1a: Diagnose (fix path only)
 
-When the input is classified as a fix, investigate the root cause *before* assessing scope or proposing changes. This is the step that `/cpm:consult` does naturally through conversation — `/cpm:quick` must replicate it explicitly.
+When the input is classified as a fix, investigate the root cause *before* assessing scope or proposing changes. This is the step that `/cpm2:consult` does naturally through conversation — `/cpm2:quick` must replicate it explicitly.
 
 1. **Reproduce or confirm the symptom**: Read the relevant code, trace the execution path, and if possible run the failing case. Understand *what* is broken from the code's perspective, not just the user's description.
 2. **Form a hypothesis**: Based on your investigation, identify the most likely root cause. Be specific — "the config loader silently returns null when the file is missing" not "config handling has issues."
@@ -101,7 +101,7 @@ Explore the codebase to understand what the change involves, then assess whether
 
 1. **Explore**: Use Glob, Grep, and Read tools to understand the change. Identify which files would be affected, what patterns exist, and whether there are hidden dependencies. Spend enough time to form a genuine opinion — a superficial scan isn't sufficient.
 
-2. **Assess scope**: Based on your exploration, evaluate whether this change is a good fit for `/cpm:quick`. Consider:
+2. **Assess scope**: Based on your exploration, evaluate whether this change is a good fit for `/cpm2:quick`. Consider:
    - **File count**: How many files need to change?
    - **Architectural impact**: Does this require new patterns, data model changes, or cross-cutting concerns?
    - **Dependencies**: Does this affect shared interfaces, APIs, or contracts?
@@ -114,12 +114,12 @@ Explore the codebase to understand what the change involves, then assess whether
    - If the change appears too large or complex, explain **why** — which factors raised concern. Then offer escalation **once**:
 
    Use AskUserQuestion: "This looks like it might benefit from the full planning pipeline. Want to escalate?" with options:
-   - **Escalate to `/cpm:discover`** — Start with problem discovery
-   - **Escalate to `/cpm:spec`** — Jump to specification
-   - **Escalate to `/cpm:epics`** — Jump to work breakdown
-   - **Continue with `/cpm:quick`** — Proceed anyway
+   - **Escalate to `/cpm2:discover`** — Start with problem discovery
+   - **Escalate to `/cpm2:spec`** — Jump to specification
+   - **Escalate to `/cpm2:epics`** — Jump to work breakdown
+   - **Continue with `/cpm2:quick`** — Proceed anyway
 
-   If the user chooses to continue, honour their decision and proceed to Step 2. Do not raise the scope concern again.
+   If the user chooses to continue, honour their decision and proceed to Step 2. The scope concern is raised once — after that, respect the user's call.
 
 ### Step 2: Propose and Confirm
 
@@ -200,7 +200,7 @@ The spec file path is `docs/quick/{nn}-quick-{slug}-spec.md`. Tell the user the 
 
 Do the work. Create Claude Code tasks and implement the change directly.
 
-**Hard gate — read the spec file first.** Before creating any tasks, read the spec file written in Step 2 (`docs/quick/{nn}-quick-{slug}-spec.md`) using the Read tool. If the spec file does not exist, **stop and go back to Step 2** — do not proceed without a written spec. Extract the acceptance criteria from the file; these are the source of truth for what to implement.
+**Hard gate — read the spec file first.** Before creating any tasks, read the spec file written in Step 2 (`docs/quick/{nn}-quick-{slug}-spec.md`) using the Read tool. If the spec file does not exist, **stop and go back to Step 2** — a written spec is required before proceeding. Extract the acceptance criteria from the file; these are the source of truth for what to implement.
 
 **ADR awareness**: Before starting implementation, check if this change touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the change involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
 
@@ -212,7 +212,7 @@ Do the work. Create Claude Code tasks and implement the change directly.
      activeForm: "{Present continuous form}"
    ```
 
-   Create as many tasks as the work needs — a single-file change gets one task, a multi-step change gets several. Don't over-decompose; don't under-decompose.
+   Create as many tasks as the work needs — a single-file change gets one task, a multi-step change gets several. Match decomposition to the natural shape of the work.
 
 2. **Execute tasks sequentially**: For each task:
    - Call TaskUpdate to set status to `in_progress`.
@@ -220,7 +220,7 @@ Do the work. Create Claude Code tasks and implement the change directly.
    - **Write or update tests** if the task modifies behaviour. Follow existing test patterns in the project — look for nearby test files and match their style, framework, and conventions. If no test patterns exist, skip. This is not TDD — write the implementation first, then cover it with a test. If `**Test command**` in the progress file is not `none`, run the tests after writing them to confirm they pass.
    - When the task is done, call TaskUpdate to set status to `completed`.
 
-3. **Keep momentum**: Move through tasks efficiently. Don't over-explain between tasks. The proposal was already confirmed — now execute it.
+3. **Keep momentum**: Move through tasks efficiently. Keep commentary between tasks minimal. The proposal was already confirmed — now execute it.
 
 *Progress note: capture tasks completed and files changed in the Step 3 summary.*
 
@@ -234,16 +234,16 @@ Re-read the acceptance criteria from the spec file written in Step 2. Verify eac
 
 **Run tests first**: If `**Test command**` in the progress file is not `none`, run the cached test command using the Bash tool before self-assessment.
 - If tests **pass**: note the pass and continue to self-assessment of each criterion.
-- If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". Do not block — let the user decide.
+- If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". The work loop always continues — let the user decide.
 - If `**Test command**` is `none`: skip test execution and rely on self-assessment only.
 
-**Self-assess each criterion**: Inspect the relevant files using Read, Glob, or Grep to confirm each criterion is met. Test results (if available) serve as supporting evidence but do not replace criterion-by-criterion assessment.
+**Self-assess each criterion**: Inspect the relevant files using Read, Glob, or Grep to confirm each criterion is met. Test results (if available) serve as supporting evidence but supplement (rather than replace) criterion-by-criterion assessment.
 
 - If all criteria are met, proceed to write the completion record.
 - If any criteria are **not** met, flag them to the user. Use AskUserQuestion: "Some acceptance criteria are not met:" with the unmet items listed, and options:
   - **Fix now** — Continue working on the unmet criteria
   - **Record as-is** — Write the completion record noting the gaps
-  - **Stop** — Don't write a completion record yet
+  - **Stop** — Hold off on the completion record for now
 
 If the user chooses "Fix now", address the gaps and re-verify. Iterate until criteria are met or the user decides to proceed.
 
@@ -289,7 +289,7 @@ The **Retro** field is mandatory. Reflect on the change as a whole and pick the 
 - **Testing gap**: Tests revealed issues that acceptance criteria didn't anticipate
 - **Pattern worth reusing**: Discovered an approach or technique worth applying elsewhere
 
-If nothing went wrong, use "Smooth delivery" — that's valuable data too. This feeds into `/cpm:retro` for cross-session learning.
+If nothing went wrong, use "Smooth delivery" — that's valuable data too. This feeds into `/cpm2:retro` for cross-session learning.
 
 Tell the user the record path after saving.
 
@@ -303,7 +303,7 @@ Spec files are written during Step 2 and promoted to completion records during S
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-execution.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -311,11 +311,11 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
 **Why this matters**: The progress file is the only recovery point if context compaction fires mid-session. A stale or missing file means the user loses session state with no recovery — treat the Write call with the same care as saving user code.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the completion record has been saved and confirmed written — never before.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the completion record has been saved and confirmed written — always after, because early deletion loses state if compaction fires.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -324,7 +324,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:quick
+**Skill**: cpm2:quick
 **Step**: {N} of 4 — {Step Name}
 **Change description**: {the original change description}
 **Classification**: {fix | change}
@@ -358,8 +358,8 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **Lean by default, correct by design.** `/cpm:quick` avoids unnecessary ceremony — one confirmation, then execute. But lean means *no wasted steps*, not *rush through steps*. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
+- **Lean by default, correct by design.** `/cpm2:quick` avoids unnecessary ceremony — one confirmation, then execute. But lean means *no wasted steps*, not *rush through steps*. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
 - **Scope honesty.** If a change is too big for quick execution, say so — but only once. The user decides.
 - **Traceability without overhead.** The completion record is the minimum artifact needed to know what happened and why.
-- **Fixes need diagnosis, changes don't.** The input classification exists because fixes and additions have fundamentally different first steps. A fix starts with a symptom that needs investigation; a change starts with a known modification. Don't run diagnosis on additions (wasted ceremony) and don't skip diagnosis on fixes (that's how you get surface-level patches that don't address root causes).
+- **Fixes need diagnosis; changes skip it.** The input classification exists because fixes and additions have fundamentally different first steps. A fix starts with a symptom that needs investigation; a change starts with a known modification. Run diagnosis only on fixes — additions proceed directly (skipping saves ceremony), and fixes always get a root-cause pass (skipping it yields surface-level patches).
 - **Do the work.** This skill implements changes, not just plans them. Write code, edit files, run tests.

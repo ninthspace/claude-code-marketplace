@@ -1,11 +1,11 @@
 ---
-name: cpm:spec
-description: Build a structured requirements and architecture specification through facilitated conversation. Takes a problem brief or user description as input and produces a spec document with functional requirements, architecture decisions, and scope boundaries. Triggers on "/cpm:spec".
+name: cpm2:spec
+description: Build a structured requirements and architecture specification through facilitated conversation. Takes a problem brief or user description as input and produces a spec document with functional requirements, architecture decisions, and scope boundaries. Triggers on "/cpm2:spec".
 ---
 
 # Requirements & Architecture Specification
 
-Build a structured spec through facilitated conversation. Each section uses AskUserQuestion to gate progression — never dump everything at once.
+Build a structured spec through facilitated conversation. Each section uses AskUserQuestion to gate progression — one section at a time.
 
 ## Input
 
@@ -26,13 +26,21 @@ After resolving the input source and before starting Section 1, discover existin
 2. If ADRs exist, read each one and present a summary to the user: "Found {N} existing ADRs: {titles}. I'll reference these during architecture decisions (Section 4) and only facilitate new decisions for gaps."
 3. Store the ADR paths and summaries for use in Section 4.
 
-**Graceful degradation**: If ADRs don't exist, Section 4 works as before — facilitating architecture decisions from scratch. The spec skill must work without `cpm:architect` having been run.
+**Graceful degradation**: If ADRs are absent, Section 4 works as before — facilitating architecture decisions from scratch. The spec skill works with or without `cpm2:architect` having been run.
 
 ## Process
 
 Work through these sections **one at a time**. Use AskUserQuestion for every gate.
 
 **State tracking**: Create the progress file before Section 1 and update it after each section completes. See State Management below for the format and rationale. Delete the file once the final spec has been saved.
+
+### Termination
+
+- **Success**: The user approves the section's output via AskUserQuestion — move to the next section. For the overall process: Section 7 review is approved and the spec is saved.
+- **Blocker**: The user needs external information not available in the session (stakeholder input, technical investigation, cost data). Note the gap in the section summary, proceed to the next section, and flag the gap for resolution during Section 7 review.
+- **Ambiguity**: The user is uncertain or cannot decide on a section's content after one clarification round. Present a recommended default based on the best available information. If the user still cannot decide, note both options in the spec with a "TBD" marker and proceed — the spec is a living document that can be revised before `cpm2:epics`.
+
+**Facilitation depth**: Each section's refinement loop converges in 1-2 rounds of AskUserQuestion. When the user approves a section's content, move on — one final "anything else?" check per section, not an open-ended refinement cycle.
 
 ### Retro Check (Startup)
 
@@ -58,7 +66,17 @@ Follow the shared **Library Check** procedure with scope keyword `spec`. Deep-re
 
 After startup checks and before Section 1, display:
 
-> Output format is fixed (used by downstream skills). Run `/cpm:templates preview spec` to see the format.
+> Output format is fixed (used by downstream skills). Run `/cpm2:templates preview spec` to see the format.
+
+### Codebase Grounding (Startup)
+
+Before facilitating requirements, explore the existing codebase to ground the conversation in what already exists:
+
+1. Use Glob and Grep to survey the project structure — key directories, configuration files, dependency manifests, and existing patterns.
+2. Read key files to understand the technology stack, architectural conventions, and domain model in use.
+3. Carry these findings into all sections — propose requirements and architecture decisions that build on what exists rather than starting from assumptions.
+
+If the project has no existing codebase (greenfield), note that and proceed. For projects with code, grounding ensures that requirements reflect real constraints and architecture decisions align with established patterns.
 
 ### Section 1: Problem Recap
 
@@ -73,7 +91,7 @@ Facilitate conversation about what the system must do. Use MoSCoW prioritisation
 - **Could have**: Nice-to-haves if time allows
 - **Won't have**: Explicitly out of scope for this iteration
 
-Present a draft list and refine with the user. Don't try to capture everything at once — iterate.
+Present a draft list and refine with the user. Iterate — refine progressively rather than trying to capture everything at once.
 
 ### Section 3: Non-Functional Requirements
 
@@ -129,11 +147,11 @@ Present the test approach tag vocabulary to the user:
 - `[integration]` — Verified by integration tests that exercise boundaries between components (API contracts, event flows, data layer interactions)
 - `[feature]` — Verified by feature/end-to-end tests that exercise complete user-facing workflows
 - `[manual]` — Verified by manual inspection, observation, or user confirmation (no automated test)
-- `[tdd]` — Workflow mode: task follows a red-green-refactor loop. Composable with any level tag above (e.g. `[tdd] [unit]`, `[tdd] [integration]`). Orthogonal — describes *how* to work, not *what kind* of test. When present, `cpm:do` writes a failing test first, then implements to pass it, then refactors. `[tdd]` without a level tag defaults to `[tdd] [unit]`.
+- `[tdd]` — Workflow mode: task follows a red-green-refactor loop. Composable with any level tag above (e.g. `[tdd] [unit]`, `[tdd] [integration]`). Orthogonal — describes *how* to work, not *what kind* of test. When present, `cpm2:do` writes a failing test first, then implements to pass it, then refactors. `[tdd]` without a level tag defaults to `[tdd] [unit]`.
 
 The first four tags describe *test level* — what kind of verification proves the criterion. `[tdd]` describes *workflow mode* — how the implementation should proceed. These are orthogonal dimensions: a criterion can carry both (e.g. `[tdd] [unit]`).
 
-These tags will flow downstream: `cpm:epics` propagates them onto story acceptance criteria, and `cpm:do` uses them to determine verification approach (run tests vs. self-assess) and workflow mode (standard post-implementation vs. TDD red-green-refactor). Use AskUserQuestion to confirm the vocabulary or let the user adjust it for their project.
+These tags will flow downstream: `cpm2:epics` propagates them onto story acceptance criteria, and `cpm2:do` uses them to determine verification approach (run tests vs. self-assess) and workflow mode (standard post-implementation vs. TDD red-green-refactor). Use AskUserQuestion to confirm the vocabulary or let the user adjust it for their project.
 
 **Graceful fallback**: If the user prefers not to tag criteria (e.g. for a small project where tagging adds ceremony without value), skip tag assignment and proceed with the current lightweight behaviour — acceptance criteria mapping without tags. The rest of Section 6 still runs.
 
@@ -145,8 +163,9 @@ For each must-have functional requirement from Section 2, review its acceptance 
 2. Propose a tag for each criterion based on its nature — boundary-crossing behaviour suggests `[integration]`, isolated logic suggests `[unit]`, user-visible workflow suggests `[feature]`, and non-automatable checks suggest `[manual]`.
 3. Use AskUserQuestion to confirm or adjust the proposed tags.
 4. **Flag incomplete criteria**: Any acceptance criterion that cannot be assigned a tag because it's too vague or subjective to verify should be flagged. Present the flagged criteria and ask the user to refine them until they're testable.
+5. **Probe for must-NOT clauses**: For each criterion, ask: "Are there behaviours this criterion explicitly allows that you would reject?" If the user identifies rejected behaviours, capture them as paired `must NOT` lines alongside the positive criterion — e.g. if the criterion says "User can reset their password via email", a must-NOT might be "must NOT allow password reset without rate limiting". These defensive boundaries catch assumptions that positive criteria leave implicit. Include must-NOT lines in the Acceptance Criteria Coverage table with their own tags (typically matching the parent criterion's tag).
 
-Work through requirements one at a time — don't dump all tags at once.
+Work through requirements one at a time — present tags and must-NOT probes incrementally.
 
 #### Step 6c: Integration Boundaries
 
@@ -163,7 +182,7 @@ Assess whether the project needs any testing infrastructure that doesn't already
 - CI configuration for running tests
 - Mock/stub libraries for external services
 
-If infrastructure is needed, capture it — these become stories in `cpm:epics`. If the project already has adequate test infrastructure, note that and move on. Use AskUserQuestion to confirm.
+If infrastructure is needed, capture it — these become stories in `cpm2:epics`. If the project already has adequate test infrastructure, note that and move on. Use AskUserQuestion to confirm.
 
 #### Step 6e: Present and Refine
 
@@ -253,22 +272,22 @@ Test approach tags used in this spec:
 {Key integration points between architectural components, derived from ADRs if available}
 
 ### Test Infrastructure
-{Testing infrastructure the project needs — frameworks, test databases, fixtures, CI configuration, mock libraries. "None required" if the project already has adequate infrastructure. Items listed here become stories in `cpm:epics`.}
+{Testing infrastructure the project needs — frameworks, test databases, fixtures, CI configuration, mock libraries. "None required" if the project already has adequate infrastructure. Items listed here become stories in `cpm2:epics`.}
 
 ### Unit Testing
-Unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.
+Unit testing of individual components is handled at the `cpm2:do` task level — each story's acceptance criteria drive test coverage during implementation.
 ```
 
 After saving, suggest next steps:
-- `/cpm:epics` to break the spec into epic documents with stories and tasks (recommended)
-- `/cpm:architect` to explore architecture first, if no ADRs exist yet and the system has non-trivial architectural decisions
+- `/cpm2:epics` to break the spec into epic documents with stories and tasks (recommended)
+- `/cpm2:architect` to explore architecture first, if no ADRs exist yet and the system has non-trivial architectural decisions
 - `/plan` (native plan mode) if the scope is small enough to skip planning artifacts entirely
 
 ## State Management
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -276,9 +295,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (unsuffixed filename) handles that case.
 
-**Create** the file before starting Section 1 (ensure `docs/plans/` exists). **Update** it after each section completes. **Delete** it only after the final spec has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Section 1 (ensure `docs/plans/` exists). **Update** it after each section completes. **Delete** it only after confirming the final spec is saved and written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -287,7 +306,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:spec
+**Skill**: cpm2:spec
 **Section**: {N} of 7 — {Section Name}
 **Output target**: docs/specifications/{nn}-spec-{slug}.md
 **Input source**: {path to brief or description used as input}
@@ -319,8 +338,8 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
-- **Facilitate, don't prescribe.** Present options and trade-offs. Let the user decide.
-- **Build on existing context.** If there's a brief or existing code, use it. Don't re-ask what's already known.
-- **Stay practical.** Skip sections that don't add value for the project's scale.
+- **Facilitate, then let the user decide.** Present options and trade-offs. The user owns the decision.
+- **Build on existing context.** If there's a brief or existing code, use it. Carry forward what's already established.
+- **Stay practical.** Skip sections that are unnecessary at the project's scale.
 - **One section at a time.** Complete each before moving on.
 - **Match depth to complexity.** A small feature needs a lean spec. A new product needs more detail.

@@ -1,6 +1,6 @@
 ---
-name: cpm:archive
-description: Archive old or completed planning documents. Scans for stale artifacts, groups them by chain, and moves them to docs/archive/ with user confirmation. Triggers on "/cpm:archive".
+name: cpm2:archive
+description: Archive old or completed planning documents. Scans for stale artifacts, groups them by chain, and moves them to docs/archive/ with user confirmation. Triggers on "/cpm2:archive".
 ---
 
 # Archive Planning Documents
@@ -28,7 +28,7 @@ Scan the four planning directories for documents and group them into artifact ch
    - `docs/epics/[0-9]*-epic-*.md`
    - `docs/retros/[0-9]*-retro-*.md`
 
-   **Explicitly exclude** `docs/library/` — library documents have their own lifecycle via `/cpm:library`.
+   **Explicitly exclude** `docs/library/` — library documents have their own lifecycle via `/cpm2:library`.
 
 2. **Extract slugs**: For each document found, extract the slug from the filename by anchoring on the **type identifier**, not on positional numerics. The slug is everything after the type identifier (`-plan-`, `-spec-`, `-epic-`, `-retro-`, `-review-`, `-adr-`, `-quick-`, `-discussion-`, `-coverage-`, `-brief-`). This rule is shape-agnostic — it works for both legacy flat filenames (`{nn}-{type}-{slug}.md`) and new two-part epic filenames (`{parent}-{seq}-epic-{slug}.md`). For example:
    - `01-plan-compaction-resilience.md` → slug: `compaction-resilience` (legacy flat)
@@ -37,7 +37,7 @@ Scan the four planning directories for documents and group them into artifact ch
    - `28-01-epic-doc-numbering-scheme.md` → slug: `doc-numbering-scheme` (new two-part epic)
    - `28-01-coverage-doc-numbering-scheme.md` → slug: `doc-numbering-scheme` (new two-part coverage)
 
-   Do not attempt to parse the numeric prefix as a fixed-width string — the width may be one or two integer fields depending on the artifact type and shape. Always find the type identifier substring first, then take everything after it as the slug.
+   Always find the type identifier substring first, then take everything after it as the slug — the numeric prefix width varies (one or two integer fields depending on artifact type and shape).
 
 3. **Group into chains**: Match documents across directories by slug. A chain is the set of all documents sharing the same slug. For example, slug `compaction-resilience` might have:
    - `docs/plans/01-plan-compaction-resilience.md`
@@ -81,7 +81,7 @@ Present the discovered chains and documents to the user, grouped by chain with s
 3. **User selection**: Use AskUserQuestion to let the user choose:
    - **Archive all flagged chains** — Move all documents in chains that have at least one staleness signal
    - **Select individually** — Walk through each chain one at a time, asking archive or skip for each
-   - **Skip** — Don't archive anything, exit the skill
+   - **Skip** — Exit the skill with no changes
 
 4. **Individual selection flow**: If the user chose "Select individually", present each chain with AskUserQuestion:
    - **Archive this chain** — Move all documents in this chain
@@ -100,7 +100,7 @@ Move the selected files to `docs/archive/` with mirrored subdirectory structure.
 2. **Move files**: For each selected file, run `mv {source} {target}` via Bash. The target path mirrors the source: `docs/specifications/01-spec-foo.md` → `docs/archive/specifications/01-spec-foo.md`.
 
 3. **Track results**: Record success or failure for each file. If a move fails:
-   - Continue with the remaining files (don't abort the batch)
+   - Continue with the remaining files (always complete the batch)
    - Record the error for the failed file
 
 4. **Report results**: Present a summary to the user:
@@ -118,7 +118,7 @@ Files are moved to `docs/archive/{subdirectory}/` preserving the mirrored direct
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -126,9 +126,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all archive operations have completed — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all archive operations have completed. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -137,7 +137,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:archive
+**Skill**: cpm2:archive
 **Step**: {N} of 4 — {Step Name}
 
 ## Completed Steps
@@ -162,7 +162,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **User controls everything.** Never auto-archive. Every move requires explicit user selection.
+- **User controls everything.** Every move requires explicit user selection — always wait for confirmation.
 - **Chains over individuals.** When archiving one document, always offer to archive its full artifact chain.
-- **Non-destructive.** Move, never delete. Files remain accessible under `docs/archive/`.
+- **Non-destructive.** Always move, preserving files under `docs/archive/`.
 - **Report failures.** If a move fails mid-chain, report which succeeded and which failed.

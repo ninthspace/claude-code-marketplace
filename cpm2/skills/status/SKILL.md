@@ -1,13 +1,13 @@
 ---
-name: cpm:status
-description: Project status reconnaissance. Scans CPM artifacts, git history, and codebase changes to produce an ephemeral status report with recommended next steps. Triggers on "/cpm:status".
+name: cpm2:status
+description: Project status reconnaissance. Scans CPM artifacts, git history, and codebase changes to produce an ephemeral status report with recommended next steps. Triggers on "/cpm2:status".
 ---
 
 # Project Status
 
 Scan the current project's CPM artifacts and git history to produce a structured status report. Print the report to stdout — no files saved, no state modified.
 
-This is a read-only reconnaissance skill. It gathers information and reports it. It never creates, modifies, or deletes any files or git state.
+This is a read-only reconnaissance skill. It gathers information and reports it. All operations are read-only — files and git state remain untouched.
 
 ## Input
 
@@ -20,7 +20,7 @@ If no arguments are given, produce a full project status report covering all CPM
 
 ## State Management
 
-**This skill is stateless and ephemeral.** No progress file is created or maintained. No output artifact is saved. The report is printed to stdout and the skill is done. If the user needs to discuss or act on the status, they can invoke other CPM skills (e.g. `/cpm:do`, `/cpm:retro`, `/cpm:archive`).
+**This skill is stateless and ephemeral.** No progress file is created or maintained. No output artifact is saved. The report is printed to stdout and the skill is done. If the user needs to discuss or act on the status, they can invoke other CPM skills (e.g. `/cpm2:do`, `/cpm2:retro`, `/cpm2:archive`).
 
 ## Process
 
@@ -28,7 +28,7 @@ Work through three phases sequentially. Each phase gathers data; the final phase
 
 ### Phase 1: Artifact Inventory Scan
 
-Scan CPM documentation directories for artifacts. For each directory, use the Glob tool. If the directory doesn't exist or contains no matching files, skip it silently — never error on missing data.
+Scan CPM documentation directories for artifacts. For each directory, use the Glob tool. If the directory doesn't exist or contains no matching files, skip it silently — always degrade gracefully on missing data.
 
 **Directories to scan:**
 
@@ -41,13 +41,13 @@ Scan CPM documentation directories for artifacts. For each directory, use the Gl
 | Retros | `docs/retros/[0-9]*-retro-*.md` |
 | Architecture | `docs/architecture/[0-9]*-adr-*.md` |
 
-**For each directory**, count the files found. Do not list individual files — just the count.
+**For each directory**, count the files found. Report only the count, not individual files.
 
-**Epic deep-read:** For each epic file, use the Read tool to extract the `**Status**:` field and story completion counts. Read each file individually — do not use Bash loops with shell variables for this. Only report epics that have **remaining work** (Status is not Complete). Completed epics are summarised as a single count (e.g. "17 epics complete"). Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
+**Epic deep-read:** For each epic file, use the Read tool to extract the `**Status**:` field and story completion counts. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). Only report epics that have **remaining work** (Status is not Complete). Completed epics are summarised as a single count (e.g. "17 epics complete"). Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
 
 **Progress files:** Glob `docs/plans/.cpm-progress-*.md`. If any exist, read the first few lines to extract `**Skill**:` and `**Current task**:`/`**Phase**:` fields. Report which skills have active sessions.
 
-**Collect the data** — don't print the report yet. Phase 3 handles formatting.
+**Collect the data** — save it for Phase 3, which handles formatting.
 
 ### Phase 2: Git Activity Scan
 
@@ -74,7 +74,7 @@ Use an **adaptive time window** to determine how far back to look:
 
 Run `git log --oneline` with the appropriate filter to get the commit list. Also run `git log --format="%s"` with the same filter to get the full subject lines — these are the raw material for the narrative synthesis in Phase 3.
 
-**Collect the data** — don't print the report yet. Phase 3 handles formatting.
+**Collect the data** — save it for Phase 3, which handles formatting.
 
 ### Phase 3: Synthesis and Report
 
@@ -84,7 +84,7 @@ Combine data from Phase 1 and Phase 2 into a **narrative summary** that tells th
 
 1. **What this project is**: Infer the project's purpose from artifact names, epic titles, commit messages, and any README or CLAUDE.md. One or two sentences that describe the project to someone who has never seen it.
 
-2. **What's been built**: Summarise the body of completed work. Don't list every epic — group them into themes (e.g. "Core planning pipeline (discover → spec → epics → do), facilitation skills (party, consult), quality infrastructure (TDD, coverage matrices, review)"). This gives a sense of the project's maturity and scope.
+2. **What's been built**: Summarise the body of completed work. Group epics into themes rather than listing individually (e.g. "Core planning pipeline (discover → spec → epics → do), facilitation skills (party, consult), quality infrastructure (TDD, coverage matrices, review)"). This gives a sense of the project's maturity and scope.
 
 3. **What happened recently**: Read the commit subjects from Phase 2 and identify the themes of recent work. Group related commits into a narrative thread (e.g. "Recent work focused on coverage matrix improvements and adding the consult skill"). Mention the time since last commit if there's been a notable gap.
 
@@ -98,12 +98,12 @@ If the project has active work (in-progress epics or sessions), lead with that �
 
 | Project state | Recommendation |
 |--------------|---------------|
-| No CPM artifacts at all | "Start planning with `/cpm:discover` or `/cpm:brief`" |
-| Briefs exist but no specs | "Turn your brief into a spec with `/cpm:spec {brief path}`" |
-| Specs exist but no epics | "Break your spec into epics with `/cpm:epics {spec path}`" |
-| Epics with pending/in-progress stories | "Continue work with `/cpm:do {epic path}`" (show the specific epic with remaining work) |
-| All epic stories complete, no retro | "Run a retrospective with `/cpm:retro {epic path}`" |
-| Retros exist, completed epics | "Archive completed work with `/cpm:archive`" |
+| No CPM artifacts at all | "Start planning with `/cpm2:discover` or `/cpm2:brief`" |
+| Briefs exist but no specs | "Turn your brief into a spec with `/cpm2:spec {brief path}`" |
+| Specs exist but no epics | "Break your spec into epics with `/cpm2:epics {spec path}`" |
+| Epics with pending/in-progress stories | "Continue work with `/cpm2:do {epic path}`" (show the specific epic with remaining work) |
+| All epic stories complete, no retro | "Run a retrospective with `/cpm2:retro {epic path}`" |
+| Retros exist, completed epics | "Archive completed work with `/cpm2:archive`" |
 | Active progress files | "Resume active session — {skill name} is in progress" |
 | Uncommitted changes | "You have uncommitted changes — consider committing before starting new work" |
 
@@ -123,12 +123,12 @@ Print the report to stdout using this structure:
 {1-3 concrete actions with copy-pasteable commands}
 ```
 
-**Brevity is paramount.** The entire report should fit in one screenful. The summary is a narrative, not a data dump — synthesise, don't enumerate.
+**Brevity is paramount.** The entire report should fit in one screenful. The summary is a narrative, not a data dump — synthesise into themes and patterns.
 
 ## Guidelines
 
-- **Read-only.** Never create, modify, or delete files. Never run git commands that change state. Use only `git log`, `git status`, `git diff`, `git branch`.
-- **Graceful degradation.** If a directory doesn't exist, skip it silently. If no artifacts are found, say so and suggest where to start. Never error on missing data.
+- **Read-only.** Use only read-only operations: `git log`, `git status`, `git diff`, `git branch`. All files and git state remain untouched.
+- **Graceful degradation.** If a directory doesn't exist, skip it silently. If no artifacts are found, say so and suggest where to start. Always degrade gracefully on missing data.
 - **Scannable output.** Use clear section headers, concise summaries, and bullet points. The entire report should be digestible in under a minute.
-- **Actionable recommendations.** Every recommended next step should include a copy-pasteable command (e.g. `` `/cpm:do docs/epics/02-epic-auth.md` ``).
+- **Actionable recommendations.** Every recommended next step should include a copy-pasteable command (e.g. `` `/cpm2:do docs/epics/02-epic-auth.md` ``).
 - **Adaptive detail.** Match report depth to what's found. An empty project gets a short "getting started" report. A project with 5 epics gets a detailed inventory.

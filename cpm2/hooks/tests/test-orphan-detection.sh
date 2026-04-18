@@ -59,50 +59,50 @@ make_stale() {
 
 test_start "Other-session file is flagged as orphan"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "ORPHAN"
 
 test_start "Other-session file includes skill name in orphan block"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
-assert_contains "$OUTPUT" "Skill: cpm:spec"
+assert_contains "$OUTPUT" "Skill: cpm2:spec"
 
 test_start "Other-session file includes phase in orphan block"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "Phase: Section 3"
 
 test_start "Other-session file includes age in orphan block"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "Age:"
 
 test_start "Other-session file includes file path in orphan block"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "File:"
 assert_contains "$OUTPUT" ".cpm-progress-old-session.md"
 
 test_start "Current-session file is NOT flagged as orphan"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "my-session" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "my-session" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"my-session","source":"startup"}')
 assert_not_contains "$OUTPUT" "ORPHAN"
 
 test_start "Current-session file is injected as active state"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "my-session" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "my-session" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"my-session","source":"startup"}')
 assert_contains "$OUTPUT" "--- CPM SESSION STATE"
 
 test_start "No cleanup guidance when no orphan files exist"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "my-session" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "my-session" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"my-session","source":"startup"}')
 assert_not_contains "$OUTPUT" "ORPHAN CLEANUP REQUIRED"
 
@@ -115,26 +115,26 @@ assert_not_contains "$OUTPUT" "ORPHAN"
 
 test_start "Orphan output does not auto-execute deletion"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_not_contains "$OUTPUT" "rm "
 assert_not_contains "$OUTPUT" "rm -"
 
 test_start "Orphan output instructs not to delete without confirmation"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "Do NOT delete"
 
 test_start "Orphan output is marked as BLOCKING"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "BLOCKING"
 
 test_start "Orphan output instructs to stop before proceeding"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "MUST stop"
 assert_contains "$OUTPUT" "Do NOT proceed"
@@ -143,8 +143,8 @@ assert_contains "$OUTPUT" "Do NOT proceed"
 
 test_start "Each orphan file is a separate block with delimiters"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-1" "cpm:spec" "Section 3"
-create_progress_file "$PROJECT" "old-2" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "old-1" "cpm2:spec" "Section 3"
+create_progress_file "$PROJECT" "old-2" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "--- ORPHAN FILE 1 ---"
 assert_contains "$OUTPUT" "--- ORPHAN FILE 2 ---"
@@ -152,15 +152,15 @@ assert_contains "$OUTPUT" "--- END ORPHAN ---"
 
 test_start "Orphan files and active files handled separately"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "current-session" "cpm:do" "Task execution"
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "current-session" "cpm2:do" "Task execution"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
-assert_contains "$OUTPUT" "--- CPM SESSION STATE (cpm:do"
+assert_contains "$OUTPUT" "--- CPM SESSION STATE (cpm2:do"
 assert_contains "$OUTPUT" "--- ORPHAN FILE 1 ---"
 
 test_start "Orphan block for other-session file is NOT injected as active state"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_not_contains "$OUTPUT" "--- CPM SESSION STATE"
 
@@ -168,21 +168,21 @@ assert_not_contains "$OUTPUT" "--- CPM SESSION STATE"
 
 test_start "Fresh orphan file shows age without STALE marker"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:do" "Task execution"
+create_progress_file "$PROJECT" "old-session" "cpm2:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "Age:"
 assert_not_contains "$OUTPUT" "STALE"
 
 test_start "Stale orphan file (>24h) shows STALE marker"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 make_stale "$PROJECT/docs/plans/.cpm-progress-old-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "STALE"
 
 test_start "Stale orphan file shows age in days"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 make_stale "$PROJECT/docs/plans/.cpm-progress-old-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "d old"
@@ -191,8 +191,8 @@ assert_contains "$OUTPUT" "d old"
 
 test_start "Fresh and stale orphans use same block structure"
 PROJECT=$(setup_project_dir)
-create_progress_file "$PROJECT" "old-1" "cpm:do" "Task execution"
-create_progress_file "$PROJECT" "old-2" "cpm:spec" "Section 3"
+create_progress_file "$PROJECT" "old-1" "cpm2:do" "Task execution"
+create_progress_file "$PROJECT" "old-2" "cpm2:spec" "Section 3"
 make_stale "$PROJECT/docs/plans/.cpm-progress-old-2.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 # Both should have ORPHAN FILE blocks with Skill/Phase/Age/File fields

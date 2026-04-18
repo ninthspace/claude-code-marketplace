@@ -1,6 +1,6 @@
 ---
-name: cpm:pivot
-description: Course correction. Revisit any planning artefact, surgically amend it, and cascade changes through downstream documents. Triggers on "/cpm:pivot".
+name: cpm2:pivot
+description: Course correction. Revisit any planning artefact, surgically amend it, and cascade changes through downstream documents. Triggers on "/cpm2:pivot".
 ---
 
 # Course Correction
@@ -24,11 +24,11 @@ Check for input in this order:
 Discover existing planning artefacts and their relationships. Skip this step if `$ARGUMENTS` provided a direct file path.
 
 1. **Glob all five planning directories**:
-   - `docs/plans/[0-9]*-plan-*.md` (problem briefs from cpm:discover)
-   - `docs/briefs/[0-9]*-brief-*.md` (product briefs from cpm:brief)
-   - `docs/architecture/[0-9]*-adr-*.md` (ADRs from cpm:architect)
-   - `docs/specifications/[0-9]*-spec-*.md` (specs from cpm:spec)
-   - `docs/epics/[0-9]*-epic-*.md` (epics from cpm:epics)
+   - `docs/plans/[0-9]*-plan-*.md` (problem briefs from cpm2:discover)
+   - `docs/briefs/[0-9]*-brief-*.md` (product briefs from cpm2:brief)
+   - `docs/architecture/[0-9]*-adr-*.md` (ADRs from cpm2:architect)
+   - `docs/specifications/[0-9]*-spec-*.md` (specs from cpm2:spec)
+   - `docs/epics/[0-9]*-epic-*.md` (epics from cpm2:epics)
 
 2. **Build dependency chains**: For each document found, read the first 10 lines and look for back-reference fields:
    - Product briefs have `**Source**:` — may contain a path to a problem brief.
@@ -39,7 +39,7 @@ Discover existing planning artefacts and their relationships. Skip this step if 
 
    The full cascade chain is: problem brief → product brief → ADRs → spec → epics. Not every chain will have all levels. Use verified file-path references to group documents into chains.
 
-3. **Fall back to slug matching**: When back-references are missing, contain descriptions instead of file paths, or don't resolve to existing files, match documents by slug. Extract the slug from the filename (the part after the number-prefix and type — e.g. `auth` from `01-plan-auth.md`, `pivot` from `05-spec-pivot.md`) and group documents with the same slug into a chain.
+3. **Fall back to slug matching**: When back-references are missing, contain descriptions instead of file paths, or fail to resolve to existing files, match documents by slug. Extract the slug from the filename (the part after the number-prefix and type — e.g. `auth` from `01-plan-auth.md`, `pivot` from `05-spec-pivot.md`) and group documents with the same slug into a chain.
 
 4. **Handle partial chains**: Not every chain will be complete. A spec without a brief, or epics without a spec, are valid — present what exists.
 
@@ -73,10 +73,10 @@ Before walking the cascade, check whether all downstream epic documents are full
 
 2. **All epics complete — ask intent**: If every downstream epic is fully complete, the user is pivoting a spec whose work has already been delivered. Use AskUserQuestion to determine intent:
    - **Amend the historical record** — Continue with the normal cascade. The user wants to correct or update the existing documents to reflect reality or clarify what was built.
-   - **Pivot forward (new epics)** — Skip the cascade entirely. The completed epics stay untouched as a historical record of what shipped. Instead, offer to hand off to `cpm:epics` with the amended spec as input, generating fresh epic docs for the new work.
-   - **Raise a new spec** — Skip the cascade entirely. The amendment is substantial enough that it warrants a fresh specification rather than new epics from the amended document. Hand off to `cpm:spec` with the amended spec as input context. Only offer this option when the amended document is a spec (not a brief or ADR).
+   - **Pivot forward (new epics)** — Skip the cascade entirely. The completed epics stay untouched as a historical record of what shipped. Instead, offer to hand off to `cpm2:epics` with the amended spec as input, generating fresh epic docs for the new work.
+   - **Raise a new spec** — Skip the cascade entirely. The amendment is substantial enough that it warrants a fresh specification rather than new epics from the amended document. Hand off to `cpm2:spec` with the amended spec as input context. Only offer this option when the amended document is a spec (not a brief or ADR).
 
-   If the user chooses "Pivot forward", save the progress file, then tell the user to run `/cpm:epics {amended-spec-path}` to generate new epics. If the user chooses "Raise a new spec", save the progress file, then tell the user to run `/cpm:spec {amended-spec-path}` to create a new specification. In both cases, proceed directly to Step 4 (skip the cascade walk below).
+   If the user chooses "Pivot forward", save the progress file, then tell the user to run `/cpm2:epics {amended-spec-path}` to generate new epics. If the user chooses "Raise a new spec", save the progress file, then tell the user to run `/cpm2:spec {amended-spec-path}` to create a new specification. In both cases, proceed directly to Step 4 (skip the cascade walk below).
 
 3. **Partial or no completion**: If some epics are incomplete, or completion markers are absent, proceed with the normal cascade below. Individual story completion is handled per-story during the walk.
 
@@ -129,7 +129,7 @@ Identify tasks that may be affected by the changes. Skip this step if no tasks e
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -137,9 +137,9 @@ Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for c
 1. Read the old file's contents (already visible in context from hook injection).
 2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
 3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
+Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
 
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all amended artifacts have been confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
+**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all amended artifacts have been confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
 
 **Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
@@ -148,7 +148,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 ```markdown
 # CPM Session State
 
-**Skill**: cpm:pivot
+**Skill**: cpm2:pivot
 **Step**: {N} of 4 — {Step Name}
 **Target document**: {path to document being amended}
 **Chain**: {brief → spec → epics paths, or "single document"}
@@ -175,17 +175,24 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Graceful Degradation
 
-- **No planning documents found**: Tell the user there's nothing to pivot and stop. Don't error.
-- **Direct file path doesn't exist**: Tell the user the file wasn't found and stop.
-- **Back-references don't resolve**: Fall back to slug matching. If neither works, present documents as orphans.
-- **No downstream documents**: Skip cascade step, proceed to task flagging.
-- **No tasks exist**: Skip task flagging, finish the workflow.
-- **User exits mid-cascade**: Already-saved edits to the source document (and any already-cascaded documents) are preserved on disk.
+Every scenario below specifies an explicit action sequence ending with a visible result. No silent fallbacks.
+
+- **No planning documents found** → **Action**: Stop the skill. **Result**: Report to the user: "No planning documents found in docs/ — nothing to pivot."
+
+- **Direct file path doesn't exist** → **Action**: Stop the skill. **Result**: Report to the user: "File not found at {path} — verify the path and try again."
+
+- **Back-references don't resolve** → **Action**: Fall back to slug matching (match the slug portion of the filename). If slug matching also fails, present all documents as orphans — list them without resolved upstream/downstream links. **Result**: Report to the user: "Back-references could not be resolved for {N} documents — showing them as unlinked. Cascade may be incomplete."
+
+- **No downstream documents** → **Action**: Skip the cascade step. Proceed directly to task flagging. **Result**: Report to the user: "No downstream documents found — skipping cascade."
+
+- **No tasks exist** → **Action**: Skip the task flagging step. Finish the workflow with the source and cascade edits already completed. **Result**: Report to the user: "No Claude Code tasks found — skipping task flagging."
+
+- **User exits mid-cascade** → **Action**: Preserve all edits already written to disk (source document and any cascaded documents). Stop the workflow without rolling back. **Result**: Report to the user: "Cascade stopped — {N} documents already updated are preserved on disk."
 
 ## Guidelines
 
 - **Lighter than re-running, but correct.** Pivot should be more efficient than re-running a full skill — but not at the cost of correctness. Surgical edits must be precise and verified. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
-- **Surgical edits only.** Always use Edit, never Write, for document amendments. This minimises risk of accidental content loss.
-- **Human-in-the-loop for cascade.** Never auto-update downstream documents. Every downstream change goes through the user.
+- **Surgical edits only.** Always use Edit for document amendments (Write risks accidental content loss).
+- **Human-in-the-loop for cascade.** Every downstream change goes through the user for approval.
 - **No auto-modification of tasks.** Flag affected tasks, present the information, let the user decide.
-- **Preserve what's saved.** If anything goes wrong, edits already written to disk stay written. Never hold content only in memory.
+- **Preserve what's saved.** If anything goes wrong, edits already written to disk stay written. Always persist content to disk immediately.
