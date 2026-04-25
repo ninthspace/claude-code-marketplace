@@ -31,6 +31,16 @@ The epic doc, once resolved, applies to the entire work loop. Parse it once and 
 3. Call `TaskList` and pick the lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 4. If no pending unblocked tasks exist after hydration, the work is done.
 
+## Retro Check
+
+Follow the shared **Retro Awareness** procedure before the work loop begins.
+
+**Retro incorporation** (this skill):
+- **Complexity underestimates**: Inform per-task exploration (Step 1, Load Context) — when exploring a task, look for the complexity drivers past tasks underestimated (concurrency, edge cases, data shapes).
+- **Codebase discoveries**: Inform per-task exploration — surfaced patterns and limitations are checked first before re-discovering them.
+- **Testing gaps**: Inform Step 4 (Verify Acceptance Criteria) — past untestable criteria patterns are flagged early so the user can refine criteria before implementation, not after.
+- **Patterns worth reusing**: Inform Step 4 implementation — apply the surfaced pattern when its conditions match the current task.
+
 ## Library Check
 
 Follow the shared **Library Check** procedure with scope keyword `do`. Deep-read selectively during task execution when a library document's content directly affects the current task — e.g. coding standards before writing code, or architecture docs before structural decisions.
@@ -304,6 +314,8 @@ The file must reflect:
 
 ### 7. Next Task
 
+**Loop without prompting.** Step 7 is silent — no user gate, no announcement, no "ready for the next one?" check-in. If a task exists, return to Step 1. If none does, proceed to Step 8. The transition between tasks (and between stories, via Story Hydration) happens without user input. See the **No unauthorised checkpoints** and **Forbidden phrasings** entries in Guidelines.
+
 - Run the **Story Hydration** gating check: call `TaskList`. If no pending unblocked tasks exist, hydrate the next unblocked story from the epic doc (see Story Hydration above). This handles story-to-story transitions automatically.
 - After hydration (or if tasks already existed), pick the next lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 - If one exists, go back to step 1 (Load Context) for the new task.
@@ -383,25 +395,14 @@ Every scenario below specifies an explicit action sequence ending with a visible
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting the first task.
+- **Update**: after each task completes.
+- **Delete**: only after confirming all output artifacts (epic doc updates, batch summary) are written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (unsuffixed filename) handles that case.
-
-**Why this matters**: The progress file is the only recovery point if context compaction fires mid-loop. A stale or missing file means the user loses session state with no recovery — treat the Write call with the same care as saving user code.
-
-**Create** the file before starting the first task. **Update** it after each task completes. **Delete** it only after confirming all output artifacts (epic doc updates, batch summary) are written.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -434,6 +435,13 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Do the work.** This skill doesn't just plan — it implements. Write code, create files, run tests, whatever the task requires.
 - **Acceptance criteria gate completion.** Only mark a task Complete when all acceptance criteria are met, or the user explicitly approves.
 - **Keep momentum, but not at the cost of correctness.** Move through tasks efficiently with minimal explanation between them. Always run verification and take care with edits. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
+- **No unauthorised checkpoints.** The work loop only stops at the gates explicitly listed in this skill — verification failures, unmet criteria, stalled cycles, TDD edge cases, blockers, ambiguous criteria, coverage matrix write failures, and the epic-end gate at Step 8. Everything else is forward motion: task-to-task transitions, story-to-story transitions, and the post-completion summary are all silent. Do not invent additional check-ins. Do not narrate progress between tasks. Do not pause to ask permission to proceed.
+- **Forbidden phrasings.** Never offer the user a "continue / stop / commit" three-way choice between tasks or stories. Never ask "Should I commit before continuing?", "Would you like me to proceed to the next story?", "Shall I move on?", or any equivalent. Commits, if needed, are part of the task itself or are handled outside this skill — the skill never solicits permission for the next iteration of its own loop. If you find yourself about to write such a prompt, return to Step 7 instead.
+- **Surface change moments explicitly.** When a change-worthy situation appears mid-task — a criterion that contradicts reality, a story whose scope is wrong, a missing requirement that affects multiple stories, a wording bug — invoke the shared **Change Type Decision** procedure. Present an `AskUserQuestion` gate with the four labelled options (Inline edit / Pivot the upstream artefact / Retro observation only / Pivot + retro). Do not silently edit a criterion mid-task; do not silently defer the question to verification. Surface it now.
+  - **If the user chooses Inline edit**: apply the Edit immediately to the affected story or task in the epic doc, then record `**Inline change**: {one-line summary of what changed} ({YYYY-MM-DD})` on the story (alongside any existing `**Retro**:` field) using a second Edit. The breadcrumb is mandatory — silent inline edits violate the convention.
+  - **If the user chooses Pivot**: stop the work loop, save the progress file, and tell the user to run `/cpm2:pivot {path-to-affected-artefact}`. Resume the work loop after the pivot completes (a fresh `/cpm2:do` invocation will pick up where this one left off via the progress file).
+  - **If the user chooses Retro observation only**: capture the observation in the story's `**Retro**:` field at task completion (Step 6 Part B), no other action.
+  - **If the user chooses Pivot + retro**: do both — stop for pivot, then capture the retro observation when the work loop resumes.
 - **One task at a time.** Complete each task fully before starting the next.
 - **`[tdd]` activates the red-green-refactor sub-loop.** When a story's acceptance criteria carry the `[tdd]` tag, Step 4 switches from standard implementation to a three-phase TDD loop: write a failing test (Red), write minimum code to pass (Green), clean up within task scope (Refactor). Each phase runs a targeted test — the specific test file, not the full suite. The full suite runs at the story verification gate. Stories without `[tdd]` use the standard post-implementation workflow unchanged. Both modes can coexist in the same epic.
 - **Story refactoring pass polishes before moving on.** When a verification gate passes, Step 5b performs a refactoring pass starting from the files touched by the story — then retests. For Laravel projects, this uses the `laravel-simplifier` agent if available; for all other projects, it's a self-directed review. The pass starts with the story's code but looks outward for consolidation opportunities — deduplication, extraction, and abstraction across touched and existing code. If refactoring breaks tests, the changes are reverted.

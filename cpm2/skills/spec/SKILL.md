@@ -44,15 +44,13 @@ Work through these sections **one at a time**. Use AskUserQuestion for every gat
 
 ### Retro Check (Startup)
 
-Before beginning Section 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+Follow the shared **Retro Awareness** procedure before beginning Section 1.
 
-1. Read the most recent retro file.
-2. Present a brief summary of its key recommendations to the user.
-3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate as additional context?"
-   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the spec sections (especially functional requirements and scope)
-   - **No, skip** — Proceed normally without retro context
-
-If no retro files exist, skip this check silently and proceed to the Library Check.
+**Retro incorporation** (this skill):
+- **Criteria gaps**: Inform Section 2 (functional requirements) and Section 6b (acceptance criteria tagging) — gaps from last round become explicit must-haves and tagged criteria this round.
+- **Scope surprises**: Inform Section 3 (scope boundaries) — surface and address the boundary issue that caused the surprise.
+- **Testing gaps**: Inform Section 6 (testing strategy) — past untestable criteria get rewritten or upgraded to integration boundaries.
+- **Patterns worth reusing**: Inform Section 4 (architecture decisions) — surfaced patterns may already answer architecture questions.
 
 ### Roster Loading (Startup)
 
@@ -155,7 +153,7 @@ Present the test approach tag vocabulary to the user:
 
 #### Step 6b: Tag Acceptance Criteria
 
-For each must-have functional requirement from Section 2, propose a test approach tag for each acceptance criterion based on its nature (boundary-crossing → `[integration]`, isolated logic → `[unit]`, user-visible workflow → `[feature]`, non-automatable → `[manual]`). Use AskUserQuestion to confirm or adjust. Flag any criterion too vague to tag and ask the user to refine it.
+For each must-have functional requirement from Section 2, propose a test approach tag for each acceptance criterion. **Default to automation** — boundary-crossing → `[integration]`, isolated logic → `[unit]`, user-visible workflow → `[feature]`. Propose `[manual]` only when automation is genuinely infeasible (visual/UX judgement, third-party UI you don't control, content review, observability checks against external systems), and when you do, include a one-line justification stating what blocks automation. `[manual]` is the exception, not a peer of the automated tags — see `cpm2:epics`'s **Default to automation** guideline for the full automatable/manual category lists. Use AskUserQuestion to confirm or adjust. Flag any criterion too vague to tag and ask the user to refine it.
 
 **Probe for must-NOT clauses**: For each criterion, ask: "Are there behaviours this criterion explicitly allows that you would reject?" Capture rejected behaviours as paired `must NOT` lines alongside the positive criterion (e.g. "must NOT allow password reset without rate limiting"). Include must-NOT lines in the Acceptance Criteria Coverage table with their own tags.
 
@@ -186,7 +184,7 @@ Present the complete testing strategy to the user: tagged criteria, integration 
 
 ### Section 7: Review
 
-Present the complete spec to the user for review. Use AskUserQuestion to confirm or request changes.
+Render the complete spec in the message body. Then use AskUserQuestion as a short gate (e.g. "Approve this spec?" with options `Approve` / `Request changes` / `Stop`). See the shared **Gate Presentation** convention.
 
 ## Output
 
@@ -279,23 +277,14 @@ After saving, suggest next steps:
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting Section 1 (ensure `docs/plans/` exists).
+- **Update**: after each section completes.
+- **Delete**: only after confirming the final spec is saved and written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (unsuffixed filename) handles that case.
-
-**Create** the file before starting Section 1 (ensure `docs/plans/` exists). **Update** it after each section completes. **Delete** it only after confirming the final spec is saved and written. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State

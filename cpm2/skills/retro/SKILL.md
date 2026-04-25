@@ -9,11 +9,17 @@ Read a completed (or partially completed) epic doc, synthesise observations capt
 
 ## Input
 
+This skill operates on two source types: **epic docs** (`docs/epics/`) and **quick records** (`docs/quick/`). Both produce retro-eligible observations during execution; the retro skill consumes either kind.
+
 Check for input in this order:
 
-1. If `$ARGUMENTS` references a file path (e.g. `docs/epics/01-epic-auth.md`), use that as the epic doc.
-2. If no path given, look for the most recent `docs/epics/*-epic-*.md` file and ask the user to confirm.
-3. If no epic docs exist, tell the user there's nothing to retro and stop.
+1. If `$ARGUMENTS` references a file path, use it. Accept paths under `docs/epics/` (epic doc) or `docs/quick/` (quick record).
+2. If no path given, look for the most recent file across **both** `docs/epics/*-epic-*.md` and `docs/quick/*-quick-*.md` (compare by filename prefix or modification time). Present the most recent candidate(s) to the user with AskUserQuestion to confirm.
+3. If neither directory has matching files, tell the user there's nothing to retro and stop.
+
+**Source detection**: Once the input is resolved, classify it by directory or filename pattern:
+- **Epic source** (`docs/epics/...-epic-...md`): observations live in `**Retro**:` fields on completed stories and the optional `## Lessons` section. Steps 1-3 below apply as written.
+- **Quick source** (`docs/quick/...-quick-...md`): observations live in the record's `## Retro` section (mandatory single-category observation). Steps 1-3 still apply, with adjustments noted inline.
 
 ## Process
 
@@ -25,16 +31,22 @@ Before Step 1, display:
 
 > Output format is fixed (used by downstream skills). Run `/cpm2:templates preview retro` to see the format.
 
-### Step 1: Read Epic Doc
+### Step 1: Read Source Document
 
-Read the resolved epic doc with the Read tool. Identify:
+Read the resolved source document with the Read tool.
 
+**For epic sources** (`docs/epics/`), identify:
 - Total number of stories and their statuses (Pending, In Progress, Complete)
 - Any `**Retro**:` fields on completed stories (these are per-story observations captured by `cpm2:do` Step 6, Part B — mandatory on verification gates)
 - Any `## Lessons` section already present (batch summary from `cpm2:do` Step 8)
 - The overall completion state of the batch
 
-Present a brief summary to the user: how many stories, how many complete, how many observations found.
+**For quick sources** (`docs/quick/`), identify:
+- The change description, classification (`fix` or `change`), and verification summary
+- The `## Retro` section's observation — a single category and one-sentence observation per the format defined by `cpm2:quick`
+- Whether the change shipped successfully (record promoted to completion record per `cpm2:quick` Step 4)
+
+Present a brief summary to the user — for epic sources: story counts, completion, observation count. For quick sources: change classification, observation category, outcome.
 
 ### Step 2: Synthesise Observations
 
@@ -57,6 +69,8 @@ Analyse the collected observations and story outcomes. Build the retro content:
 - Which stories completed, which didn't
 - Any stories that were blocked or stuck
 - Overall batch outcome
+
+**For quick sources**: the input is a single observation, not a batch. Place it under its declared category (e.g. a "Codebase discovery" observation goes under that single heading) and write a one-sentence synthesis. Skip categories that have no entries — a quick retro often produces a single-category retro file, which is fine.
 
 For each category with observations, write a brief synthesis — not just a list, but a sentence or two about what the pattern means and what to do differently next time.
 
@@ -155,36 +169,32 @@ After writing the retro file, check if any retro observations should be fed back
 
 ### Step 4: Pipeline Handoff
 
-After presenting the retro file path, offer the user options for what to do next. Use AskUserQuestion:
+After presenting the retro file path, offer the user options for what to do next.
 
-- **Continue to /cpm2:discover** — Use the retro as starting context for problem discovery
-- **Continue to /cpm2:spec** — Use the retro as starting context for requirements specification
-- **Continue to /cpm2:epics** — Use the retro as starting context for work breakdown
-- **Just exit** — End the session, no handoff
+**Pivot suggestion check**: Before presenting the handoff options, scan the synthesised observations for scope-affecting categories — **criteria gaps**, **scope surprises**, and **codebase discoveries** that imply the source spec or epic missed something material. If any such observation is present, surface a pivot offer alongside the regular handoff options.
 
-If the user chooses a pipeline skill, pass the retro file path as the input context for that skill. The retro file becomes the `$ARGUMENTS` equivalent — the next skill should treat it as its starting context.
+Use AskUserQuestion:
+
+- **Continue to /cpm2:pivot** *(only when scope-affecting observations exist)* — Use the retro to amend the source spec/epic. Pass the source artefact path (from the retro's `**Source**:` field) as `$ARGUMENTS` to `/cpm2:pivot`.
+- **Continue to /cpm2:discover** — Use the retro as starting context for problem discovery.
+- **Continue to /cpm2:spec** — Use the retro as starting context for requirements specification.
+- **Continue to /cpm2:epics** — Use the retro as starting context for work breakdown.
+- **Just exit** — End the session, no handoff.
+
+If the user chooses a pipeline skill, pass the retro file path (or source artefact path for pivot) as the input context for that skill.
 
 Delete the progress file after handoff or exit.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after the final retro file has been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final retro file has been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State

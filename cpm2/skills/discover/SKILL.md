@@ -15,15 +15,13 @@ Work through these phases **one at a time**. Complete each phase before moving t
 
 ### Retro Check (Startup)
 
-Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+Follow the shared **Retro Awareness** procedure before beginning Phase 1.
 
-1. Read the most recent retro file.
-2. Present a brief summary of its key recommendations to the user.
-3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate into this discovery session?"
-   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the discovery phases
-   - **No, start fresh** — Proceed normally without retro context
-
-If no retro files exist, skip this check silently and proceed to the Library Check.
+**Retro incorporation** (this skill):
+- **Scope surprises**: Inform Phase 2 (problem boundaries) — past stories that ran larger or smaller than expected suggest the problem definition needs sharper edges.
+- **Criteria gaps**: Inform Phase 3 (success criteria) — categories the previous round missed should be probed explicitly this time.
+- **Codebase discoveries**: Inform Phase 4 (constraints) — surfaced limitations and patterns are real constraints, not optional context.
+- **Testing gaps**: Inform Phase 3 acceptance criteria framing — vague criteria from last round become concrete this round.
 
 ### Roster Loading (Startup)
 
@@ -102,7 +100,7 @@ Questions to explore:
 
 ### Phase 6: Summary
 
-Produce a problem brief document. Present it to the user for confirmation using AskUserQuestion before saving.
+Produce a problem brief document. Render the full brief in the message body, then use AskUserQuestion as a short gate (e.g. "Approve this brief?" with options `Approve` / `Request changes` / `Stop`) before saving. See the shared **Gate Presentation** convention.
 
 ## Output
 
@@ -150,23 +148,14 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting Phase 1 (ensure `docs/plans/` exists).
+- **Update**: after each phase completes.
+- **Delete**: only after the final brief has been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
-
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State

@@ -156,17 +156,15 @@ If "Save and exit": write the state file content to `docs/plans/ralph-command-{t
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` during the pre-flight phase for compaction resilience.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths are relative to the current Claude Code session's working directory.
+**Lifecycle**:
+- **Create**: before Step 1.
+- **Delete**: after the Ralph loop is launched, or after dry-run output is presented.
 
-**Session ID**: Use `CPM_SESSION_ID` from context. Fall back to `.cpm-progress.md` if not present.
+(No update step — pre-flight is short enough to write once at creation and replace at end.)
 
-**Resume adoption**: Follow the standard CPM resume adoption procedure — if an old progress file matches this skill's `**Skill**:` field but has a different session ID, adopt it.
-
-**Create** before Step 1. **Delete** after the Ralph loop is launched (or after dry-run output is presented).
-
-Use the Write tool to write the full file each time. Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -186,7 +184,6 @@ Use the Write tool to write the full file each time. Format:
 {What to do next}
 ```
 
-**Delete** the progress file after the Ralph loop is launched or after dry-run output. Also delete `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists.
 
 ## Maintenance Coupling
 

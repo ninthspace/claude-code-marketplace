@@ -23,6 +23,15 @@ The change description is the seed for everything that follows — scope assessm
 
 **State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once the completion record has been saved.
 
+### Retro Check (Startup)
+
+Follow the shared **Retro Awareness** procedure before the Library Check.
+
+**Retro incorporation** (this skill):
+- **Patterns worth reusing**: Inform Step 1 (classify and assess) — apply the pattern directly when its conditions match the requested change, short-circuiting re-exploration.
+- **Codebase discoveries**: Inform Step 1 — surfaced limitations and conventions are treated as known constraints rather than rediscovered.
+- **Scope surprises**: Inform Step 1 escalation logic — if the requested change resembles a past scope-surprise category, escalate to the full pipeline more readily.
+
 ### Library Check (Startup)
 
 Follow the shared **Library Check** procedure with scope keyword `quick`. Deep-read selectively during execution when library content affects the requested change — e.g. coding standards before writing code.
@@ -292,25 +301,14 @@ Spec files are written during Step 2 and promoted to completion records during S
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-execution.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after the completion record has been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
-
-**Why this matters**: The progress file is the only recovery point if context compaction fires mid-session. A stale or missing file means the user loses session state with no recovery — treat the Write call with the same care as saving user code.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the completion record has been saved and confirmed written — always after, because early deletion loses state if compaction fires.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State

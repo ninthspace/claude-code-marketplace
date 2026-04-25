@@ -28,6 +28,16 @@ Check for input in this order:
 
 **Facilitation depth**: Each presentation-and-refine gate (Step 2 epics, Step 3 stories, Step 3b tasks) converges in 1-2 rounds of AskUserQuestion. When the user approves, move on. Step 3d coverage matrix and Step 4 confirmation are single-pass gates — present once, refine once if needed, then proceed.
 
+### Retro Check (Startup)
+
+Follow the shared **Retro Awareness** procedure before beginning Step 1.
+
+**Retro incorporation** (this skill):
+- **Scope surprises**: Inform Step 3 (story sizing) — past stories that ran larger or smaller than expected suggest sizing rules to apply this round (e.g. "split stories that touch more than N components").
+- **Patterns worth reusing**: Inform Step 3b (task lists) — surfaced abstractions and approaches become candidate tasks rather than re-discovered work.
+- **Testing gaps**: Inform Step 3 acceptance criteria tagging — past untestable criteria become explicitly tagged this round.
+- **Codebase discoveries**: Inform Step 3c (integration testing story) — surfaced integration points may need explicit cross-story coverage.
+
 ### Library Check (Startup)
 
 Follow the shared **Library Check** procedure with scope keyword `epics`. Deep-read selectively during Step 2 epic grouping when architecture or coding-standards docs affect epic boundaries or dependency identification.
@@ -62,7 +72,7 @@ For each epic, determine:
 - **Slug** (`{slug}`): Kebab-case derived from the epic name (e.g. "authentication-system", "api-layer")
 - **Summary**: One-sentence description of what this epic covers
 
-Present the epic grouping to the user with AskUserQuestion and refine. Include the proposed filenames so the user can see the full output plan.
+Render the epic grouping (names, summaries, proposed filenames) in the message body so the user can see the full output plan. Then use AskUserQuestion as a short gate (e.g. "Approve this grouping?" with options `Approve` / `Request changes` / `Stop`) and refine. See the shared **Gate Presentation** convention.
 
 Keep epics practical:
 - 2-5 epics for a small feature
@@ -116,7 +126,7 @@ Examples:
 
 1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
 2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tags from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, `[manual]`, and `[tdd]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments. The `[tdd]` tag is a workflow mode tag (orthogonal to level tags) — propagate it alongside any level tag when present (e.g. `[tdd] [unit]`).
-3. If a story's criteria go beyond a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), propose a tag based on the criterion's nature and confirm with the user.
+3. If a story's criteria go beyond a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), default to an automated tag — `[unit]`, `[integration]`, or `[feature]`. Propose `[manual]` only when automation is genuinely infeasible, and when you do, include a one-line justification stating what blocks automation (e.g. "requires human visual judgement", "third-party OAuth flow we don't control"). See the **Default to automation** guideline below.
 4. Tags appear at the end of the acceptance criteria line, e.g.: `- User can log in via OAuth [integration]` or `- Payment processor validates card [tdd] [integration]`
 
 **Graceful degradation**: If the spec has no Testing Strategy section, no Acceptance Criteria Coverage table, or no tags, skip tag propagation entirely — write acceptance criteria without tags. The skill must work without `cpm2:spec`'s enhanced Section 6 having been used.
@@ -148,7 +158,16 @@ These are the default assignment categories. The user can also add `[plan]` manu
 
 **Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 
-Present the stories for each epic to the user using AskUserQuestion. Refine before moving to the next epic.
+Render the stories for each epic (titles, summaries, acceptance criteria) in the message body. After the stories, render a **tag distribution summary** showing per-story counts so any drift toward manual is visible at a glance. Format:
+
+```
+Tag distribution:
+- Story 1 — {N} automated ([unit] x{a}, [integration] x{b}, [feature] x{c}), {M} manual
+- Story 2 — {N} automated, {M} manual
+- ...
+```
+
+If any story has zero automated tags, flag it explicitly under the table (e.g. "⚠ Story 2 is fully manual — confirm this is intentional"). Then use AskUserQuestion as a short gate (e.g. "Approve these stories?" with options `Approve` / `Request changes` / `Stop`). Refine before moving to the next epic. See the shared **Gate Presentation** convention.
 
 *Progress note: record which tags were propagated to which stories in the Step 3 summary.*
 
@@ -184,7 +203,7 @@ If **all** of a story's criteria are tagged `[manual]` (or have no tags), do **n
 
 **Graceful degradation**: If no tags were propagated during Step 3 (e.g. the spec had no testing strategy), skip testing task generation entirely.
 
-Present the tasks for each story using AskUserQuestion. Refine before moving to the next story.
+Render the tasks for each story in the message body. Then use AskUserQuestion as a short gate (e.g. "Approve these tasks?" with options `Approve` / `Request changes` / `Stop`). Refine before moving to the next story. See the shared **Gate Presentation** convention.
 
 ### Step 3c: Integration Testing Story (when warranted)
 
@@ -327,23 +346,14 @@ When starting implementation of a task, read the relevant epic document first to
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after confirming the final epic documents are saved and written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (unsuffixed filename) handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after confirming the final epic documents are saved and written. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -401,6 +411,23 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Right-size task decomposition.** A single task per story is fine when the work is straightforward. The value of task-level breakdown is making complex stories manageable, not adding bureaucracy to simple ones.
 - **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {filename-prefix}-epic-{slug}` for cross-epic dependencies — e.g. `Epic 28-01-epic-foo` for new two-part epics, or `Epic 15-epic-bar` for legacy flat epics (both shapes are valid). Keep dependencies at the story level — if tasks in different stories are interdependent, the stories themselves should carry the dependency.
 - **One epic, one document.** Each epic produces its own markdown file. This keeps documents focused and allows parallel work on independent epics.
+- **Default to automation.** When proposing tags for new criteria, the default is automation — `[unit]`, `[integration]`, or `[feature]`. `[manual]` is the exception, not a peer of the automated tags. Reach for an automated tag whenever the criterion describes:
+  - **CRUD operations**, validation rules, or business logic
+  - **API contracts**, request/response shape, or status code behaviour
+  - **Authentication / authorisation flows** (sessions, tokens, permission checks)
+  - **Data transformations**, calculations, or state machines
+  - **Persistence behaviour** (database writes, migrations, query results)
+  - **Event flows** or message handling between components
+  - **User-visible workflows** that can be driven by a feature/E2E test runner
+
+  Reach for `[manual]` only when the criterion describes:
+  - **Visual or UX judgement** (chart legibility, copy quality, layout polish)
+  - **Third-party UI you don't control** (an external OAuth provider's login page, a payment processor's hosted form)
+  - **Content review** of generated text, images, or media
+  - **Observability checks** against external systems (e.g. confirming an email actually arrived in a real inbox)
+  - **Behaviour that is genuinely infeasible to exercise from code** in the current test infrastructure
+
+  Every `[manual]` tag carries a one-line justification stating which of the above (or a comparable reason) applies. If you can't write the justification, the criterion probably belongs in an automated tag.
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Let the automation handle testing tasks — it ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
 - **`[plan]` opts into formal plan mode.** When a story heading carries `[plan]`, `cpm2:do` enters formal plan mode (EnterPlanMode/ExitPlanMode) for that story's tasks — enforcing read-only exploration and user approval before implementation. Without `[plan]`, `cpm2:do` uses inline planning (brief text plan, then straight to implementation) which keeps the task loop uninterrupted. Suggest `[plan]` for stories involving architectural decisions, security-sensitive areas, or multi-system integration. Most stories work well with inline planning.

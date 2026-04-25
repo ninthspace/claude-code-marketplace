@@ -27,6 +27,15 @@ For story-level review, present the list of stories from the epic doc and let th
 
 Follow the shared **Roster Loading** procedure. After loading, confirm the roster and how many agents are available: "Review roster loaded: {N} agents available. I'll select the most relevant reviewers based on the content."
 
+## Retro Check
+
+Follow the shared **Retro Awareness** procedure before Agent Selection.
+
+**Retro incorporation** (this skill):
+- **All categories**: Use the most recent retro's observations as **adversarial review prompts** for the selected agents — "the last retro flagged criteria gaps in auth flows; check whether this artifact has the same risk." This makes review actively guard against recurring failure modes.
+- **Codebase discoveries** and **patterns worth reusing**: Pre-load these as context for reviewer agents that critique structure or implementation.
+- **Scope surprises** and **complexity underestimates**: Use as prompts for the agents critiquing scope and effort.
+
 ## Library Check
 
 Follow the shared **Library Check** procedure with scope keyword `review`. Deep-read selectively when reviewer personas need context from architecture or coding-standards docs — e.g. an architect reviewing structural decisions, or a developer citing coding standards.
@@ -371,23 +380,14 @@ Delete the progress file after handoff or exit.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after the final review file has been saved and any autofix/handoff is complete.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final review file has been saved and any autofix/handoff is complete — always after, because early deletion loses state if compaction fires. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
