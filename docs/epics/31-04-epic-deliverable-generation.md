@@ -30,7 +30,7 @@
 
 ## Deliverable structure
 **Story**: 2
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 1
 **Satisfies**: #13 (deliverable structure)
 
@@ -48,12 +48,12 @@
 ### Document deliverable structure
 **Task**: 2.1
 **Description**: Document the full deliverable structure in SKILL.md: header, executive summary, mental model, findings table with column specification, top-5 priorities, quick wins, "looks bad but actually fine" (with required-non-negotiable callout), open questions. Covers all eight criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for deliverable structure
 **Task**: 2.2
 **Description**: Write automated tests asserting that audit documents contain all required section headings (`## Executive Summary`, `## Architectural Mental Model`, `## Findings`, `## Top 5 Priorities`, `## Quick Wins`, `## Things that look bad but are actually fine`, `## Open Questions`), and that the findings table column header row matches the documented columns.
-**Status**: Pending
+**Status**: Complete
 
 ---
 

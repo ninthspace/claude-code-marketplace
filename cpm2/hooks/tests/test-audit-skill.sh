@@ -78,6 +78,78 @@ else
   test_fail "marketplace.json missing"
 fi
 
+# --- Deliverable structure (Epic 31-04 Story 2) ---
+
+REQUIRED_SECTIONS=(
+  "## Executive Summary"
+  "## Architectural Mental Model"
+  "## Findings"
+  "## Top 5 Priorities"
+  "## Quick Wins"
+  "## Things that look bad but are actually fine"
+  "## Open Questions"
+)
+
+test_start "SKILL.md documents all seven required deliverable sections"
+if [ -f "$SKILL_FILE" ]; then
+  MISSING=""
+  for SECTION in "${REQUIRED_SECTIONS[@]}"; do
+    grep -qF -- "$SECTION" "$SKILL_FILE" || MISSING="$MISSING\n  $SECTION"
+  done
+  if [ -z "$MISSING" ]; then
+    test_pass
+  else
+    test_fail "$(printf 'Missing in SKILL.md: %b' "$MISSING")"
+  fi
+else
+  test_fail "SKILL.md missing"
+fi
+
+test_start "Each audit deliverable contains all required sections"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      for SECTION in "${REQUIRED_SECTIONS[@]}"; do
+        grep -qF -- "$SECTION" "$f" || BAD="$BAD\n$(basename "$f"): missing '$SECTION'"
+      done
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+test_start "Audit findings tables use the documented column headers"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    EXPECTED='| ID | Category | Citation | Severity | Effort | Description | Recommendation |'
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      grep -qF -- "$EXPECTED" "$f" || BAD="$BAD\n$(basename "$f"): missing the documented column header row"
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
 # --- Numbered deliverable path (Epic 31-04 Story 1) ---
 
 test_start "Audit deliverables follow docs/audits/{nn}-audit-{slug}.md shape"

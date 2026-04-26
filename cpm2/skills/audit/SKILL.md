@@ -247,6 +247,48 @@ The deliverable is a numbered markdown document at `docs/audits/{nn}-audit-{slug
 
 If `docs/audits/` does not exist, create it before writing the deliverable.
 
+#### 3a. Deliverable structure
+
+The deliverable opens with a header, then proceeds through eight sections in fixed order. Use exactly the section headings shown — downstream skills key off them.
+
+**Header**:
+
+```markdown
+# Audit: <project name>
+
+**Date**: YYYY-MM-DD
+**Audited at**: <40-char-sha>
+**Scope**: <hint or "full sweep">
+```
+
+**Sections** (in order):
+
+1. **`## Executive Summary`** — Maximum 10 bullets, ranked by impact. Each bullet summarises a finding or theme with severity. The last bullet line is the effort aggregate (Step 3g): `Effort: S×<n>, M×<n>, L×<n>`.
+2. **`## Architectural Mental Model`** — One or two paragraphs. Plain prose describing how the codebase is organised — entry points, dominant patterns, where logic lives. This is the audit's compressed understanding of the system, useful for any reader who comes to the deliverable cold.
+3. **`## Findings`** — Markdown table with the columns documented in 3b. Target 30–80 rows for typical projects.
+4. **`## Top 5 Priorities`** — Five concrete refactor outlines, drawn from the findings table. Each priority is a 2–4 sentence outline: what to change, where, and the expected outcome. References the finding ID(s) that motivate it.
+5. **`## Quick Wins`** — Checklist (`- [ ] ...`) of small, low-risk changes drawn from the findings table. Each item should be doable in under an hour.
+6. **`## Things that look bad but are actually fine`** — Bullet list of patterns or signals an inexperienced reader might flag, with a one-line justification per item explaining why they are correct as-is. **Required, non-negotiable**: this section must always appear, even if it has only one entry. Its presence makes clear the audit considered counter-evidence.
+7. **`## Open Questions`** — Bullet list. Tool failures (`Tool: <name> — <reason>`), conflicts surfaced by re-orientation (`Conflict: <X> superseded by <Y>`), and items the audit could not resolve without more information.
+
+> **Non-negotiable**: section 6 ("Things that look bad but are actually fine") is required on every audit. Omission is not allowed even when the audit found nothing in this category — pick the most counter-intuitive accept-as-is observation and write the one-liner.
+
+#### 3b. Findings table columns
+
+The findings table uses exactly these column headers, in this order:
+
+| ID | Category | Citation | Severity | Effort | Description | Recommendation |
+|---|---|---|---|---|---|---|
+| F-001 | Architectural decay | `src/auth/login.ts:42 (authenticate)` | High | M | One-sentence problem description. | Scoped recommendation. |
+
+- **ID**: sequential, prefixed `F-` (e.g. `F-001`, `F-002`), zero-padded to 3 digits.
+- **Category**: one of the nine dimension names from Step 2.
+- **Citation**: `file:line (symbol)` exactly. See 3c.
+- **Severity**: Critical / High / Medium / Low. See 3d.
+- **Effort**: S / M / L. See 3d.
+- **Description**: one sentence describing the problem.
+- **Recommendation**: one to three sentences scoping the change (no rewrites — see 3e).
+
 ### Step 4: Pipeline Handoffs
 
 (populated by Epic 31-05 — final AskUserQuestion offering library / spec / quick / done; per-option behaviour; library wrapper entry creation.)
