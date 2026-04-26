@@ -243,7 +243,9 @@ Re-orientation runs once per conflict; do not loop. If a third dimension surface
 
 ### Step 3: Deliverable Generation
 
-(populated by Epic 31-04 — numbered output via shared Numbering, deliverable structure, citation format, severity & effort scales, no-rewrites/no-padding rules, scoped audit consistency, effort aggregates.)
+The deliverable is a numbered markdown document at `docs/audits/{nn}-audit-{slug}.md`. Follow the shared **Numbering** procedure to assign `{nn}` — integer comparison across active and archived audits in `docs/audits/`, retired numbers stay retired, growth past 99 is transparent. The slug is derived from the scope hint (when supplied) or "full-sweep" otherwise, lowercase-hyphenated.
+
+If `docs/audits/` does not exist, create it before writing the deliverable.
 
 ### Step 4: Pipeline Handoffs
 

@@ -7,7 +7,7 @@
 
 ## Numbered output via shared Numbering
 **Story**: 1
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 **Satisfies**: #12 (numbered deliverable)
 
@@ -19,12 +19,12 @@
 ### Document deliverable path and Numbering reference
 **Task**: 1.1
 **Description**: Document the output path `docs/audits/{nn}-audit-{slug}.md` in SKILL.md, referencing the shared Numbering procedure for `{nn}` assignment. Include the directory creation behaviour. Covers both criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for numbered deliverable path
 **Task**: 1.2
 **Description**: Write automated tests asserting that audit output paths follow the `docs/audits/{nn}-audit-{slug}.md` shape with integer-comparison numbering, and that re-running on the same project produces a new (incremented) number rather than overwriting.
-**Status**: Pending
+**Status**: Complete
 
 ---
 

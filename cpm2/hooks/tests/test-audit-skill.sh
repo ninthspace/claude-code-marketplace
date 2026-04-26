@@ -78,6 +78,55 @@ else
   test_fail "marketplace.json missing"
 fi
 
+# --- Numbered deliverable path (Epic 31-04 Story 1) ---
+
+test_start "Audit deliverables follow docs/audits/{nn}-audit-{slug}.md shape"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      BASE=$(basename "$f")
+      if ! echo "$BASE" | grep -qE '^[0-9]+-audit-[a-z0-9-]+\.md$'; then
+        BAD="$BAD\n$BASE: not in {nn}-audit-{slug}.md shape"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+test_start "Audit deliverable numbers are unique (no overwrites)"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/[0-9]*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -le 1 ]; then
+    test_pass
+  else
+    NUMS=""
+    for f in "${AUDIT_FILES[@]}"; do
+      NUM=$(basename "$f" | sed -E 's/^([0-9]+)-audit-.*$/\1/')
+      NUMS="$NUMS $NUM"
+    done
+    DUPES=$(echo $NUMS | tr ' ' '\n' | sort | uniq -d)
+    if [ -z "$DUPES" ]; then
+      test_pass
+    else
+      test_fail "Duplicate audit numbers: $DUPES"
+    fi
+  fi
+else
+  test_pass
+fi
+
 # --- Commit SHA capture (Story 31-02 Story 1) ---
 
 test_start "SKILL.md documents the **Audited at** header field"
