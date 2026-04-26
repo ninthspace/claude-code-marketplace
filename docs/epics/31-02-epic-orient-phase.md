@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/31-spec-cpm2-audit-skill.md
 **Date**: 2026-04-25
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Epic 31-01-epic-skill-scaffolding
 
 ## Orient — codebase reads, git history, commit SHA capture
@@ -96,7 +96,7 @@
 
 ## User-shaping question after orient
 **Story**: 4
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 1, Story 3
 **Satisfies**: #9 (user-shaping question)
 
@@ -109,6 +109,20 @@
 ### Document user-shaping AskUserQuestion
 **Task**: 4.1
 **Description**: Document the post-orient AskUserQuestion in SKILL.md, including the question text, the must-NOT clause about not skipping dimensions, and how user input is incorporated downstream as a focus hint (not a scope reducer). Covers all criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] The "weight, not membership" framing is the cleanest way to explain how a scope hint shapes the sweep without skipping dimensions. Worth reusing as the canonical phrasing in the spec/library if scope-shaping appears in another skill.
 
 ---
+
+## Lessons
+
+### Smooth Deliveries
+
+- Story 2: Single-task documentation story — must-NOT clause sat naturally as a Non-negotiable callout below the read description.
+- Story 3: Markdown table for the manifest → stack mapping is the right shape; architecture decision in the spec was already specific enough that documentation was a one-pass write.
+- Story 4: "Weight, not membership" framing cleanly explained how a scope hint shapes the sweep without skipping dimensions.
+
+### Codebase Discoveries
+
+- Story 1: The "test deliverable shape" pattern needs to handle the case where deliverables don't exist yet (skill hasn't been run). Vacuous-pass when `docs/audits/` is empty plus per-file format checks when files do exist gives a clean structural test that grows as the skill is used. Reusable for any test verifying runtime-produced artifacts.
