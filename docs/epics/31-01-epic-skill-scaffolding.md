@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/31-spec-cpm2-audit-skill.md
 **Date**: 2026-04-25
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 
 ## Create cpm2:audit skill scaffold
@@ -73,3 +73,13 @@
 **Retro**: [Pattern worth reusing] `awk -F'"' '/"key"[[:space:]]*:/ {print $4; exit}'` cleanly extracts JSON string values in BSD-compatible bash; reusable wherever cpm2 hook tests need to assert on manifest fields without bringing in `jq`.
 
 ---
+
+## Lessons
+
+### Criteria Gaps
+
+- Story 1: Epic 31-06 Task 1.1 specifies the test file as `test_audit_skill.sh` (underscores), but the existing runner globs `test-*.sh` — the underscore form would never be discovered. Used `test-audit-skill.sh` to match the runner; flag for `cpm2:pivot` when reaching Epic 31-06.
+
+### Patterns Worth Reusing
+
+- Story 2: `awk -F'"' '/"key"[[:space:]]*:/ {print $4; exit}'` cleanly extracts JSON string values in BSD-compatible bash; reusable wherever cpm2 hook tests need to assert on manifest fields without bringing in `jq`.
