@@ -15,6 +15,7 @@ SKILL_FILE="$REPO_ROOT/cpm2/skills/audit/SKILL.md"
 PLUGIN_MANIFEST="$REPO_ROOT/cpm2/.claude-plugin/plugin.json"
 MARKETPLACE_MANIFEST="$REPO_ROOT/.claude-plugin/marketplace.json"
 AUDITS_DIR="$REPO_ROOT/docs/audits"
+LIBRARY_DIR="$REPO_ROOT/docs/library"
 
 echo "Testing: cpm2:audit skill"
 echo "========================="
@@ -76,6 +77,58 @@ if [ -f "$MARKETPLACE_MANIFEST" ]; then
   assert_contains "$CPM2_BLOCK" '"audit"'
 else
   test_fail "marketplace.json missing"
+fi
+
+# --- Library wrapper path (Epic 31-05 Story 1) ---
+
+test_start "Library audit-wrapper entries follow {nn}-library-audit-{slug}.md shape"
+if [ -d "$LIBRARY_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  WRAPPERS=("$LIBRARY_DIR"/*-library-audit-*.md)
+  if [ ${#WRAPPERS[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${WRAPPERS[@]}"; do
+      BASE=$(basename "$f")
+      if ! echo "$BASE" | grep -qE '^[0-9]+-library-audit-[a-z0-9-]+\.md$'; then
+        BAD="$BAD\n$BASE: not in {nn}-library-audit-{slug}.md shape"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+test_start "Library audit-wrapper slugs match a source audit document"
+if [ -d "$LIBRARY_DIR" ] && [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  WRAPPERS=("$LIBRARY_DIR"/*-library-audit-*.md)
+  if [ ${#WRAPPERS[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${WRAPPERS[@]}"; do
+      BASE=$(basename "$f")
+      SLUG=$(echo "$BASE" | sed -E 's/^[0-9]+-library-audit-(.*)\.md$/\1/')
+      MATCHES=("$AUDITS_DIR"/[0-9]*-audit-"$SLUG".md)
+      if [ ! -e "${MATCHES[0]}" ]; then
+        BAD="$BAD\n$BASE: no source audit found for slug '$SLUG'"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
 fi
 
 # --- Severity and effort scales (Epic 31-04 Story 4) ---

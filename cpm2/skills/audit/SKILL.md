@@ -364,7 +364,73 @@ When a count is zero, omit that scale value from the line — `Effort: S×4, M×
 
 ### Step 4: Pipeline Handoffs
 
-(populated by Epic 31-05 — final AskUserQuestion offering library / spec / quick / done; per-option behaviour; library wrapper entry creation.)
+After the deliverable is saved, present a single `AskUserQuestion` offering four ways to flow the findings into the rest of the cpm2 pipeline:
+
+> **Question**: "Audit complete. What next?"
+> **Options**:
+> - "Send findings to `/cpm2:library`" — wrap the audit as a library reference document so other cpm2 skills can pick it up via Library Check.
+> - "Promote priorities to `/cpm2:spec`" — invoke the spec skill on the audit document path so the Top 5 Priorities can become a structured spec.
+> - "Run quick wins through `/cpm2:quick`" — invoke the quick skill on the audit document path so the checklist can be processed item-by-item.
+> - "Done" — end the session; no downstream invocation.
+
+#### 4a. Library handoff
+
+When the user selects the library option:
+
+1. Use `AskUserQuestion` to collect **scope keywords** for the library entry. Offer the nine dimension names (architectural-decay, consistency-rot, type-debt, test-debt, dependency-debt, performance, error-observability, security, documentation-drift) plus a freeform option, with `multiSelect: true` so the user can pick the dimensions the audit's findings touch most heavily. The keyword `audit` is always added automatically.
+2. Compute the next library number using the shared **Numbering** procedure (active + archive across `docs/library/`).
+3. Write a wrapper entry at `docs/library/{nn}-library-audit-{slug}.md` where `{slug}` matches the source audit document's slug. The file's body references the audit document by relative path; the frontmatter records the scope keywords and a one-line description.
+
+**Frontmatter shape**:
+
+```yaml
+---
+title: Audit findings — <project name> (<YYYY-MM-DD>)
+description: Codebase audit findings with file:line citations across <N> dimensions.
+scope:
+  - audit
+  - <scope keyword>
+  - <scope keyword>
+source: docs/audits/{nn}-audit-{slug}.md
+---
+```
+
+This is the **single library wrapper entry per audit** approach (per Architecture Decision 6). One wrapper, one number, one entry — fragmentation by dimension is deferred.
+
+#### 4b. Spec handoff
+
+When the user selects the spec option, invoke the spec skill via the Skill tool, passing the audit document path as args:
+
+```
+Skill(skill: "cpm2:spec", args: "docs/audits/{nn}-audit-{slug}.md")
+```
+
+`/cpm2:spec` already accepts file-path `$ARGUMENTS` — the audit document is the contract.
+
+#### 4c. Quick handoff
+
+When the user selects the quick option, invoke the quick skill via the Skill tool, passing the audit document path as args:
+
+```
+Skill(skill: "cpm2:quick", args: "docs/audits/{nn}-audit-{slug}.md")
+```
+
+`/cpm2:quick` will read the audit, classify the request, and walk the quick wins checklist as the change description.
+
+#### 4d. Done
+
+When the user selects Done, end the session with no further skill invocation. The progress file (see State Management) is deleted.
+
+#### 4e. Scope hint disambiguation
+
+If the original `$ARGUMENTS` scope hint matches multiple plausible interpretations within the project, the disambiguation runs **before** orient — not at handoff time. Detect the ambiguity by globbing for matches across the project root:
+
+- `auth` matches both `src/auth/` and `tests/auth/` → ambiguous.
+- `billing` matches `app/billing/`, `lib/billing.ts`, and `docs/billing/` → ambiguous.
+
+When ambiguity is detected, present an `AskUserQuestion` listing the candidate interpretations (top 3 by file count) with a "Sweep all matches" fallback option. The chosen interpretation seeds orient-phase reads; "Sweep all matches" treats the union as the focus area.
+
+Disambiguation runs at most once per audit run. After the user picks, the resolved scope is recorded in the progress file under `**Scope (resolved)**:`.
 
 ## State Management
 
