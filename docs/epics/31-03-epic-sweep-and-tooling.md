@@ -7,7 +7,7 @@
 
 ## 9-dimension sweep procedure
 **Story**: 1
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 **Satisfies**: #10 (9-dimension sweep)
 
@@ -19,7 +19,9 @@
 ### Document 9-dimension sweep procedure
 **Task**: 1.1
 **Description**: Document in SKILL.md the sequential 9-dimension sweep with the exact dimension order, then for each dimension specify scope, signals to look for, and evidence to capture. Adapt material from the source skill (ksimback/tech-debt-skill) verbatim where appropriate. Covers both criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] Per-dimension three-bullet shape (Scope / Signals / Evidence) gave each dimension a predictable structure that's easy to scan and easy to extend. Reusable as the canonical shape for any dimensional sweep.
 
 ---
 

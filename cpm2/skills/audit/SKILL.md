@@ -101,9 +101,90 @@ Detect the project's stack(s) from the presence of well-known manifest files at 
 
 Stack detection results are recorded in the progress file under `**Stacks detected**:`.
 
+#### 1g. User-shaping question
+
+After orient is complete and before Step 2 (Sweep) begins, present a single `AskUserQuestion` to give the user one chance to shape where the sweep spends its attention:
+
+> **Question**: "Specific areas to focus on, or sweep all 9 dimensions evenly?"
+> **Options**: "Focus on a specific area (provide hint)" / "Sweep all 9 dimensions evenly (Recommended)"
+
+The user's response is recorded as a **focus hint** in the progress file. The hint shapes which files, modules, or dimensions receive deeper attention during the sweep — it does not change which dimensions are run.
+
+> **Non-negotiable**: the user response must NOT be used as license to skip any of the nine dimensions. Every dimension is swept on every run. A focus hint changes weight, not membership. If the user says "just focus on auth", the sweep still runs all nine dimensions across the whole codebase, but pays extra attention to authentication code while doing so.
+
+If a scope hint was supplied via `$ARGUMENTS`, the question is still asked — the hint can be confirmed or refined, but never used to skip dimensions.
+
 ### Step 2: Sweep
 
-(populated by Epic 31-03 — 9-dimension sweep, stack-specific tool execution, graceful tool degradation, run-time progress signalling, re-orientation on failure.)
+Sweep the codebase across nine dimensions of code health, in the documented order below. The order is fixed — each dimension builds on signals surfaced by earlier dimensions, and progress signalling depends on the sequence. Every run sweeps every dimension; the focus hint from Step 1g changes weight, never membership.
+
+**Dimension order**:
+
+1. Architectural decay
+2. Consistency rot
+3. Type & contract debt
+4. Test debt
+5. Dependency & config debt
+6. Performance & resource hygiene
+7. Error handling & observability
+8. Security hygiene
+9. Documentation drift
+
+#### 2a. Architectural decay
+
+- **Scope**: Module boundaries, layering rules, dependency direction, abstraction leaks. Look at the directory structure captured in 1a and the top-20 file rankings from 1c.
+- **Signals**: God modules, circular dependencies, layer violations (e.g. UI calling DB directly), shared utility files that have become a graveyard, "coordinator" or "manager" classes with sprawling responsibilities, modules that import from every other module.
+- **Evidence**: `file:line (symbol)` citations of boundary violations, dependency-graph cycles (when a tool surfaces them), and structural metrics drawn from manifest/config inspection. The intersection of "largest" and "most-modified" from 1c is a high-yield starting point.
+
+#### 2b. Consistency rot
+
+- **Scope**: Patterns that drift between files — naming conventions, error-handling shapes, return types, parameter ordering, formatting, idiomatic vs. ad-hoc usage of language features.
+- **Signals**: Two ways of doing the same thing within the same module, ad-hoc `if/else` where the rest of the code uses pattern matching / strategy / lookup tables, mixed naming (camelCase vs snake_case in the same language), inconsistent error envelopes, "ported" modules retaining their old idioms.
+- **Evidence**: Cite both the canonical pattern and the drifted instance, e.g. `src/users/handlers.ts:42 (createUser)` vs `src/billing/handlers.ts:118 (createInvoice)`, with a recommendation to align on the canonical shape.
+
+#### 2c. Type & contract debt
+
+- **Scope**: Type holes (`any`/`unknown`/missing annotations), unchecked casts, weak interfaces, stringly-typed APIs, runtime validators that don't match declared types, contract drift between producer and consumer (DB → ORM, API → client).
+- **Signals**: `any`/`mixed` peppered through hot paths, duplicate type definitions that have diverged, parsers that hide errors, optional fields that should be required (or vice versa), DTOs that don't match wire format.
+- **Evidence**: Cite each offender with `file:line (symbol)` and reference the contract on the other side (e.g. JSON schema, OpenAPI doc, ORM model) to prove the drift.
+
+#### 2d. Test debt
+
+- **Scope**: Coverage gaps, brittle tests, mocked-too-much tests, slow suites, flaky tests, test-only code paths in production, tests that re-implement the function under test.
+- **Signals**: Modules with no tests at all, integration tests that mock everything below the entry point, "TODO: test this" comments, suites that take >5 minutes for trivial change, tests that pass when the implementation is empty.
+- **Evidence**: Cite the test file (or the absence of one), the SUT it targets (or fails to), and the specific anti-pattern. Pull stack-tooling output (e.g. coverage reports) into "Open questions" if the tool is missing.
+
+#### 2e. Dependency & config debt
+
+- **Scope**: Outdated dependencies, transitive vulnerabilities, abandoned packages, conflicting version constraints, environment-specific config that's checked into the repo, secrets-in-config, missing config validation.
+- **Signals**: `npm audit` / `composer audit` / `pip-audit` / `cargo audit` / `govulncheck` advisories, packages last published >2 years ago and not flagged as "stable", multiple semver-incompatible versions of the same lib in the lockfile, `.env`-shaped files in git.
+- **Evidence**: Cite the manifest and lockfile entries; for advisories, cite the tool output verbatim under the finding's recommendation column. **Never quote actual secret values** — citation is the location only.
+
+#### 2f. Performance & resource hygiene
+
+- **Scope**: N+1 queries, sync work in async paths, unbounded loops, leaks (file handles, sockets, listeners), wasteful allocations, missing indexes, blocking the event loop.
+- **Signals**: Loops that fire DB queries inside, synchronous file I/O on hot paths, big-O complexity hidden behind innocuous-looking helpers, missing pagination, unbounded recursion.
+- **Evidence**: Cite the offending line and identify the pattern. Where stack tooling provides hot-path information (profiler output, slow-query logs), include the tool output as supplementary evidence.
+
+#### 2g. Error handling & observability
+
+- **Scope**: Swallowed exceptions, generic catch-alls, lack of logging, log spam, missing trace context, panic-paths in production, silent failures, error envelopes that lose information.
+- **Signals**: `catch { /* ignore */ }`, `except: pass`, log statements with no level/context, error-returns that callers don't check, `panic`/`die` in library code, missing structured logs around external calls.
+- **Evidence**: Cite each occurrence; group by class of failure (swallowed vs. logged-and-ignored vs. unhandled).
+
+#### 2h. Security hygiene
+
+- **Scope**: Authentication and authorisation gaps, input validation, SQL/command/template injection surfaces, secrets management, transport security, dependency vulnerabilities (overlap with 2e), CORS, rate limiting, audit logging.
+- **Signals**: Hand-rolled crypto, `eval` / `exec` / shell-out with user input, missing CSRF on state-changing routes, secrets read from env without validation, permissive CORS in production code, raw SQL string concatenation.
+- **Evidence**: Cite the location only. **Never paste actual secret values, tokens, or credentials into the deliverable, even if you find them in the codebase**. The finding describes the class of issue and points at the file:line; it does not echo the value.
+
+#### 2i. Documentation drift
+
+- **Scope**: README claims that no longer hold, code comments that contradict the code, API docs that describe deleted endpoints, internal docs (`docs/`) that reference old architecture, missing docs for newly added subsystems.
+- **Signals**: README setup steps that fail, comments saying "this returns X" when the code returns Y, OpenAPI/Swagger files diverging from handlers, architecture diagrams citing deleted services.
+- **Evidence**: Cite both sides of the drift — the doc location and the contradicting code location.
+
+For each dimension, capture findings with `file:line (symbol)` citations. The capture format feeds directly into the findings table in Step 3.
 
 ### Step 3: Deliverable Generation
 
