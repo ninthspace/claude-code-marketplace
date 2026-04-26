@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/31-spec-cpm2-audit-skill.md
 **Date**: 2026-04-25
-**Status**: Complete
+**Status**: Partial — Story 1 Complete; Story 2 Blocked (interactive runtime required)
 **Blocked by**: Epic 31-04-epic-deliverable-generation, Epic 31-05-epic-pipeline-handoffs
 
 ## Test harness for skill structural assertions
