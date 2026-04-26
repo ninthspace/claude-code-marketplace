@@ -14,6 +14,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 SKILL_FILE="$REPO_ROOT/cpm2/skills/audit/SKILL.md"
 PLUGIN_MANIFEST="$REPO_ROOT/cpm2/.claude-plugin/plugin.json"
 MARKETPLACE_MANIFEST="$REPO_ROOT/.claude-plugin/marketplace.json"
+AUDITS_DIR="$REPO_ROOT/docs/audits"
 
 echo "Testing: cpm2:audit skill"
 echo "========================="
@@ -75,6 +76,51 @@ if [ -f "$MARKETPLACE_MANIFEST" ]; then
   assert_contains "$CPM2_BLOCK" '"audit"'
 else
   test_fail "marketplace.json missing"
+fi
+
+# --- Commit SHA capture (Story 31-02 Story 1) ---
+
+test_start "SKILL.md documents the **Audited at** header field"
+if [ -f "$SKILL_FILE" ]; then
+  assert_contains "$(cat "$SKILL_FILE")" "**Audited at**:"
+else
+  test_fail "SKILL.md missing"
+fi
+
+test_start "Each audit deliverable header has a 40-char hex SHA after **Audited at**:"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    # Vacuously pass — skill not yet run on this repo
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      LINE=$(grep -m1 '^\*\*Audited at\*\*:' "$f")
+      if [ -z "$LINE" ]; then
+        BAD="$BAD\n$f: missing **Audited at** line"
+        continue
+      fi
+      VALUE=$(echo "$LINE" | sed -E 's/^\*\*Audited at\*\*:[[:space:]]*//')
+      # Allow either a 40-char hex SHA or the documented git-unavailable fallback
+      if echo "$VALUE" | grep -qE '^[0-9a-f]{40}$'; then
+        :
+      elif [ "$VALUE" = "not a git repository" ]; then
+        :
+      else
+        BAD="$BAD\n$f: '$VALUE' is neither a 40-char hex SHA nor 'not a git repository'"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  # No audits dir yet — vacuously pass
+  test_pass
 fi
 
 test_summary

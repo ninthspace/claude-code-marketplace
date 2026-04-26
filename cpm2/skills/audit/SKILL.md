@@ -36,7 +36,45 @@ Follow the shared **Library Check** procedure with scope keyword `audit`. Deep-r
 
 ### Step 1: Orient
 
-(populated by Epic 31-02 — orient phase: README, package manifests, directory structure, git history, top-20 file rankings, commit SHA capture, passive cpm2 artifact read, stack detection, post-orient user-shaping question.)
+Build a baseline understanding of the codebase before any sweep work begins. Orient is reads-only — no findings, no recommendations, no skipping. The output of orient is mental context for Step 2 (Sweep) plus a small set of header values for the deliverable.
+
+#### 1a. Codebase reads
+
+Read the project's surface artifacts so the sweep has a project-shaped baseline rather than starting from a blank slate.
+
+- **README**: Read `README.md`, `README.rst`, or `README` (whichever is present at the project root). If multiple are present, prefer the markdown variant. If none is present, note "No README" and continue.
+- **Package manifests**: Read each manifest detected during stack detection (Step 1d). For example, when `package.json` is present read it; when `composer.json` is present read it; same for `pyproject.toml` / `requirements.txt` / `setup.py`, `Cargo.toml`, `go.mod`. Multi-stack projects read every applicable manifest.
+- **Top-level directory structure**: List the project root (`ls -la`) so the sweep knows which directories the project organises code into. Do not recursively descend — the sweep handles deep reads when a finding warrants them.
+
+#### 1b. Git history
+
+Capture two views of the project's history so dimensions like architectural decay, consistency rot, and documentation drift have temporal context. Run both invocations during orient:
+
+- **Recent commit summary**: `git log --oneline -200` — gives the shape of activity over the last ~200 commits (cadence, recurring themes, refactor pulses).
+- **File-change activity**: `git log --stat --since="6 months ago"` — surfaces which files have churned recently and by how much. This feeds the file ranking in 1c.
+
+If `git` is unavailable or the project is not a git repository, record `Tool: git — not available` under "Open questions" in the deliverable and continue without git-derived signals (graceful degradation rule).
+
+#### 1c. Top-20 file rankings
+
+Identify two ranked lists from the codebase. The intersection is where debt usually hides — large files that change often are the prime suspects for architectural decay, consistency rot, and test debt.
+
+- **Top-20 largest files (by line count)**: Walk the project tree, exclude vendored/generated directories that the project's stack-specific conventions identify (e.g. `node_modules/`, `vendor/`, `target/`, `dist/`, `build/`, `.venv/`, generated migration directories). Rank the remaining files by line count and take the top 20.
+- **Top-20 most-modified files (past 6 months)**: From the `git log --stat --since="6 months ago"` output captured in 1b, count distinct file mentions per file and take the top 20.
+
+Compute the intersection of the two lists explicitly. Files appearing in both rankings are noted as priority targets for the sweep.
+
+#### 1d. Commit SHA capture
+
+Pin the audit to a specific commit so findings are reproducible against a known state of the repository. Run `git rev-parse HEAD` during orient and record the resulting 40-character SHA.
+
+The SHA appears in the deliverable header verbatim:
+
+```
+**Audited at**: 0123456789abcdef0123456789abcdef01234567
+```
+
+If git is unavailable, record `**Audited at**: not a git repository` in the header and add `Tool: git — not available` under "Open questions".
 
 ### Step 2: Sweep
 
