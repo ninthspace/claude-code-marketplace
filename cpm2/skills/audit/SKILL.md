@@ -82,6 +82,25 @@ If the project uses cpm2, read `docs/specifications/`, `docs/epics/`, `docs/brie
 
 > **Non-negotiable**: cpm2 artifact contents must NOT be used to skip any of the nine dimensions, shortcut a finding, or otherwise bias the independent sweep. The audit's value is independent observation. Existing artifacts are read for context only — never to deduce that a dimension "is already covered" or that a finding "has already been planned for". Every dimension is swept on its own merits.
 
+#### 1f. Stack detection
+
+Detect the project's stack(s) from the presence of well-known manifest files at the project root. Detection is cheap, deterministic, and runs before any tooling is invoked.
+
+| Manifest present | Stack detected |
+|---|---|
+| `package.json` | TS/JS |
+| `composer.json` | PHP |
+| `composer.json` **and** `artisan` | Laravel (overlay — PHP detection remains active) |
+| `pyproject.toml` *or* `requirements.txt` *or* `setup.py` | Python |
+| `Cargo.toml` | Rust |
+| `go.mod` | Go |
+
+**Multi-stack projects**: every applicable stack is detected and contributes its tooling to Step 2 (Sweep). A polyglot repo with `package.json` + `composer.json` + `artisan` runs the TS/JS, PHP, and Laravel toolchains during the sweep.
+
+**Laravel overlay rule**: when `composer.json` and `artisan` are both present, Laravel is detected **in addition to** PHP — never instead of. Laravel-specific tools (e.g. `larastan`, `pint`, `php artisan about`) run alongside the PHP toolchain (e.g. `composer audit`, `phpstan`/`psalm`). The overlay never replaces; it adds.
+
+Stack detection results are recorded in the progress file under `**Stacks detected**:`.
+
 ### Step 2: Sweep
 
 (populated by Epic 31-03 — 9-dimension sweep, stack-specific tool execution, graceful tool degradation, run-time progress signalling, re-orientation on failure.)

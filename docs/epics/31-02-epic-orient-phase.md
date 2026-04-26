@@ -71,7 +71,7 @@
 
 ## Stack detection
 **Story**: 3
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 **Satisfies**: #6 (stack detection)
 
@@ -88,7 +88,9 @@
 ### Document stack detection table
 **Task**: 3.1
 **Description**: Document the manifest-presence detection table in SKILL.md: file → stack mapping, the Laravel-as-PHP-overlay rule, and explicit multi-stack support (every applicable stack contributes its tooling). Covers all detection criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] Markdown table for the manifest → stack mapping is the right shape — concise, scannable, and the Laravel overlay rule reads naturally as a callout below. Architecture decision in the spec was already specific enough that documentation was a one-pass write.
 
 ---
 
