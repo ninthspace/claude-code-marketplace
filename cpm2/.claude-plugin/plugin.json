@@ -1,7 +1,7 @@
 {
   "name": "cpm2",
   "description": "Claude Planning Method v2 — facilitated planning with multi-perspective party mode for Claude Code Opus 4.7+. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "author": {
     "name": "Chris Aves"
   },
@@ -29,6 +29,7 @@
     "reference",
     "artifacts",
     "review",
-    "adversarial"
+    "adversarial",
+    "audit"
   ]
 }

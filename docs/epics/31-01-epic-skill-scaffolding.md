@@ -45,7 +45,7 @@
 
 ## Bump plugin version and register skill
 **Story**: 2
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 **Satisfies**: #19 (plugin manifest registration)
 
@@ -58,16 +58,18 @@
 ### Bump version in cpm2/.claude-plugin/plugin.json
 **Task**: 2.1
 **Description**: Update the `version` field from `0.0.2` to `0.1.0`. Add `audit` to the `keywords` array. Covers the plugin.json criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Bump version in .claude-plugin/marketplace.json
 **Task**: 2.2
 **Description**: Locate the `cpm2` entry in the root `marketplace.json` `plugins` array; update its `version` from `0.0.2` to `0.1.0`; add `audit` to its `keywords` array. Covers the marketplace.json criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for plugin version bump
 **Task**: 2.3
 **Description**: Write automated tests asserting both manifests have `version: "0.1.0"` for the cpm2 plugin and that both `keywords` arrays include `"audit"`.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Pattern worth reusing] `awk -F'"' '/"key"[[:space:]]*:/ {print $4; exit}'` cleanly extracts JSON string values in BSD-compatible bash; reusable wherever cpm2 hook tests need to assert on manifest fields without bringing in `jq`.
 
 ---
