@@ -51,7 +51,7 @@
 
 ## Passive cpm2 artifact read (no bias)
 **Story**: 2
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 **Satisfies**: #4 (passive cpm2 artifact read)
 
@@ -63,7 +63,9 @@
 ### Document passive cpm2 artifact read
 **Task**: 2.1
 **Description**: Document the read of `docs/specifications/`, `docs/epics/`, `docs/briefs/`, `docs/architecture/` as passive context only. Include the must-NOT clause prominently as a non-negotiable rule in SKILL.md — passive reads must not bias the independent sweep. Covers both criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] Single-task documentation story — the must-NOT clause sits naturally as a Non-negotiable callout below the read description and reuses the same "non-negotiable" framing as the citation/no-rewrites rules in the Guidelines section. Predictable.
 
 ---
 

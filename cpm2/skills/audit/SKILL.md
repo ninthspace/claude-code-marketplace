@@ -76,6 +76,12 @@ The SHA appears in the deliverable header verbatim:
 
 If git is unavailable, record `**Audited at**: not a git repository` in the header and add `Tool: git — not available` under "Open questions".
 
+#### 1e. Passive cpm2 artifact read
+
+If the project uses cpm2, read `docs/specifications/`, `docs/epics/`, `docs/briefs/`, and `docs/architecture/` (whichever exist) and surface them to the user as context — list the files found and brief descriptions where useful. The user should know the audit has seen the existing planning material.
+
+> **Non-negotiable**: cpm2 artifact contents must NOT be used to skip any of the nine dimensions, shortcut a finding, or otherwise bias the independent sweep. The audit's value is independent observation. Existing artifacts are read for context only — never to deduce that a dimension "is already covered" or that a finding "has already been planned for". Every dimension is swept on its own merits.
+
 ### Step 2: Sweep
 
 (populated by Epic 31-03 — 9-dimension sweep, stack-specific tool execution, graceful tool degradation, run-time progress signalling, re-orientation on failure.)
