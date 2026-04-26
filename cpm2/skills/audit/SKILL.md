@@ -186,6 +186,42 @@ Sweep the codebase across nine dimensions of code health, in the documented orde
 
 For each dimension, capture findings with `file:line (symbol)` citations. The capture format feeds directly into the findings table in Step 3.
 
+#### 2j. Stack-specific tool execution
+
+For each stack detected in 1f, invoke at least one tool from the list below and feed its output into the relevant dimensions. The toolset is recommended, not exhaustive — projects with stronger linting setups can add their own.
+
+| Stack | Tools (invoke at least one) | Feeds dimensions |
+|---|---|---|
+| TS/JS | `npm audit`, `npx knip`, `npx madge --circular`, `npx depcheck`, `tsc --noEmit` | 2a, 2c, 2e |
+| PHP | `composer audit`, `composer outdated`, `phpstan` *or* `psalm` | 2c, 2e |
+| Laravel (overlay) | `larastan`, `pint`, `php artisan about` | 2a, 2b, 2c |
+| Python | `pip-audit`, `ruff check`, `vulture`, `pydeps --show-cycles`, `mypy --strict` | 2a, 2b, 2c, 2e |
+| Rust | `cargo audit`, `cargo udeps`, `cargo machete`, `cargo clippy -- -W clippy::pedantic` | 2b, 2c, 2e |
+| Go | `govulncheck`, `go vet`, `staticcheck`, `golangci-lint run` | 2b, 2c, 2e |
+
+Multi-stack projects invoke tooling from every detected stack. Laravel runs **in addition to** PHP — its tools layer onto the PHP toolset, never replace it.
+
+Tool output is parsed structurally where possible: vulnerability counts, circular-dependency lists, type-error counts, lint-rule violations. Each parsed output feeds the dimension(s) it most naturally matches and contributes to findings table rows in Step 3 with `file:line (symbol)` citations where the tool surfaces them.
+
+#### 2k. Graceful tool degradation
+
+Stack tools are best-effort. Any of these outcomes count as a failure:
+
+- The binary is missing (e.g. `composer` not installed).
+- The tool exits non-zero in a way that's not "found findings" (e.g. parse error, internal crash).
+- The tool times out (target: 60s per tool, project-tunable).
+- The output is unparseable.
+
+For each failure, add a single line to the deliverable's "Open questions" section in the form:
+
+```
+Tool: <name> — <reason>
+```
+
+For example: `Tool: phpstan — binary not found`, `Tool: cargo audit — exited 124 (timeout)`.
+
+> **Non-negotiable**: a tool failure must NOT abort the audit. The sweep continues to the next dimension. The audit always produces a complete deliverable; tool gaps live in "Open questions", not in the absence of an audit.
+
 ### Step 3: Deliverable Generation
 
 (populated by Epic 31-04 — numbered output via shared Numbering, deliverable structure, citation format, severity & effort scales, no-rewrites/no-padding rules, scoped audit consistency, effort aggregates.)

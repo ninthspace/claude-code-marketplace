@@ -27,7 +27,7 @@
 
 ## Stack-specific tool execution + graceful degradation
 **Story**: 2
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 1
 **Satisfies**: #7 (stack-specific tooling), #8 (graceful tool degradation)
 
@@ -45,12 +45,14 @@
 ### Document stack-tool invocation table
 **Task**: 2.1
 **Description**: Document the per-stack tool list in SKILL.md (TS/JS, PHP, Laravel, Python, Rust, Go) and how each tool's output feeds the relevant audit dimensions. Covers the per-stack invocation criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Document graceful tool degradation rule
 **Task**: 2.2
 **Description**: Document the rule that any tool failure (missing binary, non-zero exit, timeout, unparseable output) is recorded as `Tool: <name> — <reason>` in the deliverable's "Open questions" section and the audit continues without aborting. Include the must-NOT clause prominently as a non-negotiable. Covers the degradation criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] The tool table maps cleanly to dimensions via a "Feeds dimensions" column, which keeps the link between tooling and findings explicit without duplicating dimension descriptions. The 60s timeout default is project-tunable — flagged in case projects need to override.
 
 ---
 
