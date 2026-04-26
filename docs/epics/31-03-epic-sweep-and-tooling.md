@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/31-spec-cpm2-audit-skill.md
 **Date**: 2026-04-25
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Epic 31-02-epic-orient-phase
 
 ## 9-dimension sweep procedure
@@ -58,7 +58,7 @@
 
 ## Run-time progress signalling
 **Story**: 3
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 1
 **Satisfies**: #23 (run-time progress signalling — should-have)
 
@@ -69,13 +69,15 @@
 ### Document run-time progress signal format
 **Task**: 3.1
 **Description**: Document the per-dimension transition message format `Sweeping dimension N/9: <name>...` in SKILL.md as part of the sweep orchestration section. Covers the sole criterion.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] One-line transition format `Sweeping dimension N/9: <name>...` is the right shape — visible heartbeat without polluting the deliverable. Status line, not a finding.
 
 ---
 
 ## Re-orientation on failure
 **Story**: 4
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 2
 **Satisfies**: #21 (re-orientation on failure)
 
@@ -87,6 +89,21 @@
 ### Document re-orientation on failure protocol
 **Task**: 4.1
 **Description**: Document in SKILL.md the protocol for handling late-breaking findings that invalidate earlier recommendations: detect the conflict, update the recommendation, note the conflict in "Open questions". Cite a representative example (e.g. `composer audit` flagging a CVE in a dep that was about to be recommended). Covers both criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Pattern worth reusing] "Update the recommendation, note the conflict in Open Questions" is a clean two-step pattern for handling late-breaking evidence that invalidates earlier conclusions. Reusable wherever a multi-pass process generates draft outputs that may be revised by later passes.
 
 ---
+
+## Lessons
+
+### Smooth Deliveries
+
+- Story 1: Per-dimension three-bullet shape (Scope / Signals / Evidence) gave each dimension a predictable structure that's easy to scan and easy to extend.
+- Story 2: Tool table maps cleanly to dimensions via a "Feeds dimensions" column. The 60s timeout default is project-tunable.
+- Story 3: One-line transition format `Sweeping dimension N/9: <name>...` is the right shape — visible heartbeat without polluting the deliverable.
+
+### Patterns Worth Reusing
+
+- Story 1: Three-bullet (Scope / Signals / Evidence) shape per dimension — canonical structure for any dimensional sweep.
+- Story 4: "Update the recommendation, note the conflict in Open Questions" — clean two-step pattern for handling late-breaking evidence that invalidates earlier conclusions.

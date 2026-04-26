@@ -222,6 +222,25 @@ For example: `Tool: phpstan — binary not found`, `Tool: cargo audit — exited
 
 > **Non-negotiable**: a tool failure must NOT abort the audit. The sweep continues to the next dimension. The audit always produces a complete deliverable; tool gaps live in "Open questions", not in the absence of an audit.
 
+#### 2l. Run-time progress signalling
+
+At the start of each of the nine dimensions, emit a single transition message in the form:
+
+```
+Sweeping dimension N/9: <name>...
+```
+
+For example: `Sweeping dimension 1/9: architectural decay...`, `Sweeping dimension 5/9: dependency & config debt...`. This gives the user a visible heartbeat across what can be a multi-minute sweep. The message is a status line, not a finding — it does not appear in the deliverable.
+
+#### 2m. Re-orientation on failure
+
+When a stack tool surfaces a finding that invalidates a recommendation already drafted earlier in the same run — for example `composer audit` flagging a CVE in a package the architectural-decay dimension was about to recommend extracting a helper into — re-orient on the spot:
+
+1. **Update the earlier recommendation** to reflect the new evidence. The drafted finding's recommendation column is rewritten so the deliverable doesn't ship contradictory advice.
+2. **Note the conflict** in the deliverable's "Open questions" section in the form: `Conflict: <dimension X recommendation> superseded by <dimension Y finding>`. This makes the change transparent to the reader.
+
+Re-orientation runs once per conflict; do not loop. If a third dimension surfaces evidence that conflicts with both the original and the revised recommendation, the open-question entry is amended, not duplicated.
+
 ### Step 3: Deliverable Generation
 
 (populated by Epic 31-04 — numbered output via shared Numbering, deliverable structure, citation format, severity & effort scales, no-rewrites/no-padding rules, scoped audit consistency, effort aggregates.)
