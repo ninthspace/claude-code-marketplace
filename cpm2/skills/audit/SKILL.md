@@ -289,6 +289,79 @@ The findings table uses exactly these column headers, in this order:
 - **Description**: one sentence describing the problem.
 - **Recommendation**: one to three sentences scoping the change (no rewrites — see 3e).
 
+#### 3c. Citation format
+
+Every concrete finding cites a location in `file:line (symbol)` format. The `(symbol)` portion is optional when the location does not correspond to a named symbol (e.g. config files, top-level imports). Examples across stacks:
+
+| Stack | Citation example |
+|---|---|
+| TS/JS | `src/auth/login.ts:42 (authenticate)` |
+| PHP | `app/Http/Controllers/UserController.php:87 (store)` |
+| Python | `app/services/billing.py:124 (calculate_invoice)` |
+| Rust | `src/parser/lexer.rs:201 (Lexer::next_token)` |
+| Go | `internal/server/handlers.go:53 (HandleLogin)` |
+| Config | `composer.json:14` (no symbol) |
+
+> **Non-negotiable**: citations must NOT quote actual secret values, tokens, or credentials, even when the finding is about a hard-coded secret in the codebase. The citation is the location only. A finding like "API key checked into source" has the citation `src/config/keys.ts:11` and a description that says a hard-coded secret was found — it does not include the secret's value. This rule is absolute.
+
+#### 3d. Severity and effort scales
+
+Severity uses **Critical / High / Medium / Low** — exactly these four values, exactly this casing.
+
+- **Critical**: actively harmful in production (data loss, security exposure, runtime crashes). Block the next deploy.
+- **High**: notable risk or developer-velocity drag. Address in current cycle.
+- **Medium**: legitimate debt with bounded impact. Address opportunistically.
+- **Low**: tidy-up. Doesn't materially affect anyone today, but the citation captures it for the record.
+
+Effort uses **S / M / L** — exactly these three values, exactly this casing.
+
+- **S** (Small): under an hour for one engineer who knows the area. Quick-wins material.
+- **M** (Medium): one to a few days. Within a single sprint.
+- **L** (Large): more than a sprint, or touches multiple modules / requires coordinated changes.
+
+Pick the value that fits the **specific recommendation** as written, not the size of the original problem. A High-severity issue can have an S-effort recommendation if the fix is a one-line change.
+
+#### 3e. No-rewrites rule
+
+Recommendations describe **scoped changes**: which file, which symbol, what to change, and what to change it to. Acceptable phrasing patterns:
+
+- "Extract `<symbol>` from `<file>` into `<new-file>` and inject it into `<consumer>`."
+- "Replace the manual loop in `<file>:<line>` with a `Map.entries()` walk to remove the index bookkeeping."
+- "Add a JSON schema validator at the boundary in `<file>:<line>`; let the existing branches handle invalid shapes."
+
+> **Non-negotiable**: recommendations must NOT use the phrases "rewrite", "replace entirely", "rebuild", "ground-up rewrite", or any equivalent language that implies wholesale module/file/system replacement. The audit's job is to surface fixable debt, not to license large rewrites. If a finding genuinely warrants a rewrite, that's a discussion for `/cpm2:spec` and `/cpm2:architect` — the audit document records the symptom, not the rewrite recommendation.
+
+#### 3f. No-padding rule
+
+Empty dimension sections are **omitted entirely** from the deliverable. Do not insert "Nothing material", "N/A — no findings", "Empty section", or any other placeholder content for dimensions that produced no findings. The findings table simply contains no rows for that category, and no narrative is added.
+
+> **Non-negotiable**: the deliverable must NOT contain "Nothing material" placeholders or filler content for empty categories. Padding signals to the reader that the audit was box-ticking; absence signals confidence. Trust the reader to notice an absent category.
+
+This rule applies whether the absence is because nothing was found (full-sweep audit, dimension came up clean) or because the dimension was scope-shaped out (Step 3g). The deliverable shape is the same — empty categories simply don't appear.
+
+#### 3g. Scoped audit consistency
+
+When a scope hint is provided (via `$ARGUMENTS` or the post-orient question in 1g), the deliverable's structural shape stays identical to a full-sweep deliverable: same header section, same seven body sections, same findings table columns. Only two things differ:
+
+1. The header records `**Scope**: <hint>` (e.g. `**Scope**: src/auth`) instead of `**Scope**: full sweep`.
+2. Dimensions outside the hint that produced no findings are omitted from the findings table under the no-padding rule (3f).
+
+The "Things that look bad but are actually fine" section (3a §6) and the "Open questions" section remain present even on scoped audits — the non-negotiable on §6 applies regardless of scope.
+
+A scoped audit and a full-sweep audit on the same project at the same SHA must be readable side-by-side without structural reformatting. A reader who diffs them sees the same outline; the difference is in row count and section length, not in section shape.
+
+#### 3h. Effort aggregates
+
+The executive summary's last bulleted line summarises the total effort across all findings, in the form:
+
+```
+Effort: S×<count>, M×<count>, L×<count>
+```
+
+For example: `Effort: S×12, M×7, L×3`. The `×` is a multiplication sign (U+00D7), not a lowercase `x`. Each count equals the number of findings table rows whose Effort cell equals the corresponding scale value.
+
+When a count is zero, omit that scale value from the line — `Effort: S×4, M×2` rather than `Effort: S×4, M×2, L×0`.
+
 ### Step 4: Pipeline Handoffs
 
 (populated by Epic 31-05 — final AskUserQuestion offering library / spec / quick / done; per-option behaviour; library wrapper entry creation.)

@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/31-spec-cpm2-audit-skill.md
 **Date**: 2026-04-25
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Epic 31-03-epic-sweep-and-tooling
 
 ## Numbered output via shared Numbering
@@ -59,7 +59,7 @@
 
 ## Citation format
 **Story**: 3
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 2
 **Satisfies**: #11 (citation format)
 
@@ -71,18 +71,18 @@
 ### Document citation format
 **Task**: 3.1
 **Description**: Document the `file:line (symbol)` citation format in SKILL.md with multiple examples spanning languages (TS, PHP, Python, Rust, Go). Document the must-NOT-quote-secrets rule prominently as a non-negotiable. Covers both criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for citation format
 **Task**: 3.2
 **Description**: Write automated tests asserting that every row in the findings table's Citation column matches the regex `^[^\s:]+:\d+( \([^)]+\))?$` and contains no obvious secret patterns (e.g. high-entropy strings, common API key prefixes).
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Severity and effort scales
 **Story**: 4
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 2
 **Satisfies**: #14 (severity and effort scales)
 
@@ -94,18 +94,18 @@
 ### Document severity and effort scales
 **Task**: 4.1
 **Description**: Document the severity scale (Critical/High/Medium/Low) and effort scale (S/M/L) in SKILL.md with brief calibration guidance. Covers both criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for scale values
 **Task**: 4.2
 **Description**: Write automated tests asserting that every row in the findings table has a Severity value drawn from the set {Critical, High, Medium, Low} and an Effort value from {S, M, L}.
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## No-rewrites and no-padding rules
 **Story**: 5
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 2
 **Satisfies**: #15 (no-rewrites rule), #16 (no-padding rule)
 
@@ -119,23 +119,23 @@
 ### Document no-rewrites rule
 **Task**: 5.1
 **Description**: Document the no-rewrites rule in SKILL.md with examples of acceptable scoped recommendations and counter-examples (forbidden full-rewrite phrasings). Mark as a non-negotiable. Covers the no-rewrites criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Document no-padding rule
 **Task**: 5.2
 **Description**: Document the no-padding rule in SKILL.md: empty dimension sections are omitted from the deliverable rather than padded with placeholder content. Include the must-NOT-contain-"Nothing material" clause prominently. Covers the no-padding criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for no-padding placeholder absence
 **Task**: 5.3
 **Description**: Write automated tests asserting that audit documents do not contain the string "Nothing material" or other padding indicators (e.g. "N/A — no findings", "Empty section").
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Scoped audit consistency
 **Story**: 6
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 2
 **Satisfies**: #17 (scoped audit consistency)
 
@@ -148,18 +148,18 @@
 ### Document scoped audit handling
 **Task**: 6.1
 **Description**: Document in SKILL.md how scope-hint runs are handled: declared scope recorded in header, out-of-scope dimensions omitted under the no-padding rule, deliverable structure preserved. Covers all three criteria.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for scoped audit consistency
 **Task**: 6.2
 **Description**: Write automated tests asserting that scoped audit deliverables contain `**Scope**: <hint>` in the header and that the section structure (executive summary, mental model, findings, top-5, quick wins, "looks bad but fine", open questions) is identical to full-sweep deliverables.
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Effort aggregates in executive summary
 **Story**: 7
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 4
 **Satisfies**: #20 (effort aggregates)
 
@@ -170,11 +170,30 @@
 ### Document effort aggregates format
 **Task**: 7.1
 **Description**: Document the effort aggregates line in SKILL.md as part of the executive summary specification. Format: `Effort: S×<count>, M×<count>, L×<count>`. Covers the sole criterion.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for effort aggregates
 **Task**: 7.2
 **Description**: Write automated tests asserting that the executive summary contains a line matching the pattern `Effort: S×\d+, M×\d+, L×\d+` and that the counts equal the actual S/M/L counts in the findings table.
-**Status**: Pending
+**Status**: Complete
 
 ---
+
+## Lessons
+
+### Smooth Deliveries
+
+- Story 1: Numbered output via shared procedure was a one-paragraph reference; the test pattern (vacuous-pass when no audits exist + format check when they do) reused the orient-phase test scaffolding.
+- Story 2: Single multi-section edit covered all 8 [unit] structural criteria; tests iterate over a single REQUIRED_SECTIONS array, easy to extend.
+- Story 3: Citation format documentation and tests followed the same shape as scale/effort tests — extract column N, compare against allowed values.
+- Stories 4–7: Stories 4 (severity/effort scales), 5 (no-rewrites/no-padding), 6 (scoped consistency), 7 (effort aggregates) all share the same test shape (extract findings row column, validate value set or pattern). Once the `extract_findings_rows` awk helper was in place, each subsequent test was 10–20 lines.
+
+### Patterns Worth Reusing
+
+- `extract_findings_rows()` awk helper that pulls F-prefixed rows from the findings table is the canonical access point for any test that validates findings-row contents — severity, effort, citation, and any future column.
+- "Vacuous-pass when no deliverable exists, per-file format check when they do" pattern consistently produces tests that pass clean today and grow assertions automatically as the skill is exercised.
+- Per-task three-bullet shape (Description, Format, Examples) for SKILL.md sub-sections kept the prose scannable across nine sub-sections without requiring artificial section breaks.
+
+### Codebase Discoveries
+
+- The `awk -F'|'` plus `gsub(/^ +| +$/, "", $N)` idiom for extracting a Nth-pipe-delimited table cell is reusable across all column-validation tests; combine it with `extract_findings_rows()` to focus only on the rows that contain findings.

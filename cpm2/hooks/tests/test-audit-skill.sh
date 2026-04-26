@@ -78,6 +78,202 @@ else
   test_fail "marketplace.json missing"
 fi
 
+# --- Severity and effort scales (Epic 31-04 Story 4) ---
+
+test_start "Audit findings rows use Severity in {Critical, High, Medium, Low}"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      while IFS= read -r row; do
+        SEVERITY=$(echo "$row" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')
+        [ -z "$SEVERITY" ] && continue
+        case "$SEVERITY" in
+          Critical|High|Medium|Low) ;;
+          *) BAD="$BAD\n$(basename "$f"): bad severity '$SEVERITY'" ;;
+        esac
+      done < <(extract_findings_rows "$f")
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+test_start "Audit findings rows use Effort in {S, M, L}"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      while IFS= read -r row; do
+        EFFORT=$(echo "$row" | awk -F'|' '{gsub(/^ +| +$/, "", $6); print $6}')
+        [ -z "$EFFORT" ] && continue
+        case "$EFFORT" in
+          S|M|L) ;;
+          *) BAD="$BAD\n$(basename "$f"): bad effort '$EFFORT'" ;;
+        esac
+      done < <(extract_findings_rows "$f")
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+# --- No-padding rule (Epic 31-04 Story 5) ---
+
+test_start "Audit deliverables do not contain padding placeholders"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      if grep -qiE '(Nothing material|N/A — no findings|Empty section|No findings to report)' "$f"; then
+        BAD="$BAD\n$(basename "$f"): contains padding placeholder"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+# --- Scoped audit consistency (Epic 31-04 Story 6) ---
+
+test_start "Audit deliverables record **Scope** in the header"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      grep -qE '^\*\*Scope\*\*:' "$f" || BAD="$BAD\n$(basename "$f"): missing **Scope** header"
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+# --- Effort aggregates (Epic 31-04 Story 7) ---
+
+test_start "Audit executive summaries include an effort aggregate line"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      # Extract the executive-summary section (between ## Executive Summary and the next ##)
+      EXEC=$(awk '/^## Executive Summary/{flag=1; next} /^## /{flag=0} flag' "$f")
+      # Allow variants like "Effort: S×12" or "Effort: S×12, M×7" or with all three
+      if ! echo "$EXEC" | grep -qE 'Effort: S×[0-9]+(, M×[0-9]+)?(, L×[0-9]+)?'; then
+        BAD="$BAD\n$(basename "$f"): executive summary missing 'Effort: …' aggregate line"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+# --- Citation format (Epic 31-04 Story 3) ---
+
+extract_findings_rows() {
+  awk '
+    /^\| ID \| Category \| Citation \| Severity \| Effort \| Description \| Recommendation \|/ {in_table=1; getline; next}
+    in_table && /^$/ {in_table=0}
+    in_table && /^\| F-/ {print}
+  ' "$1"
+}
+
+test_start "Audit findings rows have citations matching file:line[ (symbol)]"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      while IFS= read -r row; do
+        # Citation is the third pipe-delimited cell (after ID, Category)
+        CITATION=$(echo "$row" | awk -F'|' '{gsub(/^ +| +$/, "", $4); print $4}')
+        [ -z "$CITATION" ] && continue
+        if ! echo "$CITATION" | grep -qE '^`?[^[:space:]:]+:[0-9]+( \([^)]+\))?`?$'; then
+          BAD="$BAD\n$(basename "$f"): bad citation '$CITATION'"
+        fi
+      done < <(extract_findings_rows "$f")
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
+test_start "Audit findings rows do not contain obvious secret patterns"
+if [ -d "$AUDITS_DIR" ]; then
+  shopt -s nullglob 2>/dev/null
+  AUDIT_FILES=("$AUDITS_DIR"/*-audit-*.md)
+  if [ ${#AUDIT_FILES[@]} -eq 0 ]; then
+    test_pass
+  else
+    BAD=""
+    for f in "${AUDIT_FILES[@]}"; do
+      # Check finding rows for common secret prefixes that would indicate a quoted value
+      if grep -qE '(AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9-]{10,})' "$f"; then
+        BAD="$BAD\n$(basename "$f"): contains a recognised secret token pattern"
+      fi
+    done
+    if [ -z "$BAD" ]; then
+      test_pass
+    else
+      test_fail "$(printf '%b' "$BAD")"
+    fi
+  fi
+else
+  test_pass
+fi
+
 # --- Deliverable structure (Epic 31-04 Story 2) ---
 
 REQUIRED_SECTIONS=(
