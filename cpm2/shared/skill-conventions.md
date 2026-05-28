@@ -191,18 +191,24 @@ Map each CPM skill to a reasoning effort level. Skills that reference this docum
 | discover | xhigh | Facilitated problem discovery across 6 phases with perspectives |
 | pivot | high | Surgical amendment with cascade analysis and downstream propagation |
 | quick | high | Scoped implementation with verification, but bypasses full pipeline ceremony |
-| library | medium | Document intake and front-matter generation; consolidation is bounded |
-| archive | medium | File relocation with user confirmation |
-| retro | medium | Observation synthesis from structured epic doc fields |
-| present | medium | Artifact transformation with audience selection |
-| status | medium | Scan and report with no implementation |
-| templates | medium | List and scaffold with no analysis |
+| library | medium | Bounded document intake and front-matter generation; 4.8 adheres to medium strictly, which fits the well-scoped transformation — no under-thinking risk |
+| archive | medium | Mechanical file relocation with user confirmation; 4.8's strict medium adherence is sufficient for work that needs no deep reasoning |
+| retro | medium | Synthesis over already-structured epic doc fields; categorisation is bounded, so medium holds under 4.8's strict adherence |
+| present | medium | Artifact transformation with audience selection; scoped enough that 4.8's strict medium adherence carries no under-thinking risk |
+| status | medium | Scan-and-report with no implementation; 4.8 adheres to medium strictly, adequate for read-and-summarise work |
+| templates | medium | List-and-scaffold with no analysis; 4.8's strict medium adherence is more than sufficient |
+
+> **4.8 effort note**: On Opus 4.8, extended thinking is off by default and the model adheres to the chosen effort level strictly — it will not silently over-think a `low`/`medium` task to compensate. Pair the reasoning-heavy skills at `xhigh`/`max` with a large output budget (~64k tokens) so there is room for the reasoning the level implies. The medium-tier rationales above are deliberate floors: each task is bounded enough that strict adherence to `medium` carries no under-thinking risk.
 
 ## Subagent Delegation
 
 When to use subagents (the Agent tool) vs. working inline. Subagents are valuable for parallelising independent work and protecting the main context window from excessive results — but they add overhead and lose conversational context.
 
+Opus 4.8 spawns fewer subagents by default than earlier models, so the fan-out guidance below is load-bearing: when one of the "Delegate (fan-out) when" cases applies, actively reach for the Agent tool rather than defaulting to inline work. The "Work inline when" cases are the deliberate counterweight that keeps this from regressing into over-spawning — both lists stay in force.
+
 ### Delegate (fan-out) when
+
+These cases are actively encouraged under 4.8 — treat fan-out as the expected path when one applies, not an optional optimisation.
 
 - **Reading multiple independent files**: e.g. reading 5+ library documents, scanning multiple epic docs, or auditing files across directories. Each read is independent — fan out to avoid bloating the main context.
 - **Per-item work across a list**: e.g. processing each epic independently in a production loop, or reviewing each story in isolation. The items share no state — parallelise them.

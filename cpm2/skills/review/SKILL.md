@@ -135,7 +135,7 @@ Each finding must be tagged with exactly one severity level:
 
 #### Review Execution
 
-**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state. Use the Agent tool to spawn parallel subagents, one per reviewer agent. Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, and the finding format. Consolidate findings from all subagents after they complete.
+**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state. Spawn parallel subagents via the Agent tool, one per reviewer agent — fan-out is the expected path here, not an optional optimisation. Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, and the finding format. Consolidate findings from all subagents after they complete.
 
 **Inline execution** (when 2 agents are selected or fan-out is unavailable): Review with each agent in turn within the main context.
 
