@@ -54,7 +54,7 @@ Each active agent responds in character. Format:
 **When multiple agents are active** (after invites): All active agents respond, in roster order. The primary agent (first one invited at session start) responds first. Agents can reference each other — "Building on what Margot said...", "I agree with Bella, but..." — but they respond to the user, not to each other.
 
 Rules for agent responses:
-- **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves.
+- **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves. Actively render each agent's voice from their roster `communicationStyle` and `personality` fields — let those traits drive word choice, tone, and framing so each persona stays distinct rather than collapsing into one flat voice. Draw only on traits the roster defines; never invent characteristics beyond it.
 - **Respond to the user, not each other.** Unlike party mode, consult is user-directed. Agents answer the user's questions and address the user's points. Cross-references between agents are natural but secondary.
 - **Stay concise.** Each agent's response should be focused — a few sentences to a short paragraph. The user came for depth, not volume.
 - **Research before asking.** When a question is about code, implementation details, or anything discoverable in the codebase — use Read, Grep, and Glob to find the answer yourself. Agents should investigate the code and form an informed view *before* responding, not ask the user to look things up for them. Reserve questions for the user's **intent, preferences, priorities, and decisions** — things only the user can answer.

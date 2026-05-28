@@ -118,6 +118,8 @@ If a scope hint was supplied via `$ARGUMENTS`, the question is still asked — t
 
 Sweep the codebase across nine dimensions of code health, in the documented order below. The order is fixed — each dimension builds on signals surfaced by earlier dimensions, and progress signalling depends on the sequence. Every run sweeps every dimension; the focus hint from Step 1g changes weight, never membership.
 
+**Coverage first**: the sweep is the finding stage, and its job is maximum coverage rather than curation. Report every issue you find across all nine dimensions — do not suppress, hold back, or pre-rank findings here because they look minor or uncertain. Each finding carries its Severity (the existing table column) plus a confidence indicator written as a leading `(confidence: low|med|high)` marker inside its Description cell — this is not a new column. Filtering and ranking happen later, only when the Executive Summary is assembled (Step 3a); the findings table itself stays comprehensive.
+
 **Dimension order**:
 
 1. Architectural decay
@@ -263,7 +265,7 @@ The deliverable opens with a header, then proceeds through eight sections in fix
 
 **Sections** (in order):
 
-1. **`## Executive Summary`** — Maximum 10 bullets, ranked by impact. Each bullet summarises a finding or theme with severity. The last bullet line is the effort aggregate (Step 3g): `Effort: S×<n>, M×<n>, L×<n>`.
+1. **`## Executive Summary`** — Maximum 10 bullets, ranked by impact. This is the filtering and ranking step: the comprehensive findings table is curated down here to the highest-impact findings or themes (weighing severity and confidence), while the table itself stays complete. Each bullet summarises a finding or theme with severity. The last bullet line is the effort aggregate (Step 3g): `Effort: S×<n>, M×<n>, L×<n>`.
 2. **`## Architectural Mental Model`** — One or two paragraphs. Plain prose describing how the codebase is organised — entry points, dominant patterns, where logic lives. This is the audit's compressed understanding of the system, useful for any reader who comes to the deliverable cold.
 3. **`## Findings`** — Markdown table with the columns documented in 3b. Target 30–80 rows for typical projects.
 4. **`## Top 5 Priorities`** — Five concrete refactor outlines, drawn from the findings table. Each priority is a 2–4 sentence outline: what to change, where, and the expected outcome. References the finding ID(s) that motivate it.
@@ -279,14 +281,14 @@ The findings table uses exactly these column headers, in this order:
 
 | ID | Category | Citation | Severity | Effort | Description | Recommendation |
 |---|---|---|---|---|---|---|
-| F-001 | Architectural decay | `src/auth/login.ts:42 (authenticate)` | High | M | One-sentence problem description. | Scoped recommendation. |
+| F-001 | Architectural decay | `src/auth/login.ts:42 (authenticate)` | High | M | (confidence: high) One-sentence problem description. | Scoped recommendation. |
 
 - **ID**: sequential, prefixed `F-` (e.g. `F-001`, `F-002`), zero-padded to 3 digits.
 - **Category**: one of the nine dimension names from Step 2.
 - **Citation**: `file:line (symbol)` exactly. See 3c.
 - **Severity**: Critical / High / Medium / Low. See 3d.
 - **Effort**: S / M / L. See 3d.
-- **Description**: one sentence describing the problem.
+- **Description**: one sentence describing the problem, opening with a `(confidence: low|med|high)` marker that records how sure the finding is. The marker lives inside this cell — it is not a separate column.
 - **Recommendation**: one to three sentences scoping the change (no rewrites — see 3e).
 
 #### 3c. Citation format

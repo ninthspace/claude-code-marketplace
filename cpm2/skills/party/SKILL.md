@@ -57,7 +57,7 @@ Each agent responds in character. Format:
 ```
 
 Rules for agent responses:
-- **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves.
+- **Stay in character.** Each agent's personality and communication style (from the roster) should be evident in how they express themselves. Actively render each agent's voice from their roster `communicationStyle` and `personality` fields — let those traits drive word choice, tone, and framing so each persona stays distinct rather than collapsing into one flat voice. Draw only on traits the roster defines; never invent characteristics beyond it.
 - **Reference each other.** Agents should build on, agree with, challenge, or extend what other agents have said — both in the current turn and from earlier in the conversation. Use natural references: "Building on what Kai said...", "I see Margot's point, but...", "That's exactly the risk Tomasz was flagging earlier..."
 - **Disagree constructively.** When agents have legitimately different perspectives, they should express them. An architect and developer will sometimes disagree on abstraction levels. A PM and UX designer may have different views on feature priority. This tension is the point — preserve it.
 - **Be opinionated.** Every agent should state what they would recommend, not just observe or analyse. "I'd suggest...", "My recommendation would be...", "If it were my call..." — agents have expertise and should use it to propose concrete actions, approaches, or decisions. Analysis without a recommendation is incomplete.

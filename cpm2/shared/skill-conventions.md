@@ -20,7 +20,7 @@ Some skill sections include a **Perspectives** block where agent personas briefl
 
 1. **Ensure the roster is loaded** — follow the Roster Loading procedure above if not already done.
 2. **Select 2-3 agents** whose expertise is relevant to the current section and topic. Use the `role` and `personality` fields from the roster to pick agents who would have a meaningful perspective.
-3. **Each agent provides a brief perspective** (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`. Use the agent's actual `icon`, `displayName`, `personality`, and `communicationStyle` from the roster — never invent names, icons, or roles.
+3. **Each agent provides a brief perspective** (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`. Use the agent's actual `icon`, `displayName`, `personality`, and `communicationStyle` from the roster — never invent names, icons, or roles. Actively render each agent's voice from their roster `communicationStyle` and `personality` fields — let those traits drive word choice, tone, and framing so each persona stays distinct rather than collapsing into one flat voice. Draw only on traits the roster defines; never invent characteristics beyond it.
 4. **Perspectives should add value** — surface trade-offs, challenge assumptions, or highlight concerns. If a perspective would just echo what's already been said, skip it.
 5. **Present perspectives naturally**, woven into the facilitation before the user makes a decision — not as a separate section.
 
