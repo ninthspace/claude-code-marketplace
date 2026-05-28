@@ -117,8 +117,13 @@ test_start "Orphan output does not auto-execute deletion"
 PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "old-session" "cpm2:spec" "Section 3"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
-assert_not_contains "$OUTPUT" "rm "
-assert_not_contains "$OUTPUT" "rm -"
+# Scope the check to the orphan output block. The hook also injects the shared
+# conventions doc, whose Progress File Management procedure legitimately shows an
+# `rm` example for a skill deleting its own progress file — unrelated to orphan
+# handling. Asserting against the whole output would false-positive on that.
+ORPHAN_SECTION=$(echo "$OUTPUT" | sed -n '/ORPHAN CLEANUP REQUIRED/,$p')
+assert_not_contains "$ORPHAN_SECTION" "rm "
+assert_not_contains "$ORPHAN_SECTION" "rm -"
 
 test_start "Orphan output instructs not to delete without confirmation"
 PROJECT=$(setup_project_dir)
