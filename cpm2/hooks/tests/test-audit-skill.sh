@@ -47,10 +47,10 @@ fi
 
 # --- Plugin manifests (Story 2) ---
 
-test_start "cpm2/.claude-plugin/plugin.json has version 0.1.0"
+test_start "cpm2/.claude-plugin/plugin.json has version 0.2.0"
 if [ -f "$PLUGIN_MANIFEST" ]; then
   VERSION=$(awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}' "$PLUGIN_MANIFEST")
-  assert_equals "0.1.0" "$VERSION"
+  assert_equals "0.2.0" "$VERSION"
 else
   test_fail "plugin.json missing at $PLUGIN_MANIFEST"
 fi
@@ -62,11 +62,11 @@ else
   test_fail "plugin.json missing"
 fi
 
-test_start ".claude-plugin/marketplace.json cpm2 entry has version 0.1.0"
+test_start ".claude-plugin/marketplace.json cpm2 entry has version 0.2.0"
 if [ -f "$MARKETPLACE_MANIFEST" ]; then
   CPM2_BLOCK=$(awk '/"name": "cpm2"/,/\]/' "$MARKETPLACE_MANIFEST")
   CPM2_VERSION=$(echo "$CPM2_BLOCK" | awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}')
-  assert_equals "0.1.0" "$CPM2_VERSION"
+  assert_equals "0.2.0" "$CPM2_VERSION"
 else
   test_fail "marketplace.json missing"
 fi
