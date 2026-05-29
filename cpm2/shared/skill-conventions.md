@@ -246,3 +246,10 @@ Prefer clarity and correctness over speed in all implementation work. Getting it
 
 - **Why**: Momentum-driven shortcuts — skipping verification, batching unrelated changes, or rushing through edits — create subtle bugs and rework. A correct implementation delivered methodically is faster end-to-end than a quick implementation that needs debugging.
 - **How this interacts with skill-level guidelines**: Individual skills may emphasise efficiency or momentum (e.g. "keep momentum", "fast by default"). Those guidelines mean *don't add unnecessary ceremony* — they do not mean *sacrifice correctness for speed*. When the two are in tension, correctness wins.
+
+### Version control stays with the user
+
+Do not run mutating git operations on your own initiative — no `git commit`, no `git add`/staging, no `git branch` or `git checkout -b`, no `git push`, no `git merge`/`rebase`/`reset`. Version control is the user's responsibility, performed outside the skill loop. Read-only git inspection (`git status`, `git log`, `git diff`) is always fine and often useful.
+
+- **Why**: Self-initiated commits and branches surprise the user, fragment history on their behalf, and can move work onto a branch they never asked for. Leaving the working tree as edited files keeps the user in control of when and how changes are recorded.
+- **When git changes are allowed**: only when explicitly directed — a task whose acceptance criteria call for a git action, a user instruction in the conversation, or a wrapper that mandates it (e.g. `cpm2:ralph`'s "commit after each story"). Outside those, finish the work and leave committing to the user.
