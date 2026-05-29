@@ -171,7 +171,9 @@ Use whichever tool the current harness actually provides for each operation. Rea
 
 > `AskUserQuestion`: "Here is the draft: [200 lines pasted into question text]. Approve?"
 
-When in doubt: if the content the user needs to read is more than a sentence or two, it belongs in the message body, not in the question.
+**Option previews**: `AskUserQuestion` options can carry an optional `preview` field that renders in a transient side-by-side pane. Reserve it for small *presentational* choices where the user is comparing concrete variants — a short layout mockup, a wording or naming option, a brief snippet shown side by side. Keep artifacts and any content the user needs to keep out of it: drafts, specs, ADRs, briefs, plans, and lists of proposed changes go in the message body, never in `preview`. The preview pane is transient and easy to miss, and it is not part of the saved message output — so reserve it for a quick visual aid on a presentational pick, and render everything substantive in the body.
+
+When in doubt: if the content the user needs to read is more than a sentence or two, it belongs in the message body, not in the question or its option previews.
 
 ## Effort Recommendations
 
