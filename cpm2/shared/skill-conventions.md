@@ -253,3 +253,54 @@ Do not run mutating git operations on your own initiative — no `git commit`, n
 
 - **Why**: Self-initiated commits and branches surprise the user, fragment history on their behalf, and can move work onto a branch they never asked for. Leaving the working tree as edited files keeps the user in control of when and how changes are recorded.
 - **When git changes are allowed**: only when explicitly directed — a task whose acceptance criteria call for a git action, a user instruction in the conversation, or a wrapper that mandates it (e.g. `cpm2:ralph`'s "commit after each story"). Outside those, finish the work and leave committing to the user.
+
+## HTML Output
+
+CPM2 artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in three explicitly-bounded roles: **companion assets** (visual content the Markdown references — a UI mockup, a data-flow diagram), **faithful renders** (a navigable HTML view of a whole `spec`/ADR/`review`), and **`present` HTML communications** (audience-reframed output in a styled medium). HTML is never a parsed/consumed data substrate — downstream skills read the Markdown for requirements, never the markup. Skills that generate HTML reference this convention.
+
+### Consume the shared template — do not fork it
+
+There is exactly **one** shared styling/layout asset: `cpm2/assets/html/template.html` (relative to the plugin root). Every HTML output that **presents a CPM2 artifact** draws its styling and layout from this single asset so all such generated HTML is visually consistent and no skill grows divergent CSS/layout. **Never** fork the template's CSS, copy its `<style>` block into a skill, or hand-roll a parallel stylesheet.
+
+**The one carve-out**: a companion asset that represents **deliverable functionality** — a mockup of the UI of the system being built — is *system-specific* and must look like the target system, not CPM2. Those mockups deliberately do **not** consume or wear the shared chrome. See *Companion-asset content: shared chrome vs. system-specific mockups* below. Everything else (faithful renders, `present` communications, and documentation visuals that explain the artifact) uses the shared template.
+
+The template is a complete, valid, self-contained HTML5 document with an inline `<style>` design system and **placeholder comment tokens** that consumers substitute. The consumption model is:
+
+1. Read `cpm2/assets/html/template.html`.
+2. Replace each placeholder token with generated content — **never edit the `<style>` block**:
+   - `<!-- CPM:TITLE -->` — document title (also used in `<title>`)
+   - `<!-- CPM:SUBTITLE -->` — kicker / eyebrow line (optional; collapses when empty)
+   - `<!-- CPM:META -->` — date / source-artifact line (optional)
+   - `<!-- CPM:NAV -->` — contents sidebar (a `<ul>` of in-page anchors; styled by `.cpm-toc`)
+   - `<!-- CPM:CONTENT -->` — main body
+   - `<!-- CPM:FOOTER -->` — footer (optional)
+3. Write the result to the storage path for its role (below).
+
+The template ships reusable component classes so consumers express each role without new CSS: prose + tables + code blocks; `.adr-options`/`.adr-option` (side-by-side ADR option/trade-off columns, `.is-chosen` for the selected option); `.sev-critical`/`.sev-major`/`.sev-minor`/`.sev-info` badges and `.finding` blocks (review severity); `.cpm-figure` + `<figcaption>` (container for documentation diagrams that explain the artifact — *not* for deliverable-functionality mockups, see below); `.cpm-callout` (`--note`/`--warn`/`--tip`); and `.cpm-memo`/`.cpm-memo-fields` (memo / onboarding layout). Add `class="cpm-numbered"` to `<main>` for editorial section numbering.
+
+### Storage & reference paths
+
+| Role | Path | Notes |
+|------|------|-------|
+| Companion asset | `docs/{type}/assets/{nn}-{slug}-{label}.html` | Referenced from the Markdown by a stable **relative** path; `{label}` distinguishes multiple assets for one artifact |
+| Faithful render | `docs/{type}/html/{nn}-{slug}.html` | Navigable view of the whole artifact |
+| `present` HTML communication | `docs/communications/` | Alongside `present`'s Markdown output |
+
+`{type}` is the artifact directory (`specifications`, `architecture`, `reviews`, …); `{nn}` and `{slug}` match the source Markdown's number and slug. Numbering globs match `*.md`, so these HTML siblings never collide with the numbering scheme.
+
+### Self-contained rule
+
+Every generated HTML file is a **single self-contained file**: inline CSS and inline SVG / `data:` URIs only — no external CSS, JS, images, or fonts, no CDN, no network request to render, no server, and no build step. A file must open correctly when double-clicked or sent to someone. This is Tier 1: **static only — no JavaScript**. (The `[integration]` self-containment validator in `cpm2/hooks/tests/html-test-helpers.sh` enforces this.)
+
+### Generate-from-source, never replace
+
+No HTML generation step ever mutates or replaces the source Markdown. Generation reads the Markdown read-only and writes HTML to a separate path; the Markdown remains the parsed source of truth. Re-rendering after the Markdown changes updates the existing HTML file in place rather than spawning duplicates. (The source-immutability check in `html-test-helpers.sh` enforces the no-mutation guarantee.)
+
+### Companion-asset content: shared chrome vs. system-specific mockups
+
+Companion assets are two different things, and they are styled differently:
+
+- **Documentation visuals** — diagrams that *explain* the artifact (architecture, data-flow, sequence). This is CPM2 explaining its own content, so it wears the shared chrome: render the diagram (inline SVG) inside a `.cpm-figure` within the shared shell. Use the template's styling; do not fork it.
+- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's, never the template's.
+
+**Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template. Faithful renders and `present` communications always use the shared template directly.
