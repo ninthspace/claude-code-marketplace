@@ -9,21 +9,19 @@ Guide the user through understanding their problem before jumping to solutions. 
 
 ## Process
 
-Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
+Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — present only one phase of questions per turn.
 
-**State tracking**: Before starting Phase 1, create the progress file (see State Management below). Each phase below ends with a mandatory progress file update — do not skip it. After saving the final brief, delete the file.
+**State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final brief has been saved.
 
 ### Retro Check (Startup)
 
-Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+Follow the shared **Retro Awareness** procedure before beginning Phase 1.
 
-1. Read the most recent retro file.
-2. Present a brief summary of its key recommendations to the user.
-3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate into this discovery session?"
-   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the discovery phases
-   - **No, start fresh** — Proceed normally without retro context
-
-If no retro files exist, skip this check silently and proceed to the Library Check.
+**Retro incorporation** (this skill):
+- **Scope surprises**: Inform Phase 2 (problem boundaries) — past stories that ran larger or smaller than expected suggest the problem definition needs sharper edges.
+- **Criteria gaps**: Inform Phase 3 (success criteria) — categories the previous round missed should be probed explicitly this time.
+- **Codebase discoveries**: Inform Phase 4 (constraints) — surfaced limitations and patterns are real constraints, not optional context.
+- **Testing gaps**: Inform Phase 3 acceptance criteria framing — vague criteria from last round become concrete this round.
 
 ### Roster Loading (Startup)
 
@@ -39,6 +37,16 @@ After startup checks and before Phase 1, display:
 
 > Output format is fixed (used by downstream skills). Run `/cpm:templates preview discover` to see the format.
 
+### Codebase Grounding (Startup)
+
+Before facilitating discovery, explore the existing codebase to ground the conversation in what already exists:
+
+1. Use Glob and Grep to survey the project structure — key directories, configuration files, and existing code patterns.
+2. Read key files to understand the current implementation state, technology choices, and domain model.
+3. Carry these findings into all phases — Phase 3 (Current State) benefits most directly, but codebase context informs every phase from problem framing to constraint identification.
+
+If the project has no existing codebase (greenfield), note that and proceed. For projects with code, grounding ensures discovery builds on real technical context rather than assumptions.
+
 ### Phase 1: Why
 
 Ask what the user is trying to accomplish and why it matters. Understand the motivation, not just the feature request.
@@ -50,8 +58,6 @@ Questions to explore:
 
 **Perspectives**: After the user describes their problem, before moving to Phase 2, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Product Manager to reframe the problem in terms of user value, the Software Architect to flag technical implications, or the UX Designer to highlight user experience concerns.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 1 summary before continuing.
-
 ### Phase 2: Who
 
 Identify target users and their needs.
@@ -60,8 +66,6 @@ Questions to explore:
 - Who will use this?
 - What are they trying to accomplish?
 - How technical are they?
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 2 summary before continuing.
 
 ### Phase 3: Current State
 
@@ -74,8 +78,6 @@ Questions to explore:
 
 If there's an existing codebase to explore, use Read, Glob, and Grep to understand the current state before asking questions.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 3 summary before continuing.
-
 ### Phase 4: Success Criteria
 
 Define what "done" looks like.
@@ -84,8 +86,6 @@ Questions to explore:
 - How will we know this works?
 - What does the happy path look like?
 - Are there measurable outcomes?
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 4 summary before continuing.
 
 ### Phase 5: Constraints
 
@@ -98,11 +98,9 @@ Questions to explore:
 
 **Perspectives**: Before finalising constraints, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Software Architect on scalability concerns, the DevOps Engineer on deployment constraints, or the QA Engineer on testability challenges.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 5 summary before continuing.
-
 ### Phase 6: Summary
 
-Produce a problem brief document. Present it to the user for confirmation using AskUserQuestion before saving.
+Produce a problem brief document. Render the full brief in the message body, then use AskUserQuestion as a short gate (e.g. "Approve this brief?" with options `Approve` / `Request changes` / `Stop`) before saving. See the shared **Gate Presentation** convention.
 
 ## Output
 
@@ -150,23 +148,14 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Phase 1 (ensure `docs/plans/` exists).
+- **Update**: after each phase completes.
+- **Delete**: only after the final brief has been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -195,8 +184,8 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
-- **Facilitate, don't interrogate.** These are conversations, not forms.
+- **Facilitate, stay conversational.** These are conversations, not forms.
 - **Build on answers.** Each question should respond to what the user just said.
 - **Skip what's obvious.** If the user's initial description already covers a phase, acknowledge it and move on.
 - **Stay curious.** Ask follow-up questions when answers are vague or assumptions seem risky.
-- **One phase at a time.** Never combine phases into a single question block.
+- **One phase at a time.** Present only one phase of questions per turn.

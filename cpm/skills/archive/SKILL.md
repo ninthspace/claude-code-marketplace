@@ -16,7 +16,7 @@ Parse `$ARGUMENTS` to determine behavior:
 
 ## Process
 
-**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After completing all archive operations, delete the file.
+**State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once all archive operations have completed.
 
 ### Step 1: Scan and Discover
 
@@ -37,7 +37,7 @@ Scan the four planning directories for documents and group them into artifact ch
    - `28-01-epic-doc-numbering-scheme.md` → slug: `doc-numbering-scheme` (new two-part epic)
    - `28-01-coverage-doc-numbering-scheme.md` → slug: `doc-numbering-scheme` (new two-part coverage)
 
-   Do not attempt to parse the numeric prefix as a fixed-width string — the width may be one or two integer fields depending on the artifact type and shape. Always find the type identifier substring first, then take everything after it as the slug.
+   Always find the type identifier substring first, then take everything after it as the slug — the numeric prefix width varies (one or two integer fields depending on artifact type and shape).
 
 3. **Group into chains**: Match documents across directories by slug. A chain is the set of all documents sharing the same slug. For example, slug `compaction-resilience` might have:
    - `docs/plans/01-plan-compaction-resilience.md`
@@ -52,8 +52,6 @@ Scan the four planning directories for documents and group them into artifact ch
 
 5. If no documents are found in any directory, tell the user there's nothing to archive and stop.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
-
 ### Step 2: Evaluate Staleness
 
 For each chain (or individual document), evaluate staleness using four signals. A chain is flagged as stale if **any** signal fires. Read documents with the Read tool as needed to check status fields.
@@ -67,8 +65,6 @@ For each chain (or individual document), evaluate staleness using four signals. 
 **Signal 4 — Spec fully implemented**: A spec whose matching epic doc(s) (linked via `**Source spec**:` back-references in the epic docs) all have status Complete. The spec has been fully delivered. Flag the spec as stale.
 
 For each chain, record which signals fired. Chains with no signals are still presented as candidates — the user may want to archive them for other reasons — but they are not flagged.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary before continuing.
 
 ### Step 3: Present Candidates
 
@@ -85,7 +81,7 @@ Present the discovered chains and documents to the user, grouped by chain with s
 3. **User selection**: Use AskUserQuestion to let the user choose:
    - **Archive all flagged chains** — Move all documents in chains that have at least one staleness signal
    - **Select individually** — Walk through each chain one at a time, asking archive or skip for each
-   - **Skip** — Don't archive anything, exit the skill
+   - **Skip** — Exit the skill with no changes
 
 4. **Individual selection flow**: If the user chose "Select individually", present each chain with AskUserQuestion:
    - **Archive this chain** — Move all documents in this chain
@@ -93,7 +89,7 @@ Present the discovered chains and documents to the user, grouped by chain with s
 
 5. Build the final list of files to move based on user selections.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary (selected files list) before continuing.
+*Progress note: capture the selected files list in the Step 3 summary.*
 
 ### Step 4: Archive Execution
 
@@ -104,7 +100,7 @@ Move the selected files to `docs/archive/` with mirrored subdirectory structure.
 2. **Move files**: For each selected file, run `mv {source} {target}` via Bash. The target path mirrors the source: `docs/specifications/01-spec-foo.md` → `docs/archive/specifications/01-spec-foo.md`.
 
 3. **Track results**: Record success or failure for each file. If a move fails:
-   - Continue with the remaining files (don't abort the batch)
+   - Continue with the remaining files (always complete the batch)
    - Record the error for the failed file
 
 4. **Report results**: Present a summary to the user:
@@ -112,7 +108,7 @@ Move the selected files to `docs/archive/` with mirrored subdirectory structure.
    - Which files failed and why (if any)
    - The archive paths where files were moved
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 4 summary, then delete the progress file.
+*Workflow complete — delete the progress file.*
 
 ## Output
 
@@ -120,23 +116,14 @@ Files are moved to `docs/archive/{subdirectory}/` preserving the mirrored direct
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after all archive operations have completed.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after all archive operations have completed — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -166,7 +153,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **User controls everything.** Never auto-archive. Every move requires explicit user selection.
+- **User controls everything.** Every move requires explicit user selection — always wait for confirmation.
 - **Chains over individuals.** When archiving one document, always offer to archive its full artifact chain.
-- **Non-destructive.** Move, never delete. Files remain accessible under `docs/archive/`.
+- **Non-destructive.** Always move, preserving files under `docs/archive/`.
 - **Report failures.** If a move fails mid-chain, report which succeeded and which failed.

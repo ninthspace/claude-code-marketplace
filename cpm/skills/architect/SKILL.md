@@ -25,21 +25,19 @@ Check for input in this order:
 
 ## Process
 
-Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
+Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — present only one phase of questions per turn.
 
-**State tracking**: Before starting Phase 1, create the progress file (see State Management below). Each phase below ends with a mandatory progress file update — do not skip it. After saving the final ADRs, delete the file.
+**State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final ADRs have been saved.
 
 ### Retro Check (Startup)
 
-Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+Follow the shared **Retro Awareness** procedure before beginning Phase 1.
 
-1. Read the most recent retro file.
-2. Present a brief summary of its key recommendations to the user.
-3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate into this architecture exploration?"
-   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the exploration
-   - **No, start fresh** — Proceed normally without retro context
-
-If no retro files exist, skip this check silently and proceed to the Library Check.
+**Retro incorporation** (this skill):
+- **Codebase discoveries**: Inform Phase 1 (decision identification) — surfaced limitations and patterns may be load-bearing decisions worth promoting to ADRs.
+- **Complexity underestimates**: Inform Phase 3 (option evaluation) — past underestimates flag option complexity the team tends to miss.
+- **Patterns worth reusing**: Inform Phase 3 — promote proven patterns to recommended options.
+- **Testing gaps**: Inform Phase 4 (operational concerns) — surfaced testing limitations may shape architecture choices around testability.
 
 ### Roster Loading (Startup)
 
@@ -57,6 +55,12 @@ After startup checks and before Phase 1, display the template hint:
 
 If a project-level override exists at `docs/templates/architect.md`, read it and use that format for the output ADRs instead of the embedded default. Full replacement — no merging.
 
+### Codebase Grounding (Startup)
+
+Architectural decisions must be grounded in the current codebase. Phase 1 (Context & Codebase Exploration) performs the detailed exploration — use Glob, Grep, and Read to survey project structure, frameworks, existing patterns, and infrastructure before proposing any decisions. Carry findings from Phase 1 into all subsequent phases.
+
+If the project has no existing codebase (greenfield), note that in Phase 1 and derive context from the product brief instead.
+
 ### Phase 1: Context & Codebase Exploration
 
 Before proposing any architecture, understand what already exists. If there's an existing codebase:
@@ -71,8 +75,6 @@ Also summarise the product context from the input (product brief or description)
 
 Confirm understanding with the user.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 1 summary before continuing.
-
 ### Phase 2: Identify Architectural Decisions
 
 Analyse the product brief and codebase findings to identify the key architectural decisions that need to be made. Each decision should be **derived from the product's actual needs** — not generic boilerplate like "should we use microservices?"
@@ -82,13 +84,11 @@ For each decision, capture:
 - **Why** this decision matters for this specific product
 - **Which features or requirements** drive it
 
-Present the decision list to the user with AskUserQuestion. Refine — they may add decisions you missed or remove ones that don't apply. Aim for 3-8 decisions for a typical product. Don't force decisions that aren't genuinely needed.
+Present the decision list to the user with AskUserQuestion. Refine — they may add decisions you missed or remove ones that apply. Aim for 3-8 decisions for a typical product. Only include decisions that are genuinely needed for this product.
 
 **Anti-pattern**: Decisions like "choose a database" or "pick a framework" without product-specific context are boilerplate. Instead: "How to handle booking availability with concurrent access" or "Where to run image processing given the latency requirements."
 
 **Perspectives**: After identifying decisions, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Software Architect on missing structural decisions, the DevOps Engineer on operational concerns, or the Senior Developer on whether a decision is premature.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 2 summary before continuing.
 
 ### Phase 3: Explore Trade-offs (per decision)
 
@@ -108,7 +108,7 @@ For each decision:
 
 Use AskUserQuestion after each decision to confirm the chosen option and rationale before moving to the next.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` after each decision is resolved.
+*Cadence note: save the progress file after each decision is resolved (per-decision, not per-phase).*
 
 ### Phase 4: Operational Architecture
 
@@ -126,8 +126,6 @@ Present findings with AskUserQuestion. Some of these may produce additional ADRs
 
 **Perspectives**: Have the DevOps engineer and QA engineer weigh in on operational concerns they see. Keep each perspective to 1-2 sentences. Format: `{icon} **{name}**: {perspective}`.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 4 summary before continuing.
-
 ### Phase 5: Decision Dependencies
 
 Present a summary of all decisions and their dependencies. Show how decisions relate to each other — which constrain others, which must be made first, which are independent.
@@ -136,15 +134,43 @@ If any circular dependencies or conflicts emerge, flag them and work through res
 
 Use AskUserQuestion for confirmation before proceeding to output.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 5 summary before continuing.
-
 ### Phase 6: Produce ADRs
 
-Generate one ADR per architectural decision. Present each ADR to the user for confirmation using AskUserQuestion before saving.
+Generate one ADR per architectural decision. For each ADR, render its full content in the message body, then use AskUserQuestion as a short gate (e.g. "Approve this ADR?" with options `Approve` / `Request changes` / `Stop`) before saving. See the shared **Gate Presentation** convention.
 
 After all ADRs are saved, suggest next steps:
 - `/cpm:spec` to build requirements using these ADRs as architectural context
 - `/cpm:epics` if a spec already exists and needs architectural alignment
+
+#### Companion Assets (when an ADR is inherently visual)
+
+Some architectural decisions are inherently visual — the shape of a system is clearer as an architecture diagram, a data-flow, or a sequence diagram than as prose. When an ADR's content **is** visual, generate an HTML **companion asset** so the structure travels downstream intact. Follow the shared **HTML Output** convention for all mechanics (storage, self-contained, template) — this section only says *when* to generate and *what to record*.
+
+**Content-driven, not flag-driven.** Generate because the decision is genuinely visual, never because of an explicit request or flag.
+
+**Conservative heuristic — the diagram must earn its place.** Generate an asset *only* when a diagram conveys something the ADR's Options/Decision/Consequences prose cannot. Do **not** generate one for decisions that are purely textual trade-offs (a library choice, a naming convention, a policy). When in doubt, don't — most ADRs need no companion asset.
+
+**ADR diagrams are documentation visuals.** An architecture/data-flow/sequence diagram *explains* the decision, so it consumes the shared template — render the inline SVG inside a `.cpm-figure` within the shared shell. Do not fork the template. (The system-specific deliverable-mockup carve-out in the shared convention is a `spec` concern — previewing the UI of the system being built — and does not normally arise for ADRs.)
+
+**Reference and note.** After writing the asset to `docs/architecture/assets/{nn}-{slug}-{label}.html`, do two things in the ADR Markdown:
+1. Reference the asset by its stable **relative** path from the section it illustrates — typically Context or Decision (e.g. `See diagram: [request flow](assets/{nn}-{slug}-flow.html)`).
+2. Record a one-line note explaining **why this asset exists** — what the diagram carries that the prose cannot. If you cannot write that one-line justification, the diagram has not earned its place — don't generate it.
+
+#### Faithful Render (on request)
+
+A companion asset captures *one visual decision*; a **faithful render** is a navigable HTML view of a **whole ADR**. It is produced **only on request** — when the user asks for an HTML version of an ADR (to read, share, or review) — never automatically as part of writing the ADR. Follow the shared **HTML Output** convention for the mechanics; this section states the ADR-specific particulars.
+
+When requested:
+
+1. Read the saved ADR Markdown (`docs/architecture/{nn}-adr-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.
+2. Generate a single self-contained HTML view by consuming the shared template (substitute the `CPM:` tokens — do not fork the `<style>` block): the ADR's Context/Options/Decision/Rationale/Consequences become the `CPM:CONTENT`, the decision title/date become `CPM:TITLE`/`CPM:META`.
+3. Write it to `docs/architecture/html/{nn}-{slug}.html` — same `{nn}` and `{slug}` as the source ADR. Tell the user the path.
+
+**Regeneration in place.** Because that path is a deterministic function of the source's `{nn}`/`{slug}`, re-rendering after the ADR changes **overwrites the same file in place** — it updates the existing render rather than spawning a duplicate, and the shared path keeps the render traceable to its source.
+
+This is a faithful projection of the ADR, not an audience-reframed *transform* (that is `cpm:present`'s job).
+
+**Navigation (artifact-appropriate).** An ADR is a comparison, so render the **Options Considered side-by-side**: wrap them in the template's `.adr-options` container with one `.adr-option` per option, and mark the selected option `.is-chosen` so the decision reads at a glance against its alternatives. This is **static only** — layout via the template's CSS, no JavaScript.
 
 ## Output
 
@@ -208,23 +234,14 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Phase 1 (ensure `docs/plans/` exists).
+- **Update**: after each phase completes.
+- **Delete**: only after the final ADRs have been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final ADRs have been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -260,12 +277,26 @@ The "Completed Phases" section grows as phases complete. Each summary should cap
 
 The "Next Action" field tells the post-compaction context exactly where to pick up.
 
+## Graceful Degradation
+
+Every scenario below specifies an explicit action sequence ending with a visible result. No silent fallbacks.
+
+- **No input resolved** (no briefs, plans, or description) → **Action**: Use AskUserQuestion to ask the user to describe the system they want to explore architecturally. **Result**: The user provides a description and exploration proceeds from that input.
+
+- **No existing codebase** (greenfield project) → **Action**: Skip codebase exploration in Phase 1. Note the greenfield context. **Result**: Report to the user: "No existing codebase found — starting architecture exploration from scratch."
+
+- **No retro files found** → **Action**: Skip the retro check. Proceed directly to the Library Check. **Result**: Report to the user: "No retro files found — proceeding without retro context."
+
+- **No roster found** → **Action**: Skip agent perspectives in Phases 2 and 4. Proceed with facilitation without persona-driven commentary. **Result**: Report to the user: "Agent roster not found — proceeding without perspectives."
+
+- **ADRs directory doesn't exist** → **Action**: Create `docs/architecture/` when saving the first ADR. **Result**: Report to the user: "Created docs/architecture/ for ADR output."
+
 ## Guidelines
 
 - **Explore before proposing.** Always understand the existing codebase and constraints before suggesting architecture.
 - **Product-derived decisions.** Every decision should trace back to a product need. If you can't explain why a decision matters for this specific product, it's boilerplate — skip it.
-- **Honest trade-offs.** Don't present a preferred option as having no downsides. Every choice has costs.
+- **Honest trade-offs.** Present every option with its genuine costs. Every choice has downsides worth acknowledging.
 - **Operational architecture is architecture.** Deployment, monitoring, failure handling, and security are not afterthoughts — they're architectural decisions that deserve the same rigour.
 - **Dependencies matter.** Architectural decisions don't exist in isolation. Capture what constrains what.
-- **Facilitate, don't lecture.** The user knows their domain. Present analysis, not prescriptions.
+- **Facilitate, let the user lead.** The user knows their domain. Present analysis, not prescriptions.
 - **One decision at a time.** In Phase 3, work through each decision individually with the user before moving to the next.

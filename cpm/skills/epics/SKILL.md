@@ -16,22 +16,33 @@ Check for input in this order:
 3. Look for planning docs — check `docs/specifications/` first, then `docs/plans/`.
 4. If nothing found, ask the user what work they want to break down.
 
+**Dependency-view mode (on request).** If `$ARGUMENTS` asks for a **dependency / readiness / "what's ready to pick up" view** of the existing epics (e.g. contains `dependency view`, `dependencies`, `unblocked`, `ready to pick up`, or "what can I work on") rather than naming work to break down, do **not** run the production process below. Instead run the **Dependency View (on request)** section (after `## Output`) — a read-only HTML projection over the epic docs that already exist. The two modes are mutually exclusive: breaking a spec into epics *writes* epic docs; the dependency view only *reads* them.
+
 ## Process
 
-**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final epic docs, delete the file.
+**State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once the final epic docs have been saved.
+
+### Termination
+
+- **Success**: The user confirms the final task tree in Step 4 — save the epic documents and finish.
+- **Blocker**: The user identifies a spec gap, missing requirement, or dependency that cannot be resolved in this session. Note the gap, save the epic documents with what's confirmed, and flag the gap for resolution via `cpm:pivot` or a spec update.
+- **Ambiguity**: The user is uncertain about epic grouping, story scope, or task breakdown after one clarification round. Present a recommended structure with rationale. If the user still cannot decide, use the recommended default and note the decision as provisional — it can be revised before `cpm:do` begins execution.
+
+**Facilitation depth**: Each presentation-and-refine gate (Step 2 epics, Step 3 stories, Step 3b tasks) converges in 1-2 rounds of AskUserQuestion. When the user approves, move on. Step 3d coverage matrix and Step 4 confirmation are single-pass gates — present once, refine once if needed, then proceed.
+
+### Retro Check (Startup)
+
+Follow the shared **Retro Awareness** procedure before beginning Step 1.
+
+**Retro incorporation** (this skill):
+- **Scope surprises**: Inform Step 3 (story sizing) — past stories that ran larger or smaller than expected suggest sizing rules to apply this round (e.g. "split stories that touch more than N components").
+- **Patterns worth reusing**: Inform Step 3b (task lists) — surfaced abstractions and approaches become candidate tasks rather than re-discovered work.
+- **Testing gaps**: Inform Step 3 acceptance criteria tagging — past untestable criteria become explicitly tagged this round.
+- **Codebase discoveries**: Inform Step 3c (integration testing story) — surfaced integration points may need explicit cross-story coverage.
 
 ### Library Check (Startup)
 
-Before Step 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `epics` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to work breakdown: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during epic breakdown when a library document's content is relevant — e.g. reading architecture docs to inform epic grouping or dependency identification.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the epics process due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `epics`. Deep-read selectively during Step 2 epic grouping when architecture or coding-standards docs affect epic boundaries or dependency identification.
 
 ### Template Hint (Startup)
 
@@ -47,13 +58,11 @@ After the Template Hint and before Step 1, discover existing Architecture Decisi
 2. If ADRs exist, read each one and note the architectural decisions and their dependencies. Report to the user: "Found {N} existing ADRs: {titles}. I'll reference these when breaking down architectural work into epics and stories."
 3. During Step 2 (Identify Epics) and Step 3 (Break into Stories), use ADR context to inform epic grouping — e.g. if an ADR identifies separate concerns or bounded contexts, these may map naturally to epics. Reference specific ADRs in story descriptions when they constrain or inform the implementation approach.
 
-**Graceful degradation**: If ADRs don't exist, epic breakdown works as before — deriving structure purely from the spec. The skill must work without `cpm:architect` having been run.
+**Graceful degradation**: If ADRs are absent, epic breakdown works as before — deriving structure purely from the spec. The skill works with or without `cpm:architect` having been run.
 
 ### Step 1: Read Source
 
 Read and understand the source document. Summarise the key work areas to the user.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Identify Epics
 
@@ -65,12 +74,12 @@ For each epic, determine:
 - **Slug** (`{slug}`): Kebab-case derived from the epic name (e.g. "authentication-system", "api-layer")
 - **Summary**: One-sentence description of what this epic covers
 
-Present the epic grouping to the user with AskUserQuestion and refine. Include the proposed filenames so the user can see the full output plan.
+Render the epic grouping (names, summaries, proposed filenames) in the message body so the user can see the full output plan. Then use AskUserQuestion as a short gate (e.g. "Approve this grouping?" with options `Approve` / `Request changes` / `Stop`) and refine. See the shared **Gate Presentation** convention.
 
 Keep epics practical:
 - 2-5 epics for a small feature
 - 5-10 for a larger project
-- Don't create epics for the sake of it
+- Only create an epic when the work genuinely warrants one
 
 ### Epic Filename Convention
 
@@ -81,29 +90,19 @@ Epic documents use a **two-part numeric prefix**: `{parent}-{seq}-epic-{slug}.md
 **Parent extraction**:
 
 - **Spec-linked epics** (the default — input is a spec): `{parent}` is the numeric prefix of the source spec's filename. For example, input `docs/specifications/28-spec-foo.md` yields `{parent} = 28`, producing `28-01-epic-foo.md`, `28-02-epic-bar.md`, and so on.
-- **Orphan epics** (input is a brief, discussion, description, or bare prompt — no parent spec): `{parent}` is the literal string `00`. Orphan epics are written as `00-{seq}-epic-{slug}.md`. The skill never produces a flat-shape epic — every new epic has two parts.
+- **Orphan epics** (input is a brief, discussion, description, or bare prompt — no parent spec): `{parent}` is the literal string `00`. Orphan epics are written as `00-{seq}-epic-{slug}.md`. Every new epic produced by this skill uses the two-part shape.
 
 **Sub-number assignment** (`{seq}`):
 
-The sub-number is assigned per parent, via a **scoped glob** that naturally excludes flat-shape epics:
+Assign `{seq}` per parent using the shared Numbering procedure — glob both `docs/epics/{parent}-[0-9]*-epic-*.md` and `docs/archive/epics/{parent}-[0-9]*-epic-*.md`, extract the second numeric field from each match, parse as integer (always integer comparison, never lexical), take `max + 1` across the union. If both sets are empty, start at `01`. Format using the shared Numbering width rule. Flat-shape files (e.g. `15-epic-consult-skill-core.md`) are naturally excluded from the scoped glob.
 
-1. Glob `docs/epics/{parent}-[0-9]*-epic-*.md` in the active directory.
-2. Glob `docs/archive/epics/{parent}-[0-9]*-epic-*.md` in the archive mirror. If the archive directory does not exist, treat this set as empty.
-3. Extract the **second numeric field** from each matched filename (the part immediately after `{parent}-`). Parse it as an integer — per the shared Numbering invariant, never as a string.
-4. Take the union of the two sets and compute `max + 1`. If both sets are empty, the first epic under this parent gets `{seq} = 01`.
-5. Format `{seq}` using the shared Numbering width rule — minimum 2 digits, zero-padded.
+Sub-numbers are **identifiers**, not ordinals — gaps from deleted sub-numbers are preserved (the max-lookup skips them), keeping cross-references stable.
 
-Flat-shape files like `15-epic-consult-skill-core.md` are naturally excluded from this glob because they have no second numeric field to match. They remain in the directory untouched and are invisible to sub-number assignment.
-
-**Immutability of sub-numbers**:
-
-Sub-numbers are **identifiers**, not ordinals. If epic `28-02-epic-foo.md` is later deleted during a pivot, the next new epic under spec 28 is `28-04-epic-baz.md` — not `28-03-epic-baz.md`. Gaps from deleted sub-numbers are preserved; the max-lookup simply skips missing integers. This is modelled on ticket IDs (JIRA-123 is never reissued when JIRA-122 is deleted) and keeps cross-references stable.
-
-**General epic listings**: Operations that enumerate *all* epics (for dependency resolution, batch status checks, cross-epic references) must use the general glob `docs/epics/[0-9]*-epic-*.md`, which matches both flat and two-part shapes. Only the sub-number assignment above uses the scoped glob. Never narrow the general glob to the two-part shape — that would hide legacy epics from readers.
+**General epic listings**: Operations that enumerate *all* epics (for dependency resolution, batch status checks, cross-epic references) must use the general glob `docs/epics/[0-9]*-epic-*.md`, which matches both flat and two-part shapes. Only the sub-number assignment above uses the scoped glob. Always use the general glob for listings — narrowing to the two-part shape would hide legacy epics from readers.
 
 **Production loop**: After epics are confirmed, Steps 3, 3b, 3c, and 3d iterate per epic — break each epic into stories, then tasks, then assess integration testing, then verify requirement coverage. Save each epic document and its coverage matrix after they are finalised (before moving to the next epic). This means epic docs are written incrementally, not all at once at the end.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (epic names, numbers, slugs, and output paths) before continuing.
+*Progress note: capture epic names, numbers, slugs, and output paths in the Step 2 summary.*
 
 ### Step 3: Break into Stories
 
@@ -115,7 +114,7 @@ Each story should have:
 - An activeForm for progress display (present continuous: "Setting up compaction hook infrastructure")
 - **Spec traceability** (when input is a spec): Which functional requirements from the spec this story satisfies. Use the requirement text or a short label. This enables verification that the spec is fully covered across all epics — every must-have requirement should appear in at least one story.
 
-**Acceptance criteria fidelity** (when input is a spec): When deriving acceptance criteria from a spec, use the spec's language verbatim where it provides specific thresholds, values, or behaviours. Do not generalise, paraphrase, or soften. If the spec says "concurrent session limit of 3 per user", the story criterion says "concurrent session limit of 3 per user" — not "handles concurrent sessions appropriately." The spec's specificity must survive intact into the stories.
+**Acceptance criteria fidelity** (when input is a spec): When deriving acceptance criteria from a spec, use the spec's language verbatim where it provides specific thresholds, values, or behaviours. Use the spec's language verbatim — preserve thresholds, values, and behaviours exactly. If the spec says "concurrent session limit of 3 per user", the story criterion says "concurrent session limit of 3 per user". The spec's specificity must survive intact into the stories.
 
 **Testability standard**: Each acceptance criterion must be **testable as written** — it describes a specific, observable, verifiable outcome. Flag any criterion that relies on subjective judgement or cannot be verified through code, tests, or inspection. Criteria that fail this standard must be rewritten before the story is finalised.
 
@@ -129,24 +128,52 @@ Examples:
 
 1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
 2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tags from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, `[manual]`, and `[tdd]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments. The `[tdd]` tag is a workflow mode tag (orthogonal to level tags) — propagate it alongside any level tag when present (e.g. `[tdd] [unit]`).
-3. If a story's criteria don't map directly to a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), propose a tag based on the criterion's nature and confirm with the user.
+3. If a story's criteria go beyond a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), default to an automated tag — `[unit]`, `[integration]`, or `[feature]`. Propose `[manual]` only when automation is genuinely infeasible, and when you do, include a one-line justification stating what blocks automation (e.g. "requires human visual judgement", "third-party OAuth flow we don't control"). See the **Default to automation** guideline below.
 4. Tags appear at the end of the acceptance criteria line, e.g.: `- User can log in via OAuth [integration]` or `- Payment processor validates card [tdd] [integration]`
+
+**Mockup-referencing criteria**: When a `spec` or `architect` artifact references an HTML **companion asset** (a UI mockup or diagram — see the shared **HTML Output** convention), a story criterion that says "build to match this asset" describes *visual conformance*, whose only oracle is human judgement. Tag such a criterion `[manual]` (or `[feature]` when the match is exercised through a user-facing workflow) — **never** an automated markup-parsing test. The companion asset is a **design target**, not data: `epics` treats it as "build to match this," never as a source of requirements to extract. The Markdown acceptance criteria remain the machine-readable specification; the asset only shows what the result should look like. This is the named case where `[manual]`/`[feature]` is correct *because* the oracle is visual — record the one-line justification the **Default to automation** guideline requires (e.g. "match the referenced mockup — visual conformance, no markup oracle").
 
 **Graceful degradation**: If the spec has no Testing Strategy section, no Acceptance Criteria Coverage table, or no tags, skip tag propagation entirely — write acceptance criteria without tags. The skill must work without `cpm:spec`'s enhanced Section 6 having been used.
 
-**`[plan]` tag suggestion**: After defining a story's acceptance criteria, assess whether it warrants formal plan mode during execution. Append `[plan]` to the story's `##` heading (e.g. `## Set up OAuth provider integration [plan]`) when any of these apply:
+**Must-NOT clause propagation** (when the input spec has `must NOT` lines from Section 6b):
 
-- **Architectural**: The story introduces new patterns, data models, or structural decisions that affect the broader codebase
-- **Security-sensitive**: The story involves authentication, authorization, personal data, financial data, or other security-critical areas
-- **Multi-system integration**: The story coordinates across multiple external systems, APIs, or services where the interaction design needs upfront thought
+1. Read the spec's Acceptance Criteria Coverage table for `must NOT` lines paired with positive criteria.
+2. When writing story acceptance criteria, include the `must NOT` lines alongside their paired positive criteria. Preserve the spec's wording verbatim — these are defensive boundaries, not suggestions.
+3. If a story's criteria go beyond the spec (new criteria without spec-originating must-NOTs), assess whether must-NOT clauses are warranted based on the story's domain (see below).
 
-Do not apply `[plan]` to straightforward stories — config changes, documentation, additions that follow existing patterns, or stories where the epic doc's acceptance criteria already fully specify the approach. When in doubt, omit it — inline planning (the default in `cpm:do`) handles most stories without the overhead of formal plan mode.
+**Must-NOT clause suggestion** (when the spec has no must-NOT lines, or for criteria without them):
+
+When a story touches any of these domains, propose `must NOT` clauses for the user to confirm:
+- **Security**: authentication, authorization, session management, credential handling
+- **Data integrity**: database writes, financial calculations, user data mutations
+- **External systems**: API calls, webhook handling, third-party integrations
+
+Propose 1-2 must-NOT clauses per relevant criterion. Present them via AskUserQuestion alongside the story's acceptance criteria for the user to accept, modify, or reject. If the user rejects all proposed must-NOTs, proceed without them — must-NOT clauses are advisory, not mandatory.
+
+**Graceful degradation**: If the spec has no must-NOT lines and the story does not touch security, data integrity, or external systems, skip must-NOT suggestion entirely.
+
+**`[plan]` tag suggestion**: After defining a story's acceptance criteria, assess whether it warrants formal plan mode during execution. The `[plan]` tag forces an EnterPlanMode pause before implementation — it's a workflow lock, not a signal that the story is hard. Append `[plan]` to the story's `##` heading (e.g. `## Set up OAuth provider integration [plan]`) when the story involves:
+
+- **Data model changes**: New or modified database schemas, entity relationships, or data structures that affect persistence
+- **API contract changes**: New or modified public APIs, webhook schemas, or inter-service contracts where the design needs upfront agreement
+- **Cross-system integration**: Coordination across multiple external systems, APIs, or services where the interaction design needs upfront thought
+
+These are the default assignment categories. The user can also add `[plan]` manually to any story they want gated — these categories are defaults, not restrictions. Stories that follow existing patterns, are fully specified by their acceptance criteria, or are straightforward config/documentation changes use inline planning (the default in `cpm:do`).
 
 **Stories vs tasks**: A story groups related implementation work under a single deliverable with shared acceptance criteria. If you find yourself writing a story title that describes a single file change or a single function — that's a task, not a story. Push it down to Step 3b.
 
-Present the stories for each epic to the user using AskUserQuestion. Refine before moving to the next epic.
+Render the stories for each epic (titles, summaries, acceptance criteria) in the message body. After the stories, render a **tag distribution summary** showing per-story counts so any drift toward manual is visible at a glance. Format:
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary (including which tags were propagated to which stories) before continuing.
+```
+Tag distribution:
+- Story 1 — {N} automated ([unit] x{a}, [integration] x{b}, [feature] x{c}), {M} manual
+- Story 2 — {N} automated, {M} manual
+- ...
+```
+
+If any story has zero automated tags, flag it explicitly under the table (e.g. "⚠ Story 2 is fully manual — confirm this is intentional"). Then use AskUserQuestion as a short gate (e.g. "Approve these stories?" with options `Approve` / `Request changes` / `Stop`). Refine before moving to the next epic. See the shared **Gate Presentation** convention.
+
+*Progress note: record which tags were propagated to which stories in the Step 3 summary.*
 
 ### Step 3b: Identify Tasks within Stories
 
@@ -166,7 +193,7 @@ Descriptions should state **scope boundaries**, not implementation steps. Good d
 
 Tasks are the actual work items. They should be specific enough that an implementer knows exactly what to do.
 
-Not every story needs multiple tasks. If a story is straightforward enough to be done in one step, a single task is fine. Don't decompose for the sake of it.
+A single task per story is fine when the work is straightforward. Decompose only when it makes complex stories manageable.
 
 **Auto-generated testing tasks**: After identifying implementation tasks for a story, check whether any of the story's acceptance criteria carry `[unit]`, `[integration]`, or `[feature]` tags. If at least one automated test tag is present:
 
@@ -180,9 +207,7 @@ If **all** of a story's criteria are tagged `[manual]` (or have no tags), do **n
 
 **Graceful degradation**: If no tags were propagated during Step 3 (e.g. the spec had no testing strategy), skip testing task generation entirely.
 
-Present the tasks for each story using AskUserQuestion. Refine before moving to the next story.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3b summary before continuing.
+Render the tasks for each story in the message body. Then use AskUserQuestion as a short gate (e.g. "Approve these tasks?" with options `Approve` / `Request changes` / `Stop`). Refine before moving to the next story. See the shared **Gate Presentation** convention.
 
 ### Step 3c: Integration Testing Story (when warranted)
 
@@ -204,17 +229,17 @@ After all implementation stories and their tasks are defined for an epic, assess
 
 **Graceful degradation**: If no tags were propagated during Step 3, skip this step entirely.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3c summary (integration story generated or skipped, with rationale) before continuing.
+*Progress note: capture whether an integration story was generated or skipped, with the rationale, in the Step 3c summary.*
 
 ### Step 3d: Requirement Coverage Matrix (when input is a spec)
 
 After stories, tasks, and integration testing are defined for the current epic, verify that the spec requirements this epic claims to satisfy are properly covered. This runs per-epic as part of the production loop (after Step 3c, before saving the epic doc and moving to the next epic).
 
-The coverage matrix is **procedural, not evaluative**. Your job is to extract and present verbatim text from both the spec and the stories so the user can judge fidelity. Do not assess whether criteria are "exact" or "partial" — present the side-by-side text and let the human decide.
+The coverage matrix is **procedural, not evaluative**. Your job is to extract and present verbatim text from both the spec and the stories so the user can judge fidelity. Present the side-by-side text and let the human judge fidelity — the assessment is theirs to make.
 
 1. **Identify which spec requirements this epic covers.** Scan the epic's stories' `**Satisfies**` fields to find all referenced spec requirements.
 2. **Read the source spec's requirement text.** For each referenced requirement, extract the number, label, and the specific text that defines thresholds, values, or behaviours. Quote from the **requirements section**, not the testing strategy table (these can differ — the requirements text is authoritative).
-3. **Build a side-by-side coverage table.** For each referenced requirement, quote both the spec's requirement text and the matching story acceptance criterion text **verbatim** — do not summarise, paraphrase, or abbreviate either side.
+3. **Build a side-by-side coverage table.** For each referenced requirement, quote both the spec's requirement text and the matching story acceptance criterion text **verbatim** — preserve the exact wording on both sides.
 
 If the spec's Testing Strategy section includes test approach tags, add a **Spec Test Approach** column showing the tag(s) from the spec's Acceptance Criteria Coverage table. This lets the user verify tag propagation in the same view.
 
@@ -238,7 +263,7 @@ If the user identifies a fidelity problem (story criterion is weaker than or con
 
 **Graceful degradation**: If the input is not a spec (e.g. a brief or description without structured requirements), skip this step — there's no requirement list to verify against.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3d summary (coverage matrix presented, any fidelity issues identified and corrected, user confirmation) before continuing.
+*Progress note: capture the matrix presentation, any fidelity issues identified and corrected, and user confirmation in the Step 3d summary.*
 
 ### Step 4: Confirm
 
@@ -295,7 +320,7 @@ Save each epic document to `docs/epics/{parent}-{seq}-epic-{slug}.md`. Create th
 - `**Status**`: Derived from stories — `Pending` when no stories are started, `In Progress` when any story is in progress, `Complete` when all stories are complete.
 - `**Blocked by**`: Cross-epic dependency. References another epic by its filename prefix (e.g. `Epic 28-01-epic-setup` for new two-part epics or `Epic 15-epic-data-model` for legacy flat epics — both shapes are valid). Leave as `—` when the epic has no upstream dependencies. Multiple dependencies are comma-separated (e.g. `Epic 28-01-epic-setup, Epic 15-epic-data-model`).
 
-**Story numbers** are sequential per epic document, starting at 1. They provide stable references within the doc that don't depend on Claude Code's task system. The `**Blocked by**` field on stories references story numbers for intra-epic deps (e.g. `Story 1` or `Story 1, Story 2`).
+**Story numbers** are sequential per epic document, starting at 1. They provide stable references within the doc, independent of Claude Code's task system. The `**Blocked by**` field on stories references story numbers for intra-epic deps (e.g. `Story 1` or `Story 1, Story 2`).
 
 **Task numbers** use dot notation: `{story number}.{task sequence}`. Task 1.1 is the first task of Story 1, Task 2.3 is the third task of Story 2.
 
@@ -323,25 +348,41 @@ Save each coverage matrix at the same time as its epic doc. Tell the user both f
 
 When starting implementation of a task, read the relevant epic document first to understand the full context: all stories, tasks, dependencies, acceptance criteria, and where the current task fits in the broader plan. Also read the epic's coverage matrix when available — its path follows the epic doc's own shape (`docs/epics/{parent}-{seq}-coverage-{slug}.md` for new two-part epics, or `docs/epics/{nn}-coverage-{slug}.md` for legacy flat epics). It provides requirement-level traceability that connects each task back to the spec.
 
+## Dependency View (on request)
+
+`cpm:epics` *writes* epic docs from a spec; the **dependency view** is the inverse — a **read-only HTML projection over the epic docs that already exist**, showing what is ready to pick up versus what is still blocked. It runs **only when requested** (see *Dependency-view mode* under Input), never as part of the production loop. Follow the shared **HTML Output** convention for the template mechanics; this section states only the `epics`-specific particulars.
+
+**The epic docs are the read-only source of truth.** This mode parses them but **must never modify, rewrite, or re-save any epic doc** — no Edit/Write to anything under `docs/epics/`. The only file written is the HTML view itself, at a separate path. Mutation of epic docs stays exclusively with `cpm:do`.
+
+1. **Scan all epics** with the general glob `docs/epics/[0-9]*-epic-*.md` (matches both two-part and legacy flat shapes — never narrow this, or legacy epics vanish from the view). Read each **read-only**. From each, parse the epic-level `**Status**` and, for every `##` story, its `**Status**` and `**Blocked by**` fields.
+2. **Compute readiness** using the *same rule `cpm:do` hydration applies*, so the view agrees with what `do` would actually pick up:
+   - A story's dependency is satisfied when the referenced story/epic has `**Status**: Complete` (or the `**Blocked by**` field is `—`).
+   - A **Pending** story whose dependencies are *all* satisfied is **Ready to pick up** (unblocked). A Pending story with any unsatisfied dependency is **Blocked** — record *what* it waits on.
+   - **In progress** and **Complete** stories are shown in their own groups.
+3. **Render via the shared template** — substitute the `CPM:` tokens, **never fork the `<style>` block**. Use **unblocked-first ordering** with these sections (give each an `id` for the `.cpm-toc` nav): **Ready to pick up** (unblocked Pending stories, each with its parent epic and a `/cpm:do {epic path}` next-step), **Blocked** (each with the unmet dependency named, as `.cpm-callout--note`), **In progress**, **Complete**. Use the template's `.sev-*` badges for the readiness colour language and a `<table>` or callouts for grouping.
+4. **Tier 2 — optional export affordances.** The view **may** include inline vanilla JS for **copy-as-prompt / copy-as-JSON** export — follow the shared **HTML Output → Tier 2 export affordances** convention for the canonical pattern and rules (inline-only, read-only/export-only, data embedded at generation time). Useful here: **copy-as-prompt** on each ready item (e.g. `/cpm:do docs/epics/05-…`) and **copy-as-JSON** of the ready-to-pick-up list for downstream tooling. A purely static view is an equally valid deliverable.
+5. **Self-contained** — a single file: inline CSS/SVG and inline JS only, no external CSS/JS/images/fonts, no build step.
+6. **Write to the ephemeral scratch path `docs/plans/epics-dependency-view.html`** — a regenerated-on-demand projection, **not** a numbered/tracked artifact (no `{nn}` prefix, never committed by the skill). Re-running overwrites it in place. Tell the user the path and that it is ephemeral. If the user asks to keep it durably, save a copy to a location they specify (or offer a sensible default and confirm).
+
+**Schema tolerance — render what parsed, flag the rest, never error out.** Epic docs drift: a story may be missing its `**Status**` or `**Blocked by**` field, an epic may lack a parseable header, or a file may have no `##` stories at all. A single malformed doc must **never** abort the whole view or blank a section. Degrade gracefully:
+
+- **Missing `**Status**` on a story** — do *not* guess a readiness bucket. Render the story in a dedicated **Needs attention** group, visibly flagged (a `.sev-major` "status unparsed" badge inside a `.cpm-callout--warn`), so the gap is obvious rather than silently mis-bucketed.
+- **Missing or unparseable `**Blocked by**`** — treat dependencies as undetermined for ordering, render the story, and flag it "dependencies unparsed" rather than assuming it is ready.
+- **An epic file that cannot be parsed** (no recognisable stories, malformed structure) — list it by filename under a **Could not parse** entry in the Needs-attention group and **continue with every other epic**. One bad file costs one line, not the view.
+- **Always emit a valid, self-contained document.** Even if every epic is malformed, the view renders its shell and the Needs-attention group; it does not throw, abort, or produce a broken file.
+
+The flagged gaps are visible by design — the view shows what it could read and names what it couldn't, so the reader trusts the parts that rendered.
+
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after confirming the final epic documents are saved and written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final epic documents have been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -395,13 +436,30 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 - **Epics are work areas, stories are deliverables, tasks are steps.** An epic represents a major area of work ("Authentication System"). Stories within it represent meaningful outcomes ("Set up OAuth provider integration"). Tasks are the implementation work to get there ("Create OAuth callback handler", "Write token refresh logic"). If an epic has only one story, it's probably not an epic.
 - **Right-sized stories.** Each story should be completable in a focused session. Not too big (vague multi-day effort), not too small (a single trivial change). A story with 2-5 tasks is typical.
-- **Acceptance criteria live on stories.** Tasks don't have their own acceptance criteria — they inherit meaning from their parent story. The story is done when its acceptance criteria pass, not necessarily when every task checkbox is ticked.
-- **Don't over-decompose tasks.** Not every story needs multiple tasks. If the work is straightforward, one task is fine. The value of task-level breakdown is making complex stories manageable, not adding bureaucracy to simple ones.
-- **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {filename-prefix}-epic-{slug}` for cross-epic dependencies — e.g. `Epic 28-01-epic-foo` for new two-part epics, or `Epic 15-epic-bar` for legacy flat epics (both shapes are valid). Don't create cross-story task dependencies — if tasks in different stories are interdependent, the stories themselves should have the dependency.
+- **Acceptance criteria live on stories.** Tasks inherit meaning from their parent story — acceptance criteria belong at the story level. The story is done when its acceptance criteria pass, not necessarily when every task checkbox is ticked.
+- **Right-size task decomposition.** A single task per story is fine when the work is straightforward. The value of task-level breakdown is making complex stories manageable, not adding bureaucracy to simple ones.
+- **Dependencies between stories or epics, not tasks.** Use `**Blocked by**: Story N` for intra-epic story dependencies. Use `**Blocked by**: Epic {filename-prefix}-epic-{slug}` for cross-epic dependencies — e.g. `Epic 28-01-epic-foo` for new two-part epics, or `Epic 15-epic-bar` for legacy flat epics (both shapes are valid). Keep dependencies at the story level — if tasks in different stories are interdependent, the stories themselves should carry the dependency.
 - **One epic, one document.** Each epic produces its own markdown file. This keeps documents focused and allows parallel work on independent epics.
-- **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Don't add testing tasks manually — the automation ensures consistency. Stories with only `[manual]` criteria get no testing task.
+- **Default to automation.** When proposing tags for new criteria, the default is automation — `[unit]`, `[integration]`, or `[feature]`. `[manual]` is the exception, not a peer of the automated tags. Reach for an automated tag whenever the criterion describes:
+  - **CRUD operations**, validation rules, or business logic
+  - **API contracts**, request/response shape, or status code behaviour
+  - **Authentication / authorisation flows** (sessions, tokens, permission checks)
+  - **Data transformations**, calculations, or state machines
+  - **Persistence behaviour** (database writes, migrations, query results)
+  - **Event flows** or message handling between components
+  - **User-visible workflows** that can be driven by a feature/E2E test runner
+
+  Reach for `[manual]` only when the criterion describes:
+  - **Visual or UX judgement** (chart legibility, copy quality, layout polish)
+  - **Third-party UI you don't control** (an external OAuth provider's login page, a payment processor's hosted form)
+  - **Content review** of generated text, images, or media
+  - **Observability checks** against external systems (e.g. confirming an email actually arrived in a real inbox)
+  - **Behaviour that is genuinely infeasible to exercise from code** in the current test infrastructure
+
+  Every `[manual]` tag carries a one-line justification stating which of the above (or a comparable reason) applies. If you can't write the justification, the criterion probably belongs in an automated tag.
+- **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Let the automation handle testing tasks — it ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
-- **`[plan]` opts into formal plan mode.** When a story heading carries `[plan]`, `cpm:do` enters formal plan mode (EnterPlanMode/ExitPlanMode) for that story's tasks — enforcing read-only exploration and user approval before implementation. Without `[plan]`, `cpm:do` uses inline planning (brief text plan, then straight to implementation) which keeps the task loop uninterrupted. Suggest `[plan]` for stories involving architectural decisions, security-sensitive areas, or multi-system integration. Most stories don't need it.
-- **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Only create them when the epic has genuine cross-story integration points — not as a default for every epic.
-- **Coverage matrix is procedural, not evaluative.** Step 3d runs per-epic and quotes spec text and story criterion text side-by-side — verbatim, not summarised. Your job is extraction and presentation; the user judges fidelity. Don't assess "exact" vs "partial" — that's a subjective call the human makes by reading the two columns. Each matrix is saved as `docs/epics/{parent}-{seq}-coverage-{slug}.md` alongside its epic. Step 4 then runs a cross-epic gap check to catch requirements that no epic covers.
+- **`[plan]` opts into formal plan mode.** When a story heading carries `[plan]`, `cpm:do` enters formal plan mode (EnterPlanMode/ExitPlanMode) for that story's tasks — enforcing read-only exploration and user approval before implementation. Without `[plan]`, `cpm:do` uses inline planning (brief text plan, then straight to implementation) which keeps the task loop uninterrupted. Suggest `[plan]` for stories involving architectural decisions, security-sensitive areas, or multi-system integration. Most stories work well with inline planning.
+- **Integration testing stories are for cross-story verification.** They're distinct from per-story testing tasks. Create them only when the epic has genuine cross-story integration points.
+- **Coverage matrix is procedural, not evaluative.** Step 3d runs per-epic and quotes spec text and story criterion text side-by-side — verbatim, not summarised. Your job is extraction and presentation; the user judges fidelity. Leave "exact" vs "partial" judgement to the human — they make that call by reading the two columns. Each matrix is saved as `docs/epics/{parent}-{seq}-coverage-{slug}.md` alongside its epic. Step 4 then runs a cross-epic gap check to catch requirements that no epic covers.
 - **Facilitate the grouping.** The user knows their domain better than you. Present a suggested structure and let them reshape it.

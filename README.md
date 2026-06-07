@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM and CPM2), note searching, PHP code intelligence, and JavaScript/TypeScript code simplification. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), note searching, PHP code intelligence, and JavaScript/TypeScript code simplification. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -18,29 +18,10 @@ This marketplace contains plugins for facilitated planning (CPM and CPM2), note 
 /plugin install noteplan@claude-code-marketplace
 /plugin install php-lsp@claude-code-marketplace
 /plugin install cpm@claude-code-marketplace
-/plugin install cpm2@claude-code-marketplace
 /plugin install js-simplifier@claude-code-marketplace
 ```
 
 ## Available Plugins
-
-### Claude Planning Method 2 (cpm2)
-
-**Opus 4.7-optimised fork of CPM — facilitated planning with multi-perspective discussion and focused consultation**
-
-A 4.7-tuned version of the Claude Planning Method plugin. All skills rewritten with positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and reduced token footprint. Ships as a separate plugin so users can choose the version that matches their model.
-
-Same 18-skill pipeline as CPM (discover → brief → architect → spec → epics → do → retro, plus party, consult, review, pivot, ralph, quick, status, library, archive, present, templates). See the CPM section below for the full skill table — `cpm2` skills work identically, just invoked as `/cpm2:skill` instead of `/cpm:skill`.
-
-**When to use cpm2 vs cpm**: Use `cpm2` when running on Opus 4.7 or later. Use `cpm` on earlier models (Opus 4.6, Sonnet).
-
-```bash
-/plugin install cpm2@claude-code-marketplace
-```
-
-[View full documentation](./cpm2/README.md)
-
----
 
 ### NotePlan Search (v1.0.0)
 
@@ -123,13 +104,15 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v1.19.3)
+### Claude Planning Method (v2.0.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
 Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots — and consult mode for focused one-to-one expert dialogue with dynamic membership. Inspired by the BMAD-METHOD.
 
-**Seventeen skills forming a pipeline:**
+v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and a reduced token footprint.
+
+**Nineteen skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -141,7 +124,9 @@ Structured discovery, product ideation, architecture exploration, specification,
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
 | `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{nn}-epic-{slug}.md` |
 | `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
+| `/cpm:ralph` | Autonomous multi-epic execution (Ralph Wiggum loop) | Ralph loop command + execution log |
 | `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
+| `/cpm:audit` | Independent codebase health audit across nine dimensions | `docs/audits/{nn}-audit-{slug}.md` |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
 | `/cpm:present` | Audience-aware artifact transformation | `docs/communications/{nn}-{format}-{slug}.md` |
@@ -217,6 +202,7 @@ Structured discovery, product ideation, architecture exploration, specification,
 - Spec, ADR, and test coverage compliance review dimensions
 - Lightweight retros with testing gap analysis that feed forward into the next planning cycle
 - Adversarial review — agent personas challenge assumptions, spot gaps, and flag risks with optional autofix
+- Independent codebase audit — nine dimensions of code health with `file:line` citations, prioritised findings, and handoff to spec/library/quick
 - Course correction — surgically amend any artefact with cascading downstream updates (5 artifact types)
 - Audience-aware artifact transformation — present planning artifacts to any audience in any format
 - Two-tier template system — structural (fixed data contracts) and presentational (overridable)
@@ -275,7 +261,6 @@ A skill that scans all JS/TS files (or a configurable subset) and applies clarit
 /plugin uninstall noteplan@claude-code-marketplace
 /plugin uninstall php-lsp@claude-code-marketplace
 /plugin uninstall cpm@claude-code-marketplace
-/plugin uninstall cpm2@claude-code-marketplace
 /plugin uninstall js-simplifier@claude-code-marketplace
 
 # Remove the entire marketplace

@@ -18,11 +18,11 @@ Resolve the epic doc first, then select a task.
    a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
    b. If no epic files found, proceed without one (tasks still work via their descriptions).
    c. If only one epic file exists, use it — no need to ask.
-   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Do not use Bash loops with shell variables for this — use Grep and Read tools. If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
+   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Use Grep and Read tools directly (Bash loops with shell variables lose context). If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
    e. If all epics are `Complete`, tell the user there's nothing to do.
 3. If no epic docs exist, proceed without one (tasks still work via their descriptions).
 
-The epic doc, once resolved, applies to the entire work loop — don't re-parse it from each task.
+The epic doc, once resolved, applies to the entire work loop. Parse it once and reuse the result across all tasks.
 
 ### Task Selection
 
@@ -31,18 +31,34 @@ The epic doc, once resolved, applies to the entire work loop — don't re-parse 
 3. Call `TaskList` and pick the lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 4. If no pending unblocked tasks exist after hydration, the work is done.
 
+## Retro Check
+
+Before the work loop begins, run the **retro consumption gate** — a hard gate (defined here, local to `cpm:do`) that forces each relevant prior-epic lesson to be consciously applied, deferred, or dismissed before any work starts. This is `cpm:do`'s stronger form of retro consumption; the shared **Retro Awareness** procedure remains advisory for the other skills, and this skill overrides its Yes/No prompt with the disposition gate below.
+
+1. **Find the lessons.** Glob `docs/retros/[0-9]*-retro-*.md`. If none exist or the directory is absent, skip the gate silently and start the loop. Otherwise read the most recent retro file (highest numeric prefix).
+2. **Select relevant observations.** Filter the retro's observations to the categories this skill acts on (see **Retro incorporation** below); observations outside those categories are not gated.
+3. **Gate on disposition, not acknowledgement.** Present each relevant observation **verbatim, with its category** (rendered in the message body per the **Gate Presentation** convention), and require a disposition for *each one* via `AskUserQuestion` — never a single blanket confirmation:
+   - **Applied** — state *how* it changes this run (which task exploration or criterion it informs).
+   - **Deferred** — give a one-line *reason* it isn't being applied now.
+   - **Obsolete** — no longer relevant; say why.
+   A lone "acknowledge" or "continue" response does **not** satisfy the gate — each observation gets its own disposition.
+4. **Record the trace.** For each disposition, append a breadcrumb to the epic doc being worked (the epic resolved in Input), in its top-level metadata block (below the epic's `**Blocked by**` field):
+   `**Retro applied**: {nn} · {category} · {disposition} — {note}`
+   where `{nn}` is the source retro's number, `{category}` the observation category, `{disposition}` one of Applied / Deferred / Obsolete, and `{note}` the how/reason/why from step 3. This makes how each prior lesson was handled auditable by the next reader, `cpm:status`, and the next retro.
+
+**Autonomous mode (e.g. `cpm:ralph`)**: When the run is autonomous — no human is present to choose dispositions — the gate **does not block**. Auto-defer every relevant observation: write `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)` for each (the step 4 format), and surface the full list of these deferrals in the batch/run summary (Step 8 item 4) so a human can review them after the loop. Degrade to a logged deferral — never wait for input.
+
+Once every relevant observation has a disposition, **start the loop**, carrying each *Applied* disposition into the run as active context — a lens on every task per the incorporation guidance below, not a one-off.
+
+**Retro incorporation** (this skill — which categories matter and what changes):
+- **Complexity underestimates**: Inform per-task exploration (Step 1, Load Context) — when exploring a task, look for the complexity drivers past tasks underestimated (concurrency, edge cases, data shapes).
+- **Codebase discoveries**: Inform per-task exploration — surfaced patterns and limitations are checked first before re-discovering them.
+- **Testing gaps**: Inform Step 4 (Verify Acceptance Criteria) — past untestable criteria patterns are flagged early so the user can refine criteria before implementation, not after.
+- **Patterns worth reusing**: Inform Step 4 implementation — apply the surfaced pattern when its conditions match the current task.
+
 ## Library Check
 
-After resolving the epic doc and before starting the per-task workflow, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `do` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to task execution: {titles}. I'll reference these during implementation." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during task execution (step 4 of the per-task workflow) when a library document's content is directly relevant to the current task — e.g. reading coding standards before writing code, or architecture docs before making structural decisions.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block task execution due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file. These results persist across the entire task loop — do not re-scan between tasks. Only re-scan if the progress file is missing (post-compaction recovery).
+Follow the shared **Library Check** procedure with scope keyword `do`. Deep-read selectively during task execution when a library document's content directly affects the current task — e.g. coding standards before writing code, or architecture docs before structural decisions.
 
 ### Template Hint (Startup)
 
@@ -65,7 +81,7 @@ After the Template Hint and before story hydration, discover the project's test 
    - `Cargo.toml` — check for Rust project (e.g. `cargo test`)
 3. **Ask the user**: If no test command is discoverable from steps 1-2, use AskUserQuestion to ask: "No test runner found automatically. What command runs your tests?" with options for common runners and a freeform option.
 
-**Cache the result**: Store the discovered test command in the progress file (see State Management) as `**Test command**: {command}` or `**Test command**: none` if the user declines. This persists across all verification gates in the session — do not re-discover between tasks.
+**Cache the result**: Store the discovered test command in the progress file (see State Management) as `**Test command**: {command}` or `**Test command**: none` if the user declines. Reuse the cached command for all verification gates in the session.
 
 **Graceful degradation**: If no test runner is discoverable and the user chooses not to provide one, set `**Test command**: none`. Verification gates will fall back to the existing self-assessment approach and note that no test runner was available.
 
@@ -80,9 +96,9 @@ After Test Runner Discovery and before story hydration, detect the project's fra
 1. **Laravel**: Check for an `artisan` file in the project root **and** `composer.json` containing `laravel/framework` in its `require` or `require-dev` dependencies. If both are present, the project is Laravel.
 2. **Other frameworks**: No special detection needed at this stage. Additional frameworks can be added here as framework-specific tooling becomes available.
 
-**Cache the result**: Store the detected framework in the progress file as `**Framework**: laravel` or `**Framework**: none`. This persists across the entire session — do not re-detect between tasks.
+**Cache the result**: Store the detected framework in the progress file as `**Framework**: laravel` or `**Framework**: none`. Reuse the cached value for the entire session.
 
-**Permission check**: If the framework is `laravel`, check whether the `laravel-simplifier:laravel-simplifier` agent is available by reviewing the session's tool permissions. The story refactoring pass (Step 5b) invokes this agent via the Task tool, which requires `Task(laravel-simplifier:laravel-simplifier)` in the user's permission allow list. If unsure whether it's pre-authorised, warn the user early: "Laravel detected — the story refactoring pass uses the `laravel-simplifier` agent. If you haven't already, add `Task(laravel-simplifier:laravel-simplifier)` to your permission allow list (in `.claude/settings.json` under `permissions.allow`) to avoid permission prompts that may not surface during the work loop." This is advisory — do not block startup on it.
+**Permission check**: If the framework is `laravel`, check whether the `laravel-simplifier:laravel-simplifier` agent is available by reviewing the session's tool permissions. The story refactoring pass (Step 5b) invokes this agent via the Task tool, which requires `Task(laravel-simplifier:laravel-simplifier)` in the user's permission allow list. If unsure whether it's pre-authorised, warn the user early: "Laravel detected — the story refactoring pass uses the `laravel-simplifier` agent. If you haven't already, add `Task(laravel-simplifier:laravel-simplifier)` to your permission allow list (in `.claude/settings.json` under `permissions.allow`) to avoid permission prompts that may not surface during the work loop." This is advisory — proceed with startup regardless.
 
 ## Story Hydration
 
@@ -141,9 +157,13 @@ Parse stories and tasks by their heading structure (`##` for stories, `###` for 
 
 ## Per-Task Workflow
 
-**State tracking**: Before starting the first task, create the progress file (see State Management below). After the work loop finishes, delete the file.
+**State tracking**: Create the progress file before the first task and update it after each task completes. See State Management below for the format and rationale. Delete the file once the work loop finishes.
 
-> **HARD RULE — PROGRESS FILE UPDATE**: After completing EVERY task, you MUST call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` BEFORE doing anything else. This is not optional. This is not deferrable. This has the same priority as saving a file after editing it. A task is NOT done until the progress file reflects it. Historically this step gets silently dropped when momentum is high — that is a bug, not an optimisation. If compaction fires and this file is stale, the user loses all session context with no recovery path.
+### Termination
+
+- **Success**: No pending unblocked tasks remain after the Story Hydration check in Step 7 — proceed to Batch Summary (Step 8).
+- **Blocker**: A task requires an external dependency that cannot be resolved in this session (missing API access, awaiting another team's output, infrastructure not available). Use AskUserQuestion to confirm the blocker with the user, then skip the task and continue to the next unblocked task. If no unblocked tasks remain, proceed to Batch Summary with the blocker noted.
+- **Ambiguity**: Acceptance criteria cannot be evaluated — the requirement is unclear, contradictory, or untestable with available tools. Use AskUserQuestion to surface the specific criterion text and ask the user to clarify. If resolved, continue. If unresolvable, treat as a blocker — skip the task and continue to the next.
 
 For each task, follow these steps in order.
 
@@ -155,7 +175,7 @@ For each task, follow these steps in order.
 - **Drift detection**: If a coverage matrix was loaded and any of its rows have `✓` in the Verified column, compare the "Story Criterion (verbatim)" text in those verified rows against the corresponding acceptance criteria in the epic doc. If the text differs — indicating the epic doc was modified after verification — flag the mismatch to the user: "Coverage matrix drift detected: Story {N} criterion text has changed since verification. The `✓` marker may be stale." This catches out-of-band edits that bypassed `/cpm:pivot`'s invalidation logic. If no verified rows exist or no coverage matrix is present, skip this check.
 - **Determine task type**: Check the task description for `Type: verification`. If present, this is a story verification gate — the work in step 4 will be acceptance criteria checking, not implementation. If absent, this is a normal implementation task.
 - **Determine workflow mode**: Scan the parent story's acceptance criteria for the `[tdd]` tag. If any criterion carries `[tdd]`, this story uses TDD workflow mode — record this for use in Step 4. If no `[tdd]` tag is found, the story uses the standard post-implementation workflow.
-- **Determine planning mode**: Check whether the parent story's `##` heading contains a `[plan]` tag (e.g. `## Set up OAuth provider integration [plan]`). If `[plan]` is present, this story uses formal plan mode in Step 3. If absent, Step 3 uses inline planning (the default). Record this for use in Step 3.
+- **Determine planning mode**: Check whether the parent story's `##` heading contains a `[plan]` tag (e.g. `## Set up OAuth provider integration [plan]`). If `[plan]` is present, this story uses formal plan mode in Step 3 — but the plan covers the whole story and fires **once per story, not once per task**. Also check the progress file's `**Planned stories**:` line: if this story's number already appears there, its plan is approved and Step 3 will skip straight to implementation. If `[plan]` is absent, Step 3 uses inline planning (the default). Record both the tag and the already-planned state for use in Step 3.
 - If no epic doc is available, proceed without epic doc integration — the task still gets done.
 
 ### 2. Update Status to In Progress
@@ -177,13 +197,16 @@ For complex, critical, or sensitive tasks: explore the codebase using Read, Glob
 
 Skip planning entirely for straightforward tasks — config changes, documentation updates, simple additions to existing patterns.
 
-**Formal plan mode (`[plan]` tag present)**
+**Formal plan mode (`[plan]` tag present) — once per story**
 
-When the parent story's heading carries a `[plan]` tag: enter `EnterPlanMode`, explore the codebase, design the approach, and get user approval before writing any code. Then exit plan mode and proceed to Step 4.
+The `[plan]` tag lives on the story, so the plan covers the whole story and formal plan mode fires **once per story, not once per task**. Which case applies depends on whether the story has already been planned in this run (the `**Planned stories**:` check from Step 1):
+
+- **Story not yet planned** (its number is absent from `**Planned stories**:` — typically the first task of the story): enter `EnterPlanMode`, explore the codebase, and design the approach **for the entire story** — sequence all of its tasks and call out implementation decisions and risks across them, not just the current task. Get user approval before writing any code, then exit plan mode. Record the story as planned by adding its number to the progress file's `**Planned stories**:` line (written at the next Step 6 Part C). Then proceed to Step 4 for the current task.
+- **Story already planned** (its number appears in `**Planned stories**:`): do **not** re-enter plan mode — the approved story plan already governs this task. Proceed directly to Step 4. Add a brief one- or two-line inline note only if this specific task needs a wrinkle the story-level plan did not cover.
 
 Use formal plan mode for stories where the enforcement benefit (physically prevented from writing code while planning) and the approval gate (user reviews before implementation begins) justify the loop interruption. The `[plan]` tag is applied by `cpm:epics` to stories that touch architecture, security, or multi-system integration.
 
-**Note**: Formal plan mode creates an interaction boundary that pauses the task loop. After exiting plan mode and completing the task, you MUST continue the task loop — proceed to Step 5, then Step 6, then Step 7 (next task). The plan mode interaction is NOT a stopping point.
+**Note**: Formal plan mode creates an interaction boundary that pauses the task loop. After exiting plan mode and completing the task, you MUST continue the task loop — proceed to Step 5, then Step 6, then Step 7 (next task). The plan mode interaction is NOT a stopping point, and it does not repeat for the remaining tasks in the same story.
 
 **Keep execution plans concise** (both modes). The epic doc already defines *what* to build — stories, tasks, acceptance criteria, and description fields provide the specification. Your plan should only add what the epic doc doesn't say:
 
@@ -191,22 +214,21 @@ Use formal plan mode for stories where the enforcement benefit (physically preve
 2. **Implementation decisions** — choices not already captured in the epic (e.g. which design pattern, which library API to use)
 3. **Risk flags** — edge cases or complications you've spotted during exploration
 
-Do not restate acceptance criteria, enumerate test cases already implied by `[unit]`/`[tdd]` tags, or spell out file contents that will be written during implementation. A bulleted list of 5-15 lines is the target — not a design document. Context is finite; every token spent on the plan is a token unavailable for implementation.
+Include only what the epic doc omits: order of operations, implementation decisions, and risk flags. Acceptance criteria, test cases implied by tags, and file content details belong to the implementation phase. A bulleted list of 5-15 lines is the target. Context is finite; every token spent on the plan is a token unavailable for implementation.
 
 ### 4. Do the Work
 
-**If this is a verification gate** (`Type: verification` in the task description): Do not implement anything. Instead, read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase.
+**If this is a verification gate** (`Type: verification` in the task description): Read the parent story's acceptance criteria from the epic doc and verify each criterion against the current state of the codebase. The gate's purpose is assessment only — all implementation happens in prior tasks.
 
-**Test execution in verification gates**: Scan the story's acceptance criteria for test approach tags (`[unit]`, `[integration]`, `[feature]`). If any automated tags are present and `**Test command**` in the progress file is not `none`:
+**Test execution in verification gates**: For criteria tagged `[unit]`, `[integration]`, or `[feature]`, run the cached test command and use pass/fail as evidence — a failing test means the criterion is not met. For `[manual]` or untagged criteria, self-assess by inspecting the codebase. If `**Test command**` is `none`, all verification uses self-assessment.
 
-1. Run the cached test command using the Bash tool.
-2. If tests **pass**: report the pass and continue verification of remaining criteria (including `[manual]` ones via self-assessment).
-3. If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". Do not block the work loop — let the user decide.
-4. If `**Test command**` is `none` or all criteria are tagged `[manual]`, use the existing self-assessment approach — inspect files, check outputs, and assess each criterion manually.
+**Stalled verification**: If a fix-and-recheck cycle fails to reduce the count of unmet criteria after a fix attempt, stop cycling and use AskUserQuestion: "Verification not converging — {N} criteria still unmet." Options: "Continue trying", "Mark unmet criteria as known issues and proceed", "Stop the work loop".
 
 Proceed to step 5 with your assessment.
 
-**If this is an implementation task in TDD mode** (no `Type: verification`, and the story carries `[tdd]` as determined in Step 1): Replace the standard implementation approach with the **red-green-refactor sub-loop**. This is the core TDD discipline — do not skip or compress these phases.
+**If this is an implementation task in TDD mode** (no `Type: verification`, and the story carries `[tdd]` as determined in Step 1): Replace the standard implementation approach with the **red-green-refactor sub-loop**. This is the core TDD discipline — execute all three phases in sequence, each producing a distinct outcome.
+
+> **Intentionally preserved**: The three-phase structure below is a behavioural lock that enforces test-before-implementation ordering — it is not instructional verbosity. Compressing it risks losing the ordering guarantee that is the whole point of TDD mode.
 
 **Phase 1 — Red (write a failing test)**:
 1. Derive a test from the parent story's acceptance criteria and the current task's description. Write a test file (or add test cases to an existing test file) that describes the expected behaviour.
@@ -215,13 +237,13 @@ Proceed to step 5 with your assessment.
 4. If the test **passes unexpectedly**: stop. Something is wrong — either the test isn't testing what you think, or the behaviour already exists. Use AskUserQuestion to present the situation: "Red phase: test passed unexpectedly. This means the expected behaviour may already exist, or the test isn't verifying the right thing." Options: "Investigate and fix the test", "Skip TDD for this task (fall back to standard workflow)", "Stop and discuss".
 
 **Phase 2 — Green (minimum implementation)**:
-1. Write the **minimum code** needed to make the failing test pass. Do not add extra features, handle edge cases not covered by the test, or refactor. Just make the test pass.
+1. Write the **minimum code** needed to make the failing test pass — only what the failing test requires. Extra features, uncovered edge cases, and refactoring belong to later phases.
 2. Run the targeted test command again. It **must pass**.
 3. If the test **still fails**: the implementation isn't sufficient. Continue working on the implementation until the test passes. If stuck after a reasonable attempt, use AskUserQuestion: "Green phase: test still failing after implementation." Options: "Continue working on it", "Skip TDD for this task (fall back to standard workflow)", "Stop and investigate".
 
 **Phase 3 — Refactor (clean up within task scope)**:
 1. Review the code just written in Phases 1 and 2. Clean up: improve naming, extract methods, remove duplication, improve readability.
-2. **Scope constraint**: Only refactor code touched by the current task. Do not restructure surrounding code, reorganise files, or make changes beyond the immediate scope. The refactor phase is about the code you just wrote, not the broader codebase.
+2. **Scope constraint**: Limit refactoring to code touched by the current task. Restructuring, file reorganisation, and broader changes belong to the story-level refactoring pass (Step 5b).
 3. Run the targeted test command again. It **must still pass** — refactoring must not change behaviour.
 4. If the test **fails after refactoring**: you changed behaviour, not just structure. Undo the refactoring change that broke the test and try again.
 
@@ -230,6 +252,8 @@ Proceed to step 5 after the sub-loop completes.
 **If this is an implementation task in standard mode** (no `Type: verification`, and the story does **not** carry `[tdd]`): Execute the task as described. This is the existing approach — writing code, creating files, running commands, whatever the task requires. Read the full task description and the parent story's acceptance criteria to understand the broader context. Work until the task is complete.
 
 **ADR awareness** (both modes): Before starting implementation, check if this task touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the task involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
+
+**Companion-asset awareness** (both modes): A task's acceptance criterion may reference an HTML **companion asset** — a relative path to `docs/{type}/assets/{nn}-{slug}-{label}.html` (a UI mockup or diagram a `spec`/`architect` artifact generated; see the shared **HTML Output** convention). When it does, open the asset and treat it as a **visual design target**: build the implementation to *match what it shows*. You must **NOT** parse the companion HTML to extract requirements, structure, or values — the Markdown acceptance criteria are the only machine-readable source of truth. The asset informs *appearance*, not *requirements*: read it the way a developer reads a mockup, not the way a parser reads data.
 
 ### 5. Verify Acceptance Criteria
 
@@ -248,7 +272,7 @@ Before marking the task complete:
 2. For each matching row, use the Edit tool to replace the empty Verified cell with `✓`. The edit targets the specific row's trailing `| |` (empty Verified cell) and replaces it with `| ✓ |`.
 3. Only update rows matching the current story — rows for other stories must remain untouched.
 
-If the coverage matrix file doesn't exist, log a note ("No coverage matrix found — skipping proof recording") and continue. Proof recording is additive; it must never block task execution. If an Edit call fails (e.g. the row text doesn't match the expected pattern), flag the failure to the user via AskUserQuestion with options: "Continue without recording proof for this row" or "Stop and investigate". Do not silently skip a failed write.
+If the coverage matrix file doesn't exist, log a note ("No coverage matrix found — skipping proof recording") and continue. Proof recording is additive and must always allow task execution to proceed. If an Edit call fails (e.g. the row text doesn't match the expected pattern), flag the failure to the user via AskUserQuestion with options: "Continue without recording proof for this row" or "Stop and investigate" — every failed write must be surfaced.
 
 ### 5b. Story Refactoring Pass (verification gates only)
 
@@ -264,15 +288,15 @@ After the verification gate passes (all acceptance criteria met in Step 5), perf
 **Retest**: After refactoring, run the cached test command (if not `none`) to confirm nothing broke.
 
 - If tests **pass**: proceed to Step 6.
-- If tests **fail**: revert the refactoring changes that caused failures and proceed to Step 6 without them. Do not block the work loop on a failed refactoring pass.
+- If tests **fail**: revert the refactoring changes that caused failures and proceed to Step 6 without them. The work loop always continues past a failed refactoring pass.
 
-**Scope constraint**: Start with the files touched by the current story, but look outward for consolidation opportunities — duplicate code, similar patterns, extraction candidates, and abstractions that span touched and non-touched code. If the story introduced logic that already exists elsewhere, merge it. If a pattern appears in both new and existing code, extract it. The refactoring may touch files beyond the story's direct scope when there's a clear consolidation or deduplication benefit. However, do not pursue unrelated refactoring — every change should connect back to the code the story produced.
+**Scope constraint**: Start with the files touched by the current story, but look outward for consolidation opportunities — duplicate code, similar patterns, extraction candidates, and abstractions that span touched and non-touched code. If the story introduced logic that already exists elsewhere, merge it. If a pattern appears in both new and existing code, extract it. The refactoring may touch files beyond the story's direct scope when there's a clear consolidation or deduplication benefit. Every change must connect back to the code the story produced — unrelated refactoring is out of scope.
 
 **Skip conditions**: If the story had no implementation tasks (e.g. pure documentation or configuration), skip the refactoring pass — there's nothing to refactor.
 
 ### 6. Complete and Update State
 
-> **THIS STEP HAS THREE PARTS. ALL THREE ARE MANDATORY. YOU MUST COMPLETE ALL THREE BEFORE MOVING TO STEP 7. THE THIRD PART (PROGRESS FILE) IS THE ONE THAT GETS DROPPED — DO NOT DROP IT.**
+This step has three parts: mark complete, capture an observation, and write the progress file. All three run on every task.
 
 **Part A — Mark complete**:
 - If epic doc integration is active, use the Edit tool to update the matched entry's status (whether `##` story or `###` task):
@@ -282,11 +306,9 @@ After the verification gate passes (all acceptance criteria met in Step 5), perf
 
 **Part B — Capture observations (retro)**:
 
-> **THIS STEP IS MANDATORY FOR VERIFICATION GATES. DO NOT SKIP IT.**
->
-> Every completed story must produce a `**Retro**:` field — this is the only input `/cpm:retro` has to work with. If no observations are captured, the retro skill has nothing to synthesise and the feedback loop between execution and planning is broken. A retro observation is not optional bookkeeping — it is the bridge between execution and learning.
+Every completed story produces a `**Retro**:` field — this is the only input `/cpm:retro` has to work with. Without an observation, the retro skill has nothing to synthesise.
 
-**For verification gate tasks**: You MUST record an observation. Reflect on the story as a whole — all the tasks you just verified. Ask: "What's worth remembering about this story?" Pick the most fitting category below and write one sentence. If nothing went wrong, use `Smooth delivery` — that's valuable data too.
+**For verification gate tasks**: Record an observation. Reflect on the story as a whole — all the tasks you just verified. Ask: "What's worth remembering about this story?" Pick the most fitting category below and write one sentence. If nothing went wrong, use `Smooth delivery` — that's valuable data too.
 
 **For implementation tasks**: Observation is optional. If something noteworthy happened during this specific task, record it. Otherwise, skip Part B — the mandatory verification gate observation will cover the story.
 
@@ -301,20 +323,24 @@ Observation categories (use exactly one per observation):
 
 Use the Edit tool to append a `**Retro**:` field to the completed story in the epic doc, immediately after the last existing field for that story (before the `---` separator). Format: `**Retro**: [{category}] {One-sentence observation}`
 
+**Signal capture (retro triggers)**: Independently of the observation above, watch for *retro-trigger signals* during the loop — these decide whether the end-of-epic retro is generated (Step 8). A signal fires when any of these occur while working a task: a verification gate resolved fail-then-continue (criteria unmet but the user chose to proceed), a `[tdd]` story needed more than one red cycle, a test command returned failures, a story was marked Blocked or stuck, or an `**Inline change**` breadcrumb was recorded. When a signal fires during a task, record it in the progress file's `**Retro signals**:` line (Part C) — append the trigger as it happens; never re-judge it later. The set accumulates across the whole epic. (The epic-level spec gap is the one trigger that surfaces after the loop, at Step 8 — it is added to the set there.)
+
 **Part C — Write progress file**:
 
-> **YOU ARE ABOUT TO SKIP THIS. DO NOT SKIP THIS.**
->
-> Call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` RIGHT NOW. Not later. Not after the next task. NOW. Every time you have completed Part A, you must immediately do Part C. There is no scenario where skipping this is acceptable. A skipped progress file write is a data loss bug — the user loses their entire session if compaction fires.
+Call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` immediately after Part A (and Part B's Edit, if applicable). This must be the very next tool call — before any reads, task queries, or other operations.
 
 The file must reflect:
 - The task just completed (added to Completed Tasks section)
 - The next action (which task to pick up next, or "work loop complete")
 - The current tasks remaining count
+- The `**Planned stories**:` line — carry forward any story numbers already listed, and add the current story's number if its `[plan]` plan was approved during this task (Step 3). This is what stops formal plan mode from re-firing for the story's remaining tasks.
+- The `**Retro signals**:` line — carry forward signals already recorded, and append any retro-trigger signal that fired during this task (see Part B's *Signal capture*). This accumulating set is what Step 8 reads to decide whether retro generation is mandatory.
 
-**Step 6 is not complete until the Write tool call for `.cpm-progress-{session_id}.md` has returned. Do not call TaskList, TaskGet, Read, or any other tool until the Write has succeeded. The very next tool call after Part A's TaskUpdate (and Part B's Edit if applicable) MUST be the Write call for the progress file.**
+Once the progress file is written, go straight to Step 7. Finishing a task — or a whole story, or making a commit — is **not** a checkpoint: do not summarise what you just did, do not announce progress, and do not pause to ask whether or how to proceed (in any wording). The next iteration begins silently. The only stops are the explicit gates this skill names (see Step 7 and the **No unauthorised checkpoints** guideline).
 
 ### 7. Next Task
+
+**Loop without prompting.** Step 7 is silent — no user gate, no announcement, no "ready for the next one?" check-in. If a task exists, return to Step 1. If none does, proceed to Step 8. The transition between tasks (and between stories, via Story Hydration) happens without user input. In particular, never close a task or story by pausing to ask whether or how to proceed. The wording varies endlessly — "Would you like to continue, stop, or commit?", "Shall I move on?", "Want me to keep going?", "Ready for the next one?" — so it is the *intent* that is forbidden, not any fixed phrase: any prompt that halts the loop for permission to continue, in any wording and whether via `AskUserQuestion` or plain text, is an unauthorised checkpoint. Completing a unit of work is never permission to pause. See the **No unauthorised checkpoints** and **Forbidden phrasings** entries in Guidelines.
 
 - Run the **Story Hydration** gating check: call `TaskList`. If no pending unblocked tasks exist, hydrate the next unblocked story from the epic doc (see Story Hydration above). This handles story-to-story transitions automatically.
 - After hydration (or if tasks already existed), pick the next lowest-ID task that is `pending` and has no unresolved `blockedBy`.
@@ -329,44 +355,20 @@ When the work loop finishes (no more pending unblocked tasks):
 
    **Epic-level proof recording**: After the epic-level verification passes (no gaps found), update the coverage matrix to mark any remaining unverified rows with `✓`. These are rows that passed story-level verification but may not have been marked during Step 5 (e.g. requirements that span multiple stories, or rows that only became fully verified at the integration level). If the epic-level check identified gaps, do **not** mark those gap-flagged rows — they represent unproven requirements. If no coverage matrix exists, skip this step.
 
-2. **Check for observations**: Read the epic doc and scan for any `**Retro**:` fields across all completed stories. If none exist, skip the lessons step.
+2. **Gather observations and the retro-trigger flag set**: Read the epic doc and collect all `**Retro**:` fields across completed stories — these are the observations. Then read the progress file's `**Retro signals**:` line — the retro-trigger flag set accumulated during the loop (Step 6 Part B, *Signal capture*). Add the **epic-level spec gap** to the flag set if the epic-level verification in item 1 found one.
 
-3. **Synthesise lessons**: If observations were captured, append a `## Lessons` section to the end of the epic doc using the Edit tool. Group observations by category:
+3. **Generate the retro (mandatory when signals fired)**: Decide generation from the flag set, not from a judgement call:
 
-```markdown
-## Lessons
+   - **If the flag set is non-empty** (any retro-trigger signal fired, or an epic-level spec gap was found): retro generation is **mandatory**. Follow the shared **Retro Synthesis** procedure (in the CPM Shared Skill Conventions), passing the observations gathered in item 2, the epic's story outcomes, and the epic doc path as the source. The procedure groups, synthesises, and writes `docs/retros/{nn}-retro-{slug}.md`, returning the path. This **is** the batch synthesis — do **not** also write a separate `## Lessons` section into the epic doc; the retro file is the single synthesis artifact, produced by the one synthesis implementation shared with `/cpm:retro`.
+   - **If the flag set is empty** (no retro-trigger signal fired and no epic-level spec gap): auto-skip is permitted — do not write a retro file. **Log the skip and its reason** in the batch summary (item 4), e.g. "Retro auto-skipped — clean epic, no retro signals fired." The skip is **never silent**: a skipped retro is always reported with its reason, so the absence of a retro file is a visible, explained decision rather than an oversight. (Note: any `**Retro**:` observations still live on their stories in the epic doc; a manual `/cpm:retro` run can still synthesise them later.)
 
-### Smooth Deliveries
-- {observation from story N}
-
-### Scope Surprises
-- {observation from story N}
-
-### Criteria Gaps
-- {observation from story N}
-
-### Complexity Underestimates
-- {observation from story N}
-
-### Codebase Discoveries
-- {observation from story N}
-
-### Testing Gaps
-- {observation from story N}
-
-### Patterns Worth Reusing
-- {observation from story N}
-```
-
-Only include categories that have observations. Each bullet should reference which story it came from. The summary must be scannable in under 30 seconds — keep it tight.
-
-4. **Report**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain").
+4. **Report**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain"). Always include the **retro outcome**: either the path of the generated retro file, or — when generation was auto-skipped — the explicit skip reason (per item 3). Never omit this line; a clean-epic skip must be stated, not silent. Under an **autonomous run**, also surface the **deferred-unreviewed** consumption-gate dispositions — list every `deferred (autonomous run, unreviewed)` observation (or their count) recorded by the Retro Check gate — so a human can review them after the loop.
 
 5. **Next epic check**: After reporting, decide whether to look for more work:
-   a. **If the epic was specified explicitly** (a file path was passed via `$ARGUMENTS`, not auto-discovered): the user asked for this specific epic. Delete the progress file and stop — do not scan for other epics.
+   a. **If the epic was specified explicitly** (a file path was passed via `$ARGUMENTS`, not auto-discovered): the user asked for this specific epic. Delete the progress file and stop.
    b. **If the epic was auto-discovered** (resolved via smart discovery, not an explicit path): check if other epics are available to work on:
       i. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
-      ii. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete` (excluding the epic just finished). Do not use Bash loops with shell variables for this — use Grep and Read tools.
+      ii. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete` (excluding the epic just finished). Use Grep and Read tools directly (Bash loops with shell variables lose context).
       iii. If **no remaining epics** have work: delete the progress file and stop.
       iv. If **one or more epics** have remaining work: present the choice using AskUserQuestion — "Epic {name} is complete. What would you like to do?" with options:
          - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic)
@@ -375,38 +377,34 @@ Only include categories that have observations. Each bullet should reference whi
 
 ## Graceful Degradation
 
-The skill should work even without an epic doc:
+Every scenario below specifies an explicit action sequence ending with a visible result. No silent fallbacks.
 
-- **No epic doc resolved during Input**: Skip epic doc reads and status updates. Still do the work, still verify acceptance criteria from the task description.
-- **Epic doc file doesn't exist or was deleted mid-loop**: Same — skip epic doc integration, work on the task directly.
-- **Story heading not found in epic doc**: Log a note, skip status updates for that story, continue with the work.
-- **Test command fails to execute** (command not found, timeout, permission error): Report the error to the user via AskUserQuestion. Do not retry automatically. Offer options: "Provide a different test command", "Continue without tests (self-assessment only)", "Stop and investigate". If the user provides a new command, update `**Test command**` in the progress file. Never block the work loop on a broken test command.
-- **Test command returns failures** (tests run but some fail): This is not an error — it's information. Report which tests failed and let the user decide how to proceed (see Step 4 verification gate logic). The work loop continues regardless of the user's choice.
-- **No test command cached** (`**Test command**: none`): All verification uses self-assessment. This is the default fallback and is always available.
-- **No test command + `[tdd]` story**: If the story carries `[tdd]` but `**Test command**` is `none`, the TDD sub-loop cannot run (it requires test execution at every phase). Fall back to the standard post-implementation workflow for this story and warn the user: "TDD mode requires a test runner, but none is available. Falling back to standard workflow for this story." The warning should be visible — use AskUserQuestion to let the user either provide a test command or acknowledge the fallback.
-- **`laravel-simplifier` agent not available**: If the project is Laravel but the `laravel-simplifier:laravel-simplifier` agent is not available in the current session (Task tool call fails, the subagent type is unrecognised, or the permission prompt is not approved), fall back to self-directed refactoring in Step 5b. Log a note: "laravel-simplifier not available, using self-directed refactoring." Do not block the work loop.
+- **No epic doc resolved during Input** → **Action**: Skip epic doc reads and status updates. Execute tasks using their Claude Code task descriptions as the sole specification. **Result**: Report to the user at loop start: "No epic doc — working from task descriptions only."
+
+- **Epic doc file missing or deleted mid-loop** → **Action**: Detect the missing file on the next Read attempt. Switch to task-description-only mode for the remainder of the loop. **Result**: Report to the user: "Epic doc not found at {path} — continuing without epic doc integration."
+
+- **Story heading not found in epic doc** → **Action**: Skip status updates for that story. Continue executing the task using its Claude Code task description. **Result**: Report to the user: "Story {N} heading not found in epic doc — skipping status updates for this story."
+
+- **Test command fails to execute** (command not found, timeout, permission error) → **Action**: Use AskUserQuestion with options: "Provide a different test command", "Continue without tests (self-assessment only)", "Stop and investigate". If the user provides a new command, update `**Test command**` in the progress file. **Result**: The user's choice is recorded and the work loop continues with the selected approach.
+
+- **Test command returns failures** (tests run but some fail) → **Action**: Report the specific test failures to the user via AskUserQuestion with options per Step 4 verification gate logic. **Result**: The user decides how to proceed — fix, skip, or stop. The work loop continues regardless of the choice made.
+
+- **No test command cached** (`**Test command**: none`) → **Action**: Use self-assessment for all verification — inspect files, check outputs, and assess each criterion against the codebase. **Result**: Verification gate reports assessment results inline with each criterion's pass/fail status.
+
+- **No test command + `[tdd]` story** → **Action**: The TDD sub-loop requires test execution at every phase. Use AskUserQuestion: "TDD mode requires a test runner, but none is available." Options: "Provide a test command now", "Fall back to standard workflow for this story". If the user provides a command, update `**Test command**` in the progress file and proceed with TDD. **Result**: If fallback chosen, report: "Using standard workflow for Story {N} (TDD unavailable)." If command provided, proceed with TDD normally.
+
+- **`laravel-simplifier` agent not available** → **Action**: Use self-directed refactoring in Step 5b — review touched files for naming clarity, duplication, and readability. **Result**: Report to the user: "laravel-simplifier not available — using self-directed refactoring for this story."
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the work loop for compaction resilience. This allows seamless continuation if context compaction fires mid-loop.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting the first task.
+- **Update**: after each task completes.
+- **Delete**: only after confirming all output artifacts (epic doc updates, batch summary) are written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-> **KNOWN FAILURE MODE**: The progress file update is the single most skipped instruction in this skill. It gets silently dropped when task momentum is high. Every time it is skipped, it creates a window where compaction would destroy the session with no recovery. Treat the Write call for this file with the same urgency as saving user code — it is not bookkeeping, it is the only thing standing between the user and total context loss.
-
-**Create** the file before starting the first task. **Update** it after EVERY task completes. **Delete** it only after all output artifacts (epic doc updates, batch summary) have been confirmed written — never before.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -417,6 +415,8 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 **Test command**: {discovered test command, or "none" if no runner found}
 **Framework**: {detected framework, e.g. "laravel" or "none"}
 **Tasks remaining**: {count of pending unblocked tasks}
+**Planned stories**: {comma-separated numbers of [plan] stories whose plan has been approved this run, or "none"}
+**Retro signals**: {comma-separated retro-trigger signals fired so far this epic (e.g. "Story 3 fail-then-continue, test failures"), or "none"}
 
 ## Completed Tasks
 
@@ -437,8 +437,18 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 ## Guidelines
 
 - **Do the work.** This skill doesn't just plan — it implements. Write code, create files, run tests, whatever the task requires.
-- **Acceptance criteria gate completion.** Don't mark a task Complete if criteria aren't met unless the user explicitly approves.
-- **Keep momentum, but not at the cost of correctness.** Move through tasks efficiently — don't over-explain between tasks. But never skip verification or rush edits for the sake of speed. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
-- **One task at a time.** Complete each task fully before starting the next. Don't interleave work across tasks.
+- **Minimal change, scoped to the task.** Implement what the task and its acceptance criteria call for — no speculative abstractions, extra configuration, or features beyond the stated scope. When a smaller change satisfies the criteria, prefer it; breadth can be added later when a real need appears.
+- **Solve generally, not to the test.** Write code that addresses the underlying requirement across the full range of valid inputs, rather than special-casing the specific examples a test happens to check. Tests confirm the general solution holds — they are evidence, not the specification to hard-code against.
+- **Acceptance criteria gate completion.** Only mark a task Complete when all acceptance criteria are met, or the user explicitly approves.
+- **Keep momentum, but not at the cost of correctness.** Move through tasks efficiently with minimal explanation between them. Always run verification and take care with edits. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
+- **No unauthorised checkpoints.** The work loop only stops at the gates explicitly listed in this skill — verification failures, unmet criteria, stalled cycles, TDD edge cases, blockers, ambiguous criteria, coverage matrix write failures, and the epic-end gate at Step 8. Everything else is forward motion: task-to-task transitions, story-to-story transitions, and the post-completion summary are all silent. Do not invent additional check-ins. Do not narrate progress between tasks. Do not pause to ask permission to proceed.
+- **Forbidden phrasings.** Never pause the loop to ask the user whether or how to proceed between tasks or stories — regardless of how the prompt is worded, how many options it offers, or whether it uses `AskUserQuestion` or plain text. It is the *category* that is banned, not a fixed list of phrases; the wording varies endlessly. Illustrative, non-exhaustive examples: "Would you like to continue, stop, or commit?", "continue / stop / commit", "Should I commit before continuing?", "Would you like me to proceed to the next story?", "Shall I move on?", "Want me to keep going?", "Ready for the next task?". This holds at every task and story boundary, and immediately after a commit — none is a checkpoint. Commits, if needed, are part of the task itself or are handled outside this skill (see **Version control stays with the user**) — the skill never solicits permission for the next iteration of its own loop. If you find yourself about to write any such prompt, return to Step 7 instead.
+- **Version control stays with the user.** Do not commit, stage, branch, or push on your own initiative — leave the working tree as edited files for the user to commit outside the loop. See the shared **Version control stays with the user** guideline. The only exceptions are a task whose acceptance criteria explicitly require a git action, an instruction from the user, or a wrapper like `cpm:ralph` that mandates commits.
+- **Surface change moments explicitly.** When a change-worthy situation appears mid-task — a criterion that contradicts reality, a story whose scope is wrong, a missing requirement that affects multiple stories, a wording bug — invoke the shared **Change Type Decision** procedure. Present an `AskUserQuestion` gate with the four labelled options (Inline edit / Pivot the upstream artefact / Retro observation only / Pivot + retro). Do not silently edit a criterion mid-task; do not silently defer the question to verification. Surface it now.
+  - **If the user chooses Inline edit**: apply the Edit immediately to the affected story or task in the epic doc, then record `**Inline change**: {one-line summary of what changed} ({YYYY-MM-DD})` on the story (alongside any existing `**Retro**:` field) using a second Edit. The breadcrumb is mandatory — silent inline edits violate the convention.
+  - **If the user chooses Pivot**: stop the work loop, save the progress file, and tell the user to run `/cpm:pivot {path-to-affected-artefact}`. Resume the work loop after the pivot completes (a fresh `/cpm:do` invocation will pick up where this one left off via the progress file).
+  - **If the user chooses Retro observation only**: capture the observation in the story's `**Retro**:` field at task completion (Step 6 Part B), no other action.
+  - **If the user chooses Pivot + retro**: do both — stop for pivot, then capture the retro observation when the work loop resumes.
+- **One task at a time.** Complete each task fully before starting the next.
 - **`[tdd]` activates the red-green-refactor sub-loop.** When a story's acceptance criteria carry the `[tdd]` tag, Step 4 switches from standard implementation to a three-phase TDD loop: write a failing test (Red), write minimum code to pass (Green), clean up within task scope (Refactor). Each phase runs a targeted test — the specific test file, not the full suite. The full suite runs at the story verification gate. Stories without `[tdd]` use the standard post-implementation workflow unchanged. Both modes can coexist in the same epic.
 - **Story refactoring pass polishes before moving on.** When a verification gate passes, Step 5b performs a refactoring pass starting from the files touched by the story — then retests. For Laravel projects, this uses the `laravel-simplifier` agent if available; for all other projects, it's a self-directed review. The pass starts with the story's code but looks outward for consolidation opportunities — deduplication, extraction, and abstraction across touched and existing code. If refactoring breaks tests, the changes are reverted.

@@ -2,12 +2,12 @@
 
 **Source spec**: docs/specifications/33-spec-html-artifact-projection.md
 **Date**: 2026-06-02
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Epic 33-01-epic-shared-template-foundation
 
 ## Add intrinsic companion-asset generation to spec and architect
 **Story**: 1
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Epic 33-01-epic-shared-template-foundation
 **Satisfies**: Intrinsic companion-asset generation; Stable, referenced asset storage; Conservative generation heuristic
 
@@ -22,23 +22,25 @@
 ### Add companion-asset generation guidance to the spec skill
 **Task**: 1.1
 **Description**: Emit a mockup when a requirement is visual; reference it from the Markdown; apply the conservative heuristic and the one-line "why this asset exists" note. A deliverable-functionality mockup is system-specific — styled to the target system, standalone, not the shared template.
-**Status**: Pending
+**Status**: Complete
 
 ### Add companion-asset generation guidance to the architect skill
 **Task**: 1.2
 **Description**: Emit a diagram asset when an ADR is inherently visual; same reference/heuristic/note rules as the spec skill.
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for companion-asset storage and reference
 **Task**: 1.3
 **Description**: Assert generated assets land at the convention path and the Markdown reference resolves; assert documentation diagrams consume the shared template, while deliverable-functionality mockups are self-contained (no external refs) without requiring the shared template. Covers the story's [integration] criteria.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] The shared HTML Output convention from epic 33-01 already carried all the mechanics, so the skill edits stayed thin (when-to-generate + what-to-record only) and the [integration] coverage dropped cleanly into the mature bash harness as three reusable validators plus one suite.
 
 ---
 
 ## Establish the downstream consumption contract in epics and do [plan]
 **Story**: 2
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: Story 1
 **Satisfies**: Downstream consumption as a design target
 
@@ -51,11 +53,20 @@
 ### Add design-target consumption guidance to the epics skill
 **Task**: 2.1
 **Description**: Tag mockup-referencing criteria `[manual]`/`[feature]`; treat referenced assets as design targets, not parsed data.
-**Status**: Pending
+**Status**: Complete
 
 ### Add design-target consumption guidance to the do skill
 **Task**: 2.2
 **Description**: Build to match a referenced asset; must not parse companion HTML to extract requirements.
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Smooth delivery] The downstream consumption contract resolved to two thin prose insertions (one each in `epics` and `do`) deferring to the shared HTML Output convention; the `[plan]` gate was justified by the cross-system contract design even though the implementation itself was light.
 
 ---
+
+## Lessons
+
+### Smooth Deliveries
+
+- Story 1: The shared HTML Output convention from epic 33-01 already carried all the mechanics, so the skill edits stayed thin (when-to-generate + what-to-record only) and the `[integration]` coverage dropped cleanly into the mature bash harness as three reusable validators plus one suite.
+- Story 2: The downstream consumption contract resolved to two thin prose insertions (one each in `epics` and `do`) deferring to the shared HTML Output convention; the `[plan]` gate was justified by the cross-system contract design even though the implementation itself was light.

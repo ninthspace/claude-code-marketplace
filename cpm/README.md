@@ -2,8 +2,6 @@
 
 Facilitated planning skills for Claude Code. Brings structured discovery, product ideation, architecture exploration, specification, and work breakdown into your development workflow — guiding you through understanding problems before jumping to solutions.
 
-Inspired by the [BMAD-METHOD](https://github.com/bmad-method) (Breakthrough Method for Agile AI-Driven Development), adapted for Claude Code's native capabilities.
-
 ## Quick Start
 
 After installation, use any skill independently or as a pipeline:
@@ -20,6 +18,7 @@ After installation, use any skill independently or as a pipeline:
 /cpm:library (import reference docs used by all skills)
 /cpm:templates (explore and customise artifact templates)
 /cpm:present (transform artifacts for different audiences)
+/cpm:audit (independent codebase health audit — feeds findings into spec/library/quick)
 ```
 
 `/cpm:consult` and `/cpm:party` both feed into the planning pipeline — consult for focused one-to-one conversations, party for multi-perspective discussions. `/cpm:review` sits between planning and execution — review an epic before or after `/cpm:do`. `/cpm:pivot` amends any artefact mid-flow. `/cpm:archive` cleans up completed artefacts. `/cpm:present` transforms artifacts for stakeholder consumption. `/cpm:templates` helps you explore and customise the output formats.
@@ -36,6 +35,7 @@ Each step is optional. Use what fits your situation:
 - Ready to implement? `/cpm:do` works through tasks one by one
 - Want autonomous overnight execution? `/cpm:ralph` wraps `/cpm:do` in a Ralph Wiggum loop
 - Want a critical review before starting? `/cpm:review` runs adversarial review of epics/stories
+- Want an independent codebase health check? `/cpm:audit` sweeps nine dimensions and feeds findings into spec/library/quick
 - Need to share planning artifacts with stakeholders? `/cpm:present` transforms them for any audience
 - Want to explore or customise artifact templates? `/cpm:templates` lists, previews, and scaffolds overrides
 - Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
@@ -232,9 +232,24 @@ Agent selection is dynamic — 2-3 agents for single stories, 3-4 for full epics
 
 **On exit**: Adaptive pipeline handoff — pre-execution epics offer pivot/do/exit; post-execution epics offer retro/pivot/discover/spec/exit.
 
+### `/cpm:audit` — Independent Codebase Audit
+
+Run a structured audit of the existing codebase, producing a commit-pinned audit document with concrete `file:line (symbol)` citations across nine dimensions of code health: architectural decay, consistency rot, type & contract debt, test debt, dependency & config debt, performance, error handling & observability, security, and documentation drift. Existing CPM planning artifacts (specs, epics, briefs, ADRs) are read as passive context only — never to skip a dimension, shortcut a finding, or claim something is "already planned". The audit's value is independent observation; it records symptoms, not rewrite recommendations.
+
+**Input**: An optional scope hint (a path or area, e.g. `/cpm:audit src/billing`) — shapes where attention deepens but never skips a dimension. Runs against the current codebase.
+**Output**: `docs/audits/01-audit-{slug}.md` (auto-numbered), with findings rated by severity (Critical/High/Medium/Low) and effort (S/M/L), plus a Top 5 priorities summary.
+
+```
+/cpm:audit                 # audit the whole codebase
+/cpm:audit auth            # deepen attention on the auth area
+/cpm:audit src/billing     # deepen attention on a path
+```
+
+**On exit**: Offers to pipe findings into `/cpm:library` (wrap as a reference doc), `/cpm:spec` (promote the Top 5 priorities into a spec), or `/cpm:quick` (work the quick wins item-by-item).
+
 ### `/cpm:retro` — Lightweight Retrospective
 
-Reads a completed epic doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle. Observation categories include scope surprises, criteria gaps, complexity underestimates, codebase discoveries, and testing gaps. When library documents exist, relevant observations are offered as amendments back to the library — closing the feedback loop.
+Reads a completed epic doc, synthesises observations captured during task execution, and produces a retro file that feeds forward into the next planning cycle. Observation categories include smooth deliveries, scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps, and patterns worth reusing. When library documents exist, relevant observations are offered as amendments back to the library — closing the feedback loop.
 
 **Input**: An epic doc path, or auto-detects the most recent one.
 **Output**: `docs/retros/01-retro-{slug}.md` (auto-numbered)

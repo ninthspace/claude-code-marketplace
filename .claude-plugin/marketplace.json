@@ -43,29 +43,7 @@
       "name": "cpm",
       "source": "./cpm",
       "description": "Claude Planning Method — facilitated planning with multi-perspective party mode for Claude Code. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-      "version": "1.24.0",
-      "keywords": [
-        "planning",
-        "discovery",
-        "requirements",
-        "specification",
-        "architecture",
-        "facilitation",
-        "agile",
-        "stories",
-        "tasks",
-        "bmad",
-        "party-mode",
-        "multi-perspective",
-        "personas",
-        "consult"
-      ]
-    },
-    {
-      "name": "cpm2",
-      "source": "./cpm2",
-      "description": "Claude Planning Method v2 — facilitated planning with multi-perspective party mode for Claude Code. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-      "version": "0.2.0",
+      "version": "2.0.0",
       "keywords": [
         "planning",
         "discovery",

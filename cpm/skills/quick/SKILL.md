@@ -1,6 +1,6 @@
 ---
 name: cpm:quick
-description: Lightweight execution for small, well-defined changes. Bypasses the full CPM pipeline — accept a description, assess scope, confirm, execute, and produce a completion record. Use for changes that don't warrant discover/brief/spec/epics ceremony. Triggers on "/cpm:quick".
+description: Lightweight execution for small, well-defined changes. Bypasses the full CPM pipeline — accept a description, assess scope, confirm, execute, and produce a completion record. Use for changes that skip discover/brief/spec/epics ceremony. Triggers on "/cpm:quick".
 ---
 
 # Quick Execution
@@ -21,22 +21,20 @@ The change description is the seed for everything that follows — scope assessm
 
 ## Process
 
-**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the completion record, delete the file.
+**State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once the completion record has been saved.
 
-> **HARD RULE — PROGRESS FILE UPDATE**: After completing EVERY step, you MUST call the Write tool on `docs/plans/.cpm-progress-{session_id}.md` BEFORE doing anything else. This is not optional. This is not deferrable. This has the same priority as saving a file after editing it. A step is NOT done until the progress file reflects it. Historically this step gets silently dropped when momentum is high — that is a bug, not an optimisation. If compaction fires and this file is stale, the user loses all session context with no recovery path.
+### Retro Check (Startup)
+
+Follow the shared **Retro Awareness** procedure before the Library Check.
+
+**Retro incorporation** (this skill):
+- **Patterns worth reusing**: Inform Step 1 (classify and assess) — apply the pattern directly when its conditions match the requested change, short-circuiting re-exploration.
+- **Codebase discoveries**: Inform Step 1 — surfaced limitations and conventions are treated as known constraints rather than rediscovered.
+- **Scope surprises**: Inform Step 1 escalation logic — if the requested change resembles a past scope-surprise category, escalate to the full pipeline more readily.
 
 ### Library Check (Startup)
 
-Before Step 1, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently and proceed to Step 1.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `quick` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to quick execution: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during execution when a library document's content is relevant — e.g. reading coding standards before writing code.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block execution due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `quick`. Deep-read selectively during execution when library content affects the requested change — e.g. coding standards before writing code.
 
 ### Test Runner Discovery (Startup)
 
@@ -53,7 +51,7 @@ After the Library Check and before Step 1, discover the project's test runner co
    - `Cargo.toml` — check for Rust project (e.g. `cargo test`)
 3. **Ask the user**: If no test command is discoverable from steps 1-2, use AskUserQuestion to ask: "No test runner found automatically. What command runs your tests?" with options for common runners and a freeform option.
 
-**Cache the result**: Store the discovered test command in the progress file as `**Test command**: {command}` or `**Test command**: none` if the user declines or no runner is found. This persists across the entire session — do not re-discover between steps.
+**Cache the result**: Store the discovered test command in the progress file as `**Test command**: {command}` or `**Test command**: none` if the user declines or no runner is found. Reuse this cached value for the session — it persists across all steps.
 
 **Graceful degradation**: If no test runner is discoverable and the user chooses not to provide one, set `**Test command**: none`. Step 4 verification will fall back to self-assessment only.
 
@@ -95,7 +93,7 @@ Options:
 
 If the user says "partially right" or "wrong", incorporate their feedback and re-investigate. Iterate until the diagnosis is confirmed. Only then proceed to Step 1b.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1a summary (diagnosis, confidence, user confirmation) before continuing.
+*Progress note: capture the diagnosis, confidence, and user confirmation in the Step 1a summary.*
 
 #### Step 1b: Scope Assessment
 
@@ -121,9 +119,7 @@ Explore the codebase to understand what the change involves, then assess whether
    - **Escalate to `/cpm:epics`** — Jump to work breakdown
    - **Continue with `/cpm:quick`** — Proceed anyway
 
-   If the user chooses to continue, honour their decision and proceed to Step 2. Do not raise the scope concern again.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1b summary before continuing.
+   If the user chooses to continue, honour their decision and proceed to Step 2. The scope concern is raised once — after that, respect the user's call.
 
 ### Step 2: Propose and Confirm
 
@@ -166,7 +162,7 @@ If the user adjusts, incorporate their feedback and re-present the proposal. Ite
 
 #### Write the Spec File
 
-**This is mandatory — do not skip it.** After the user confirms the proposal, write it to a tracked file before proceeding to Step 3. This creates a hard gate: implementation cannot begin without a written spec.
+After the user confirms the proposal, write it to a tracked file before proceeding to Step 3. The written spec is a hard gate: implementation cannot begin without it.
 
 Determine the record number and slug using the same convention as the completion record:
 
@@ -198,13 +194,13 @@ Create the `docs/quick/` directory if it doesn't exist. Write the spec file usin
 
 The spec file path is `docs/quick/{nn}-quick-{slug}-spec.md`. Tell the user the spec file path after saving.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (the confirmed proposal and spec file path) before continuing.
+*Progress note: capture the confirmed proposal and spec file path in the Step 2 summary.*
 
 ### Step 3: Execute
 
 Do the work. Create Claude Code tasks and implement the change directly.
 
-**Hard gate — read the spec file first.** Before creating any tasks, read the spec file written in Step 2 (`docs/quick/{nn}-quick-{slug}-spec.md`) using the Read tool. If the spec file does not exist, **stop and go back to Step 2** — do not proceed without a written spec. Extract the acceptance criteria from the file; these are the source of truth for what to implement.
+**Hard gate — read the spec file first.** Before creating any tasks, read the spec file written in Step 2 (`docs/quick/{nn}-quick-{slug}-spec.md`) using the Read tool. If the spec file does not exist, **stop and go back to Step 2** — a written spec is required before proceeding. Extract the acceptance criteria from the file; these are the source of truth for what to implement.
 
 **ADR awareness**: Before starting implementation, check if this change touches architectural boundaries. **Glob** `docs/architecture/[0-9]*-adr-*.md` — if ADRs exist and the change involves structural decisions, data models, integration points, or deployment concerns, read the relevant ADRs for context. Let the architectural decisions guide implementation choices. If no ADRs exist, proceed normally.
 
@@ -216,7 +212,7 @@ Do the work. Create Claude Code tasks and implement the change directly.
      activeForm: "{Present continuous form}"
    ```
 
-   Create as many tasks as the work needs — a single-file change gets one task, a multi-step change gets several. Don't over-decompose; don't under-decompose.
+   Create as many tasks as the work needs — a single-file change gets one task, a multi-step change gets several. Match decomposition to the natural shape of the work.
 
 2. **Execute tasks sequentially**: For each task:
    - Call TaskUpdate to set status to `in_progress`.
@@ -224,9 +220,9 @@ Do the work. Create Claude Code tasks and implement the change directly.
    - **Write or update tests** if the task modifies behaviour. Follow existing test patterns in the project — look for nearby test files and match their style, framework, and conventions. If no test patterns exist, skip. This is not TDD — write the implementation first, then cover it with a test. If `**Test command**` in the progress file is not `none`, run the tests after writing them to confirm they pass.
    - When the task is done, call TaskUpdate to set status to `completed`.
 
-3. **Keep momentum**: Move through tasks efficiently. Don't over-explain between tasks. The proposal was already confirmed — now execute it.
+3. **Keep momentum**: Move through tasks efficiently. Keep commentary between tasks minimal. The proposal was already confirmed — now execute it.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary (tasks completed, files changed) before continuing.
+*Progress note: capture tasks completed and files changed in the Step 3 summary.*
 
 ### Step 4: Completion Record and Verification
 
@@ -238,16 +234,16 @@ Re-read the acceptance criteria from the spec file written in Step 2. Verify eac
 
 **Run tests first**: If `**Test command**` in the progress file is not `none`, run the cached test command using the Bash tool before self-assessment.
 - If tests **pass**: note the pass and continue to self-assessment of each criterion.
-- If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". Do not block — let the user decide.
+- If tests **fail**: report the failure output to the user via AskUserQuestion with options: "Fix the failing tests and re-run", "Continue anyway (mark as known issue)", or "Stop and investigate". The work loop always continues — let the user decide.
 - If `**Test command**` is `none`: skip test execution and rely on self-assessment only.
 
-**Self-assess each criterion**: Inspect the relevant files using Read, Glob, or Grep to confirm each criterion is met. Test results (if available) serve as supporting evidence but do not replace criterion-by-criterion assessment.
+**Self-assess each criterion**: Inspect the relevant files using Read, Glob, or Grep to confirm each criterion is met. Test results (if available) serve as supporting evidence but supplement (rather than replace) criterion-by-criterion assessment.
 
 - If all criteria are met, proceed to write the completion record.
 - If any criteria are **not** met, flag them to the user. Use AskUserQuestion: "Some acceptance criteria are not met:" with the unmet items listed, and options:
   - **Fix now** — Continue working on the unmet criteria
   - **Record as-is** — Write the completion record noting the gaps
-  - **Stop** — Don't write a completion record yet
+  - **Stop** — Hold off on the completion record for now
 
 If the user chooses "Fix now", address the gaps and re-verify. Iterate until criteria are met or the user decides to proceed.
 
@@ -297,7 +293,7 @@ If nothing went wrong, use "Smooth delivery" — that's valuable data too. This 
 
 Tell the user the record path after saving.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 4 summary, then delete the progress file. The session is complete.
+*Workflow complete — delete the progress file.*
 
 ## Output
 
@@ -305,25 +301,14 @@ Spec files are written during Step 2 and promoted to completion records during S
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-execution.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after the completion record has been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-> **KNOWN FAILURE MODE**: The progress file update is the single most skipped instruction in this skill. It gets silently dropped when task momentum is high. Every time it is skipped, it creates a window where compaction would destroy the session with no recovery. Treat the Write call for this file with the same urgency as saving user code — it is not bookkeeping, it is the only thing standing between the user and total context loss.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the completion record has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -365,5 +350,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 - **Lean by default, correct by design.** `/cpm:quick` avoids unnecessary ceremony — one confirmation, then execute. But lean means *no wasted steps*, not *rush through steps*. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
 - **Scope honesty.** If a change is too big for quick execution, say so — but only once. The user decides.
 - **Traceability without overhead.** The completion record is the minimum artifact needed to know what happened and why.
-- **Fixes need diagnosis, changes don't.** The input classification exists because fixes and additions have fundamentally different first steps. A fix starts with a symptom that needs investigation; a change starts with a known modification. Don't run diagnosis on additions (wasted ceremony) and don't skip diagnosis on fixes (that's how you get surface-level patches that don't address root causes).
+- **Fixes need diagnosis; changes skip it.** The input classification exists because fixes and additions have fundamentally different first steps. A fix starts with a symptom that needs investigation; a change starts with a known modification. Run diagnosis only on fixes — additions proceed directly (skipping saves ceremony), and fixes always get a root-cause pass (skipping it yields surface-level patches).
 - **Do the work.** This skill implements changes, not just plans them. Write code, edit files, run tests.
+- **Minimal change, scoped to the request.** Implement what the change calls for — no speculative abstractions, extra configuration, or features beyond what was asked. When a smaller change does the job, prefer it; breadth can be added later when a real need appears.
+- **Solve generally, not to the test.** Write code that addresses the underlying requirement across the full range of valid inputs, rather than special-casing the specific examples a test happens to check. Tests confirm the general solution holds — they are evidence, not the specification to hard-code against.

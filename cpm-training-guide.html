@@ -531,7 +531,7 @@ const SKILLS = [
     input: 'Epic doc (auto-detected or user provides)',
     output: 'Completed code + updated epic docs with retro observations',
     outputFile: '(updates epic docs in place)',
-    phases: ['Resolve epic doc + scan ADRs', 'Discover test runner (library → config → ask user)', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria — run tests for [unit]/[integration]/[feature], self-assess for [manual]', 'Mark complete + capture retro observation (including testing gaps)', 'Loop until story done → hydrate next', 'Epic-level verification against source spec'],
+    phases: ['Resolve epic doc + scan ADRs', 'Startup — apply prior-epic retros (disposition gate)', 'Discover test runner (library → config → ask user)', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria — run tests for [unit]/[integration]/[feature], self-assess for [manual]', 'Mark complete + capture retro observation (including testing gaps)', 'Loop until story done → hydrate next', 'Epic-level verification against source spec, then generate the retro (enforced when execution signals fired)'],
     tip: 'Test runner discovery is convention-based: library docs → project config files (composer.json, package.json, Makefile, pyproject.toml, Cargo.toml) → ask user. The cached command is used in all verification gates. TDD is supported by task ordering — place testing tasks before implementation tasks in the epic doc.',
     next: ['ralph', 'retro', 'review', 'pivot']
   },
@@ -591,13 +591,29 @@ const SKILLS = [
     color: '#f85149',
     category: 'quality',
     short: 'Retrospective with testing gap analysis',
-    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (scope surprise, criteria gap, complexity underestimate, codebase discovery, testing gap), extracts patterns, and produces actionable recommendations. Testing gaps capture when tests revealed issues criteria didn\'t anticipate, or criteria that proved untestable. Can write learnings back to library docs.',
+    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (smooth delivery, scope surprise, criteria gap, complexity underestimate, codebase discovery, testing gap, pattern worth reusing), extracts patterns, and produces actionable recommendations. Testing gaps capture when tests revealed issues criteria didn\'t anticipate, or criteria that proved untestable. In v2, /cpm:do also generates this retro automatically at epic completion (synthesising the same observations) and applies prior-epic retros at startup. Can write learnings back to library docs.',
     input: 'Completed epic doc',
     output: 'Retro file with patterns, observations (including testing gaps), and recommendations',
     outputFile: 'docs/retros/{nn}-retro-{slug}.md',
     phases: ['Read epic doc, identify retro observations', 'Synthesise by category (including testing gaps), extract patterns', 'Write retro file with recommendations', 'Optionally amend library docs with learnings', 'Pipeline handoff to next cycle'],
     tip: 'Testing gap observations capture when tests revealed issues criteria didn\'t anticipate or when criteria proved untestable. The library write-back can feed testing conventions back to reference docs for the next cycle.',
     next: ['discover', 'spec', 'epics', 'library']
+  },
+  {
+    id: 'audit',
+    name: '/cpm:audit',
+    label: 'Audit',
+    icon: '🔬',
+    color: '#ff7b72',
+    category: 'quality',
+    short: 'Independent codebase health audit',
+    description: 'Run a structured audit of the existing codebase, producing a commit-pinned audit document with concrete file:line (symbol) citations across nine dimensions of code health: architectural decay, consistency rot, type & contract debt, test debt, dependency & config debt, performance, error handling & observability, security, and documentation drift. Existing planning artifacts are read as passive context only — never to skip a dimension or shortcut a finding. Ends by offering to pipe findings into library, spec, or quick.',
+    input: 'Optional scope hint (a path or area); runs against the current codebase',
+    output: 'Audit document with prioritised findings, severity/effort ratings, and citations',
+    outputFile: 'docs/audits/{nn}-audit-{slug}.md',
+    phases: ['Orient on the codebase — structure, stack, conventions', 'Sweep nine dimensions of code health independently', 'Cite every finding with file:line (symbol) at a pinned commit', 'Rate findings by severity and effort; pick the Top 5 priorities', 'Pipeline handoff to library / spec / quick'],
+    tip: 'The audit is independent observation: existing specs, epics, and briefs are read for context only and never used to claim a finding is "already planned". It records symptoms, not rewrite recommendations — wholesale rewrites are a conversation for spec and architect.',
+    next: ['library', 'spec', 'quick']
   },
   {
     id: 'present',
@@ -720,14 +736,17 @@ const EDGES = [
   { from: 'library', to: 'spec', label: 'context for', style: 'dotted' },
   { from: 'library', to: 'party', label: 'context for', style: 'dotted' },
   { from: 'library', to: 'consult', label: 'context for', style: 'dotted' },
+  { from: 'audit', to: 'spec', label: 'priorities become spec', style: 'dashed' },
+  { from: 'audit', to: 'library', label: 'findings to library', style: 'dashed' },
+  { from: 'audit', to: 'quick', label: 'quick wins', style: 'dashed' },
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','pivot','retro','present','templates','library','archive','quick','status'], knowledge: {} },
-  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know' } },
-  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', review:'know', pivot:'know', retro:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know' } },
-  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know' } },
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','ralph','pivot','retro','audit','present','templates','library','archive','quick','status'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', ralph:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', ralph:'know', review:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know' } },
+  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','audit','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', ralph:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────
@@ -750,8 +769,8 @@ SKILLS.forEach(s => state.knowledge[s.id] = 'unknown');
 // ── Node positions (arranged as a pipeline flow) ────────────────────────
 
 const NODE_POSITIONS = {
-  party:     { x: 60,   y: 150 },
-  consult:   { x: 60,   y: 290 },
+  party:     { x: 60,   y: 190 },
+  consult:   { x: 60,   y: 310 },
   discover:  { x: 210,  y: 220 },
   brief:     { x: 320,  y: 220 },
   architect: { x: 450,  y: 220 },
@@ -764,10 +783,11 @@ const NODE_POSITIONS = {
   retro:     { x: 970,  y: 220 },
   present:   { x: 450,  y: 370 },
   templates: { x: 190,  y: 370 },
-  library:   { x: 120,  y: 90 },
+  library:   { x: 60,   y: 70 },
   archive:   { x: 970,  y: 370 },
   quick:     { x: 580,  y: 370 },
   status:    { x: 840,  y: 370 },
+  audit:     { x: 320,  y: 370 },
 };
 
 const NODE_RADIUS = 34;
@@ -930,11 +950,38 @@ function draw() {
     ctx.fillText(skill.icon, x, y - 2);
     ctx.globalAlpha = 1;
 
-    // Label
+  });
+
+  // Labels in a second pass — drawn after every circle so a neighbouring node
+  // can never paint over an earlier node's text.
+  SKILLS.forEach(skill => {
+    const pos = NODE_POSITIONS[skill.id];
+    if (!pos) return;
+    const x = pos.x + ox;
+    const y = pos.y + oy;
+    const highlighted = state.highlightedSkills.includes(skill.id);
+    const selected = state.selected === skill.id;
+    const dimmed = !highlighted;
+    const nameY = y + NODE_RADIUS + 14;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Contrast backing so the label stays legible over edges or adjacent circles
+    if (!dimmed) {
+      ctx.font = `${selected ? '600' : '500'} 11px -apple-system, sans-serif`;
+      const nameW = ctx.measureText(skill.label).width;
+      ctx.font = '9px -apple-system, sans-serif';
+      const catW = ctx.measureText(skill.category).width;
+      const boxW = Math.max(nameW, catW) + 10;
+      ctx.fillStyle = 'rgba(13,17,23,0.82)';
+      ctx.fillRect(x - boxW / 2, nameY - 9, boxW, 28);
+    }
+
+    // Name
     ctx.font = `${selected ? '600' : '500'} 11px -apple-system, sans-serif`;
     ctx.fillStyle = dimmed ? '#6e768140' : selected ? skill.color : '#e6edf3';
-    ctx.textAlign = 'center';
-    ctx.fillText(skill.label, x, y + NODE_RADIUS + 14);
+    ctx.fillText(skill.label, x, nameY);
 
     // Category badge
     if (!dimmed) {

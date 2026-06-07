@@ -29,7 +29,7 @@ Before generating the prompt, validate all prerequisites.
 If explicit epic paths were provided in arguments, resolve them (expand globs). Otherwise, auto-discover:
 
 1. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
-2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Do not use Bash loops with shell variables for this — use Grep and Read tools.
+2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Use Grep and Read tools directly (Bash loops with shell variables lose context).
 3. If no incomplete epics found, report to the user and stop: "No incomplete epics found. Nothing to run."
 4. Present the discovered epics and confirm with AskUserQuestion.
 
@@ -39,9 +39,9 @@ For range-style references (e.g. `23 through 26`), expand to matching files: `do
 
 Formal plan mode (`EnterPlanMode`) creates an interactive approval gate that stalls autonomous execution. Strip `[plan]` tags from epic docs before launching the loop so `/cpm:do` uses inline planning for all stories.
 
-**Do not skip this step.** It must run after epic discovery and before any other pre-flight checks.
+**Ordering**: this step runs after epic discovery and before any other pre-flight checks — autonomous execution depends on it.
 
-1. For each resolved epic path, use the Read tool to read the file. Scan the content for any heading line (lines starting with `##` or `###`) that contains the literal text `[plan]`. Do not use Grep for this — reading each file directly avoids regex escaping issues with square brackets.
+1. For each resolved epic path, use the Read tool to read the file. Scan the content for any heading line (lines starting with `##` or `###`) that contains the literal text `[plan]`. Use Read for this — reading each file directly avoids regex escaping issues with square brackets in Grep.
 2. For each heading that contains `[plan]`, use the Edit tool to remove the `[plan]` tag and any trailing whitespace it leaves behind (e.g. `## Set up OAuth integration [plan]` → `## Set up OAuth integration`).
 3. Track which stories were modified. Log a line per stripped tag for inclusion in the execution log: "Stripped `[plan]` from Story {N}: {heading text}".
 4. If no `[plan]` tags are found, skip silently.
@@ -53,24 +53,9 @@ The ralph-wiggum plugin's stop hook is the only external dependency — it inter
 1. Check if the ralph-wiggum stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-wiggum` or `stop-hook.sh`.
 2. If not detected, warn the user: "Ralph Wiggum stop hook not detected. The loop mechanism requires the ralph-wiggum plugin to be installed — without the stop hook, writing the state file will have no effect. Install the plugin from the Claude Code marketplace." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
-#### 1d. Permissions Check
+**Permissions note**: The loop will pause on permission denials at runtime; the stop hook re-invokes after the user grants them. To avoid mid-loop stalls, users can pre-add common Bash permissions (`Bash(git:*)`, `Bash(bash:*)`, `Bash(find:*)`, `Bash(grep:*)`) to `~/.claude/settings.json` before launching.
 
-Autonomous execution will stall if Claude Code prompts for tool approval mid-run. Check that common bash commands are pre-approved:
-
-1. Read `~/.claude/settings.json` and look for a `permissions.allow` array.
-2. Check for the presence of these baseline patterns: `Bash(find:*)`, `Bash(grep:*)`, `Bash(git:*)`, `Bash(bash:*)`, `Bash(php:*)`, `Bash(npm:*)`, `Bash(sed:*)`.
-3. **If missing patterns are found**, warn the user:
-
-   "**Permissions warning**: Your user settings (`~/.claude/settings.json`) are missing some bash permissions that autonomous execution needs. Without these, the Ralph loop will stall on tool approval prompts."
-
-   List the missing patterns and use AskUserQuestion with options:
-   - "Add them for me" — use the Edit tool to add the missing patterns to `~/.claude/settings.json` `permissions.allow` array
-   - "I'll handle it" — continue without changes
-   - "Stop" — abort
-
-4. **If no permissions block exists at all**, offer to create one with the full set of recommended patterns.
-
-#### 1e. Test Runner Discovery
+#### 1d. Test Runner Discovery
 
 Discover the project's test runner for inclusion in the generated prompt:
 
@@ -78,41 +63,29 @@ Discover the project's test runner for inclusion in the generated prompt:
 2. If found, report: "Discovered test runner: {command}. This will be referenced in the generated prompt."
 3. If not found, note: "No test runner discovered. The generated prompt will instruct `/cpm:do` to discover one at runtime."
 
-#### 1f. Resume Detection
+#### 1e. Resume Detection
 
 Check for evidence of a previous Ralph run:
 
 1. **Glob** `docs/plans/ralph-log-*.md` for existing execution logs.
 2. If an execution log exists, read it and summarise the state: which epics completed, which are in progress, any skipped tasks.
-3. Use Grep to check the target epic docs' `**Status**:` fields to confirm the current state. Do not use Bash loops for this.
+3. Use Grep to check the target epic docs' `**Status**:` fields to confirm the current state. Use Grep and Read tools directly.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
 
 ### Step 2: Prompt Assembly
 
-Assemble the ralph-loop command as a single, short, plain-text string. The prompt **must not** contain markdown formatting, code fences, backticks, XML tags, or any shell-special characters beyond basic punctuation. Keep it concise — the detailed behaviour comes from `/cpm:do` itself; the prompt only needs to steer autonomous decisions.
+Assemble the ralph-loop prompt as plain text — no markdown, code fences, backticks, or XML tags (the stop hook feeds the prompt back verbatim on each iteration). Interpolate these variables into the template:
 
-Build the prompt by interpolating into the template below:
-
-- `{epic_count}` — number of epics
-- `{epic_range}` — human-readable range (e.g. "5-7")
-- `{epic_glob}` — glob pattern or explicit paths (e.g. `docs/epics/05-epic-*.md through 07-epic-*.md`)
+- `{epic_count}`, `{epic_range}`, `{epic_glob}` — from Step 1 pre-flight
 - `{max_iterations}` — from arguments or default (50)
-- `{story_filter_clause}` — if `--story-filter` was provided, append a clause like "Only work on stories 1-3." or "Skip story 4." If no filter, omit entirely.
-- `{test_runner_clause}` — if a test runner was discovered, append "Use {command} to run tests." If not found, omit entirely.
-- `{resume_clause}` — if resuming, append "This is a resumed run — skip completed work and pick up where the previous run left off." If fresh, omit entirely.
+- `{story_filter_clause}`, `{test_runner_clause}`, `{resume_clause}` — include when applicable, omit otherwise
+- `{task_budget_clause}` — "Task budget: {N} tasks, estimate ~2000 tokens per task." Count `###` task headings in target epic docs.
 
-### Prompt Template
+**Template** (written into `.claude/ralph-loop.local.md` body; use `--` for dashes; `ALL_EPICS_COMPLETE` must match `completion_promise` frontmatter; keep concise — around 1100 chars):
 
 ```
-Run /cpm:do. Work through epics {epic_range} sequentially ({epic_glob}). When an epic completes and offers the next epic choice, always continue to the next epic. Only work on the specified epics -- do not scan for or continue to other epics beyond this list. Do NOT use AskUserQuestion -- make autonomous decisions: fix test failures yourself, use inline planning instead of formal plan mode, keep working until acceptance criteria pass, skip a task after 3 consecutive failures. Commit after each completed story but NEVER push to remote.{story_filter_clause}{test_runner_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
+Run /cpm:do on epics {epic_range} sequentially ({epic_glob}). Continue to each next epic automatically. Make all decisions autonomously -- choose the most reasonable option for every AskUserQuestion. Use inline planning for all stories. Task complete means: all tagged criteria ([unit]/[integration]/[feature]) have passing test results, and all [manual] criteria have self-assessment lines in the progress file. A failure (for the 3-strike skip rule) is a test command exit code != 0 after a code change attempt -- tool errors and permission denials are retries, not failures. If acceptance criteria are ambiguous and completion cannot be determined, mark the story Blocked -- criteria ambiguous and continue to the next story. At the do retro consumption gate, do not block -- auto-defer each observation (record Retro applied: {nn} {category} deferred (autonomous run, unreviewed) on the epic) and list the deferrals in the run summary. Commit after each completed story. Keep all commits local.{story_filter_clause}{test_runner_clause}{task_budget_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
 ```
-
-**CRITICAL — prompt hygiene rules:**
-- The prompt is written into the body of `.claude/ralph-loop.local.md` (after the YAML frontmatter). It is fed back verbatim by the stop hook on each iteration.
-- No backticks, no markdown headers, no code fences, no XML/HTML tags.
-- Use `ALL_EPICS_COMPLETE` as the plain text marker in the prompt — must match the `completion_promise` frontmatter value exactly.
-- Use `--` instead of `—` for dashes in the prompt text.
-- Keep the total prompt under 500 characters where possible.
 
 ### Step 3: State File Write and Launch
 
@@ -127,7 +100,7 @@ Before writing, check if `.claude/ralph-loop.local.md` already exists using the 
 
 #### 3b. Present (Dry-Run)
 
-**Capture the current UTC time** before displaying or writing the state file. Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via the Bash tool and store the output as `{utc_timestamp}`. Do not generate the timestamp yourself — LLM-generated times are unreliable.
+**Capture the current UTC time** before displaying or writing the state file. Run `date -u +"%Y-%m-%dT%H:%M:%SZ"` via the Bash tool and store the output as `{utc_timestamp}`. Always use the Bash tool for timestamps — LLM-generated times are unreliable.
 
 Display the state file content that would be written:
 
@@ -183,17 +156,15 @@ If "Save and exit": write the state file content to `docs/plans/ralph-command-{t
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` during the pre-flight phase for compaction resilience.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths are relative to the current Claude Code session's working directory.
+**Lifecycle**:
+- **Create**: before Step 1.
+- **Delete**: after the Ralph loop is launched, or after dry-run output is presented.
 
-**Session ID**: Use `CPM_SESSION_ID` from context. Fall back to `.cpm-progress.md` if not present.
+(No update step — pre-flight is short enough to write once at creation and replace at end.)
 
-**Resume adoption**: Follow the standard CPM resume adoption procedure — if an old progress file matches this skill's `**Skill**:` field but has a different session ID, adopt it.
-
-**Create** before Step 1. **Delete** after the Ralph loop is launched (or after dry-run output is presented).
-
-Use the Write tool to write the full file each time. Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -213,7 +184,6 @@ Use the Write tool to write the full file each time. Format:
 {What to do next}
 ```
 
-**Delete** the progress file after the Ralph loop is launched or after dry-run output. Also delete `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists.
 
 ## Maintenance Coupling
 
@@ -251,20 +221,26 @@ started_at: "{utc_timestamp from Bash: date -u +\"%Y-%m-%dT%H:%M:%SZ\"}"
 
 ### cpm:do Interaction Gates
 
-The prompt template's "Autonomous Behaviour" section overrides the following `AskUserQuestion` locations in `cpm:do`:
+The prompt's autonomous instruction ("choose the most reasonable option for every AskUserQuestion") overrides the following `cpm:do` gates:
 
 | `cpm:do` Location | Gate Purpose | Prompt Override |
 |---|---|---|
 | Input — Epic Doc (multiple epics) | Ask user which epic to work on | Auto-select from the epic list in order |
 | Test Runner Discovery | Ask user for test command | Proceed with self-assessment |
+| Retro Check — consumption disposition gate | Force a disposition (Applied/Deferred/Obsolete) on each prior-epic retro observation | **Do not block, do not "choose the most reasonable option".** Auto-defer every observation, recording `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)` on the epic, and surface every such deferral in the run summary for post-loop human review |
+| Termination — Blocker | Confirm external blocker with user | Skip the task and continue to next |
+| Termination — Ambiguity | Ask user to clarify unclear criteria | Mark story "Blocked -- criteria ambiguous" and continue |
 | Step 4 — Verification gate test failure | Ask user: fix, continue, or stop | Fix automatically; skip after stuck threshold |
+| Step 4 — Verification round limit | 2 fix attempts exhausted; ask user | Mark unmet criteria as known issues and proceed |
 | Step 4 — TDD Red phase unexpected pass | Ask user: investigate, skip TDD, or stop | Investigate and fix the test |
 | Step 4 — TDD Green phase still failing | Ask user: continue, skip TDD, or stop | Continue working on implementation |
 | Step 5 — Unmet acceptance criteria | Ask user: continue working or mark complete | Continue working; skip after stuck threshold |
 | Step 5 — Coverage matrix edit failure | Ask user: continue or stop | Continue without recording proof |
-| Step 8 — Next epic check | Ask user: continue to next epic or stop | Handled natively: `cpm:do` skips the scan when an explicit epic path is provided |
+| Step 8 — Next epic check | Ask user: continue to next epic or stop | Continue to next epic automatically |
 | Graceful Degradation — Test command fails | Ask user: new command, continue, or stop | Continue without tests |
 | Graceful Degradation — No test + TDD | Ask user: provide runner or acknowledge | Fall back to standard workflow |
+
+**Retro generation is not a gate**: retro *generation* at `cpm:do` Step 8 writes the retro file automatically (no `AskUserQuestion`), so it runs unchanged under autonomous execution — only the *consumption* gate above needs an override. Generation still fires at epic completion during a Ralph run.
 
 **When to update**: If `cpm:do` adds, removes, or changes an `AskUserQuestion` gate, review the prompt template's Autonomous Behaviour section and this table. A new gate that isn't overridden will cause the Ralph loop to pause and wait for user input — defeating the purpose of autonomous execution.
 
@@ -272,6 +248,6 @@ The prompt template's "Autonomous Behaviour" section overrides the following `As
 
 - **Facilitate the setup, automate the execution.** The skill's interactive phase is pre-flight and launch confirmation. Once Ralph starts, everything is autonomous.
 - **Deterministic prompts.** Same epics + same config = same prompt. No randomness.
-- **Fail fast on pre-flight.** If prerequisites aren't met, tell the user immediately — don't generate a prompt that will fail.
+- **Fail fast on pre-flight.** If prerequisites are missing, tell the user immediately — only generate a prompt that can succeed.
 - **Dry-run is the default first step.** Always show the user what will run before running it.
 - **The execution log is the audit trail.** It survives across Ralph iterations and is the primary post-run artifact for the user to review.

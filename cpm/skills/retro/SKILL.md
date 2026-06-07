@@ -9,15 +9,21 @@ Read a completed (or partially completed) epic doc, synthesise observations capt
 
 ## Input
 
+This skill operates on two source types: **epic docs** (`docs/epics/`) and **quick records** (`docs/quick/`). Both produce retro-eligible observations during execution; the retro skill consumes either kind.
+
 Check for input in this order:
 
-1. If `$ARGUMENTS` references a file path (e.g. `docs/epics/01-epic-auth.md`), use that as the epic doc.
-2. If no path given, look for the most recent `docs/epics/*-epic-*.md` file and ask the user to confirm.
-3. If no epic docs exist, tell the user there's nothing to retro and stop.
+1. If `$ARGUMENTS` references a file path, use it. Accept paths under `docs/epics/` (epic doc) or `docs/quick/` (quick record).
+2. If no path given, look for the most recent file across **both** `docs/epics/*-epic-*.md` and `docs/quick/*-quick-*.md` (compare by filename prefix or modification time). Present the most recent candidate(s) to the user with AskUserQuestion to confirm.
+3. If neither directory has matching files, tell the user there's nothing to retro and stop.
+
+**Source detection**: Once the input is resolved, classify it by directory or filename pattern:
+- **Epic source** (`docs/epics/...-epic-...md`): observations live in `**Retro**:` fields on completed stories and the optional `## Lessons` section. Steps 1-3 below apply as written.
+- **Quick source** (`docs/quick/...-quick-...md`): observations live in the record's `## Retro` section (mandatory single-category observation). Steps 1-3 still apply, with adjustments noted inline.
 
 ## Process
 
-**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final retro file, delete the progress file.
+**State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the progress file once the final retro file has been saved.
 
 ### Template Hint (Startup)
 
@@ -25,98 +31,44 @@ Before Step 1, display:
 
 > Output format is fixed (used by downstream skills). Run `/cpm:templates preview retro` to see the format.
 
-### Step 1: Read Epic Doc
+### Step 1: Read Source Document
 
-Read the resolved epic doc with the Read tool. Identify:
+Read the resolved source document with the Read tool.
 
+**For epic sources** (`docs/epics/`), identify:
 - Total number of stories and their statuses (Pending, In Progress, Complete)
 - Any `**Retro**:` fields on completed stories (these are per-story observations captured by `cpm:do` Step 6, Part B — mandatory on verification gates)
 - Any `## Lessons` section already present (batch summary from `cpm:do` Step 8)
 - The overall completion state of the batch
 
-Present a brief summary to the user: how many stories, how many complete, how many observations found.
+**For quick sources** (`docs/quick/`), identify:
+- The change description, classification (`fix` or `change`), and verification summary
+- The `## Retro` section's observation — a single category and one-sentence observation per the format defined by `cpm:quick`
+- Whether the change shipped successfully (record promoted to completion record per `cpm:quick` Step 4)
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
+Present a brief summary to the user — for epic sources: story counts, completion, observation count. For quick sources: change classification, observation category, outcome.
 
 ### Step 2: Synthesise Observations
 
-Analyse the collected observations and story outcomes. Build the retro content:
+Gather the observations from the source resolved in Step 1, then hand them to the shared **Retro Synthesis** procedure (in the CPM Shared Skill Conventions). Source-gathering is this skill's responsibility; the grouping, synthesis, and retro-file format live in the shared procedure, so that `cpm:do` and `cpm:retro` produce identical retro files from the same inputs — there is one synthesis implementation, not two.
 
-**If `**Retro**:` fields exist**, group them by observation category:
-- **Smooth Deliveries**: Stories that went as planned — useful for identifying what good scoping looks like
-- **Scope Surprises**: Stories that were larger or smaller than expected
-- **Criteria Gaps**: Acceptance criteria that missed something important
-- **Complexity Underestimates**: Stories harder than expected due to technical factors
-- **Codebase Discoveries**: Unexpected findings in the codebase
-- **Testing Gaps**: Tests that revealed issues acceptance criteria didn't anticipate, or acceptance criteria that proved untestable with the available test infrastructure
-- **Patterns Worth Reusing**: Approaches or abstractions discovered during implementation that should be applied elsewhere
+**Gather the observations** into the shared procedure's input shape — a list of per-story observations, each with a category and a one-sentence note:
 
-**If a `## Lessons` section exists but no `**Retro**:` fields** (e.g. fields were lost during editing, or an older `cpm:do` run synthesised them away), use the `## Lessons` section as input — it contains the same observations in pre-grouped form.
+**For epic sources**:
+- **If `**Retro**:` fields exist**, each field is one observation — its `[category]` is the category and the text is the note. The seven categories are: smooth deliveries, scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps, patterns worth reusing.
+- **If a `## Lessons` section exists but no `**Retro**:` fields** (e.g. fields were lost during editing, or an older `cpm:do` run synthesised them away), use the `## Lessons` section as the observation source — it contains the same observations in pre-grouped form.
+- **If both exist**, use the `**Retro**:` fields as the primary observations (they are the raw input) and count each only once, even when it also appears in `## Lessons`.
+- **If neither exists**, pass no observations — the shared procedure's status-only fallback produces a Batch Outcome summary from story statuses alone.
 
-**If both `**Retro**:` fields and `## Lessons` exist**, use the `**Retro**:` fields as primary input (they are the raw observations). Reference the `## Lessons` grouping structure but don't double-count observations that appear in both places.
+**For quick sources**: pass a single observation — the declared category and one-sentence note from the record's `## Retro` section.
 
-**If neither `**Retro**:` fields nor `## Lessons` exist**, produce a summary from story status alone:
-- Which stories completed, which didn't
-- Any stories that were blocked or stuck
-- Overall batch outcome
-
-For each category with observations, write a brief synthesis — not just a list, but a sentence or two about what the pattern means and what to do differently next time.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary before continuing.
+**Then follow the shared Retro Synthesis procedure**, passing the gathered observations, the source's story outcomes (story counts and any blocked/stuck stories identified in Step 1), and the source artefact path. The procedure groups by category, writes a brief synthesis per category (or the Batch Outcome fallback), and proceeds to the file write in Step 3.
 
 ### Step 3: Write Retro File
 
-Save the retro file to `docs/retros/{nn}-retro-{slug}.md`. Create the `docs/retros/` directory if it doesn't exist.
-
-- `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
-- `{slug}` is derived from the epic doc name (e.g. epic doc `01-epic-auth.md` produces retro slug `auth`).
-
-Format:
-
-```markdown
-# Retro: {Title}
-
-**Date**: {today's date}
-**Source**: {path to epic doc}
-**Stories**: {completed}/{total} complete
-
-## Summary
-
-{1-3 sentence overview of the batch — what was accomplished, what the key takeaways are}
-
-## Observations
-
-### Smooth Deliveries
-- {observation from story N}: {synthesis}
-
-### Scope Surprises
-- {observation from story N}: {synthesis}
-
-### Criteria Gaps
-- {observation from story N}: {synthesis}
-
-### Complexity Underestimates
-- {observation from story N}: {synthesis}
-
-### Codebase Discoveries
-- {observation from story N}: {synthesis}
-
-### Testing Gaps
-- {observation from story N}: {synthesis}
-
-### Patterns Worth Reusing
-- {observation from story N}: {synthesis}
-
-## Recommendations
-
-{2-5 bullet points — concrete suggestions for the next planning cycle based on the observations. These should be actionable inputs for cpm:discover or cpm:spec.}
-```
-
-Only include observation categories that have entries. If no `**Retro**:` fields exist, replace the Observations section with a simpler "Batch Outcome" section summarising story completion status.
+The shared **Retro Synthesis** procedure (invoked in Step 2) performs the write: it assigns `{nn}` via the shared **Numbering** procedure, derives `{slug}` from the source artefact name (e.g. epic doc `01-epic-auth.md` produces retro slug `auth`), creates `docs/retros/` if it doesn't exist, and writes the retro file to `docs/retros/{nn}-retro-{slug}.md` in the shared retro-file format.
 
 Tell the user the retro file path after saving.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
 
 ### Step 3.5: Library Write-Back
 
@@ -124,7 +76,7 @@ After writing the retro file, check if any retro observations should be fed back
 
 1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip this step silently and proceed to Step 4.
 
-2. **Read front-matter** of each library document using the Read tool. Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
+2. **Read front-matter** of each library document using the Read tool. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). Filter to documents whose `scope` array includes `do` or `all` — these are the documents that guided task execution and are most likely to benefit from retro observations.
 
 3. **Match observations to library documents**: For each retro observation (from the `**Retro**:` fields collected in Step 1), assess whether it's relevant to any library document. Use the observation category and content to match:
    - **Codebase discoveries** → likely relevant to architecture or coding standards docs
@@ -147,7 +99,7 @@ After writing the retro file, check if any retro observations should be fed back
 5. **User approval gate**: Present all proposed amendments to the user, grouped by target library document. Use AskUserQuestion:
    - **Apply all amendments** — Write all proposed amendments
    - **Review individually** — Walk through each amendment one at a time
-   - **Skip write-back** — Don't amend any library documents
+   - **Skip write-back** — Leave all library documents unchanged
 
 6. **Write amendments**: For each approved amendment, use the Edit tool to:
    - Append the `## Amendment` block to the end of the library document
@@ -155,44 +107,38 @@ After writing the retro file, check if any retro observations should be fed back
 
 **Graceful degradation**:
 - If no library directory exists, skip silently.
-- If no observations match any library documents, skip silently — don't force amendments.
+- If no observations match any library documents, skip silently — only amend when there is a genuine match.
 - If no `**Retro**:` fields were captured (status-only retro), skip this step entirely.
-- Never block the retro workflow for write-back failures.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3.5 summary before continuing.
+- The retro workflow always continues past write-back failures.
 
 ### Step 4: Pipeline Handoff
 
-After presenting the retro file path, offer the user options for what to do next. Use AskUserQuestion:
+After presenting the retro file path, offer the user options for what to do next.
 
-- **Continue to /cpm:discover** — Use the retro as starting context for problem discovery
-- **Continue to /cpm:spec** — Use the retro as starting context for requirements specification
-- **Continue to /cpm:epics** — Use the retro as starting context for work breakdown
-- **Just exit** — End the session, no handoff
+**Pivot suggestion check**: Before presenting the handoff options, scan the synthesised observations for scope-affecting categories — **criteria gaps**, **scope surprises**, and **codebase discoveries** that imply the source spec or epic missed something material. If any such observation is present, surface a pivot offer alongside the regular handoff options.
 
-If the user chooses a pipeline skill, pass the retro file path as the input context for that skill. The retro file becomes the `$ARGUMENTS` equivalent — the next skill should treat it as its starting context.
+Use AskUserQuestion:
+
+- **Continue to /cpm:pivot** *(only when scope-affecting observations exist)* — Use the retro to amend the source spec/epic. Pass the source artefact path (from the retro's `**Source**:` field) as `$ARGUMENTS` to `/cpm:pivot`.
+- **Continue to /cpm:discover** — Use the retro as starting context for problem discovery.
+- **Continue to /cpm:spec** — Use the retro as starting context for requirements specification.
+- **Continue to /cpm:epics** — Use the retro as starting context for work breakdown.
+- **Just exit** — End the session, no handoff.
+
+If the user chooses a pipeline skill, pass the retro file path (or source artefact path for pivot) as the input context for that skill.
 
 Delete the progress file after handoff or exit.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after the final retro file has been saved and confirmed written.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final retro file has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -221,7 +167,7 @@ Use the Write tool to write the full file each time (not Edit — the file is re
 
 ## Guidelines
 
-- **Signal over noise.** A retro with 2 sharp observations is better than one with 10 vague ones. Synthesise, don't just reformat.
+- **Signal over noise.** A retro with 2 sharp observations is better than one with 10 vague ones. Synthesise into patterns, not just reformatted lists.
 - **Actionable recommendations.** Every recommendation should be something concrete that changes how the next cycle is planned or executed.
 - **Works without observations.** If no `**Retro**:` fields were captured, still produce a useful retro from story status — what completed, what didn't, what that implies.
 - **Scannable.** The entire retro file should be digestible in under a minute. Use bullet points and short paragraphs.

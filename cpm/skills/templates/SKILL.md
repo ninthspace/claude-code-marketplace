@@ -79,4 +79,4 @@ To scaffold a template:
 
 - **No state management needed.** This skill is stateless — it doesn't produce planning artifacts or run multi-phase facilitation. No progress file required.
 - **Fast and informational.** List, preview, and scaffold should each complete in a single response. No AskUserQuestion gating needed for list or preview.
-- **Respect the two-tier boundary.** Never scaffold a structural template override. The distinction exists to protect data contracts between skills.
+- **Respect the two-tier boundary.** Only scaffold presentational template overrides — structural templates are data contracts between skills and must remain fixed.

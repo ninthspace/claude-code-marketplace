@@ -25,31 +25,20 @@ For story-level review, present the list of stories from the epic doc and let th
 
 ## Roster Loading
 
-Load the agent roster at session start. Check for a project-level override first:
+Follow the shared **Roster Loading** procedure. After loading, confirm the roster and how many agents are available: "Review roster loaded: {N} agents available. I'll select the most relevant reviewers based on the content."
 
-1. **Project override**: Read `docs/agents/roster.yaml` in the current project directory. If it exists, use it as the complete roster (no merging with defaults).
-2. **Plugin default**: If no project override exists, read the plugin's `agents/roster.yaml` (located in the same plugin directory as this skill, at `../../agents/roster.yaml` relative to this file).
+## Retro Check
 
-If neither file can be found, proceed without agent personas — fall back to a single-perspective review and note the limitation to the user.
+Follow the shared **Retro Awareness** procedure before Agent Selection.
 
-After loading, briefly introduce the review team. Don't list all agents — just confirm the roster is loaded and how many agents are available:
-
-```
-Review roster loaded: {N} agents available. I'll select the most relevant reviewers based on the content.
-```
+**Retro incorporation** (this skill):
+- **All categories**: Use the most recent retro's observations as **adversarial review prompts** for the selected agents — "the last retro flagged criteria gaps in auth flows; check whether this artifact has the same risk." This makes review actively guard against recurring failure modes.
+- **Codebase discoveries** and **patterns worth reusing**: Pre-load these as context for reviewer agents that critique structure or implementation.
+- **Scope surprises** and **complexity underestimates**: Use as prompts for the agents critiquing scope and effort.
 
 ## Library Check
 
-After roster loading and before starting the review, check the project library for reference documents:
-
-1. **Glob** `docs/library/*.md`. If no files found or directory doesn't exist, skip silently.
-2. **Read front-matter** of each file found using the Read tool (the YAML block between `---` delimiters, typically the first ~10 lines). Read each file individually — do not use Bash loops with shell variables for this. Filter to documents whose `scope` array includes `review` or `all`.
-3. **Report to user**: "Found {N} library documents relevant to this review: {titles}. Agents will reference these during their review." If none match the scope filter, skip silently.
-4. **Deep-read selectively** during the review step when an agent's review would benefit from referencing library content — e.g. an architect referencing architecture docs when reviewing structural decisions, or a developer citing coding standards when reviewing implementation tasks.
-
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the review due to a malformed library document.
-
-**Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
+Follow the shared **Library Check** procedure with scope keyword `review`. Deep-read selectively when reviewer personas need context from architecture or coding-standards docs — e.g. an architect reviewing structural decisions, or a developer citing coding standards.
 
 ### Template Hint (Startup)
 
@@ -91,7 +80,7 @@ This matches the party mode format for consistency across CPM skills.
 
 ## Process
 
-**State tracking**: Before starting Step 1, create the progress file (see State Management below). Each step below ends with a mandatory progress file update — do not skip it. After saving the final review file, delete the progress file.
+**State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the progress file once the final review file has been saved.
 
 ### Step 1: Analyse the Artifact
 
@@ -105,8 +94,6 @@ Read the target artifact (full epic or specific story) and build a structured un
 **ADR discovery**: **Glob** `docs/architecture/[0-9]*-adr-*.md`. If ADRs exist, read them. This enables ADR compliance review — checking whether stories respect architectural decisions. If no ADRs exist, skip silently.
 
 Present a brief summary to the user: what's being reviewed, how many stories/tasks, current status. If a spec or ADRs were found, note that they'll be used as review context.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 1 summary before continuing.
 
 ### Step 2: Conduct Adversarial Review
 
@@ -148,7 +135,11 @@ Each finding must be tagged with exactly one severity level:
 
 #### Review Execution
 
-For each selected agent, in turn:
+**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state. Spawn parallel subagents via the Agent tool, one per reviewer agent — fan-out is the expected path here, not an optional optimisation. Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, and the finding format. Consolidate findings from all subagents after they complete.
+
+**Inline execution** (when 2 agents are selected or fan-out is unavailable): Review with each agent in turn within the main context.
+
+For each agent (whether via subagent or inline):
 
 1. Review the artifact through the agent's professional lens.
 2. Produce 2-5 findings (not a comprehensive audit — focus on the most impactful observations).
@@ -165,7 +156,7 @@ Format each finding as:
 
 After all agents have reviewed, present the findings to the user grouped by concern type (not by agent). Within each concern type, order by severity (critical first, then warning, then suggestion).
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 2 summary (concern types found, finding counts by severity) before continuing.
+*Progress note: capture concern types found and finding counts by severity in the Step 2 summary.*
 
 ### Step 3: Write Review File
 
@@ -231,7 +222,21 @@ Step 4 may append a `## Remediation` section to this file — see Autofix below.
 
 Tell the user the review file path after saving.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 3 summary before continuing.
+#### Faithful Render (on request)
+
+A review's findings, grouped and severity-sorted, read well as a navigable HTML view. Produce one **only on request** — when the user asks for an HTML version of the review (to read or share) — never automatically as part of writing the review file. Follow the shared **HTML Output** convention for the mechanics; this section states the review-specific particulars.
+
+When requested:
+
+1. Read the saved review Markdown (`docs/reviews/{nn}-review-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.
+2. Generate a single self-contained HTML view by consuming the shared template (substitute the `CPM:` tokens — do not fork the `<style>` block): the Summary and per-category Findings become the `CPM:CONTENT`; the review title/date become `CPM:TITLE`/`CPM:META`. The template ships severity classes (`.sev-critical`/`.sev-major`/`.sev-minor`/`.sev-info`) and `.finding` blocks for exactly this content — use them rather than inventing styling.
+3. Write it to `docs/reviews/html/{nn}-{slug}.html` — same `{nn}` and `{slug}` as the source review. Tell the user the path.
+
+**Regeneration in place.** Because that path is a deterministic function of the source's `{nn}`/`{slug}`, re-rendering after the review changes **overwrites the same file in place** — it updates the existing render rather than spawning a duplicate, and the shared path keeps the render traceable to its source.
+
+This is a faithful projection of the review, not an audience-reframed *transform* (that is `cpm:present`'s job).
+
+**Navigation (artifact-appropriate).** A review is a list of findings, so **group and sort by severity**: order findings most-severe-first (critical → major → minor → info) and tag each with the matching template badge class (`.sev-critical`/`.sev-major`/`.sev-minor`/`.sev-info`) inside a `.finding` block, so the reader sees the worst problems first. This is **static only** — ordering and badges via the template's CSS, no JavaScript.
 
 ### Step 4: Autofix
 
@@ -262,7 +267,7 @@ If the user chooses **Skip autofix**, use the Edit tool to append a `## Remediat
 Autofix offered but declined. {N} critical and {N} warning findings remain unaddressed.
 ```
 
-Suggestions are informational and never generate fix tasks, regardless of the user's choice.
+Suggestions are informational and always remain as-is — only critical and warning findings generate fix tasks.
 
 #### Adaptive Path Selection
 
@@ -290,7 +295,7 @@ When the epic has pending work, append a remediation story to the epic doc. This
 
    **Acceptance Criteria**:
    - Each critical and warning finding from the review has been addressed
-   - Changes do not break existing acceptance criteria on other stories
+   - Existing acceptance criteria on other stories continue to pass
 
    ### Fix: {finding summary}
    **Task**: {N.1}
@@ -305,7 +310,7 @@ When the epic has pending work, append a remediation story to the epic doc. This
    ---
    ```
 
-3. **Append using Edit tool**: Use the Edit tool to append the new story section to the end of the epic doc (before any `## Lessons` section if one exists). **Never use Write** — Edit preserves the existing content.
+3. **Append using Edit tool**: Use the Edit tool to append the new story section to the end of the epic doc (before any `## Lessons` section if one exists). **Always use Edit** — it preserves the existing content.
 
 4. **Report**: Tell the user what was added — story number, task count, and which findings were converted.
 
@@ -361,8 +366,6 @@ When the epic is complete or no epic doc exists, create Claude Code tasks direct
 
    Include one row per finding that generated a task. The Task column uses the Claude Code task subject.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Step 4 summary before continuing.
-
 ### Step 5: Pipeline Handoff
 
 After autofix (or after skipping it), offer the user options for what to do next. The options adapt based on the epic's status.
@@ -393,23 +396,14 @@ Delete the progress file after handoff or exit.
 
 ## State Management
 
-Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
+Follow the shared **Progress File Management** procedure.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+**Lifecycle**:
+- **Create**: before starting Step 1 (ensure `docs/plans/` exists).
+- **Update**: after each step completes.
+- **Delete**: only after the final review file has been saved and any autofix/handoff is complete.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
-
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Step 1 (ensure `docs/plans/` exists). **Update** it after each step completes. **Delete** it only after the final review file has been saved and any autofix/handoff is complete — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -448,15 +442,20 @@ The "Completed Steps" section grows as steps complete. Each summary should captu
 
 ## Graceful Degradation
 
-- **No roster found**: Fall back to single-perspective review without agent personas. Note the limitation to the user.
-- **No library docs**: Skip silently — review proceeds without external reference documents.
-- **Malformed epic doc**: If the epic doc can't be parsed (missing story headings, no acceptance criteria), report what was found and review what's available. Don't block on format issues.
-- **Empty review**: If no findings are produced (unlikely but possible), write a review file noting the artifact passed review with no concerns, and skip autofix.
+Every scenario below specifies an explicit action sequence ending with a visible result. No silent fallbacks.
+
+- **No roster found** → **Action**: Fall back to single-perspective review without agent personas. **Result**: Report to the user: "Agent roster not found — running single-perspective review without agent personas."
+
+- **No library docs** → **Action**: Proceed with review using only the epic doc and spec as context. **Result**: Report to the user: "No library documents found — reviewing with epic doc and spec context only."
+
+- **Malformed epic doc** → **Action**: Parse what is available. Review the portions that can be parsed. **Result**: Report to the user: "Epic doc has structural issues: {list of problems}. Reviewing {N} of {M} parseable stories."
+
+- **Empty review** → **Action**: Write a review file noting the artifact passed review with no concerns. Skip the autofix phase. **Result**: Report to the user: "Review complete — no findings. Artifact passes review."
 
 ## Guidelines
 
 - **Adversarial, not hostile.** The review should challenge assumptions and find real issues, not manufacture criticism. If something is well-designed, say so. Not every story needs 5 findings.
 - **Specific over vague.** "Story 2's acceptance criteria are unclear" is useless. "Story 2, criterion 3 says 'handles errors gracefully' — what does gracefully mean? Which errors? This will be interpreted differently by different implementers" is actionable.
-- **Severity matters.** Don't inflate severity to make findings seem more important. A genuinely critical finding (blocks execution) is rare. Most findings will be warnings or suggestions. That's fine.
+- **Severity matters.** Tag each finding at its true severity level. A genuinely critical finding (blocks execution) is rare. Most findings will be warnings or suggestions. That's fine.
 - **Reference the artifact.** Every finding should point to a specific story, task, or acceptance criterion. Reviewers who can't point to what they're criticising aren't being helpful.
-- **Match depth to scope.** A single-story review should take 2-3 agents and produce 3-8 findings. A full epic review should take 3-4 agents and produce 5-15 findings. Don't over-review small artifacts or under-review large ones.
+- **Match depth to scope.** A single-story review should take 2-3 agents and produce 3-8 findings. A full epic review should take 3-4 agents and produce 5-15 findings. Scale review depth to artifact size.

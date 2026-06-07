@@ -22,21 +22,19 @@ Check for input in this order:
 
 ## Process
 
-Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — never dump multiple phases of questions at once.
+Work through these phases **one at a time**. Complete each phase before moving to the next. Use AskUserQuestion for every gate — present only one phase of questions per turn.
 
-**State tracking**: Before starting Phase 1, create the progress file (see State Management below). Each phase below ends with a mandatory progress file update — do not skip it. After saving the final brief, delete the file.
+**State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final brief has been saved.
 
 ### Retro Check (Startup)
 
-Before beginning Phase 1, check for recent retro files using Glob: `docs/retros/[0-9]*-retro-*.md`. If one or more retro files exist:
+Follow the shared **Retro Awareness** procedure before beginning Phase 1.
 
-1. Read the most recent retro file.
-2. Present a brief summary of its key recommendations to the user.
-3. Use AskUserQuestion to ask: "A recent retro has recommendations that may be relevant. Incorporate into this ideation session?"
-   - **Yes, incorporate** — Treat the retro's recommendations as additional context throughout the ideation phases
-   - **No, start fresh** — Proceed normally without retro context
-
-If no retro files exist, skip this check silently and proceed to the Library Check.
+**Retro incorporation** (this skill):
+- **Patterns worth reusing**: Inform Phase 2 (Solution Approaches) — proven approaches from past work belong in the candidate set, not just net-new ideas.
+- **Codebase discoveries**: Inform Phase 6 (Differentiation) — surfaced limitations or strengths in existing implementation shape what this product can credibly claim against alternatives.
+- **Scope surprises**: Inform Phase 5 (Key Features) — categories that ran larger or smaller than expected last time suggest where this brief should be sharper about essential vs. enhancing.
+- **Criteria gaps**: Inform Phase 4 (Value Propositions) — vague or missed value claims from past rounds become testable, concrete claims this round.
 
 ### Roster Loading (Startup)
 
@@ -63,11 +61,9 @@ Questions to explore:
 - Has anything changed since discovery?
 - Any new constraints or context?
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 1 summary before continuing.
-
 ### Phase 2: Solution Approaches
 
-Explore different approaches to solving the problem. Don't converge on a single solution yet — present 2-4 distinct approaches and discuss their trade-offs. Each approach should be a plausible path, not a strawman.
+Explore different approaches to solving the problem. Keep the field open at this stage — present 2-4 distinct approaches and discuss their trade-offs. Each approach should be a plausible path, not a strawman.
 
 For each approach, consider:
 - What would this look like in practice?
@@ -77,8 +73,6 @@ For each approach, consider:
 Use AskUserQuestion to present the approaches and let the user discuss, combine, or refine them. The goal is to converge on a direction, not lock in every detail.
 
 **Perspectives**: After presenting approaches, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Product Manager on user impact, the Software Architect on technical feasibility, or the UX Designer on interaction implications.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 2 summary before continuing.
 
 ### Phase 3: Vision
 
@@ -91,8 +85,6 @@ Questions to explore:
 
 Present a draft vision statement and refine with the user.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 3 summary before continuing.
-
 ### Phase 4: Value Propositions
 
 Identify the core value the product delivers to its users. Value propositions answer "why would someone use this instead of the alternative?" Focus on outcomes, not features.
@@ -103,8 +95,6 @@ Questions to explore:
 - What does this make possible that wasn't before?
 
 Present 2-4 value propositions and refine with the user. Each should be concrete and testable — not generic promises.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 4 summary before continuing.
 
 ### Phase 5: Key Features
 
@@ -119,8 +109,6 @@ Present a feature list grouped by priority (essential vs. enhancing). Refine wit
 
 **Perspectives**: After features are drafted, follow the shared **Perspectives** procedure. Select 2-3 agents from the loaded roster whose expertise is relevant — e.g. the Senior Developer on implementation complexity, the QA Engineer on testability, or the Product Manager on priority.
 
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 5 summary before continuing.
-
 ### Phase 6: Differentiation
 
 Articulate what makes this product different from existing alternatives. Differentiation can be in approach, scope, audience, experience, or technology — not just features.
@@ -131,8 +119,6 @@ Questions to explore:
 - What would be hard for an alternative to replicate?
 
 Present a differentiation analysis and refine with the user. Be honest about where alternatives are stronger — credible differentiation acknowledges trade-offs.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 6 summary before continuing.
 
 ### Phase 7: User Journeys
 
@@ -145,8 +131,6 @@ For each journey:
 - What outcome do they achieve?
 
 Present draft journeys and refine with the user. Journeys should feel like stories, not flowcharts.
-
-**Update progress file now** — write the full `.cpm-progress-{session_id}.md` with Phase 7 summary before continuing.
 
 ### Phase 8: Summary
 
@@ -231,21 +215,14 @@ If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead 
 
 Maintain `docs/plans/.cpm-progress-{session_id}.md` throughout the session for compaction resilience. This allows seamless continuation if context compaction fires mid-conversation.
 
-**Path resolution**: All paths in this skill are relative to the current Claude Code session's working directory. When calling Write, Glob, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Never write to a different project's directory or reuse paths from other sessions.
+Follow the shared **Progress File Management** procedure.
 
-**Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
+**Lifecycle**:
+- **Create**: before starting Phase 1 (ensure `docs/plans/` exists).
+- **Update**: after each phase completes.
+- **Delete**: only after the final brief has been saved and confirmed written.
 
-**Resume adoption**: When a session is resumed (`--resume`) or context is cleared (`/clear`), `CPM_SESSION_ID` changes to a new value while the old progress file remains on disk. The hooks inject all existing progress files into context — if one matches this skill's `**Skill**:` field but has a different session ID in its filename, adopt it:
-1. Read the old file's contents (already visible in context from hook injection).
-2. Write a new file at `docs/plans/.cpm-progress-{current_session_id}.md` with the same contents.
-3. After the Write confirms success, delete the old file: `rm docs/plans/.cpm-progress-{old_session_id}.md`.
-Do not attempt adoption if `CPM_SESSION_ID` is absent from context — the fallback path handles that case.
-
-**Create** the file before starting Phase 1 (ensure `docs/plans/` exists). **Update** it after each phase completes. **Delete** it only after the final brief has been saved and confirmed written — never before. If compaction fires between deletion and a pending write, all session state is lost.
-
-**Also delete** `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
-
-Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale). Format:
+**Format**:
 
 ```markdown
 # CPM Session State
@@ -289,10 +266,10 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
-- **Facilitate, don't interrogate.** These are conversations, not forms.
+- **Facilitate, stay conversational.** These are conversations, not forms.
 - **Build on answers.** Each question should respond to what the user just said.
 - **Skip what's obvious.** If the input brief already covers a phase, acknowledge it and move on.
 - **Stay curious.** Ask follow-up questions when answers are vague or assumptions seem risky.
-- **One phase at a time.** Never combine phases into a single question block.
+- **One phase at a time.** Present only one phase of questions per turn.
 - **Product, not project.** Focus on what the product is and why it matters — not timelines, team structure, or delivery planning.
 - **Concrete over abstract.** Value propositions should be testable, features should be describable, differentiation should be honest.

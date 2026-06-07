@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/33-spec-html-artifact-projection.md
 **Date**: 2026-06-02
-**Status**: Pending
+**Status**: Complete
 **Blocked by**: —
 
 ## Build shared HTML test tooling
