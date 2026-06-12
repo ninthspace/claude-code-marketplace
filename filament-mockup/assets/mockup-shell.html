@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<!--
+  Filament v5 admin mockup — SCAFFOLD / STARTING POINT.
+  Copy this into docs/mockups/<project>-admin-mockups.html and build from it.
+
+  Throwaway artefact for sign-off. Everything `fi-*` is real Filament; everything
+  `mk-*` is mockup-only and gets stripped at build time.
+
+  TODO before you start:
+    1. Run scripts/capture.mjs against a real Filament v5 panel.
+    2. Paste the captured :root palette tokens into the first <style> block.
+    3. Point the theme <link> at your captured reference/css/02-theme-<hash>.css.
+    4. Note the captured Filament version in a comment.
+-->
+<html lang="en" dir="ltr" class="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>… — Admin Backend Mockups (Filament v5)</title>
+
+<!-- Albert Sans — the font the Filament demo uses. -->
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=albert-sans:400,500,600,700&display=swap" rel="stylesheet">
+
+<!-- Filament tokens (palette + font), lifted from the demo head. REFERENCE ONLY — paste the real oklch block from capture. -->
+<style>
+:root {
+  /* PASTE captured palette here: --primary-50…950, --danger-*, --gray-*, --info-*, --success-*, --warning-* */
+}
+:root {
+  --font-family: 'Albert Sans';
+  --sidebar-width: 18rem;
+  --collapsed-sidebar-width: 4.5rem;
+  --default-theme-mode: light;
+}
+html.fi { --livewire-progress-bar-color: var(--primary-500); }
+</style>
+
+<!-- The real compiled Filament v5 theme (fi-* component styles). Captured snapshot — Filament v5.x.x. -->
+<link rel="stylesheet" href="reference/css/02-theme-REPLACE.css">
+
+<!-- ════════ MOCKUP-ONLY styles (mk- namespace). None of this ships. ════════ -->
+<style>
+  html, body { height: auto; }
+  html.fi { color-scheme: light; }                 /* force light mode regardless of OS */
+  .fi-main-ctn { opacity: 1 !important; }           /* Filament fades this in via Alpine; we have none */
+
+  /* Sidebar + topbar single continuous top strip (sidebar-nav layout). */
+  .fi-sidebar { top: 0 !important; }
+  .fi-sidebar-header-ctn { height: 4rem; min-height: 4rem; border-bottom: 1px solid var(--gray-200); background: #fff; display: flex; align-items: center; padding: 0 1.5rem; }
+  .fi-topbar { height: 4rem; min-height: 4rem; box-shadow: none; border-bottom: 1px solid var(--gray-200); }
+  .fi-topbar-ctn { height: 4rem; min-height: 4rem; box-shadow: none; }
+
+  /* Screen switching */
+  .mk-screen { display: none; }
+  .mk-screen.mk-active { display: block; }
+
+  /* Bottom-centre navigator */
+  .mk-nav { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 99999;
+    display: flex; gap: .25rem; align-items: center; background: #18181b; color: #fff;
+    padding: .4rem .5rem; border-radius: 9999px; box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    font-family: 'Albert Sans', sans-serif; max-width: calc(100vw - 2rem); flex-wrap: wrap; justify-content: center; }
+  .mk-nav__title { font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .55; padding: 0 .5rem; white-space: nowrap; }
+  .mk-nav button { font: inherit; font-size: .72rem; font-weight: 600; cursor: pointer; border: 0; background: transparent;
+    color: rgba(255,255,255,.72); padding: .35rem .7rem; border-radius: 9999px; white-space: nowrap; }
+  .mk-nav button:hover { color: #fff; background: rgba(255,255,255,.12); }
+  .mk-nav button.mk-on { color: #fff; background: var(--primary-600); }
+
+  /* "Custom Livewire component" annotation — clearly NOT Filament chrome. */
+  .mk-custom { position: relative; border: 1.5px dashed var(--primary-400); border-radius: .75rem; padding-top: 1.85rem !important; }
+  .mk-custom__tag { position: absolute; top: -.7rem; left: .9rem; background: var(--primary-600); color: #fff;
+    font-size: .62rem; font-weight: 700; padding: .15rem .55rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: .3rem; }
+  /* Hidden state: render custom sections as plain Filament sections. */
+  .mk-hide-custom .mk-custom { border: 0; border-radius: var(--radius-xl); padding-top: 1.25rem !important; }
+  .mk-hide-custom .mk-custom__tag { display: none; }
+
+  /* Modal overlay (we drive visibility ourselves, not via Alpine). */
+  .mk-modal { position: fixed; inset: 0; z-index: 9000; display: none; align-items: flex-start; justify-content: center; padding: 5vh 1rem; overflow-y: auto; }
+  .mk-modal.mk-open { display: flex; }
+  .mk-modal__backdrop { position: fixed; inset: 0; background: rgba(17,24,39,.5); }
+  .mk-modal__window { position: relative; z-index: 1; width: 100%; max-width: 32rem; background: #fff; border-radius: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+
+  /* Filament-style toggle (used in banner + forms). */
+  .mk-toggle { width: 2.5rem; height: 1.4rem; border-radius: 9999px; background: var(--gray-200); position: relative; flex-shrink: 0; cursor: pointer; transition: background .12s; }
+  .mk-toggle--on { background: var(--primary-600); }
+  .mk-toggle__knob { position: absolute; top: .15rem; left: .15rem; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .12s; }
+  .mk-toggle--on .mk-toggle__knob { left: 1.25rem; }
+
+  /* Banner strip. */
+  .mk-banner { background: var(--primary-950); color: #fff; font-family: 'Albert Sans', sans-serif; font-size: .72rem; padding: .4rem 1rem; line-height: 1.4; display: flex; align-items: center; gap: 1rem; }
+  .mk-banner__text { flex: 1; }
+  .mk-banner code { background: rgba(255,255,255,.15); padding: .05rem .35rem; border-radius: .25rem; }
+  .mk-banner__toggle { display: inline-flex; align-items: center; gap: .45rem; flex-shrink: 0; background: none; border: 0; color: #fff; cursor: pointer; font: inherit; font-weight: 600; white-space: nowrap; }
+  .mk-banner__toggle .mk-toggle { width: 2rem; height: 1.1rem; background: rgba(255,255,255,.25); }
+  .mk-banner__toggle .mk-toggle__knob { width: .85rem; height: .85rem; top: .125rem; left: .125rem; }
+  .mk-banner__toggle .mk-toggle--on { background: var(--primary-500); }
+  .mk-banner__toggle .mk-toggle--on .mk-toggle__knob { left: 1.025rem; }
+</style>
+</head>
+
+<!-- mk-hide-custom = indicators OFF by default (clean view first). -->
+<body class="fi-body fi-panel-admin fi-body-has-navigation fi-body-has-topbar mk-hide-custom">
+
+<div class="mk-banner">
+  <div class="mk-banner__text">
+    <strong>… — Admin backend mockup.</strong>
+    Static Filament v5 mockup (real <code>fi-*</code> theme, not scaffolded code) for spec sign-off.
+    Use the navigator at the bottom to switch screens. Dashed boxes mark proposed custom Livewire components.
+  </div>
+  <button type="button" class="mk-banner__toggle" id="mkCustomToggle" onclick="mkToggleCustom()" aria-pressed="false">
+    <span class="mk-toggle" id="mkCustomSwitch"><span class="mk-toggle__knob"></span></span>
+    🧩 Livewire indicators
+  </button>
+</div>
+
+<div class="fi-layout">
+  <!-- ════ SIDEBAR ════ -->
+  <aside class="fi-sidebar fi-main-sidebar fi-sidebar-open">
+    <div class="fi-sidebar-header-ctn">
+      <header class="fi-sidebar-header">
+        <div style="display:flex;align-items:center;gap:.6rem;">
+          <span style="width:1.85rem;height:1.85rem;border-radius:50%;background:linear-gradient(135deg,var(--primary-500),var(--info-500));display:inline-flex;align-items:center;justify-content:center;">◆</span>
+          <span style="font-weight:800;color:var(--gray-800);font-size:1.05rem;">Project</span>
+        </div>
+      </header>
+    </div>
+    <nav class="fi-sidebar-nav">
+      <ul class="fi-sidebar-nav-groups">
+        <li class="fi-sidebar-group"><ul class="fi-sidebar-group-items">
+          <li class="fi-sidebar-item fi-active fi-sidebar-item-has-url">
+            <a href="#" onclick="mkShow('dashboard');return false" class="fi-sidebar-item-btn">
+              <span class="fi-sidebar-item-label">Dashboard</span>
+            </a>
+          </li>
+          <li class="fi-sidebar-item fi-sidebar-item-has-url">
+            <a href="#" onclick="mkShow('index');return false" class="fi-sidebar-item-btn">
+              <span class="fi-sidebar-item-label">Records</span>
+            </a>
+          </li>
+        </ul></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- ════ MAIN ════ -->
+  <div class="fi-main-ctn">
+    <div class="fi-topbar-ctn"><div class="fi-topbar">
+      <div style="display:flex;align-items:center;gap:.85rem;width:100%;height:100%;padding:0 1.25rem;">
+        <div style="flex:1;"></div>
+        <!-- Global search — same grammar as the table search (see references/fi-grammar.md). -->
+        <div class="fi-global-search-field" style="width:16rem;">
+          <label class="fi-sr-only">Global search</label>
+          <div class="fi-input-wrp">
+            <div class="fi-input-wrp-prefix fi-input-wrp-prefix-has-content fi-inline">
+              <svg class="fi-icon fi-size-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.45 4.39l3.08 3.08a.75.75 0 0 1-1.06 1.06l-3.08-3.08A7 7 0 0 1 2 9Z" clip-rule="evenodd"/></svg>
+            </div>
+            <div class="fi-input-wrp-content-ctn">
+              <input class="fi-input fi-input-has-inline-prefix" type="search" placeholder="Search" autocomplete="off">
+            </div>
+          </div>
+        </div>
+        <span style="width:2rem;height:2rem;border-radius:50%;background:var(--primary-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;">AB</span>
+      </div>
+    </div></div>
+
+    <main class="fi-main" style="padding:1.5rem 1.25rem 5rem;max-width:90rem;margin:0 auto;width:100%;">
+
+      <!-- ══ EXAMPLE SCREEN: dashboard ══ -->
+      <section class="mk-screen mk-active" id="screen-dashboard">
+        <header class="fi-header" style="margin-bottom:1.25rem;">
+          <div><h1 class="fi-header-heading">Dashboard</h1></div>
+        </header>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:1rem;">
+          <div class="fi-section" style="padding:1rem 1.25rem;"><span style="font-size:.8rem;font-weight:600;color:var(--gray-500);">A stat</span><div style="font-size:1.85rem;font-weight:800;color:var(--gray-800);">123</div></div>
+        </div>
+      </section>
+
+      <!-- ══ EXAMPLE SCREEN: a resource index (table-driven by JS) ══ -->
+      <section class="mk-screen" id="screen-index">
+        <header class="fi-header" style="margin-bottom:1.25rem;">
+          <div><h1 class="fi-header-heading">Records</h1></div>
+          <div class="fi-header-actions-ctn">
+            <button class="fi-color fi-color-primary fi-bg-color-600 hover:fi-bg-color-500 fi-text-color-0 hover:fi-text-color-0 fi-btn fi-size-md" type="button" style="padding:.5rem 1rem;">＋ New</button>
+          </div>
+        </header>
+        <div class="fi-section fi-ta" style="padding:0;overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table class="fi-ta-table" style="width:100%;border-collapse:collapse;">
+              <thead><tr>
+                <th class="fi-ta-header-cell" style="text-align:left;padding:.7rem 1rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);">Name</th>
+                <th class="fi-ta-header-cell" style="text-align:left;padding:.7rem 1rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);">Status</th>
+              </tr></thead>
+              <tbody id="mk-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ════ NAVIGATOR ════ -->
+<nav class="mk-nav" id="mkNav">
+  <span class="mk-nav__title">Project Admin</span>
+  <button data-screen="dashboard" class="mk-on" onclick="mkShow('dashboard')">Dashboard</button>
+  <button data-screen="index" onclick="mkShow('index')">Records</button>
+</nav>
+
+<script>
+/* ── Screen + modal controllers (vanilla, no Alpine) ── */
+function mkShow(name){
+  document.querySelectorAll('.mk-screen').forEach(s=>s.classList.remove('mk-active'));
+  document.getElementById('screen-'+name)?.classList.add('mk-active');
+  document.querySelectorAll('#mkNav button[data-screen]').forEach(b=>b.classList.toggle('mk-on', b.dataset.screen===name));
+  mkCloseModal();
+  window.scrollTo(0,0);
+}
+function mkOpenModal(id){ document.getElementById('modal-'+id).classList.add('mk-open'); }
+function mkCloseModal(){ document.querySelectorAll('.mk-modal').forEach(m=>m.classList.remove('mk-open')); }
+function mkToggleCustom(){
+  const hidden = document.body.classList.toggle('mk-hide-custom');
+  document.getElementById('mkCustomSwitch').classList.toggle('mk-toggle--on', !hidden);
+  document.getElementById('mkCustomToggle').setAttribute('aria-pressed', String(!hidden));
+}
+
+/* ── Data-driven rendering: data in arrays, rendered with template strings ── */
+const STATUS = {
+  active:{label:'Active',color:'success'}, pending:{label:'Pending',color:'warning'}, archived:{label:'Archived',color:'gray'},
+};
+const badge = s => `<span class="fi-badge fi-size-sm fi-color fi-color-${STATUS[s].color} fi-text-color-700" style="padding:.2rem .55rem;border-radius:9999px;font-size:.72rem;font-weight:600;">${STATUS[s].label}</span>`;
+const ROWS = [
+  { name:'Example one', status:'active' },
+  { name:'Example two', status:'pending' },
+];
+function renderRows(){
+  const cell='padding:.7rem 1rem;font-size:.85rem;color:var(--gray-700);border-top:1px solid var(--gray-100);';
+  document.getElementById('mk-rows').innerHTML = ROWS.map(r=>`
+    <tr class="fi-ta-row fi-clickable" style="cursor:pointer;">
+      <td style="${cell}font-weight:600;color:var(--gray-900);">${r.name}</td>
+      <td style="${cell}">${badge(r.status)}</td>
+    </tr>`).join('');
+}
+
+/* ── Init ── */
+renderRows();
+</script>
+</body>
+</html>

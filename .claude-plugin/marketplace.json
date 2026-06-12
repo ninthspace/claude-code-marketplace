@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -78,6 +78,24 @@
         "cleanup",
         "dead-code",
         "async-await"
+      ]
+    },
+    {
+      "name": "filament-mockup",
+      "source": "./filament-mockup",
+      "description": "Build static, high-fidelity Filament v5 admin mockups from a brief or spec for stakeholder sign-off, before scaffolding any real Filament/Laravel code",
+      "version": "1.0.0",
+      "keywords": [
+        "filament",
+        "filament-v5",
+        "mockup",
+        "prototype",
+        "admin-panel",
+        "laravel",
+        "sign-off",
+        "html",
+        "stakeholder",
+        "fidelity"
       ]
     }
   ]

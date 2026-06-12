@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM), note searching, PHP code intelligence, and JavaScript/TypeScript code simplification. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, and Filament v5 admin mockups. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -19,6 +19,7 @@ This marketplace contains plugins for facilitated planning (CPM), note searching
 /plugin install php-lsp@claude-code-marketplace
 /plugin install cpm@claude-code-marketplace
 /plugin install js-simplifier@claude-code-marketplace
+/plugin install filament-mockup@claude-code-marketplace
 ```
 
 ## Available Plugins
@@ -254,6 +255,38 @@ A skill that scans all JS/TS files (or a configurable subset) and applies clarit
 
 [View full documentation](./js-simplifier/SKILL.md)
 
+### Filament Mockup (v1.0.0)
+
+**Build high-fidelity Filament v5 admin mockups for stakeholder sign-off**
+
+A skill that turns a product brief or spec into a single self-contained HTML file that looks pixel-accurate to a real Filament v5 admin panel — clickable enough to walk a stakeholder through every screen and flow, and throwaway by design (the real Filament build regenerates all of it natively). Mockups use the real captured Filament theme CSS and Filament's exact `fi-*` markup, so what stakeholders sign off on is what gets built. **Not** for production Filament code or customer-facing/front-end mockups.
+
+**Workflow:**
+- **Capture** — lift the compiled theme CSS and design tokens from a real Filament v5 panel
+- **Inventory** — build an FR → screen matrix so every element traces back to a numbered functional requirement
+- **Build** — reuse Filament's exact `fi-*` grammar; mark genuinely custom components with the `mk-` namespace
+- **Verify** — measure with Playwright rather than eyeballing, then sign off with a coverage audit
+
+**Quick Start:**
+```bash
+# Turn a brief/spec into clickable admin screens
+create a Filament mockup from docs/specifications/05-spec-admin-panel.md
+
+# Or describe it directly
+mock up the admin panel for this PRD
+```
+
+**Key Features:**
+- Single self-contained HTML file — opens by `file://`, zero environment to stand up
+- Maximum fidelity to Filament's real design language (captured theme, Albert Sans, standard layouts)
+- Every element traces to a functional requirement — invented UI is flagged, not silently added
+- Visible `mk-` vs `fi-*` boundary distinguishes mockup scaffolding from real Filament
+- Bundled scaffold, capture/verify scripts, and an `fi-*` grammar cheat-sheet
+
+**Requires:** Node + Playwright for the capture/verify scripts (`npm i -D playwright && npx playwright install chromium`).
+
+[View full documentation](./filament-mockup/SKILL.md)
+
 ## Removing Plugins (when in Claude Code)
 
 ```bash
@@ -262,6 +295,7 @@ A skill that scans all JS/TS files (or a configurable subset) and applies clarit
 /plugin uninstall php-lsp@claude-code-marketplace
 /plugin uninstall cpm@claude-code-marketplace
 /plugin uninstall js-simplifier@claude-code-marketplace
+/plugin uninstall filament-mockup@claude-code-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace

@@ -1,0 +1,21 @@
+{
+  "name": "filament-mockup",
+  "description": "Build static, high-fidelity Filament v5 admin mockups from a brief or spec for stakeholder sign-off, before scaffolding any real Filament/Laravel code",
+  "version": "1.0.0",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "filament",
+    "filament-v5",
+    "mockup",
+    "prototype",
+    "admin-panel",
+    "laravel",
+    "sign-off",
+    "html",
+    "stakeholder",
+    "fidelity"
+  ]
+}
