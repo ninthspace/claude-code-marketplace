@@ -32,7 +32,7 @@ Follow the shared **Roster Loading** procedure. After loading, confirm the roste
 Follow the shared **Retro Awareness** procedure before Agent Selection.
 
 **Retro incorporation** (this skill):
-- **All categories**: Use the most recent retro's observations as **adversarial review prompts** for the selected agents — "the last retro flagged criteria gaps in auth flows; check whether this artifact has the same risk." This makes review actively guard against recurring failure modes.
+- **All categories**: Use the selected cross-retro observations (chosen per the shared **Retro Awareness** procedure, by relevance across all retros — not just the newest file) as **adversarial review prompts** for the selected agents — "a retro flagged criteria gaps in auth flows; check whether this artifact has the same risk." This makes review actively guard against recurring failure modes, including ones surfaced by older but on-topic retros.
 - **Codebase discoveries** and **patterns worth reusing**: Pre-load these as context for reviewer agents that critique structure or implementation.
 - **Scope surprises** and **complexity underestimates**: Use as prompts for the agents critiquing scope and effort.
 

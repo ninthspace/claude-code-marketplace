@@ -41,12 +41,15 @@ Check the project library for reference documents relevant to the current skill.
 
 ## Retro Awareness
 
-Some skills check for recent retrospectives at startup so they can incorporate lessons from past work into the current session. To use:
+Some skills check past retrospectives at startup so they can incorporate lessons from prior work into the current session. Lessons are selected **across all retros**, not just the newest file — the most recent retro is simply whatever epic or change finished last, which is rarely the same as the most *relevant* lesson for the work now starting. To use:
 
 1. **Glob** `docs/retros/[0-9]*-retro-*.md`. If no files found or directory doesn't exist, skip silently — never block the skill.
-2. Read the most recent retro file (highest numeric prefix).
-3. Present a brief summary of its observations and recommendations to the user, focusing on the categories the running skill cares about (see the skill's own **Retro incorporation** block).
-4. Use AskUserQuestion: "A recent retro has observations relevant to this skill. Incorporate?" with options `Yes, incorporate` / `No, skip`.
+2. **Gather and select across all retros.** Read the retros (most recent first) and collect their observations — **excluding any observation carrying a `**Retired` marker** (see **Retro Retirement** below) — then select the most *relevant* few rather than everything from a single file. Judge relevance by:
+   - **Source/domain match** — does the retro's `**Source**:` artefact or observation text overlap with the current work's subject (same feature area, files, or domain keywords)?
+   - **Category match** — is the observation in one of the categories this skill acts on (see the skill's own **Retro incorporation** block)? Observations outside those categories are not surfaced.
+   Use **recency only as a tiebreaker** between otherwise equally relevant observations. **Cap the selection** to a handful (≈3–5 observations) so signal is preserved — "two sharp observations beat ten vague ones" applies here as much as in synthesis. If reading every retro is impractical, scan from most recent backwards and stop once the cap is filled with strong matches; note that older retros were not exhausted.
+3. Present a brief summary of the **selected observations** to the user, naming the source retro (filename / `**Source**:`) for each so a stale or mis-matched selection is never silent.
+4. Use AskUserQuestion: "Retros have observations relevant to this skill. Incorporate?" with options `Yes, incorporate` / `No, skip`.
 5. If yes: apply the skill's incorporation guidance to active context throughout the session — not as a prompt one-off, but as a lens applied to each phase/section/step.
 
 **Per-skill incorporation**: Each skill that uses Retro Awareness includes its own **Retro incorporation** block listing:
@@ -56,6 +59,15 @@ Some skills check for recent retrospectives at startup so they can incorporate l
 Without per-skill guidance, "incorporate" defaults to vague awareness and the retro effectively goes unused. Skills must say what changes.
 
 **Graceful degradation**: If no retro files exist, skip silently. If front-matter or content is malformed, fall back to filename context. Never block on retro check failures — the retro is advisory input, not a gate.
+
+## Retro Retirement
+
+A retro lesson can outlive its usefulness — the module it warned about is gone, the constraint it captured no longer holds, the pattern was superseded. Retirement marks a single observation as no longer relevant so it stops resurfacing, **without** deleting the retro or losing the audit trail.
+
+- **Marker**: append `**Retired {YYYY-MM-DD}**: {reason}` to the observation's bullet, **in place** under its existing category heading in the source retro file. The bullet is not moved or deleted — keeping it where it lives preserves category context and leaves a visible, greppable, reversible record (un-retire by removing the marker). Example: `- Config loader fails silently: callers must null-check. **Retired 2026-06-17**: loader now throws on missing file.`
+- **Effect**: the **Retro Awareness** selection step (step 2 above) excludes any observation carrying a `**Retired` marker. Retired observations never enter the relevance ranking, so they cannot be surfaced, capped-in, or gated on.
+- **Who retires**: `cpm:do`'s consumption gate when a lesson is given the **Obsolete** disposition (see that skill). A promote-to-library flow may also retire an observation once its lesson has graduated to the durable reference library, pointing the reason at the new library doc.
+- **Granularity**: retirement is per-observation. To retire an entire retro's worth of lessons (e.g. a whole epic's context is obsolete), prefer `cpm:archive`, which moves the file out of `docs/retros/` so consumption no longer globs it.
 
 ## Retro Synthesis
 
@@ -74,7 +86,7 @@ Given a set of collected retro observations and story outcomes, synthesise them 
 1. **Group observations by category.** Place each observation under its declared category heading. Skip categories with no entries.
 2. **Synthesise, don't list.** For each category with entries, write a brief synthesis — a sentence or two about what the pattern means and what to do differently next time — not a reformatted list of the raw notes.
 3. **Status-only fallback.** If there are no observations at all, replace the Observations section with a simpler **Batch Outcome** section summarising story completion: which stories completed, which were blocked or stuck, and the overall outcome.
-4. **Assign the file number and slug — recompute both here, never inherit them.** Compute `{nn}` fresh via the shared **Numbering** procedure for `docs/retros/` (`max(active ∪ archived) + 1`), and derive `{slug}` from *this* synthesis's source artefact name (e.g. epic `01-epic-auth.md` → slug `auth`). Both values are derived at write time — from the Numbering glob and the current source — and **never** from a retro filename already sitting in context. In particular, a caller's retro-awareness/consumption step may have read "the most recent retro file" earlier in the run; that filename is the file you *consumed*, not the file you *write*. Reading a retro and writing a retro are independent operations: do not reuse the consumed retro's number, slug, or path for the new file.
+4. **Assign the file number and slug — recompute both here, never inherit them.** Compute `{nn}` fresh via the shared **Numbering** procedure for `docs/retros/` (`max(active ∪ archived) + 1`), and derive `{slug}` from *this* synthesis's source artefact name (e.g. epic `01-epic-auth.md` → slug `auth`). Both values are derived at write time — from the Numbering glob and the current source — and **never** from a retro filename already sitting in context. In particular, a caller's retro-awareness/consumption step may have read one or more existing retro files earlier in the run; those are files you *consumed*, not the file you *write*. Reading a retro and writing a retro are independent operations: do not reuse the consumed retro's number, slug, or path for the new file.
 5. **Write the retro file** to `docs/retros/{nn}-retro-{slug}.md` (create the directory if absent). **The target path must not already exist.** A correct `max + 1` cannot collide with an existing file, so if `{nn}-retro-{slug}.md` is already present you have miscomputed `{nn}` (typically by inheriting a consumed retro's number instead of recomputing it in step 4): stop, recompute `{nn}` via Numbering, and **never overwrite** the existing retro. Scope this guard precisely — a *repeated slug* across runs is normal, not a collision: re-running synthesis for the same source epic is expected to produce a new number with the same slug (e.g. `12-retro-auth.md` written after an earlier `08-retro-auth.md`), and ad-hoc retros legitimately share slugs too. Only an existing **full path** (`{nn}-retro-{slug}.md`) is the error condition; a recurring slug alone is not. Write the file using this format:
 
    ```markdown

@@ -1,6 +1,6 @@
 ---
 name: cpm:retro
-description: Lightweight retrospective. Reads a completed epic doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Triggers on "/cpm:retro".
+description: Lightweight retrospective. Reads a completed epic doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Also promotes durable lessons into the reference library via "/cpm:retro learn". Triggers on "/cpm:retro".
 ---
 
 # Lightweight Retrospective
@@ -11,7 +11,15 @@ Read a completed (or partially completed) epic doc, synthesise observations capt
 
 This skill operates on two source types: **epic docs** (`docs/epics/`) and **quick records** (`docs/quick/`). Both produce retro-eligible observations during execution; the retro skill consumes either kind.
 
-Check for input in this order:
+This skill has two mutually exclusive modes, selected by `$ARGUMENTS`:
+
+- **Synthesis** (the default) — read a completed source and *write* a retro file from its observations. This is everything documented below from **Process** onward.
+- **Lesson promotion** (`learn`) — *promote* a durable lesson out of an existing retro into the reference library, then retire it at the source. This is a separate flow; see the **Lesson Promotion (`learn` action)** section below.
+
+The two never run together: synthesis produces a retro from execution observations; `learn` graduates an already-synthesised observation into permanent reference. Decide the mode first:
+
+- **If `$ARGUMENTS` is exactly `learn`, or begins with `learn` followed by an optional retro path/filter** (e.g. `learn`, `learn docs/retros/04-retro-foo.md`), enter the **Lesson Promotion (`learn` action)** flow and ignore the synthesis steps. Any trailing text after `learn` is treated as an optional scope hint (a retro path or keyword) for candidate gathering, not as a synthesis source.
+- **Otherwise**, run synthesis. Check for input in this order:
 
 1. If `$ARGUMENTS` references a file path, use it. Accept paths under `docs/epics/` (epic doc) or `docs/quick/` (quick record).
 2. If no path given, look for the most recent file across **both** `docs/epics/*-epic-*.md` and `docs/quick/*-quick-*.md` (compare by filename prefix or modification time). Present the most recent candidate(s) to the user with AskUserQuestion to confirm.
@@ -165,9 +173,59 @@ Follow the shared **Progress File Management** procedure.
 {What to do next}
 ```
 
+## Lesson Promotion (`learn` action)
+
+`/cpm:retro learn` graduates a **durable** retro lesson — one that keeps proving true across runs — into the permanent reference library at `docs/library/lessons-learned.md`, then retires it at the source so it stops resurfacing in Retro Awareness while persisting durably for Library Check. Retros are transient feed-forward; a lesson that has earned its keep belongs in the library, not in the retro layer where it must be re-judged every run.
+
+This flow is **manual** (a human chooses what to promote), **mutually exclusive** with synthesis (it never writes or reads a retro *as a synthesis source*), and runs only when `$ARGUMENTS` selects it (see **Input**). It proceeds in two steps: select a candidate lesson, then promote-and-retire it as one atomic operation.
+
+### Step L1: Gather and Select Candidates
+
+1. **Find the retros.** Glob `docs/retros/[0-9]*-retro-*.md`. If none exist or the directory is absent, tell the user there are no lessons to promote and stop.
+2. **Collect candidate observations.** Read each retro and gather its observations — the bullets under the category headings (Smooth Deliveries, Scope Surprises, Criteria Gaps, Complexity Underestimates, Codebase Discoveries, Testing Gaps, Patterns Worth Reusing). For each, retain its source retro path, its category, and the observation text.
+3. **Exclude already-retired lessons (offer-side idempotency).** Skip any observation carrying a `**Retired` marker — per the shared **Retro Retirement** convention, a retired observation has already been dismissed or promoted, so it must **never** be offered as a candidate. This is what stops a promoted lesson being promoted twice.
+4. **Apply the optional scope hint.** If `$ARGUMENTS` carried text after `learn` (a retro path or keyword), narrow the candidate set accordingly — a path restricts to that retro; a keyword filters to observations whose text or source matches. With no hint, offer all non-retired observations.
+5. **Present candidates, grouped.** Show the candidates grouped by source retro and category, each line giving the observation text plus its source retro filename and category so the user can see provenance before choosing. Use AskUserQuestion (or a numbered list the user picks from) and **support selecting more than one** lesson in a single invocation. If no candidates remain after filtering, tell the user there is nothing to promote and stop.
+6. **Preview before any write.** For each selected lesson, render a confirmation preview showing both halves of what Step L2 will do as one operation: (a) the proposed library entry — its title, the **derived `scope`** (computed via the auto-scope rules referenced in Step L2), the summary, and the provenance line; and (b) the **retirement** that will follow — the `**Retired {YYYY-MM-DD}**: promoted to docs/library/lessons-learned.md` marker that will be written back to the source observation. Confirm with the user. **No file is written until this preview is confirmed** — proceed to Step L2 only on confirmation.
+
+### Step L2: Promote and Retire (atomic)
+
+For each lesson confirmed in Step L1, perform the promotion **and** retirement as one atomic operation. The two are inseparable — a lesson lives in exactly one place (see the **Promotion is graduation** guideline). Repeat the whole step per selected lesson when multiple were chosen.
+
+**Write the library entry**:
+
+1. **Derive the entry's `scope`.** Apply `cpm:library`'s **Auto-Scope Suggestion** heuristics (in the `cpm:library` SKILL) to the lesson's content — do **not** reimplement them here. The retro category is a useful hint (e.g. a *Testing Gaps* lesson likely scopes to `do`), but the content drives the result.
+2. **Create or append to `docs/library/lessons-learned.md`.**
+   - **First promotion (file absent)**: create it with a single file-level front-matter block conforming to `cpm:library`'s **Generate Front-Matter** six-field model (`title` / `source` / `added` / `last-reviewed` / `scope` / `summary`) — again, follow that section rather than restating the rules. Use `title: Promoted Retro Lessons`; `source: docs/retros/ (promoted via /cpm:retro learn)`; `added` and `last-reviewed` both today; `scope` the derived scope; a `summary` noting these are durable lessons promoted from retros.
+   - **Subsequent promotions (file present)**: **append** a new `##` entry — **never overwrite or rewrite existing content**. Update the file-level front-matter in place: set `scope` to the **union** of the existing scope and the new entry's derived scope, and bump `last-reviewed` to today (`added` is unchanged).
+3. **Write the entry** as a `##` section with library-side provenance:
+
+   ```markdown
+   ## {Lesson title}
+   **Promoted**: {YYYY-MM-DD}
+   **Source**: docs/retros/{nn}-retro-{slug}.md → {Category} → "{verbatim observation text}"
+   **Scope**: {scope derived for this lesson}
+
+   {The lesson, written as durable standalone guidance.}
+   ```
+
+   The `**Source**` line is the library→retro half of the provenance trail and the key used by the idempotency guard below.
+
+**Retire at the source (same operation)**:
+
+4. Immediately after the library entry is written, retire the source observation in its retro per the shared **Retro Retirement** convention: append `**Retired {YYYY-MM-DD}**: promoted to docs/library/lessons-learned.md` to that observation's bullet, in place. This is the retro→library half of the provenance trail, and it is what makes the shared **Retro Awareness** selection skip the lesson from now on (so it lives only in the library).
+5. **Ordering rule — promotion is atomic, library-first.** Write the library entry (steps 1–3) *before* the retirement marker (step 4). If the library write fails, do **not** write the retirement marker — never leave a lesson retired-but-not-promoted, and never report success on a half-done promotion. The pair succeeds together or not at all.
+
+**Idempotency (write side)**:
+
+6. Before appending an entry, check `docs/library/lessons-learned.md` for an existing entry whose `**Source**` line matches the lesson being promoted. If one exists, the lesson is already promoted — **no-op**: do not write a duplicate entry and do not re-retire. Report it as already promoted. (Offer-side idempotency is handled earlier in Step L1, which never offers a `**Retired`-marked observation; this guard is the belt-and-braces for the rare case where the same lesson reaches L2 twice.)
+
+Report each promoted lesson with both its library entry location and the retirement applied to its source retro.
+
 ## Guidelines
 
 - **Signal over noise.** A retro with 2 sharp observations is better than one with 10 vague ones. Synthesise into patterns, not just reformatted lists.
 - **Actionable recommendations.** Every recommendation should be something concrete that changes how the next cycle is planned or executed.
 - **Works without observations.** If no `**Retro**:` fields were captured, still produce a useful retro from story status — what completed, what didn't, what that implies.
 - **Scannable.** The entire retro file should be digestible in under a minute. Use bullet points and short paragraphs.
+- **Promotion is graduation, not duplication.** `learn` always retires what it promotes (Step L2) — a lesson lives in exactly one place: the retro layer until it proves durable, then the library. Never leave a promoted lesson active in both.

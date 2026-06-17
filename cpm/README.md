@@ -261,6 +261,15 @@ Reads a completed epic doc, synthesises observations captured during task execut
 
 **On exit**: Offers to hand off into `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` with the retro as input context — closing the feedback loop for the next planning cycle.
 
+#### `/cpm:retro learn` — Promote a durable lesson
+
+A retro lesson that keeps proving true across runs belongs in the permanent reference library, not the transient retro layer where it must be re-judged each run. `/cpm:retro learn` graduates a chosen lesson into `docs/library/lessons-learned.md` (a single themed library doc, with `cpm:library`-conformant front-matter so Library Check picks it up), then atomically **retires** it at its source retro so it stops resurfacing in Retro Awareness. Promotion is manual — you pick which lessons graduate — and shows a confirmation preview before any write.
+
+```
+/cpm:retro learn                                  # choose from all promotable lessons
+/cpm:retro learn docs/retros/04-retro-auth.md     # scope candidates to one retro
+```
+
 ### `/cpm:pivot` — Course Correction
 
 Revisit any planning artefact (problem brief, product brief, ADR, spec, or epic), surgically amend it, and cascade changes through downstream documents. Lighter than re-running the original skill — edit what exists rather than starting over.
