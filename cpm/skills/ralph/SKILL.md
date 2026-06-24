@@ -227,7 +227,7 @@ The prompt's autonomous instruction ("choose the most reasonable option for ever
 |---|---|---|
 | Input — Epic Doc (multiple epics) | Ask user which epic to work on | Auto-select from the epic list in order |
 | Test Runner Discovery | Ask user for test command | Proceed with self-assessment |
-| Retro Check — consumption disposition gate | Force a disposition (Applied/Deferred/Obsolete) on each prior-epic retro observation | **Do not block, do not "choose the most reasonable option".** Auto-defer every observation, recording `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)` on the epic, and surface every such deferral in the run summary for post-loop human review |
+| Retro Check — consumption disposition gate | Force a per-run disposition (Applied/Deferred/Not relevant here) on each prior-epic retro observation; durable retirement (the gated in-cycle Obsolete) is a separate deliberately-confirmed action, never auto-taken | **Do not block, do not "choose the most reasonable option".** Auto-defer every observation, recording `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)` on the epic, and surface every such deferral in the run summary for post-loop human review. **Never auto-retire** — autonomous runs only ever defer |
 | Termination — Blocker | Confirm external blocker with user | Skip the task and continue to next |
 | Termination — Ambiguity | Ask user to clarify unclear criteria | Mark story "Blocked -- criteria ambiguous" and continue |
 | Step 4 — Verification gate test failure | Ask user: fix, continue, or stop | Fix automatically; skip after stuck threshold |

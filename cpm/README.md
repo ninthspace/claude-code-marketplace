@@ -270,6 +270,15 @@ A retro lesson that keeps proving true across runs belongs in the permanent refe
 /cpm:retro learn docs/retros/04-retro-auth.md     # scope candidates to one retro
 ```
 
+#### `/cpm:retro retire` — Retire a spent lesson
+
+A retro lesson can outlive its usefulness — the module it warned about is gone, the constraint no longer holds, the pattern was superseded. `/cpm:retro retire` is the deliberate, out-of-cycle review pass for marking such a lesson with a durable `**Retired**` marker at its source, so it stops resurfacing in Retro Awareness while staying in place as a visible, reversible audit record. Retirement is **always deliberate** — you pick which lessons retire and confirm with a reason before any write. It is never the answer to "this lesson doesn't apply to my current work": that is `cpm:do`'s per-run **Not relevant here** disposition, which leaves the source retro untouched. (`cpm:do` also keeps a gated in-cycle Obsolete retire for the rare case where a lesson is demonstrably spent mid-run.)
+
+```
+/cpm:retro retire                                 # choose from all live lessons
+/cpm:retro retire docs/retros/04-retro-auth.md    # scope candidates to one retro
+```
+
 ### `/cpm:pivot` — Course Correction
 
 Revisit any planning artefact (problem brief, product brief, ADR, spec, or epic), surgically amend it, and cascade changes through downstream documents. Lighter than re-running the original skill — edit what exists rather than starting over.

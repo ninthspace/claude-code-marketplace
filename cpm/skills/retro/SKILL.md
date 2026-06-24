@@ -11,14 +11,16 @@ Read a completed (or partially completed) epic doc, synthesise observations capt
 
 This skill operates on two source types: **epic docs** (`docs/epics/`) and **quick records** (`docs/quick/`). Both produce retro-eligible observations during execution; the retro skill consumes either kind.
 
-This skill has two mutually exclusive modes, selected by `$ARGUMENTS`:
+This skill has three mutually exclusive modes, selected by `$ARGUMENTS`:
 
 - **Synthesis** (the default) — read a completed source and *write* a retro file from its observations. This is everything documented below from **Process** onward.
 - **Lesson promotion** (`learn`) — *promote* a durable lesson out of an existing retro into the reference library, then retire it at the source. This is a separate flow; see the **Lesson Promotion (`learn` action)** section below.
+- **Lesson retirement** (`retire`) — *retire* a spent lesson at its source: mark it with a durable `**Retired**` marker so it stops resurfacing in Retro Awareness, without deleting it or losing the audit trail. Use this when a lesson is no longer true anywhere — the module it warned about is gone, the constraint no longer holds, the pattern was superseded. This is the deliberate, out-of-cycle home for retirement (`cpm:do`'s in-cycle Obsolete retire is the rare exception). See the **Lesson Retirement (`retire` action)** section below.
 
-The two never run together: synthesis produces a retro from execution observations; `learn` graduates an already-synthesised observation into permanent reference. Decide the mode first:
+The three never run together: synthesis produces a retro from execution observations; `learn` graduates an observation into permanent reference (and retires it as it goes); `retire` retires a spent observation outright. Decide the mode first:
 
 - **If `$ARGUMENTS` is exactly `learn`, or begins with `learn` followed by an optional retro path/filter** (e.g. `learn`, `learn docs/retros/04-retro-foo.md`), enter the **Lesson Promotion (`learn` action)** flow and ignore the synthesis steps. Any trailing text after `learn` is treated as an optional scope hint (a retro path or keyword) for candidate gathering, not as a synthesis source.
+- **If `$ARGUMENTS` is exactly `retire`, or begins with `retire` followed by an optional retro path/filter** (e.g. `retire`, `retire docs/retros/04-retro-foo.md`), enter the **Lesson Retirement (`retire` action)** flow and ignore the synthesis steps. Any trailing text after `retire` is treated as an optional scope hint (a retro path or keyword) for candidate gathering, not as a synthesis source.
 - **Otherwise**, run synthesis. Check for input in this order:
 
 1. If `$ARGUMENTS` references a file path, use it. Accept paths under `docs/epics/` (epic doc) or `docs/quick/` (quick record).
@@ -222,6 +224,29 @@ For each lesson confirmed in Step L1, perform the promotion **and** retirement a
 
 Report each promoted lesson with both its library entry location and the retirement applied to its source retro.
 
+## Lesson Retirement (`retire` action)
+
+`/cpm:retro retire` marks a **spent** retro lesson — one whose usefulness has permanently passed — with a durable `**Retired**` marker at its source, so it stops resurfacing in Retro Awareness while staying in place as a visible, reversible audit record. This is retirement's deliberate, out-of-cycle home: unlike `cpm:do`'s in-cycle Obsolete retire (reserved for the rare can't-miss case mid-run), `retire` is the review pass you run when you sit down to prune the retro corpus.
+
+It differs from `learn` only in terminus: `learn` retires a lesson *because it graduated to the library*; `retire` retires a lesson *because it is spent*. Both write the same `**Retired**` marker via the shared **Retro Retirement** convention; neither deletes the observation. This flow is **manual** (a human chooses what to retire), **mutually exclusive** with synthesis and `learn`, and runs only when `$ARGUMENTS` selects it (see **Input**). It proceeds in two steps: select candidates, then retire them.
+
+### Step R1: Gather and Select Candidates
+
+1. **Find the retros.** Glob `docs/retros/[0-9]*-retro-*.md`. If none exist or the directory is absent, tell the user there are no lessons to retire and stop.
+2. **Collect candidate observations.** Read each retro and gather its observations — the bullets under the category headings (Smooth Deliveries, Scope Surprises, Criteria Gaps, Complexity Underestimates, Codebase Discoveries, Testing Gaps, Patterns Worth Reusing). For each, retain its source retro path, its category, and the observation text.
+3. **Exclude already-retired lessons.** Skip any observation carrying a `**Retired` marker — per the shared **Retro Retirement** convention, a retired observation has already been dismissed or promoted, so it must **never** be offered as a candidate.
+4. **Apply the optional scope hint.** If `$ARGUMENTS` carried text after `retire` (a retro path or keyword), narrow the candidate set accordingly — a path restricts to that retro; a keyword filters to observations whose text or source matches. With no hint, offer all non-retired observations.
+5. **Present candidates, grouped.** Show the candidates grouped by source retro and category, each line giving the observation text plus its source retro filename and category so the user can see provenance before choosing. Use AskUserQuestion (or a numbered list the user picks from) and **support selecting more than one** lesson in a single invocation. If no candidates remain after filtering, tell the user there is nothing to retire and stop.
+6. **Capture a reason and preview before any write.** For each selected lesson, ask the user for a one-line **reason** the lesson is spent (what changed so it no longer holds), then render a confirmation preview showing the exact retirement that will follow: the `**Retired {YYYY-MM-DD}**: {reason}` marker appended to the source observation's bullet, named by source retro and category. Confirm with the user. **No file is written until this preview is confirmed** — proceed to Step R2 only on confirmation.
+
+### Step R2: Retire at the Source
+
+For each lesson confirmed in Step R1, retire the source observation in its retro per the shared **Retro Retirement** convention: append `**Retired {YYYY-MM-DD}**: {reason}` to that observation's bullet, **in place** under its existing category heading, using the reason captured in Step R1. The bullet is not moved or deleted — retirement is reversible by removing the marker. This is what makes the shared **Retro Awareness** selection skip the lesson from now on.
+
+**Idempotency**: if a selected observation already carries a `**Retired` marker, it is a no-op — do not append a second marker. (Step R1 already excludes retired observations from candidates; this is the belt-and-braces guard.)
+
+Report each retired lesson with its source retro location and the marker applied.
+
 ## Guidelines
 
 - **Signal over noise.** A retro with 2 sharp observations is better than one with 10 vague ones. Synthesise into patterns, not just reformatted lists.
@@ -229,3 +254,4 @@ Report each promoted lesson with both its library entry location and the retirem
 - **Works without observations.** If no `**Retro**:` fields were captured, still produce a useful retro from story status — what completed, what didn't, what that implies.
 - **Scannable.** The entire retro file should be digestible in under a minute. Use bullet points and short paragraphs.
 - **Promotion is graduation, not duplication.** `learn` always retires what it promotes (Step L2) — a lesson lives in exactly one place: the retro layer until it proves durable, then the library. Never leave a promoted lesson active in both.
+- **Retirement is deliberate and reversible.** `retire` (and `cpm:do`'s gated in-cycle Obsolete) only *append* a `**Retired**` marker — the observation stays in place and un-retires by deleting the marker. Retirement means the lesson is no longer true *anywhere*; it is never the right response to "this lesson doesn't apply to the work in front of me" — that is `cpm:do`'s per-run **Not relevant here**, which leaves the source untouched. Prefer this deliberate `retire` pass over the in-cycle path for anything that isn't a can't-miss, just-superseded case.
