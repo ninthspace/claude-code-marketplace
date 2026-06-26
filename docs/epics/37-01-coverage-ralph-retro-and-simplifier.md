@@ -1,0 +1,23 @@
+# Coverage Matrix: Ralph Retro Application & Simplifier Consistency
+
+**Source spec**: docs/specifications/37-spec-ralph-retro-and-simplifier.md
+**Epic**: docs/epics/37-01-epic-ralph-retro-and-simplifier.md
+**Date**: 2026-06-26
+
+> **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
+
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
+|---|------------------|----------------------|----------------------------|------------|--------------------|----------|
+| 1 | FR1 | Relocate the refactoring pass out of "Step 5b (verification gates only)" into a single story-completion step that runs after every completed story that touched code, in both interactive and autonomous modes | Refactoring pass is relocated out of "Step 5b (verification gates only)" into a single story-completion step that runs after every completed story that touched code, in both interactive and autonomous modes | Story 1 | `[manual]` | ✓ |
+| 2 | FR2 | Run the pass only on stories that completed successfully — never on stuck, blocked, or threshold-skipped stories | must NOT run the pass on stuck, blocked, or threshold-skipped stories | Story 1 | `[manual]` | ✓ |
+| 3 | FR3 | Skip stories that touched no code (pure docs/config), logged as skipped | Stories that touched no code (pure docs/config) are skipped and logged as skipped | Story 1 | `[manual]` | ✓ |
+| 4 | FR4 | Retest safety net: where a cached test command exists, refactor → retest → revert on break (preserves current behaviour). Where no test command exists, skip the pass and log the reason — never refactor untested code blind | Where a cached test command exists: refactor → retest → revert changes that break tests; must NOT refactor when no test command exists — skip and log the reason | Story 1 | `[manual]` | ✓ |
+| 5 | FR5 | Preserve agent selection: Laravel → laravel-simplifier if available, else self-directed; all other projects → self-directed | Laravel → `laravel-simplifier` if available else self-directed; all other projects → self-directed | Story 1 | `[manual]` | ✓ |
+| 6 | FR6 | Under autonomous mode, the retro consumption gate auto-applies safe-category observations: Codebase discoveries and Patterns worth reusing | Under autonomous mode, the consumption gate auto-applies safe-category observations: Codebase discoveries and Patterns worth reusing | Story 2 | `[manual]` | ✓ |
+| 7 | FR7 | Under autonomous mode, it defers judgement-heavy categories: Scope surprises, Criteria gaps, Complexity underestimates, Testing gaps. Smooth deliveries is informational (no action) | must NOT auto-apply Scope surprises, Criteria gaps, Complexity underestimates, or Testing gaps — these are deferred; Smooth deliveries is informational | Story 2 | `[manual]` | ✓ |
+| 8 | FR8 | "Apply" (autonomous, safe-category) means carrying the observation as explicit constraint/context into the work loop — never autonomous re-planning or scope change | "Apply" carries the observation as explicit constraint/context into the work loop; must NOT trigger autonomous re-planning or scope change | Story 2 | `[manual]` | ✓ |
+| 9 | FR9 | Auto-applied lessons record a distinct breadcrumb: `**Retro applied**: {nn} · {category} · applied (autonomous, safe-category) — {what it did}` | Auto-applied lessons record the breadcrumb `**Retro applied**: {nn} · {category} · applied (autonomous, safe-category) — {what it did}` | Story 2 | `[manual]` | ✓ |
+| 10 | FR10 | Retros generated mid-run (epic N) are consumable by later epics (N+1) in the same run: the per-epic restart re-runs the Retro Check so freshly written lessons are seen | Retros generated mid-run (epic N) are consumable by later epics (N+1) in the same run — Retro Check re-runs in the per-epic restart sequence | Story 2 | `[manual]` | ✓ |
+| 11 | FR11 | The ralph run summary logs, per story, the simplifier outcome: ran / skipped (+reason) / reverted / fell back to self-directed | The `ralph` run summary logs, per story, the simplifier outcome | Story 3 | `[manual]` | ✓ |
+| 12 | FR12 | The ralph run summary lists auto-applied retro lessons prominently for review, separately from deferred ones | The `ralph` run summary lists auto-applied retro lessons prominently for review, separately from deferred ones | Story 3 | `[manual]` | ✓ |
+| 13 | FR13 | The simplifier relocation (FR1–FR4) applies to interactive /cpm:do as well as ralph | Refactoring pass … runs … in both interactive and autonomous modes | Story 1 | `[manual]` | ✓ |

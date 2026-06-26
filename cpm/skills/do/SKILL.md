@@ -49,7 +49,15 @@ Before the work loop begins, run the **retro consumption gate** — a hard gate 
    where `{nn}` is the source retro's number, `{category}` the observation category, `{disposition}` one of Applied / Deferred / Not relevant here / Obsolete (Obsolete only via the deliberately-confirmed in-cycle retire above), and `{note}` the how/reason/why from step 3. This makes how each prior lesson was handled auditable by the next reader, `cpm:status`, and the next retro.
 5. **Retire obsolete lessons at the source (durable).** For each observation given the **Obsolete** disposition via the deliberately-confirmed in-cycle retire (step 3), append a retirement marker to that observation's bullet in its **source retro file** per the shared **Retro Retirement** convention — `**Retired {YYYY-MM-DD}**: {reason}`, using the typed *reason* from the confirmation. The bullet stays in place; the marker makes the shared **Retro Awareness** selection skip it in all future runs. The step-4 breadcrumb records the decision for *this* run; this source marker makes it durable across runs. **Applied**, **Deferred**, and **Not relevant here** dispositions never write to the source retro — only the gated **Obsolete** retire does.
 
-**Autonomous mode (e.g. `cpm:ralph`)**: When the run is autonomous — no human is present to choose dispositions — the gate **does not block**. Auto-defer every relevant observation: write `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)` for each (the step 4 format), and surface the full list of these deferrals in the batch/run summary (Step 8 item 4) so a human can review them after the loop. Degrade to a logged deferral — never wait for input.
+**Autonomous mode (e.g. `cpm:ralph`)**: When the run is autonomous — no human is present to choose dispositions — the gate **does not block**. Rather than deferring everything, it **branches by observation category** — and this split is the single source of truth, so `cpm:ralph` references it rather than maintaining its own list:
+
+- **Safe categories — auto-apply.** **Codebase discoveries** and **Patterns worth reusing** are low-ambiguity and additive, so apply them autonomously and carry each into the run as active context (see *What "apply" means autonomously* below for the exact breadcrumb and semantics).
+- **Judgement-heavy categories — defer.** **Scope surprises**, **Criteria gaps**, **Complexity underestimates**, and **Testing gaps** each imply a re-planning or scope call a human must own, so **never auto-apply** them — defer each with `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)` (the step 4 format).
+- **Smooth deliveries** is informational — nothing to apply or defer.
+
+Surface the full list of **both** the auto-applied and the deferred-unreviewed observations in the batch/run summary (Step 8 item 4) so a human can review them after the loop. Degrade to these logged dispositions — never wait for input.
+
+**What "apply" means autonomously**: applying a safe-category lesson means carrying its observation into the work loop as an explicit constraint or piece of context for the tasks ahead — the same lens an *Applied* disposition gets in an interactive run. It **must NOT** trigger autonomous re-planning, story re-scoping, or any edit to the epic or spec; a lesson that seems to demand that belongs to a judgement-heavy category and is deferred, not applied. Record each auto-application with `**Retro applied**: {nn} · {category} · applied (autonomous, safe-category) — {what it did}` (the step-4 format, with an `applied (autonomous, safe-category)` disposition in place of the interactive Applied/Deferred/Not relevant here/Obsolete set). **Never auto-retire** under autonomous mode — retirement stays a deliberate human action, so the **Obsolete** disposition and its source-retro marker are unavailable to an autonomous run.
 
 Once every relevant observation has a disposition, **start the loop**, carrying each *Applied* disposition into the run as active context — a lens on every task per the incorporation guidance below, not a one-off.
 
@@ -277,9 +285,15 @@ Before marking the task complete:
 
 If the coverage matrix file doesn't exist, log a note ("No coverage matrix found — skipping proof recording") and continue. Proof recording is additive and must always allow task execution to proceed. If an Edit call fails (e.g. the row text doesn't match the expected pattern), flag the failure to the user via AskUserQuestion with options: "Continue without recording proof for this row" or "Stop and investigate" — every failed write must be surfaced.
 
-### 5b. Story Refactoring Pass (verification gates only)
+### 5b. Story Refactoring Pass (every completed story)
 
-After the verification gate passes (all acceptance criteria met in Step 5), perform a focused refactoring pass on the code produced by the story. This step **only applies to verification gate tasks** — skip it for implementation tasks.
+When a story's verification gate task runs — the story-completion point — perform a focused refactoring pass on the code the story produced. This pass fires **once per story, in both interactive and autonomous modes** (it lives in `cpm:do`, so `cpm:ralph` inherits it). It is invoked at the verification-gate task because that is where a story finishes, but it is **no longer gated on the verification *result***: a story whose criteria were unmet-but-continued still earns its pass. Each completed story receives **exactly one** refactoring pass — never two, never zero (subject to the preconditions below). It still runs only at the verification-gate task, never on individual implementation tasks — that is what keeps it to one pass per story.
+
+**Preconditions** — run the pass only when **all** of these hold; if any fails, skip the pass and record the skip with its reason in the per-story simplifier-outcome line (Step 6 Part C), never silently:
+
+- **The story completed.** It was not marked Blocked, left stuck, or skipped past the autonomous stuck threshold. Never refactor the partial, possibly-broken code of a story that did not finish.
+- **The story touched code.** At least one implementation task created or modified a code file. A story with no implementation tasks (pure documentation or configuration) has nothing to refactor — skip it and log `skipped — no code touched`.
+- **A cached test command exists** (`**Test command**` is not `none`). The retest below is the only thing that catches a refactor that changed behaviour; with no test command there is no safety net, so do **not** refactor untested code blind — skip the pass and log `skipped — no test command to verify against`.
 
 **Identify scope**: Review the tasks completed in this story (listed in the progress file's Completed Tasks section). Identify the files that were created or modified during the story's implementation tasks. These files — and only these files — are the refactoring target.
 
@@ -288,14 +302,12 @@ After the verification gate passes (all acceptance criteria met in Step 5), perf
 - **Laravel project with `laravel-simplifier`**: If `**Framework**` in the progress file is `laravel`, use the Task tool with `subagent_type: "laravel-simplifier:laravel-simplifier"` to refactor the touched files. Pass the agent a prompt listing the files modified by this story and instruct it to simplify and refine for clarity, consistency, and maintainability. If the agent is not available in the current session (tool call fails), fall back to the self-directed approach below.
 - **All other projects** (or fallback): Perform a self-directed refactoring review of the files touched by this story. Focus on: naming clarity, duplication removal, method extraction, readability improvements. Keep changes minimal — this is a polish pass, not a restructuring.
 
-**Retest**: After refactoring, run the cached test command (if not `none`) to confirm nothing broke.
+**Retest**: After refactoring, run the cached test command (guaranteed present by the preconditions) to confirm nothing broke.
 
 - If tests **pass**: proceed to Step 6.
 - If tests **fail**: revert the refactoring changes that caused failures and proceed to Step 6 without them. The work loop always continues past a failed refactoring pass.
 
 **Scope constraint**: Start with the files touched by the current story, but look outward for consolidation opportunities — duplicate code, similar patterns, extraction candidates, and abstractions that span touched and non-touched code. If the story introduced logic that already exists elsewhere, merge it. If a pattern appears in both new and existing code, extract it. The refactoring may touch files beyond the story's direct scope when there's a clear consolidation or deduplication benefit. Every change must connect back to the code the story produced — unrelated refactoring is out of scope.
-
-**Skip conditions**: If the story had no implementation tasks (e.g. pure documentation or configuration), skip the refactoring pass — there's nothing to refactor.
 
 ### 6. Complete and Update State
 
@@ -338,6 +350,7 @@ The file must reflect:
 - The current tasks remaining count
 - The `**Planned stories**:` line — carry forward any story numbers already listed, and add the current story's number if its `[plan]` plan was approved during this task (Step 3). This is what stops formal plan mode from re-firing for the story's remaining tasks.
 - The `**Retro signals**:` line — carry forward signals already recorded, and append any retro-trigger signal that fired during this task (see Part B's *Signal capture*). This accumulating set is what Step 8 reads to decide whether retro generation is mandatory.
+- The `**Simplifier outcomes**:` line — carry forward outcomes already recorded, and when this task is a verification gate whose Step 5b refactoring pass just ran, was skipped, fell back, or was reverted, append that story's outcome (e.g. `Story 2: skipped (no test command)`). This accumulating set is what the Step 8 run summary reads to report, per story, what the simplifier pass did.
 
 Once the progress file is written, go straight to Step 7. Finishing a task — or a whole story, or making a commit — is **not** a checkpoint: do not summarise what you just did, do not announce progress, and do not pause to ask whether or how to proceed (in any wording). The next iteration begins silently. The only stops are the explicit gates this skill names (see Step 7 and the **No unauthorised checkpoints** guideline).
 
@@ -365,7 +378,7 @@ When the work loop finishes (no more pending unblocked tasks):
    - **If the flag set is non-empty** (any retro-trigger signal fired, or an epic-level spec gap was found): retro generation is **mandatory**. Follow the shared **Retro Synthesis** procedure (in the CPM Shared Skill Conventions), passing the observations gathered in item 2, the epic's story outcomes, and the epic doc path as the source. The procedure groups, synthesises, and writes `docs/retros/{nn}-retro-{slug}.md`, returning the path. This **is** the batch synthesis — do **not** also write a separate `## Lessons` section into the epic doc; the retro file is the single synthesis artifact, produced by the one synthesis implementation shared with `/cpm:retro`.
    - **If the flag set is empty** (no retro-trigger signal fired and no epic-level spec gap): auto-skip is permitted — do not write a retro file. **Log the skip and its reason** in the batch summary (item 4), e.g. "Retro auto-skipped — clean epic, no retro signals fired." The skip is **never silent**: a skipped retro is always reported with its reason, so the absence of a retro file is a visible, explained decision rather than an oversight. (Note: any `**Retro**:` observations still live on their stories in the epic doc; a manual `/cpm:retro` run can still synthesise them later.)
 
-4. **Report**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain"). Always include the **retro outcome**: either the path of the generated retro file, or — when generation was auto-skipped — the explicit skip reason (per item 3). Never omit this line; a clean-epic skip must be stated, not silent. Under an **autonomous run**, also surface the **deferred-unreviewed** consumption-gate dispositions — list every `deferred (autonomous run, unreviewed)` observation (or their count) recorded by the Retro Check gate — so a human can review them after the loop.
+4. **Report**: Report a summary of what was completed across the work loop. If a coverage matrix exists, include a **verification summary** — the count of verified rows (those with `✓`) vs. total rows in the matrix (e.g. "Coverage matrix: 9/9 requirements verified" or "Coverage matrix: 7/9 requirements verified — 2 unverified rows remain"). Always include the **retro outcome**: either the path of the generated retro file, or — when generation was auto-skipped — the explicit skip reason (per item 3). Never omit this line; a clean-epic skip must be stated, not silent. Always include a **simplifier summary** — read the progress file's `**Simplifier outcomes**:` line and report, per story, what the Step 5b refactoring pass did (ran / skipped + reason / reverted / self-directed fallback), so a story whose pass was skipped is visible rather than silent. Under an **autonomous run**, also surface the consumption-gate dispositions as **two clearly separated lists**: the **auto-applied** safe-category lessons (every `applied (autonomous, safe-category)` breadcrumb) presented **prominently for review** — these changed the run with no human in the loop — and, separately, the **deferred-unreviewed** observations (every `deferred (autonomous run, unreviewed)` breadcrumb) for post-loop review. Keep the two lists distinct; never fold applied into deferred. Both use the existing `**Retro applied**:` field format, so `cpm:status` and `cpm:retro` continue to parse them unchanged.
 
 5. **Next epic check**: After reporting, decide whether to look for more work:
    a. **If the epic was specified explicitly** (a file path was passed via `$ARGUMENTS`, not auto-discovered): the user asked for this specific epic. Delete the progress file and stop.
@@ -374,7 +387,7 @@ When the work loop finishes (no more pending unblocked tasks):
       ii. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete` (excluding the epic just finished). Use Grep and Read tools directly (Bash loops with shell variables lose context).
       iii. If **no remaining epics** have work: delete the progress file and stop.
       iv. If **one or more epics** have remaining work: present the choice using AskUserQuestion — "Epic {name} is complete. What would you like to do?" with options:
-         - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic)
+         - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, the **Retro Check** consumption gate, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic). Re-running the Retro Check per epic is load-bearing: it re-globs `docs/retros/` so this epic consumes any retro written by an earlier epic **in the same run** — without it, mid-run lessons are never seen.
          - **Stop here** — delete the progress file and end the session
          If multiple epics have remaining work, show the lowest-numbered one as the "Continue to..." option.
 
@@ -420,6 +433,7 @@ Follow the shared **Progress File Management** procedure.
 **Tasks remaining**: {count of pending unblocked tasks}
 **Planned stories**: {comma-separated numbers of [plan] stories whose plan has been approved this run, or "none"}
 **Retro signals**: {comma-separated retro-trigger signals fired so far this epic (e.g. "Story 3 fail-then-continue, test failures"), or "none"}
+**Simplifier outcomes**: {comma-separated per-story Step 5b outcomes recorded so far this epic — each one of "Story {N}: ran", "Story {N}: ran (self-directed fallback)", "Story {N}: reverted (tests broke)", "Story {N}: skipped (no code touched)", "Story {N}: skipped (no test command)", or "Story {N}: skipped (story not completed)"; "none" before any story finishes}
 
 ## Completed Tasks
 
