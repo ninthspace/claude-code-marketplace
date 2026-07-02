@@ -255,7 +255,7 @@ A skill that scans all JS/TS files (or a configurable subset) and applies clarit
 
 [View full documentation](./js-simplifier/SKILL.md)
 
-### Filament Mockup (v1.0.0)
+### Filament Mockup (v1.1.0)
 
 **Build high-fidelity Filament v5 admin mockups for stakeholder sign-off**
 
@@ -266,6 +266,7 @@ A skill that turns a product brief or spec into a single self-contained HTML fil
 - **Inventory** — build an FR → screen matrix so every element traces back to a numbered functional requirement
 - **Build** — reuse Filament's exact `fi-*` grammar; mark genuinely custom components with the `mk-` namespace
 - **Verify** — measure with Playwright rather than eyeballing, then sign off with a coverage audit
+- **Hand off** — write the durable routing table (`docs/mockups/surface-routing.md`) so the downstream builder `mockup-to-filament` knows which surfaces it owns (works stand-alone — no `brief-to-mockups` prerequisite)
 
 **Quick Start:**
 ```bash
@@ -282,6 +283,7 @@ mock up the admin panel for this PRD
 - Every element traces to a functional requirement — invented UI is flagged, not silently added
 - Visible `mk-` vs `fi-*` boundary distinguishes mockup scaffolding from real Filament
 - Bundled scaffold, capture/verify scripts, and an `fi-*` grammar cheat-sheet
+- Part of the mockup→build family — a *producer* whose output the *builders* consume (`mockup-to-filament` for Filament, `mockup-to-blade` for bespoke); emits a routing handoff naming the lane per surface
 
 **Requires:** Node + Playwright for the capture/verify scripts (`npm i -D playwright && npx playwright install chromium`).
 

@@ -1,10 +1,10 @@
 ---
 name: filament-mockup
-description: "Build static, high-fidelity Filament v5 admin mockups from a brief or spec for stakeholder sign-off, BEFORE scaffolding any real Filament/Laravel code. Use when asked to 'create a Filament mockup', 'admin backend mockup', 'Filament v5 mockup', 'mock up the admin panel', turn a brief/spec/PRD into clickable admin screens, or produce sign-off mockups for a Filament back-end. Produces one self-contained HTML file using the real captured Filament theme CSS. NOT for production Filament code, nor for customer-facing/front-end mockups."
+description: "Convention: `…-mockup(s)` produces a mockup; `mockup-to-…` consumes a mockup, builds the named target. Siblings: `brief-to-mockups` is the sibling producer (bespoke/mixed briefs); builders `mockup-to-blade` (bespoke) and `mockup-to-filament` (Filament) consume mockups — `mockup-to-filament` consumes this skill's output. Build static, high-fidelity Filament v5 admin mockups from a brief or spec for stakeholder sign-off, BEFORE scaffolding any real Filament/Laravel code. Use when asked to 'create a Filament mockup', 'admin backend mockup', 'Filament v5 mockup', 'mock up the admin panel', turn a brief/spec/PRD into clickable admin screens, or produce sign-off mockups for a Filament back-end. Produces one self-contained HTML file using the real captured Filament theme CSS. NOT for production Filament code, nor for customer-facing/front-end mockups."
 license: Proprietary
 metadata:
   author: chris-aves
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Filament v5 admin mockups — brief/spec → sign-off
@@ -46,6 +46,8 @@ The boundary: `frontend-design` is the right skill for the **customer-facing / f
 brief / spec  →  MOCKUP (sign-off)  →  spec (firmed up)  →  epics  →  build
                  ▲ this skill
 ```
+
+The mockup itself is thrown away at build time, but the **routing table** this skill writes (`docs/mockups/surface-routing.md`, Phase 7) is durable — it carries the substrate/producer/builder decision forward to `mockup-to-filament`, which reads it as its first act.
 
 The mockup is the cheapest place to find a missing screen, a wrong field, or a flow that doesn't close. So the cardinal rule:
 
@@ -122,6 +124,16 @@ Use `scripts/verify.mjs` (copy it into the project's `reference/` dir, point it 
 - Before declaring done, run a **coverage audit**: a table walking every FR and where it's represented (or why it's legitimately out of scope — e.g. customer-facing FRs in an admin mockup, or pure email/system behaviours with no static surface). This audit opens the spec and becomes the build checklist.
 
 See `references/pitfalls.md` for the symptom→cause→fix table and the per-project / per-screen / pre-sign-off checklists.
+
+### Phase 7 — Write the routing handoff artifact
+
+Emit the durable **routing table** so the downstream builder knows which lane owns each surface. This is the inter-skill contract introduced in spec 01 (AD3) and consumed by `mockup-to-filament`'s Step-0 guard as its first act — so it must exist even when this skill runs alone.
+
+- **Write `docs/mockups/surface-routing.md`** with the fixed schema `surface · FRs · substrate · producer · builder` (a Markdown table). One row per admin surface, sourced from the **Phase 2 FR→screen matrix** and finalised against the **Phase 6 coverage audit**.
+- **Every row this skill writes is `substrate = filament`, `producer = filament-mockup`, `builder = mockup-to-filament`** — this skill only ever produces Filament surfaces, so the substrate/producer/builder triple is constant across its rows.
+- **No `brief-to-mockups` prerequisite.** On an all-Filament brief `brief-to-mockups` never runs, so `filament-mockup` is the *sole* producer and MUST write this artifact itself. The artifact's existence must **never** depend on `brief-to-mockups` having run first.
+- **Merge, don't clobber.** If `docs/mockups/surface-routing.md` already exists (a mixed brief where `brief-to-mockups` ran and handed off the Filament partition), add or confirm your `filament` rows and leave any existing `bespoke` rows untouched. If it doesn't exist, create it.
+- **Why it matters.** This closes the producer/consumer contract: `mockup-to-filament`'s Step-0 guard reads the `substrate` column to confirm each surface is `filament`; naming `filament-mockup` as `producer` and `mockup-to-filament` as `builder` makes the handoff explicit and diffable, and it outlives the throwaway mockup.
 
 ---
 
