@@ -388,6 +388,20 @@ The report orients someone picking up the project for the first time: what it is
 /cpm:status what's the state of auth work?     # guided emphasis
 ```
 
+### `/cpm:clean` — Clean Session State
+
+Delete leftover CPM session-state files on demand. Exhaustively lists **every** `.cpm-progress-*.md` file and its `.cpm-compact-summary-*.md` compaction companion — with age and session label, regardless of staleness — then removes only the files you name, always after showing you the exact list first.
+
+This is the user-driven counterpart to the passive once-per-session safety-net (see **Compaction Resilience** below): the safety-net surfaces only *stale* other-session files at most once per session, whereas `/cpm:clean` gives you the full inventory every time you ask. It is interactive-only — never invoked by autonomous loops (`/cpm:ralph`) — and never deletes without confirmation.
+
+**Input**: Optional file names / session IDs to pre-select; otherwise fully interactive.
+**Output**: None — stateless; it removes files and reports what was deleted.
+
+```
+/cpm:clean                                     # list everything, choose what to remove
+/cpm:clean a1b2c3                              # pre-select a session, still confirmed first
+```
+
 ## Compaction Resilience
 
 CPM skills run long, multi-phase conversations that can trigger Claude Code's auto-compaction. When that happens, mid-skill state (current phase, user decisions, facilitation progress) would normally be lost.
@@ -396,10 +410,11 @@ CPM handles this automatically through **on-disk state tracking** and **plugin h
 
 1. **During a skill**: After each phase/section/step, the skill writes progress to `docs/plans/.cpm-progress.md` — a hidden file capturing the active skill, completed phases with summaries, and what to do next.
 2. **On compaction**: A SessionStart hook (matcher: `compact`) re-injects the full state file into the fresh post-compaction context.
-3. **On session start/resume/clear**: If a previous session left an incomplete planning session, the state is re-injected and Claude offers to continue where you left off or start fresh.
-4. **On skill completion**: The state file is deleted — it only exists while a skill is actively running.
+3. **On session start/resume/clear**: The current session's own state is re-injected and Claude offers to continue where you left off. Progress files from *other* sessions are classified by age and never block startup — the hook is **non-blocking**: files 3+ days old are surfaced as cleanup candidates, more recent ones are noted as active/recent parallel sessions (informational only, never offered for deletion), and nothing is ever deleted automatically. (This replaces the earlier BLOCKING orphan prompt.)
+4. **Once-per-session safety-net**: Every `/cpm:*` skill runs the same stale-progress check as an early startup step, guarded by a session-keyed sentinel so it fires at most once per session no matter how many skills you run. When an active `/cpm:ralph` loop is detected (`.claude/ralph-loop.local.md`), it is fully suppressed and silent. To sweep leftover files deliberately at any time, use **`/cpm:clean`**.
+5. **On skill completion**: The state file is deleted — it only exists while a skill is actively running.
 
-This means compaction is seamless — Claude picks up exactly where it left off without repeating questions or losing decisions.
+This means compaction is seamless — Claude picks up exactly where it left off without repeating questions or losing decisions, and stale state never halts a new session.
 
 ## How It Works
 
@@ -470,7 +485,10 @@ cpm/
 ├── hooks/
 │   ├── hooks.json           # Hook configuration (SessionStart)
 │   ├── session-start-compact.sh  # Re-injects state after compaction
-│   └── session-start.sh     # Re-injects state on session startup/resume/clear
+│   ├── session-start.sh     # Re-injects state on session startup/resume/clear
+│   └── lib/
+│       ├── progress-classify.sh  # Shared classifier (CURRENT/FRESH/STALE + list-all)
+│       └── cleancheck-guard.sh   # Once-per-session safety-net gate (+ ralph carve-out)
 ├── skills/
 │   ├── party/
 │   │   └── SKILL.md         # Multi-perspective discussion skill
@@ -504,8 +522,10 @@ cpm/
 │   │   └── SKILL.md         # Archive planning documents skill
 │   ├── quick/
 │   │   └── SKILL.md         # Quick execution skill
-│   └── status/
-│       └── SKILL.md         # Project status reconnaissance skill
+│   ├── status/
+│   │   └── SKILL.md         # Project status reconnaissance skill
+│   └── clean/
+│       └── SKILL.md         # On-demand session-state cleanup skill
 ├── README.md
 └── LICENSE
 ```

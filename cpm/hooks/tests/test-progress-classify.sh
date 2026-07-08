@@ -202,4 +202,68 @@ echo "# Legacy" > "$DIR/.cpm-progress.md"
 OUT=$(run_classify "cur" "$DIR")
 assert_empty "$OUT"
 
+# --- list-all mode (compact-summary companions, for /cpm:clean) ---
+
+create_compact_summary() {
+  local dir="$1" session_id="$2"
+  cat > "$dir/.cpm-compact-summary-${session_id}.md" <<EOF
+# Compact Summary (PostCompact)
+**Captured**: 2026-07-08 11:06:06
+**Trigger**: auto
+
+<analysis>
+Test compact-summary body.
+</analysis>
+EOF
+}
+
+run_classify_list_all() {
+  local session_id="$1" dir="$2"
+  CPM_SESSION_ID="$session_id" bash "$HELPER" "$dir" list-all
+}
+
+test_start "Default mode does NOT emit compact-summary records (hook output unchanged)"
+DIR=$(setup_state_dir)
+create_progress_file "$DIR" "p1" "cpm:do" "x"
+create_compact_summary "$DIR" "p1"
+OUT=$(run_classify "p1" "$DIR")
+assert_contains "$OUT" ".cpm-progress-p1.md"
+assert_not_contains "$OUT" ".cpm-compact-summary-p1.md"
+
+test_start "list-all mode emits a record for a compact-summary companion alongside its progress file"
+DIR=$(setup_state_dir)
+create_progress_file "$DIR" "p1" "cpm:do" "x"
+create_compact_summary "$DIR" "p1"
+OUT=$(run_classify_list_all "p1" "$DIR")
+assert_contains "$OUT" ".cpm-progress-p1.md"
+assert_contains "$OUT" ".cpm-compact-summary-p1.md"
+
+test_start "list-all classifies a compact-summary by session id (CURRENT for match)"
+DIR=$(setup_state_dir)
+create_compact_summary "$DIR" "cur"
+OUT=$(run_classify_list_all "cur" "$DIR")
+assert_equals "CURRENT" "$(classification_for "$OUT" ".cpm-compact-summary-cur.md")"
+
+test_start "list-all: an old other-session compact-summary is STALE"
+DIR=$(setup_state_dir)
+create_compact_summary "$DIR" "old"
+set_mtime_hours_ago "$DIR/.cpm-compact-summary-old.md" 96
+OUT=$(run_classify_list_all "cur" "$DIR")
+assert_equals "STALE" "$(classification_for "$OUT" ".cpm-compact-summary-old.md")"
+
+test_start "list-all: compact-summary record carries path + numeric age; SKILL reads 'unknown'"
+DIR=$(setup_state_dir)
+create_compact_summary "$DIR" "s1"
+OUT=$(run_classify_list_all "cur" "$DIR")
+LINE=$(echo "$OUT" | grep -F ".cpm-compact-summary-s1.md")
+assert_contains "$LINE" ".cpm-compact-summary-s1.md"
+assert_contains "$LINE" "unknown"
+AGE=$(echo "$LINE" | cut -f5)
+if echo "$AGE" | grep -qE '^[0-9]+$'; then test_pass; else test_fail "age field not numeric: '$AGE'"; fi
+
+test_start "list-all with no files: emits no output, exits cleanly (exit 0)"
+DIR=$(setup_state_dir)
+OUT=$(run_classify_list_all "cur" "$DIR"); RC=$?
+if [ "$RC" -eq 0 ]; then assert_empty "$OUT"; else test_fail "expected clean exit (rc=$RC)"; fi
+
 test_summary
