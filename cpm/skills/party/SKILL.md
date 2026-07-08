@@ -17,6 +17,10 @@ If `$ARGUMENTS` is provided, use it as the starting topic/context:
 
 If no arguments are given, ask the user what they'd like to discuss.
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Roster Loading
 
 Follow the shared **Roster Loading** procedure. After loading, introduce the available agents as a compact roster listing each agent's icon, name, and role. Adapt the display to whatever agents are actually loaded. End with: "What would you like to discuss? (Or address any agent by name.)"

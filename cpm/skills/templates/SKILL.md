@@ -10,6 +10,10 @@ Explore and customise the templates used by CPM artifact-producing skills. CPM u
 - **Structural templates** are data contracts parsed by downstream skills. They cannot be overridden — their format is fixed. Examples: problem briefs, specs, epic docs, review files, retro files.
 - **Presentational templates** can be overridden with project-level files at `docs/templates/`. They control how information is presented but aren't parsed by other skills. Examples: product briefs, ADRs, communications.
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Subcommands
 
 This skill dispatches based on `$ARGUMENTS`:

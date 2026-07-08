@@ -21,6 +21,10 @@ The declared scope is recorded in the deliverable header as `**Scope**: <hint>` 
 
 **State tracking**: Create the progress file before Step 1 and update it as orient, sweep, and deliverable generation complete. See State Management below for the format. Delete the file once the deliverable has been saved and the pipeline handoff is resolved.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Retro Check (Startup)
 
 Follow the shared **Retro Awareness** procedure before the Library Check.

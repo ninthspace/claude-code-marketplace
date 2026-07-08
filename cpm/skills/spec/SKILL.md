@@ -42,6 +42,10 @@ Work through these sections **one at a time**. Use AskUserQuestion for every gat
 
 **Facilitation depth**: Each section's refinement loop converges in 1-2 rounds of AskUserQuestion. When the user approves a section's content, move on — one final "anything else?" check per section, not an open-ended refinement cycle.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Retro Check (Startup)
 
 Follow the shared **Retro Awareness** procedure before beginning Section 1.

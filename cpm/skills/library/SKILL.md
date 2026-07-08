@@ -18,6 +18,10 @@ Parse `$ARGUMENTS` to determine the action:
    - **Import a local file** — Provide a file path
    - **Import from a URL** — Provide a URL
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Intake Workflow
 
 Import a document into the project library with generated front-matter.

@@ -18,6 +18,10 @@ Parse `$ARGUMENTS` to determine behavior:
 
 **State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once all archive operations have completed.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Step 1: Scan and Discover
 
 Scan the four planning directories for documents and group them into artifact chains.

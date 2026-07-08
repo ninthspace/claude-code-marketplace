@@ -30,6 +30,10 @@ Check for input in this order:
 
 **Facilitation depth**: Each presentation-and-refine gate (Step 2 epics, Step 3 stories, Step 3b tasks) converges in 1-2 rounds of AskUserQuestion. When the user approves, move on. Step 3d coverage matrix and Step 4 confirmation are single-pass gates — present once, refine once if needed, then proceed.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Retro Check (Startup)
 
 Follow the shared **Retro Awareness** procedure before beginning Step 1.

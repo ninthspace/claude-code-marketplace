@@ -23,6 +23,10 @@ After resolving the epic doc, read it with the Read tool. Then ask the user abou
 
 For story-level review, present the list of stories from the epic doc and let the user choose. If a story number was provided in `$ARGUMENTS`, skip the selection and use that story directly.
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Roster Loading
 
 Follow the shared **Roster Loading** procedure. After loading, confirm the roster and how many agents are available: "Review roster loaded: {N} agents available. I'll select the most relevant reviewers based on the content."

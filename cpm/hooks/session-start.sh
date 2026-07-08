@@ -62,59 +62,50 @@ if [ -f "$RALPH_STATE" ]; then
 fi
 
 STATE_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
-NOW=$(date +%s)
-STALE_HOURS=24  # Files older than this get a STALE marker
+CLASSIFIER="$(cd "$(dirname "$0")" && pwd)/lib/progress-classify.sh"
 
-# Collect all session-scoped progress files
+# Classification is delegated to the shared helper — the single source of truth
+# for the age + session-ID rules. No inline duplicate of that logic lives here.
+records=""
+if [ -f "$CLASSIFIER" ]; then
+  records=$(CPM_SESSION_ID="$SESSION_ID" bash "$CLASSIFIER" "$STATE_DIR")
+fi
+
 found=0
-orphan_count=0
-orphan_output=""
-for f in "$STATE_DIR"/.cpm-progress-*.md; do
-  [ -f "$f" ] || continue
+stale_count=0
+stale_output=""
+fresh_count=0
+fresh_output=""
+while IFS=$'\t' read -r classification path skill phase age age_label; do
+  [ -z "$classification" ] && continue
   found=1
 
-  # Extract session ID from filename: .cpm-progress-{session_id}.md
-  file_session_id=$(basename "$f" | sed 's/^\.cpm-progress-//; s/\.md$//')
-
-  # Extract skill and phase from file header for a readable label
-  skill=$(grep -m1 '^\*\*Skill\*\*:' "$f" 2>/dev/null | sed 's/\*\*Skill\*\*: *//')
-  phase=$(grep -m1 '^\*\*Phase\|^\*\*Step\|^\*\*Section\|^\*\*Current task' "$f" 2>/dev/null | sed 's/\*\*[^*]*\*\*: *//')
-  label="${skill:-unknown}"
-  if [ -n "$phase" ]; then
-    label="$label — $phase"
-  fi
-
-  # Calculate file age
-  file_mtime=$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null)
-  age=0
-  age_label="unknown age"
-  if [ -n "$file_mtime" ]; then
-    age=$((NOW - file_mtime))
-    age_hours=$((age / 3600))
-    if [ "$age_hours" -ge "$STALE_HOURS" ]; then
-      age_days=$((age_hours / 24))
-      age_label="${age_days}d old — STALE"
-    elif [ "$age_hours" -ge 1 ]; then
-      age_label="${age_hours}h old"
-    else
-      age_minutes=$((age / 60))
-      age_label="${age_minutes}m old"
-    fi
-  fi
-
-  # Classify: current session vs. orphan (by session ID matching)
-  if [ -n "$SESSION_ID" ] && [ "$file_session_id" = "$SESSION_ID" ]; then
-    # Current session — inject as active state
-    echo ""
-    echo "--- CPM SESSION STATE ($label) [$(basename "$f")] ---"
-    cat "$f"
-    echo "--- END ---"
-  else
-    # Other session — orphan candidate
-    orphan_count=$((orphan_count + 1))
-    orphan_output="${orphan_output}--- ORPHAN FILE ${orphan_count} ---\nSkill: ${skill:-unknown}\nPhase: ${phase:-unknown}\nAge: ${age_label}\nFile: ${f}\n--- END ORPHAN ---\n\n"
-  fi
-done
+  case "$classification" in
+    CURRENT)
+      # Current session — inject as active state
+      label="${skill:-unknown}"
+      if [ -n "$phase" ] && [ "$phase" != "unknown" ]; then
+        label="$label — $phase"
+      fi
+      echo ""
+      echo "--- CPM SESSION STATE ($label) [$(basename "$path")] ---"
+      cat "$path"
+      echo "--- END ---"
+      ;;
+    STALE)
+      # Other session, at/over the staleness threshold — cleanup candidate
+      stale_count=$((stale_count + 1))
+      stale_output="${stale_output}--- STALE FILE ${stale_count} ---\nSkill: ${skill:-unknown}\nPhase: ${phase:-unknown}\nAge: ${age_label}\nFile: ${path}\n--- END ---\n\n"
+      ;;
+    FRESH)
+      # Other session, under the threshold — active/recent parallel session
+      fresh_count=$((fresh_count + 1))
+      fresh_output="${fresh_output}--- PARALLEL SESSION ${fresh_count} ---\nSkill: ${skill:-unknown}\nPhase: ${phase:-unknown}\nAge: ${age_label}\nFile: ${path}\n--- END ---\n\n"
+      ;;
+  esac
+done <<EOF
+$records
+EOF
 
 # Legacy support: check for old single-file format
 if [ "$found" -eq 0 ] && [ -f "$STATE_DIR/.cpm-progress.md" ]; then
@@ -127,33 +118,32 @@ if [ "$found" -eq 0 ] && [ -f "$STATE_DIR/.cpm-progress.md" ]; then
   found=1
 fi
 
-# Report orphan files for cleanup — each as a separate block
-if [ "$orphan_count" -gt 0 ]; then
+# Stale other-session files — offered for cleanup. Non-blocking: the session
+# continues; cleanup is presented as an option, never forced.
+if [ "$stale_count" -gt 0 ]; then
   echo ""
-  echo "BLOCKING — ORPHAN CLEANUP REQUIRED"
-  echo "==================================="
-  echo "Found ${orphan_count} orphaned progress file(s) from other sessions."
-  echo "These are from sessions that were interrupted, abandoned, or completed without cleanup."
+  echo "--- STALE PROGRESS FILES (cleanup candidates) ---"
+  echo "Found ${stale_count} stale progress file(s) from other sessions (3+ days old)."
+  echo "These are likely leftovers from interrupted or abandoned sessions."
+  echo "You may offer to delete them, removing only files the user explicitly confirms."
+  echo "This is non-blocking: carry on with the user's request and raise cleanup when it fits."
   echo ""
-  echo "IMPORTANT: You MUST stop and resolve this cleanup BEFORE doing anything else."
-  echo "Do NOT proceed with the user's request until orphan cleanup is complete."
-  echo "Do NOT mention the orphans and then carry on — the user must actively decide."
-  echo ""
-  echo "ACTION REQUIRED:"
-  echo "1. Present each orphaned file to the user (skill, phase, age)."
-  echo "2. Ask which ones to delete. Wait for their answer."
-  echo "3. Delete only the files the user confirms."
-  echo "4. Only THEN proceed with whatever the user originally asked."
-  echo ""
-  echo "Do NOT delete any files without explicit user confirmation."
-  echo ""
-  printf "%b" "$orphan_output"
+  printf "%b" "$stale_output"
 fi
 
-if [ "$found" -gt 0 ] && [ "$orphan_count" -eq 0 ]; then
+# Fresh other-session files — informational only. Never a cleanup candidate,
+# never injected as active state.
+if [ "$fresh_count" -gt 0 ]; then
+  echo ""
+  echo "--- ACTIVE/RECENT PARALLEL SESSIONS (informational) ---"
+  echo "Found ${fresh_count} recent progress file(s) from other sessions (under 3 days old)."
+  echo "These likely belong to active or recent parallel sessions and are shown for awareness only."
+  echo "Do not offer them for deletion."
+  echo ""
+  printf "%b" "$fresh_output"
+fi
+
+if [ "$found" -gt 0 ] && [ "$stale_count" -eq 0 ] && [ "$fresh_count" -eq 0 ]; then
   echo ""
   echo "NOTE: Found CPM session state from a previous session. Review the state above and ask the user whether they want to continue where they left off or discard it."
-elif [ "$found" -gt 0 ] && [ "$orphan_count" -gt 0 ]; then
-  echo ""
-  echo "NOTE: Found both active CPM session state and orphaned files (see above). Handle the BLOCKING orphan cleanup first, then ask the user about continuation."
 fi

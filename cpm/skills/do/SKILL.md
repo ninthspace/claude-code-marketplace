@@ -31,6 +31,10 @@ The epic doc, once resolved, applies to the entire work loop. Parse it once and 
 3. Call `TaskList` and pick the lowest-ID task that is `pending` and has no unresolved `blockedBy`.
 4. If no pending unblocked tasks exist after hydration, the work is done.
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Retro Check
 
 Before the work loop begins, run the **retro consumption gate** — a hard gate (defined here, local to `cpm:do`) that forces each relevant prior-epic lesson to be consciously applied, deferred, or judged not relevant before any work starts. This is `cpm:do`'s stronger form of retro consumption; the shared **Retro Awareness** procedure remains advisory for the other skills, and this skill overrides its Yes/No prompt with the disposition gate below.

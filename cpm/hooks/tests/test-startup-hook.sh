@@ -68,13 +68,13 @@ create_progress_file "$PROJECT" "sess-2" "cpm:party" "Discussion in progress"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_contains "$OUTPUT" "cpm:do"
 
-test_start "Other-session files are classified as orphans, not injected"
+test_start "Other-session files are not injected as active state (shown as parallel session)"
 PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
 create_progress_file "$PROJECT" "sess-2" "cpm:party" "Discussion in progress"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-1","source":"startup"}')
 assert_not_contains "$OUTPUT" "--- CPM SESSION STATE (cpm:party"
-assert_contains "$OUTPUT" "ORPHAN"
+assert_contains "$OUTPUT" "PARALLEL SESSION"
 
 test_start "Each file has delimiter markers"
 PROJECT=$(setup_project_dir)

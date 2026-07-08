@@ -20,6 +20,10 @@ If no epic paths are provided, auto-discover all incomplete epics (see Process S
 
 ## Process
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Step 1: Pre-flight Validation
 
 Before generating the prompt, validate all prerequisites.
@@ -225,6 +229,7 @@ The prompt's autonomous instruction ("choose the most reasonable option for ever
 
 | `cpm:do` Location | Gate Purpose | Prompt Override |
 |---|---|---|
+| Stale-Progress Check (shared convention, runs at every `/cpm:*` skill startup — including the `/cpm:do` this loop wraps) | Offer cleanup of stale/leftover progress files from other sessions, at most once per session | **Fully suppressed — no prompt, no output, no action.** Suppression is *guard-level*, not prompt-driven: the shared guard (`hooks/lib/cleancheck-guard.sh`) detects the active ralph loop via `.claude/ralph-loop.local.md` and returns `SUPPRESS`, so the check self-silences before any prompt regardless of the prompt's autonomous instruction. No prompt clause is required (and none is added) — the gate cannot stall the loop |
 | Input — Epic Doc (multiple epics) | Ask user which epic to work on | Auto-select from the epic list in order |
 | Test Runner Discovery | Ask user for test command | Proceed with self-assessment |
 | Retro Check — consumption disposition gate | Force a per-run disposition (Applied/Deferred/Not relevant here) on each prior-epic retro observation; durable retirement (the gated in-cycle Obsolete) is a separate deliberately-confirmed action, never auto-taken | **Do not block, do not "choose the most reasonable option".** Branch by category using `cpm:do`'s single-source safe/defer split (its Retro Check → Autonomous mode), not a blanket defer: **auto-apply** safe categories (Codebase discoveries, Patterns worth reusing), recording `**Retro applied**: {nn} · {category} · applied (autonomous, safe-category) — {what it did}` and carrying each into the run as context; **defer** judgement-heavy categories (Scope surprises, Criteria gaps, Complexity underestimates, Testing gaps), recording `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)`; Smooth deliveries is informational. Surface **both** the auto-applied and deferred lists in the run summary for post-loop human review. **Never auto-retire** — apply or defer only, never the Obsolete retire |
@@ -239,6 +244,8 @@ The prompt's autonomous instruction ("choose the most reasonable option for ever
 | Step 8 — Next epic check | Ask user: continue to next epic or stop | Continue to next epic automatically |
 | Graceful Degradation — Test command fails | Ask user: new command, continue, or stop | Continue without tests |
 | Graceful Degradation — No test + TDD | Ask user: provide runner or acknowledge | Fall back to standard workflow |
+
+**Stale-Progress Check is guard-suppressed, not prompt-overridden**: unlike the `AskUserQuestion` gates below it, the Stale-Progress Check safety-net (now part of every `/cpm:*` skill's startup) is silenced *structurally* — its shared guard returns `SUPPRESS` whenever `.claude/ralph-loop.local.md` is present. It therefore needs no autonomous instruction in the generated prompt and can never pause the loop; the table row records it so a maintainer adding a gate here knows guard-level suppression is a valid override mechanism, not only the prompt instruction.
 
 **Retro generation is not a gate**: retro *generation* at `cpm:do` Step 8 writes the retro file automatically (no `AskUserQuestion`), so it runs unchanged under autonomous execution — only the *consumption* gate above needs an override. Generation still fires at epic completion during a Ralph run.
 

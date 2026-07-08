@@ -25,6 +25,10 @@ Check for input in this order:
    b. Present discovered artifacts grouped by type with AskUserQuestion. Let the user select which artifacts to include as source material. Support multi-select — communications often draw from multiple artifacts.
    c. If no artifacts found, tell the user there's nothing to present yet and suggest running other CPM skills first.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Library Check (Startup)
 
 Follow the shared **Library Check** procedure with scope keyword `present`. Deep-read selectively when audience or format choices depend on library context — e.g. brand guidelines when formatting for clients, or glossaries when writing for non-technical audiences.

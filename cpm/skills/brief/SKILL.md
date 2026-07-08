@@ -26,6 +26,10 @@ Work through these phases **one at a time**. Complete each phase before moving t
 
 **State tracking**: Create the progress file before Phase 1 and update it after each phase completes. See State Management below for the format and rationale. Delete the file once the final brief has been saved.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Retro Check (Startup)
 
 Follow the shared **Retro Awareness** procedure before beginning Phase 1.

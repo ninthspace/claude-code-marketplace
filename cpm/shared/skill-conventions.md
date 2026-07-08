@@ -162,6 +162,34 @@ Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (u
 
 Skills reference this procedure with: "Follow the shared **Progress File Management** procedure." followed by their **Lifecycle** and **Format** blocks.
 
+## Stale-Progress Check
+
+Every `/cpm:*` skill runs this once-per-session safety-net as an early startup step, so leftover progress files from other sessions are surfaced to the user even when a slash-command invocation would otherwise steamroll the SessionStart hook's advisory output. The rules live in two shipped helpers so they never drift: the **guard** (`hooks/lib/cleancheck-guard.sh`) decides *whether* to run this session, and the **classifier** (`hooks/lib/progress-classify.sh`) decides *how each file is labelled*. Both sit under the CPM plugin root — invoke them at `${CLAUDE_PLUGIN_ROOT}/hooks/lib/…` (the same token `hooks.json` uses to locate the hook scripts).
+
+**When to run**: As an early startup step, in the same startup-checks region as Roster Loading — before the skill begins its own work.
+
+**Procedure**:
+
+1. **Consult the guard.** Run:
+   `CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/cleancheck-guard.sh"`
+   It prints exactly one token:
+   - `SUPPRESS` — an active ralph loop is present (`.claude/ralph-loop.local.md`). Do **nothing**: no prompt, no output, no action. This is the FR11 autonomous carve-out — the safety-net is fully silent during ralph runs.
+   - `SKIP` — this session already ran the check. Do **nothing**.
+   - `RUN` — proceed to step 2. (The guard has just recorded this session's sentinel, so later skills in the same session receive `SKIP`.)
+
+2. **Classify.** On `RUN` only, run:
+   `CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/progress-classify.sh"`
+   It emits one tab-delimited record per progress file — `CLASSIFICATION<TAB>PATH<TAB>SKILL<TAB>PHASE<TAB>AGE_SECONDS<TAB>AGE_LABEL`, where CLASSIFICATION is `CURRENT`, `FRESH`, or `STALE`. No records → nothing to surface; stop.
+
+3. **Present — three-way and non-blocking.** Never halt the user's request; surface the following, then carry on with what they asked:
+   - **`CURRENT`** — the current session's own progress file. Already injected as active state by the hooks; never a cleanup candidate.
+   - **`STALE`** (other session, ≥3 days old) — offer these for cleanup. List each (skill, phase, age, path) and ask which to delete.
+   - **`FRESH`** (other session, <3 days old) — informational only ("active/recent parallel session"). Show them for awareness; **never** offer them for deletion, and never silently drop them.
+
+4. **Deletion is strictly user-confirmed.** Delete only files the user explicitly names, and only after they have seen exactly what will be removed. No path — here or in the helpers — auto-executes a delete. When the user confirms deleting a progress file, also remove its `.cpm-compact-summary-{id}.md` companion if present.
+
+Skills reference this procedure with: "Follow the shared **Stale-Progress Check** procedure."
+
 ## Numbering
 
 Assign the next numeric prefix when a skill creates a new numbered artifact (`docs/specifications/`, `docs/epics/`, `docs/plans/`, `docs/briefs/`, `docs/reviews/`, `docs/retros/`, `docs/architecture/`, `docs/quick/`, `docs/discussions/`, etc.). The same rule applies to every artifact type — skills reference this procedure rather than restating the logic inline.

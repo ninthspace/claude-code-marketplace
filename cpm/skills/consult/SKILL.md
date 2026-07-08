@@ -20,6 +20,10 @@ If `$ARGUMENTS` is provided, use it to determine the starting agent and/or topic
 
 If no arguments are given, present the roster and ask the user to pick an agent and provide a topic.
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Roster Loading
 
 Follow the shared **Roster Loading** procedure. After loading, present the available agents as a compact roster (icon, name, role) and ask: "Who would you like to consult? (Name or role.)" If the user already selected an agent via `$ARGUMENTS`, skip the selection prompt and confirm: "Starting consultation with {icon} **{displayName}** ({role}). What would you like to discuss?"

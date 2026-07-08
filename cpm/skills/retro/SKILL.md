@@ -35,6 +35,10 @@ The three never run together: synthesis produces a retro from execution observat
 
 **State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the progress file once the final retro file has been saved.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Template Hint (Startup)
 
 Before Step 1, display:

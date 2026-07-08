@@ -52,37 +52,39 @@ echo "# State for def-456" > "$PROJECT/docs/plans/.cpm-progress-def-456.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
 assert_not_contains "$OUTPUT" "# State for def-456"
 
-test_start "Falls back to all files when session_id has no matching file"
+test_start "No matching session file: other-session files are NOT injected (no cat-all)"
 PROJECT=$(setup_project_dir)
 echo "# State for def-456" > "$PROJECT/docs/plans/.cpm-progress-def-456.md"
 echo "# State for ghi-789" > "$PROJECT/docs/plans/.cpm-progress-ghi-789.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"no-match","source":"compact"}')
-assert_contains "$OUTPUT" "# State for def-456"
+assert_not_contains "$OUTPUT" "# State for def-456"
+assert_not_contains "$OUTPUT" "# State for ghi-789"
 
-test_start "Fallback includes all session files"
+test_start "Compact (same session): only the matching progress file is injected as active state"
 PROJECT=$(setup_project_dir)
-echo "# State for def-456" > "$PROJECT/docs/plans/.cpm-progress-def-456.md"
-echo "# State for ghi-789" > "$PROJECT/docs/plans/.cpm-progress-ghi-789.md"
-OUTPUT=$(run_hook "$PROJECT" '{"session_id":"no-match","source":"compact"}')
-assert_contains "$OUTPUT" "# State for ghi-789"
+echo "# State for sess-current" > "$PROJECT/docs/plans/.cpm-progress-sess-current.md"
+echo "# State for sess-other" > "$PROJECT/docs/plans/.cpm-progress-sess-other.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-current","source":"compact"}')
+assert_contains "$OUTPUT" "# State for sess-current"
+assert_not_contains "$OUTPUT" "# State for sess-other"
 
-test_start "Handles malformed JSON gracefully (falls back to all files)"
+test_start "Malformed JSON: no file injected as active state (fail-safe, no resurrection)"
 PROJECT=$(setup_project_dir)
 echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(run_hook "$PROJECT" 'not valid json')
-assert_contains "$OUTPUT" "# State for abc"
+assert_not_contains "$OUTPUT" "# State for abc"
 
-test_start "Handles empty stdin gracefully"
+test_start "Empty stdin: no file injected as active state; still exits cleanly"
 PROJECT=$(setup_project_dir)
 echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(echo "" | CLAUDE_PROJECT_DIR="$PROJECT" bash "$HOOK_SCRIPT")
-assert_contains "$OUTPUT" "# State for abc"
+assert_not_contains "$OUTPUT" "# State for abc"
 
-test_start "Handles missing session_id field in JSON"
+test_start "Missing session_id field: no file injected as active state"
 PROJECT=$(setup_project_dir)
 echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(run_hook "$PROJECT" '{"source":"compact"}')
-assert_contains "$OUTPUT" "# State for abc"
+assert_not_contains "$OUTPUT" "# State for abc"
 
 test_start "Produces no progress file output when no progress files exist"
 PROJECT=$(setup_project_dir)
@@ -96,14 +98,26 @@ echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
 assert_contains "$OUTPUT" "# Legacy state"
 
-test_start "Handles clear source identically to compact (silent injection, no orphan detection)"
+test_start "On clear, other-session file is NOT injected as active state (no silent resurrection)"
 PROJECT=$(setup_project_dir)
 echo "# State for old-session" > "$PROJECT/docs/plans/.cpm-progress-old-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"new-session","source":"clear"}')
 assert_contains "$OUTPUT" "CPM_SESSION_ID: new-session"
-assert_contains "$OUTPUT" "# State for old-session"
-assert_not_contains "$OUTPUT" "ORPHAN"
-assert_not_contains "$OUTPUT" "BLOCKING"
+assert_not_contains "$OUTPUT" "# State for old-session"
+
+test_start "On clear with multiple other-session files, none are blanket-cat as active state"
+PROJECT=$(setup_project_dir)
+echo "# State for old-1" > "$PROJECT/docs/plans/.cpm-progress-old-1.md"
+echo "# State for old-2" > "$PROJECT/docs/plans/.cpm-progress-old-2.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"fresh-session","source":"clear"}')
+assert_not_contains "$OUTPUT" "# State for old-1"
+assert_not_contains "$OUTPUT" "# State for old-2"
+
+test_start "On clear, a file matching the new session id IS injected as active state"
+PROJECT=$(setup_project_dir)
+echo "# State for fresh-session" > "$PROJECT/docs/plans/.cpm-progress-fresh-session.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"fresh-session","source":"clear"}')
+assert_contains "$OUTPUT" "# State for fresh-session"
 
 test_start "Legacy file ignored when session-scoped files exist"
 PROJECT=$(setup_project_dir)
@@ -193,5 +207,14 @@ PROJECT=$(setup_project_dir)
 echo "Fallback summary." > "$PROJECT/docs/plans/.cpm-compact-summary.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"no-match","source":"compact"}')
 assert_contains "$OUTPUT" "Fallback summary."
+
+test_start "Compact same-session: matching progress file AND its summary companion are both injected"
+PROJECT=$(setup_project_dir)
+echo "# Progress for sess-x" > "$PROJECT/docs/plans/.cpm-progress-sess-x.md"
+echo "Narrative summary for sess-x." > "$PROJECT/docs/plans/.cpm-compact-summary-sess-x.md"
+OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-x","source":"compact"}')
+assert_contains "$OUTPUT" "# Progress for sess-x"
+assert_contains "$OUTPUT" "Narrative summary for sess-x."
+assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
 
 test_summary

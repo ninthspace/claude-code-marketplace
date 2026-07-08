@@ -2,9 +2,12 @@
 # session-start-compact.sh — Re-inject CPM state after compaction
 #
 # Fires on SessionStart source: "compact" or "clear".
-# Reads session_id from JSON on stdin and injects the matching
-# session-scoped progress file. Falls back to injecting all progress
-# files if no match is found or JSON parsing fails.
+# Reads session_id from JSON on stdin and injects ONLY the current session's
+# progress file as active state, using the shared classifier (lib/progress-
+# classify.sh) as the single source of truth for "current". Other-session and
+# stale files are never injected here: on compaction (same session id) the
+# matching file is recovered; on /clear (a fresh session id) nothing old is
+# silently resurrected as active state.
 # After progress file injection, injects the compact summary file
 # (written by post-compact.sh) if one exists — providing narrative
 # context alongside structured state.
@@ -41,27 +44,27 @@ if [ -f "$CONVENTIONS_FILE" ]; then
 fi
 
 STATE_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
+CLASSIFIER="$(cd "$(dirname "$0")" && pwd)/lib/progress-classify.sh"
 
 # --- Progress file injection ---
+# Inject ONLY the current session's file (classifier says CURRENT). There is no
+# blanket cat-all fallback: other-session/stale files are never injected as
+# active state, so /clear cannot silently resurrect them. On compaction the
+# session id is unchanged, so the matching file is still recovered.
 
 progress_found=0
-
-# Try exact match first
-if [ -n "$SESSION_ID" ] && [ -f "$STATE_DIR/.cpm-progress-${SESSION_ID}.md" ]; then
-  cat "$STATE_DIR/.cpm-progress-${SESSION_ID}.md"
-  progress_found=1
-fi
-
-# Fallback: inject all progress files (handles no-match and parse failures)
-if [ "$progress_found" -eq 0 ]; then
-  for f in "$STATE_DIR"/.cpm-progress-*.md; do
-    [ -f "$f" ] || continue
+if [ -f "$CLASSIFIER" ]; then
+  records=$(CPM_SESSION_ID="$SESSION_ID" bash "$CLASSIFIER" "$STATE_DIR")
+  while IFS=$'\t' read -r classification path skill phase age age_label; do
+    [ "$classification" = "CURRENT" ] || continue
+    cat "$path"
     progress_found=1
-    cat "$f"
-  done
+  done <<EOF
+$records
+EOF
 fi
 
-# Legacy support: check for old single-file format
+# Legacy support: check for old single-file format (pre session-scoped naming).
 if [ "$progress_found" -eq 0 ] && [ -f "$STATE_DIR/.cpm-progress.md" ]; then
   cat "$STATE_DIR/.cpm-progress.md"
   progress_found=1

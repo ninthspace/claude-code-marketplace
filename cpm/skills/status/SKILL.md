@@ -33,6 +33,10 @@ If no arguments are given, produce a full project status report covering all CPM
 
 This is the ephemeral-default / save-on-request contract: the user must ask for the HTML at all (it never appears on the default path), and must ask again to persist it durably.
 
+## Stale-Progress Check
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ## Process
 
 Work through three phases sequentially. Each phase gathers data; the final phase synthesises everything into the report.

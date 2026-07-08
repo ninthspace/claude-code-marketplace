@@ -23,6 +23,10 @@ The change description is the seed for everything that follows — scope assessm
 
 **State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the file once the completion record has been saved.
 
+### Stale-Progress Check (Startup)
+
+Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
+
 ### Retro Check (Startup)
 
 Follow the shared **Retro Awareness** procedure before the Library Check.
