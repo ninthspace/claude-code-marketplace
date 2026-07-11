@@ -213,6 +213,8 @@ v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, 
 - Customisable agent roster — override default personas per project
 - Compaction resilience — seamlessly survives Claude Code context compaction
 
+**Companion tool — cpm board:** a standalone terminal UI (`cpm/tools/board/`) that shows the CPM status of every project you register — a three-column Projects → Epics → Stories browser — and launches the right `/cpm:*` session for each without leaving the board. It reads each project's `docs/` planning artifacts read-only. See [the board README](./cpm/tools/board/README.md).
+
 [View full documentation](./cpm/README.md) | [Interactive Training Guide](./cpm-training-guide.html)
 
 ---

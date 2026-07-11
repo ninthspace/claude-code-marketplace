@@ -30,7 +30,10 @@ Scan the four planning directories for documents and group them into artifact ch
    - `docs/plans/[0-9]*-plan-*.md`
    - `docs/specifications/[0-9]*-spec-*.md`
    - `docs/epics/[0-9]*-epic-*.md`
+   - `docs/epics/[0-9]*-coverage-*.md`
    - `docs/retros/[0-9]*-retro-*.md`
+
+   Coverage docs live alongside epics in `docs/epics/` (one coverage doc per epic, sharing the epic's `{parent}-{seq}` prefix and slug). They are **not** independent chain members — each attaches to its sibling epic (see grouping below) and moves with it. A coverage doc must never be left behind when its epic is archived.
 
    **Explicitly exclude** `docs/library/` — library documents have their own lifecycle via `/cpm:library`.
 
@@ -43,12 +46,21 @@ Scan the four planning directories for documents and group them into artifact ch
 
    Always find the type identifier substring first, then take everything after it as the slug — the numeric prefix width varies (one or two integer fields depending on artifact type and shape).
 
-3. **Group into chains**: Match documents across directories by slug. A chain is the set of all documents sharing the same slug. For example, slug `compaction-resilience` might have:
-   - `docs/plans/01-plan-compaction-resilience.md`
-   - `docs/specifications/01-spec-compaction-resilience.md`
-   - `docs/epics/01-epic-compaction-resilience.md`
+3. **Group into chains**: Build chains from **back-reference links first**, falling back to slug only where no back-reference exists. Slug matching alone is unreliable here: an epic almost always carries its own topic slug (`04-epic-product-brief-skill` → slug `product-brief-skill`), which does **not** match its spec's slug (`14-spec-cpm-lifecycle-expansion`). Never rely on slug equality to bind a spec to its epics.
 
-   A chain may contain multiple epic docs when a single spec produced several epics (1:many). To discover these, read the `**Source spec**:` field from each epic doc's header and group epic docs that share the same source spec into the same chain.
+   Resolve links in this order:
+
+   1. **Epic → spec (primary)**: Read the `**Source spec**:` field from each epic doc's header. The epic belongs to the chain of the spec it names, **regardless of slug**. Every epic naming the same spec joins that spec's chain (1:many — a single spec may own many epics). This is the authoritative spec↔epic link; do not second-guess it by slug.
+   2. **Coverage → epic**: Attach each `*-coverage-*.md` doc to its sibling epic — the epic sharing the same `{parent}-{seq}` numeric prefix (two-part scheme) or the same slug (legacy flat). A coverage doc is part of whatever chain its epic is in and is always moved with it.
+   3. **Retro → epic**: Link a retro to its epic(s) via the retro's `**Source**:` back-reference if present, otherwise by slug.
+   4. **Plan → spec, and slug fallback**: Match plans to specs by slug (plans and specs in this repo share slugs). Use slug matching as a fallback for any document that has no usable back-reference.
+
+   A chain is the transitive closure of these links — the spec, its plan (if any), all epics that name it, every coverage doc attached to those epics, and any retros for those epics. For example the `cpm-lifecycle-expansion` chain is:
+   - `docs/specifications/14-spec-cpm-lifecycle-expansion.md`
+   - `docs/epics/04-epic-product-brief-skill.md` (+ its coverage doc, if any)
+   - `docs/epics/05-epic-architecture-exploration-skill.md` (+ coverage)
+   - `docs/epics/06-epic-communication-and-templates.md` (+ coverage)
+   - `docs/epics/07-epic-existing-skill-updates.md` (+ coverage)
 
    Not every chain will be complete — a spec without a plan, or epics without a retro, are normal.
 
@@ -76,7 +88,7 @@ Present the discovered chains and documents to the user, grouped by chain with s
 
 1. **Format the candidate list**: For each chain, show:
    - The slug name as the chain heading
-   - All documents in the chain (plan → spec → epics → retro order)
+   - All documents in the chain (plan → spec → epics → retro order), showing each epic's attached coverage doc beneath it
    - Which staleness signals fired (if any), as brief labels: `[epic complete]`, `[orphaned plan]`, `[completed retro]`, `[spec implemented]`
    - Chains with staleness signals should be presented first
 
@@ -99,15 +111,17 @@ Present the discovered chains and documents to the user, grouped by chain with s
 
 Move the selected files to `docs/archive/` with mirrored subdirectory structure.
 
-1. **Create directories**: For each subdirectory needed (e.g. `docs/archive/plans/`, `docs/archive/specifications/`), run `mkdir -p` via Bash to ensure the target directory exists.
+1. **Completeness guard**: Before moving anything, confirm each selected chain is whole. For every chain being archived, verify its source spec and every coverage doc attached to its epics are in the move list. If a completed epic chain would be archived while its source spec or a sibling coverage doc is left behind, flag it to the user and offer to include the missing file(s). Never silently orphan a spec or coverage doc.
 
-2. **Move files**: For each selected file, run `mv {source} {target}` via Bash. The target path mirrors the source: `docs/specifications/01-spec-foo.md` → `docs/archive/specifications/01-spec-foo.md`.
+2. **Create directories**: For each subdirectory needed (e.g. `docs/archive/plans/`, `docs/archive/specifications/`), run `mkdir -p` via Bash to ensure the target directory exists. Coverage docs mirror to `docs/archive/epics/` alongside their epic.
 
-3. **Track results**: Record success or failure for each file. If a move fails:
+3. **Move files**: For each selected file, run `mv {source} {target}` via Bash. The target path mirrors the source: `docs/specifications/01-spec-foo.md` → `docs/archive/specifications/01-spec-foo.md`.
+
+4. **Track results**: Record success or failure for each file. If a move fails:
    - Continue with the remaining files (always complete the batch)
    - Record the error for the failed file
 
-4. **Report results**: Present a summary to the user:
+5. **Report results**: Present a summary to the user:
    - How many files were moved successfully
    - Which files failed and why (if any)
    - The archive paths where files were moved
@@ -159,5 +173,6 @@ Follow the shared **Progress File Management** procedure.
 
 - **User controls everything.** Every move requires explicit user selection — always wait for confirmation.
 - **Chains over individuals.** When archiving one document, always offer to archive its full artifact chain.
+- **Back-references bind, not slugs.** Spec↔epic links come from the epic's `**Source spec**:` field; epic slugs deliberately differ from their spec's slug. A spec and its coverage docs must never be orphaned when their epics are archived.
 - **Non-destructive.** Always move, preserving files under `docs/archive/`.
 - **Report failures.** If a move fails mid-chain, report which succeeded and which failed.

@@ -416,6 +416,22 @@ CPM handles this automatically through **on-disk state tracking** and **plugin h
 
 This means compaction is seamless — Claude picks up exactly where it left off without repeating questions or losing decisions, and stale state never halts a new session.
 
+## Companion Tool — cpm board (TUI)
+
+A standalone terminal UI for seeing the CPM state of **all** your projects at once and launching the right session for each — the cross-project counterpart to the single-project `/cpm:status`.
+
+`cpm board` is a three-column Miller-columns browser (Projects → Epics → Stories). For every project you register it derives an overall state, progress, and an ordered list of candidate next actions from that project's `docs/` planning artifacts — **read-only**; it never writes to, stages, or mutates a tracked repo. Colour carries status (green ready · yellow in-progress · red blocked · cyan needs-retro · magenta needs-epics), and pressing `l` launches (or `c` copies) the appropriate `/cpm:*` command in the selected project's directory — a bare `/cpm:do` from the Projects column, or a specific epic/spec command from the Epics column.
+
+It lives at `cpm/tools/board/` as a self-contained [PEP 723](https://peps.python.org/pep-0723/) script — its one dependency (Textual) is declared inline and provisioned by [`uv`](https://docs.astral.sh/uv/) on first run, so there is no install step.
+
+```bash
+cd cpm/tools/board
+uv run --script board.py add ~/Work/git/my-project   # register a project
+uv run --script board.py                              # open the board
+```
+
+**Requires**: `uv` and Python 3.11+ (viewing); the `claude` CLI on `PATH` (only for launching). See [`cpm/tools/board/README.md`](tools/board/README.md) for the full key map, a shell-alias recipe, and where its registry/cache live.
+
 ## How It Works
 
 Each skill is a facilitated conversation, not a form. Claude asks questions one topic at a time, builds on your answers, and gates progression with user confirmation. The core principles baked into each skill:
@@ -526,6 +542,10 @@ cpm/
 │   │   └── SKILL.md         # Project status reconnaissance skill
 │   └── clean/
 │       └── SKILL.md         # On-demand session-state cleanup skill
+├── tools/
+│   └── board/               # cpm board — cross-project status TUI & launcher
+│       ├── board.py         # The Textual TUI (PEP 723 single-file script)
+│       └── README.md        # Setup, key map, and shell-alias recipe
 ├── README.md
 └── LICENSE
 ```

@@ -1,0 +1,23 @@
+[project]
+name = "cpm-board"
+version = "0.1.0"
+description = "Cross-project CPM status board & launcher"
+requires-python = ">=3.11"
+dependencies = [
+    "textual>=0.80",
+    "pyte>=0.8",
+]
+
+# The board is distributed and run as a PEP 723 single-file script (board.py).
+# This pyproject exists for development and testing only — it provisions the test
+# harness so `uv run pytest` works from this directory.
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+testpaths = ["tests"]
