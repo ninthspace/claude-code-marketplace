@@ -16,6 +16,7 @@ from launcher import (
     NoCommandError,
     UnsupportedTerminalError,
     clipboard_command,
+    ralph_command,
     terminal_launch,
 )
 from status_model import NextAction
@@ -131,6 +132,50 @@ def test_terminal_launch_never_builds_a_bare_shell_string():
 def test_terminal_launch_unsupported_platform_raises():
     with pytest.raises(UnsupportedTerminalError):
         terminal_launch(NASTY_PATH, do_action(), platform="linux")
+
+
+# --- ralph command: multi-epic /cpm:ralph, relative + shlex-quoted ------------
+
+
+def test_ralph_command_lists_epics_relative_and_sorted():
+    root = "/home/me/proj"
+    epics = [
+        "/home/me/proj/docs/epics/24-01-epic-bar.md",
+        "/home/me/proj/docs/epics/23-01-epic-foo.md",
+    ]
+    # Relative to the root, sorted so ralph runs them in numeric-prefix order.
+    assert ralph_command(root, epics) == (
+        "/cpm:ralph docs/epics/23-01-epic-foo.md docs/epics/24-01-epic-bar.md"
+    )
+
+
+def test_ralph_command_with_no_epics_is_the_bare_command():
+    # Bare /cpm:ralph lets ralph auto-discover every incomplete epic itself.
+    assert ralph_command("/home/me/proj", []) == "/cpm:ralph"
+
+
+def test_ralph_command_quotes_each_epic_path_for_the_claude_arg_layer():
+    # A project laden with metacharacters and an epic filename with a space: each
+    # relative path must survive as a single token when ralph re-parses $ARGUMENTS.
+    root = NASTY_PATH
+    epics = [f"{NASTY_PATH}/docs/epics/23-01 weird name.md"]
+    command = ralph_command(root, epics)
+
+    assert command.startswith("/cpm:ralph ")
+    args = shlex.split(command)
+    assert args[0] == "/cpm:ralph"
+    assert args[1:] == ["docs/epics/23-01 weird name.md"]
+
+
+def test_ralph_command_flows_safely_through_the_clipboard_layer():
+    # The ralph command is the inner (claude-arg) layer; wrapping it for the shell
+    # via clipboard_command must still tokenise cleanly — no leaked metacharacter.
+    root = NASTY_PATH
+    epics = [f"{NASTY_PATH}/docs/epics/23-01 weird name.md"]
+    action = NextAction("ralph", ralph_command(root, epics), None, "Ralph over 1 epic(s)")
+
+    result = clipboard_command(root, action)
+    assert shlex.split(result) == ["cd", root, "&&", "claude", action.command]
 
 
 # --- no-command guard (attention:unblock has no runnable command) -------------

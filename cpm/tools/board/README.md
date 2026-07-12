@@ -39,6 +39,7 @@ The Epics column header shows it, and the Projects column uses the same palette:
 | red     | blocked (waiting on a dependency)                   |
 | cyan    | complete, but no retrospective written yet (`retro`)|
 | magenta | specs exist but no epics yet (`needs epics`)        |
+| blue    | ralph-selected for a `/cpm:ralph` run (see below)   |
 | dim     | done / no planning artifacts                        |
 
 Colour conveys status, so the status word is not repeated in the row text.
@@ -52,8 +53,8 @@ Colour conveys status, so the status word is not repeated in the row text.
   Viewing the board does not require it.
 
 The board is a [PEP 723](https://peps.python.org/pep-0723/) single-file script:
-its runtime dependencies (Textual, and `pyte` for the embedded launch pane) are
-declared inline and provisioned by `uv` on first run. There is no separate install
+its runtime dependency (Textual) is declared inline and provisioned by `uv` on
+first run. There is no separate install
 step.
 
 ## Running it
@@ -133,11 +134,10 @@ chmod +x cpm/tools/board/board.py
 | ↑ / ↓   | Move within the focused column                              |
 | ← / →   | Move focus between columns                                  |
 | Ctrl+P  | Command palette — opens straight to the board's actions     |
-| `l`     | Launch **here** — embedded pane over epics + stories (below)|
-| `i`     | Launch **full-screen** — suspend the board, run inline      |
-| `L`     | Launch in a **new window** — detached terminal (see below)  |
+| `l`     | Launch the target in a **new terminal window** (see below)  |
+| `o`     | Open a plain Claude at the selected project's directory     |
 | `c`     | Copy the launch command to the clipboard                    |
-| F10     | Close the embedded session pane (when one is open)          |
+| `space` | Ralph-select the highlighted epic (toggle; see below)       |
 | `a`     | Add a project — opens a directory picker (browse, don't type)|
 | `x`     | Remove the highlighted project (confirm)                    |
 | `z`     | Show / hide completed epics & stories                       |
@@ -145,42 +145,47 @@ chmod +x cpm/tools/board/board.py
 | `R`     | Clear the cache entirely, then rebuild                      |
 | `q`     | Quit                                                        |
 
-### Launch (`l` / `i` / `L`) and copy (`c`)
+### Launch (`l`), open (`o`), and copy (`c`)
 
-All four pick their target by the **focused column**, mirroring how `/cpm:do`
+**`l` — launch in a new window.** The target session opens in a **new terminal
+window** (macOS `osascript` + Terminal.app), so the board never blocks — good for
+running several sessions at once. `c` copies the same command to the clipboard
+instead. Both pick their target by the **focused column**, mirroring how `/cpm:do`
 handles its own argument:
 
 - **Projects column** → a bare `/cpm:do` (no epic) for the selected project —
-  `cpm:do` discovers the next story itself. Launch straight from the project list
-  without stepping into the Epics column.
+  `cpm:do` discovers the next story itself.
 - **Epics / Stories column** → the highlighted epic candidate's own command
   (`/cpm:do <epic>`, `/cpm:epics <spec>`, or `/cpm:retro <epic>`). A blocked or
   reference-only row falls back to a bare `/cpm:do`.
 
-Three launch modes on that target:
-
-- **`l` — launch here (embedded).** The session runs in a pane covering the epics
-  + stories columns while the projects column and the board stay live. The pane is
-  a real embedded terminal (PTY + `pyte`). Press **F10**, or exit the session, to
-  close the pane and restore the columns. Best when you want the session and the
-  board on screen together.
-- **`i` — launch full-screen (inline).** The board suspends, `claude` runs
-  full-size in this same terminal, and the board is restored exactly where you
-  left it when the session exits. Best for a focused, one-at-a-time flow with no
-  pane cramping.
-- **`L` — launch in a new window (detached).** On macOS (`osascript` +
-  Terminal.app) the session opens in its own window and the board never blocks —
-  good for running several sessions at once. On platforms without detached
-  support yet, `L` shows a notice; use `l`/`i` or copy (`c`) instead.
+**`o` — open the project.** Opens a **plain** `claude` — no `/cpm` command — in a
+new window at the selected project's directory. Use it when you just want a Claude
+session in that project, not a specific CPM step. `o` ignores the focused column
+and any ralph selection.
 
 Everything runs in the selected project's working directory. Each command is built
-shell-safely — the project path and command are `shlex.quote()`d, and the detached
-path adds a second AppleScript-string escaping layer, with no shell at any layer —
-so a path with spaces or metacharacters can neither break the command nor inject.
+shell-safely — the project path and command are `shlex.quote()`d, and a second
+AppleScript-string escaping layer is added, with no shell at any layer — so a path
+with spaces or metacharacters can neither break the command nor inject. On
+platforms without new-window support yet, `l`/`o` show a notice; use copy (`c`).
 
-> **Note:** the embedded pane (`l`) is a spike. The core pipeline (colour, cursor,
-> keys, resize, alt-screen, F10 close) works, but nesting a heavyweight full-screen
-> child like `claude` inside a sub-pane can still show rough edges vs. `i`/`L`.
+### Ralph — autonomous multi-epic runs (`space` + launch)
+
+`/cpm:ralph` runs several epics autonomously, one after another. To launch one
+from the board, **ralph-select** the epics first: in the Epics column, press
+`space` on each epic you want (only runnable `do` epics — the green/yellow ones —
+qualify; blocked, retro and needs-epics rows can't be selected). Selected epics
+turn **blue**; `space` again toggles one off. The selection is scoped to the
+project in the Epics column and clears if you switch project.
+
+While the selection is non-empty, `l` (and `c`) retarget: they build a single
+**`/cpm:ralph <selected epics…>`** (paths project-relative, sorted into numeric
+order) instead of a single-epic `/cpm:do`, and launch it in a new window — the
+board stays free while ralph runs unattended. A launch consumes the selection.
+Select nothing and the keys behave exactly as before. Each epic path is
+`shlex.quote()`d for ralph's own argument parse, on top of the shell/AppleScript
+layers, so the multi-epic command is built with no unescaped interpolation.
 
 ## Where its data lives
 
@@ -207,7 +212,6 @@ unit-tested without a UI event loop:
 - `status_model.py` — read-only derivation engine (state, progress, next actions).
 - `board_view.py` — pure view helpers (labels, colours, row projections).
 - `launcher.py` — shell-safe launch command / argv generation.
-- `embedded_terminal.py` — the PTY terminal widget for the embedded launch pane (`l`).
 - `registry.py` — the XDG-aware project registry and its CLI.
 - `cache.py` — the freshness cache.
 - `board.py` — the Textual TUI that wires it all together.

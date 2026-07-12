@@ -42,7 +42,7 @@ async def test_discover_shows_the_board_actions_immediately(make_project, cache_
         names = [str(hit.display) async for hit in provider.discover()]
 
     # Every headline action is present the moment the palette opens.
-    for expected in ("Launch here", "Launch in a new window", "Add project", "Refresh", "Clear cache", "Quit"):
+    for expected in ("Launch", "Open project", "Ralph-select epic", "Add project", "Refresh", "Clear cache", "Quit"):
         assert expected in names
 
 

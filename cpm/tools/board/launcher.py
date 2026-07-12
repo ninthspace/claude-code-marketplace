@@ -16,6 +16,7 @@ Neither form is ever built by unescaped string interpolation of a path.
 
 from __future__ import annotations
 
+import os
 import shlex
 import sys
 
@@ -41,31 +42,46 @@ class UnsupportedTerminalError(RuntimeError):
     """
 
 
+def _launch_string(project_path: str, command: str | None) -> str:
+    """The ``cd <path> && claude [command]`` line, shell-safe.
+
+    Both interpolated values — the project path and any ``/cpm:… `` command — are
+    ``shlex.quote()``d, so a path with spaces, quotes, or shell metacharacters
+    neither breaks the command nor injects. ``command is None`` means a **plain**
+    ``claude`` (open the project with no operation).
+    """
+    cd = f"cd {shlex.quote(str(project_path))}"
+    run = "claude" if command is None else f"claude {shlex.quote(command)}"
+    return f"{cd} && {run}"
+
+
 def clipboard_command(project_path: str, action: NextAction) -> str:
-    """Build the ``cd <path> && claude "<command>"`` string for the clipboard.
-
-    Both interpolated values — the project path and the ``/cpm:do …`` command —
-    are ``shlex.quote()``d, so a path with spaces, quotes, or shell
-    metacharacters neither breaks the command nor injects.
-    """
+    """Build the ``cd <path> && claude "<command>"`` string for the clipboard."""
     if action.command is None:
         raise NoCommandError(f"{action.kind} has no runnable command")
-    return f"cd {shlex.quote(str(project_path))} && claude {shlex.quote(action.command)}"
+    return _launch_string(project_path, action.command)
 
 
-def direct_launch(project_path: str, action: NextAction) -> tuple[list[str], str]:
-    """Build the ``(argv, cwd)`` for running the session **inline** with ``subprocess``.
+def open_clipboard_command(project_path: str) -> str:
+    """Build the ``cd <path> && claude`` string that opens a **plain** session — no
+    ``/cpm`` command, just Claude at the project directory."""
+    return _launch_string(project_path, None)
 
-    Used by the board's suspend-inline launch: the board drops its screen and
-    ``subprocess.run(argv, cwd=cwd)`` runs ``claude`` full-size in the same
-    terminal until it exits. The command is a **single argv element** (``claude``
-    takes the prompt as one positional argument), so it is handed to the OS with no
-    shell — no ``shell=True``, no shell string, and the cwd path is never
-    shell-parsed.
+
+def ralph_command(project_path: str, epic_paths: list[str]) -> str:
+    """Build the ``/cpm:ralph <epics…>`` command for autonomous multi-epic execution.
+
+    Each epic is passed as a project-relative path, sorted so ``ralph`` runs them in
+    filename (numeric-prefix) order, and every path is ``shlex.quote()``d — ``ralph``
+    re-parses its arguments the way a shell tokenises them, so this is the *inner*
+    quoting layer (the outer shell layer is added when this command flows through
+    :func:`clipboard_command`). With no epics the bare ``/cpm:ralph`` is returned, so
+    ralph auto-discovers every incomplete epic itself.
     """
-    if action.command is None:
-        raise NoCommandError(f"{action.kind} has no runnable command")
-    return ["claude", action.command], str(project_path)
+    if not epic_paths:
+        return "/cpm:ralph"
+    rels = sorted(os.path.relpath(path, project_path) for path in epic_paths)
+    return "/cpm:ralph " + " ".join(shlex.quote(rel) for rel in rels)
 
 
 def _applescript_literal(text: str) -> str:
@@ -79,26 +95,14 @@ def _applescript_literal(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def terminal_launch(
-    project_path: str, action: NextAction, *, platform: str = sys.platform
-) -> list[str]:
-    """Build the argv that opens the session in a **new, detached** terminal window.
+def _osascript_launch(command: str, platform: str) -> list[str]:
+    """Wrap a shell-safe ``command`` in the ``osascript`` argv that runs it in a new
+    Terminal.app window. On macOS the command is escaped for the AppleScript string
+    layer, then handed to ``osascript`` as discrete ``-e`` argv elements — no shell
+    at any layer. Non-macOS has no detached-window support yet.
 
-    Running ``claude`` in-place would block the board's TUI until the session ends
-    and fight it for the terminal. Instead we hand a ``cd <path> && claude
-    <command>`` line to the host terminal, which opens its own window and owns the
-    session's lifetime; the board spawns this, returns immediately, and stays
-    interactive.
-
-    Shell-safety holds across both layers with no shell anywhere: the inner command
-    comes from :func:`clipboard_command` (every path ``shlex.quote``d), and on macOS
-    it is additionally escaped for the AppleScript string layer before ``osascript``
-    receives it as discrete ``-e`` argv elements.
-
-    :raises NoCommandError: the action has no runnable command.
     :raises UnsupportedTerminalError: no detached-terminal support for ``platform``.
     """
-    command = clipboard_command(project_path, action)  # raises NoCommandError if none
     if platform == "darwin":
         literal = _applescript_literal(command)
         return [
@@ -109,6 +113,33 @@ def terminal_launch(
             'tell application "Terminal" to activate',
         ]
     raise UnsupportedTerminalError(
-        f"Opening a detached terminal isn't supported on {platform!r} yet — "
+        f"Opening a new terminal window isn't supported on {platform!r} yet — "
         "press c to copy the command and paste it into a terminal instead."
     )
+
+
+def terminal_launch(
+    project_path: str, action: NextAction, *, platform: str = sys.platform
+) -> list[str]:
+    """Build the argv that opens the session in a **new** terminal window.
+
+    Running ``claude`` in-place would block the board's TUI until the session ends
+    and fight it for the terminal. Instead we hand a ``cd <path> && claude
+    <command>`` line to the host terminal, which opens its own window and owns the
+    session's lifetime; the board spawns this, returns immediately, and stays
+    interactive.
+
+    Shell-safety holds with no shell anywhere: the inner command comes from
+    :func:`clipboard_command` (every path ``shlex.quote``d), then the AppleScript
+    layer is added by :func:`_osascript_launch`.
+
+    :raises NoCommandError: the action has no runnable command.
+    :raises UnsupportedTerminalError: no new-window support for ``platform``.
+    """
+    return _osascript_launch(clipboard_command(project_path, action), platform)
+
+
+def open_terminal_launch(project_path: str, *, platform: str = sys.platform) -> list[str]:
+    """Build the argv that opens a **plain** ``claude`` (no command) in a new window
+    at the project directory — the ``o`` "open project" launch."""
+    return _osascript_launch(open_clipboard_command(project_path), platform)

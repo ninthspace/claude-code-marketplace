@@ -3,7 +3,6 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "textual>=0.80",
-#     "pyte>=0.8",
 # ]
 # ///
 """cpm board — a cross-project CPM status board & launcher.
@@ -18,8 +17,9 @@ Run directly with uv (deps are provisioned from the PEP 723 block above):
 
 With no subcommand this launches the Textual TUI: a three-column
 projects → epics → stories browser (Miller / ranger style). Selecting a project
-populates its epics; selecting an epic populates its stories. Launch (`l`) and
-copy (`c`) act on the highlighted epic candidate, in the project's cwd. The
+populates its epics; selecting an epic populates its stories. Launch (`l`) opens
+the target in a new terminal window; open (`o`) opens a plain Claude at the
+selected project's directory; copy (`c`) copies the launch command. The
 ``add`` / ``remove`` / ``list`` subcommands manage the opt-in project registry
 (see ``registry.py``). Status derivation conforms to ``cpm/shared/status-model.md``.
 """
@@ -50,12 +50,17 @@ import cache
 import launcher
 import registry
 from cache import derive_project_cached
-from embedded_terminal import EmbeddedTerminal
 from registry import RegistryEntry, load_registry
 from status_model import NextAction
 
 _REGISTRY_COMMANDS = {"add", "remove", "list"}
 _COLUMN_IDS = ("projects", "epics", "stories")
+
+#: Foreground for an epic ralph-selected via `space`. Blue is outside the epic
+#: status palette (green/yellow/red/cyan/magenta/dim), so it reads as "selected"
+#: without a marker glyph — and because InverseOptionList blends the cursor bar
+#: from the row's own colour, the selection stays visible under the cursor too.
+_RALPH_STYLE = "bold blue"
 
 
 def _pbcopy(text: str) -> None:
@@ -263,10 +268,10 @@ class BoardCommands(Provider):
     def _command_specs(self) -> list[tuple[str, str, object]]:
         app = self.app
         return [
-            ("Launch here", "Run the session in an embedded pane", app.action_launch_embedded),
-            ("Launch full-screen", "Suspend the board and run the session inline", app.action_launch_inline),
-            ("Launch in a new window", "Open the session in a detached terminal", app.action_launch_detached),
+            ("Launch", "Run the target in a new terminal window", app.action_launch),
+            ("Open project", "Open a plain Claude at the project directory", app.action_open_plain),
             ("Copy command", "Copy the launch command to the clipboard", app.action_copy),
+            ("Ralph-select epic", "Toggle the highlighted epic for a /cpm:ralph run", app.action_toggle_ralph),
             ("Add project", "Register a project", app.action_add_project),
             ("Remove project", "Unregister the highlighted project", app.action_remove_project),
             ("Show/hide completed", "Toggle completed epics & stories", app.action_toggle_complete),
@@ -306,10 +311,10 @@ class BoardApp(App[None]):
         ("a", "add_project", "Add"),
         ("x", "remove_project", "Remove"),
         ("z", "toggle_complete", "Show/hide done"),
+        ("space", "toggle_ralph", "Ralph-select"),
         ("c", "copy", "Copy"),
-        ("l", "launch_embedded", "Launch here"),
-        ("i", "launch_inline", "Launch (full-screen)"),
-        ("L", "launch_detached", "Launch window"),
+        ("l", "launch", "Launch"),
+        ("o", "open_plain", "Open project"),
         ("left", "focus_left", "◀ column"),
         ("right", "focus_right", "column ▶"),
     ]
@@ -321,15 +326,6 @@ class BoardApp(App[None]):
     .col {
         width: 1fr;
         border-right: solid $panel;
-    }
-    .col.hidden {
-        display: none;
-    }
-    /* The embedded session pane takes the space the epics + stories columns
-       vacate (2 of the 3 equal columns); the projects column stays visible. */
-    #embedded {
-        width: 2fr;
-        height: 1fr;
     }
     .col-title {
         padding: 1 2;
@@ -368,8 +364,6 @@ class BoardApp(App[None]):
         runner: Callable[..., object] | None = None,
         add_project_root: Path | None = None,
         platform: str | None = None,
-        suspend: Callable[[], object] | None = None,
-        terminal_spawn: Callable[..., int] | None = None,
     ) -> None:
         super().__init__()
         self._entries = entries
@@ -382,21 +376,20 @@ class BoardApp(App[None]):
         # Injectable boundary (retro 10): copy/launch route through these seams so
         # the security-critical paths are tested with stubs.
         self._clipboard_writer = clipboard_writer or _pbcopy
-        # Launch has two modes: inline (suspend the board, run claude full-size in
-        # this terminal) and detached (osascript opens a new window). The default
-        # runner drives both; the suspend seam lets the inline path be tested
-        # without a real terminal to suspend.
+        # Launch hands an osascript argv to the OS, which opens a new terminal
+        # window and owns the session; the board never blocks. The runner seam lets
+        # the spawn be asserted in tests without opening a real window.
         self._runner = runner or subprocess.run
         self._platform = platform or sys.platform
-        self._suspend = suspend or self.suspend
-        # Embedded-terminal launch (`l`): fork/exec seam (stubbed in tests) and the
-        # single live pane, if any.
-        self._terminal_spawn = terminal_spawn
-        self._embedded: EmbeddedTerminal | None = None
         self._projects: list[tuple[str, object]] = []  # (name, ProjectStatus), display order
         self._epic_rows: list[board_view.EpicRow] = []
         self._current_project: object | None = None  # ProjectStatus shown in the epics column
         self._show_complete = False
+        # Epics ralph-selected (by absolute target_path) for a `/cpm:ralph` launch.
+        # Scoped to the project in the epics column: cleared when the project changes
+        # (`_ralph_project` tracks whose selection this is). Ralph runs one project.
+        self._ralph_selection: set[str] = set()
+        self._ralph_project: str | None = None
         # Guards the cascade while columns are rebuilt programmatically, so a
         # rebuild's highlight change doesn't re-trigger the handler that rebuilds
         # the downstream column (we cascade explicitly instead).
@@ -411,7 +404,7 @@ class BoardApp(App[None]):
             with Vertical(classes="col", id="col-epics"):
                 yield Label(
                     "Epics   [green]ready[/]  [yellow]in-progress[/]  [red]blocked[/]  "
-                    "[cyan]retro[/]  [magenta]needs epics[/]",
+                    "[cyan]retro[/]  [magenta]needs epics[/]  [blue]ralph ✓[/]",
                     classes="col-title",
                 )
                 yield InverseOptionList(id="epics")
@@ -489,11 +482,14 @@ class BoardApp(App[None]):
     ) -> None:
         self._current_project = status
         self._epic_rows = board_view.epic_rows(status, show_complete=self._show_complete)
+        self._reconcile_ralph_selection(status)
         option_list = self.query_one("#epics", OptionList)
         self._suppress = True
         option_list.clear_options()
         for row in self._epic_rows:
-            option_list.add_option(Option(Text(row.label, style=row.style)))
+            selected = self._is_ralph_eligible(row) and row.action.target_path in self._ralph_selection
+            style = _RALPH_STYLE if selected else row.style
+            option_list.add_option(Option(Text(row.label, style=style)))
         if self._epic_rows:
             option_list.highlighted = _clamp(keep_epic, len(self._epic_rows))
         self._suppress = False
@@ -644,6 +640,74 @@ class BoardApp(App[None]):
 
     # --- launch actions ------------------------------------------------------
 
+    @staticmethod
+    def _is_ralph_eligible(row: board_view.EpicRow) -> bool:
+        """Whether an epic row can be ralph-selected. Ralph wraps ``/cpm:do``, so
+        only ``do`` candidates (in-progress + ready epics) qualify — blocked, retro,
+        needs-epics and reference-only rows have nothing for ralph to execute."""
+        return (
+            row.action is not None
+            and row.action.kind == "do"
+            and row.action.target_path is not None
+        )
+
+    def _reconcile_ralph_selection(self, status: object) -> None:
+        """Keep the ralph selection consistent with the epics column being shown:
+        drop it wholesale when the project changed, then prune any paths no longer
+        present as ``do`` rows (e.g. an epic that has since completed)."""
+        project_key = str(getattr(status, "path", None))
+        if project_key != self._ralph_project:
+            self._ralph_selection = set()
+            self._ralph_project = project_key
+        eligible = {
+            row.action.target_path for row in self._epic_rows if self._is_ralph_eligible(row)
+        }
+        self._ralph_selection &= eligible
+
+    def action_toggle_ralph(self) -> None:
+        """Toggle the highlighted epic in/out of the ralph selection (``space``).
+
+        Only fires in the epics column and only for ``do`` rows; the selection
+        recolours (blue) rather than adding a marker, and drives what ``c``/``l``/
+        ``i``/``L`` launch — a ``/cpm:ralph`` over the selected epics.
+        """
+        focused = self.focused
+        if focused is None or focused.id != "epics" or not self._epic_rows:
+            return
+        index = self.query_one("#epics", OptionList).highlighted
+        if index is None or not (0 <= index < len(self._epic_rows)):
+            return
+        row = self._epic_rows[index]
+        if not self._is_ralph_eligible(row):
+            self.notify("Only runnable epics can be ralph-selected", severity="warning")
+            return
+        path = row.action.target_path
+        if path in self._ralph_selection:
+            self._ralph_selection.discard(path)
+        else:
+            self._ralph_selection.add(path)
+        self._populate_epics(
+            self._current_project, keep_epic=index, keep_story=self._story_highlight()
+        )
+
+    def _story_highlight(self) -> int | None:
+        return self.query_one("#stories", OptionList).highlighted
+
+    def _clear_ralph_selection(self) -> None:
+        """Drop the selection and repaint (after a ralph launch fires)."""
+        if not self._ralph_selection:
+            return
+        self._ralph_selection = set()
+        index = self.query_one("#epics", OptionList).highlighted
+        self._populate_epics(self._current_project, keep_epic=index, keep_story=self._story_highlight())
+
+    def _ralph_action(self) -> NextAction:
+        """Synthesize the ``/cpm:ralph <epics…>`` action for the current selection."""
+        command = launcher.ralph_command(
+            str(self._current_project.path), sorted(self._ralph_selection)
+        )
+        return NextAction("ralph", command, None, f"Ralph over {len(self._ralph_selection)} epic(s)")
+
     def _selected_epic_row(self) -> board_view.EpicRow | None:
         """The highlighted epic candidate, or ``None`` when it isn't launchable."""
         if not self._epic_rows or self._current_project is None:
@@ -673,10 +737,15 @@ class BoardApp(App[None]):
           back** to a bare ``/cpm:do`` (never a dead key) and returns a note so the
           toast explains the fallback.
 
+        A non-empty **ralph selection** takes precedence over the column logic: the
+        launch family then operates on a ``/cpm:ralph`` over the selected epics.
+
         Returns ``(None, note)`` only when there is no project at all.
         """
         if self._current_project is None:
             return None, "Nothing to launch — no project selected"
+        if self._ralph_selection:
+            return self._ralph_action(), None
         focused = self.focused
         column = focused.id if focused is not None and focused.id in _COLUMN_IDS else "projects"
         if column == "projects":
@@ -696,69 +765,31 @@ class BoardApp(App[None]):
         self._clipboard_writer(command)
         self.notify(note or f"Copied: {action.command}")
 
-    def action_launch_embedded(self) -> None:
-        """Run the focused target in a pane covering the epics + stories columns.
-
-        The board stays mounted alongside (projects column still visible); the
-        session runs in an embedded PTY terminal. Press F10, or exit the session,
-        to close the pane and restore the columns.
+    def action_open_plain(self) -> None:
+        """Open a **plain** Claude — no `/cpm` command — in a new terminal window at
+        the selected project's directory (`o`). Ignores the epic candidate and any
+        ralph selection: this is "just open the project", nothing else.
         """
-        if self._embedded is not None:
-            return  # one embedded session at a time
-        action, note = self._launch_target()
-        if action is None or action.command is None:
-            self.notify(note or "Nothing to launch here", severity="warning")
+        if self._current_project is None:
+            self.notify("Nothing to open — no project selected", severity="warning")
             return
-        argv, cwd = launcher.direct_launch(str(self._current_project.path), action)
-        terminal = EmbeddedTerminal(argv, cwd=cwd, spawn=self._terminal_spawn, id="embedded")
-        self._embedded = terminal
-        self.query_one("#col-epics").add_class("hidden")
-        self.query_one("#col-stories").add_class("hidden")
-        self.query_one("#columns").mount(terminal)
-        # Focus after the widget is actually in the DOM, else keys keep going to
-        # the columns and the session looks frozen.
-        self.call_after_refresh(terminal.focus)
-        self.notify(note or "Launched here — press F10 to close the session pane")
-
-    def on_embedded_terminal_exited(self, event: EmbeddedTerminal.Exited) -> None:
-        """Close the pane when its session ends (F10 or the process exiting)."""
-        self._close_embedded()
-
-    def _close_embedded(self) -> None:
-        if self._embedded is None:
+        try:
+            argv = launcher.open_terminal_launch(
+                str(self._current_project.path), platform=self._platform
+            )
+        except launcher.UnsupportedTerminalError as exc:
+            self.notify(str(exc), severity="error")
             return
-        terminal = self._embedded
-        self._embedded = None  # first, so a re-entrant Exited is a no-op
-        if terminal.is_mounted:
-            terminal.remove()
-        self.query_one("#col-epics").remove_class("hidden")
-        self.query_one("#col-stories").remove_class("hidden")
-        self.query_one("#epics", OptionList).focus()
+        self._runner(argv)
+        self.notify("Opened Claude in a new window")
 
-    def action_launch_inline(self) -> None:
-        """Run the focused target's session inline, taking over the whole terminal.
+    def action_launch(self) -> None:
+        """Launch the focused target in a **new terminal window** (`l`).
 
-        The board suspends (drops its screen), claude runs full-size in this same
-        terminal, and the board is restored exactly where it was when the session
-        exits. Blocking is the point here — you're in the session until you leave it.
-        """
-        action, note = self._launch_target()
-        if action is None or action.command is None:
-            self.notify(note or "Nothing to launch here", severity="warning")
-            return
-        argv, cwd = launcher.direct_launch(str(self._current_project.path), action)
-        with self._suspend():
-            self._runner(argv, cwd=cwd)
-        if note:
-            self.notify(note)
-
-    def action_launch_detached(self) -> None:
-        """Open the focused target's session in a new, detached terminal window.
-
-        The board does not block, so instead of running claude in-place we hand the
-        command to the OS terminal, which owns its own window. Control returns here
-        immediately and the board stays interactive — good for several sessions at
-        once.
+        The board never blocks: the command is handed to the OS terminal, which
+        owns its own window, and control returns here immediately — good for
+        running several sessions at once. On platforms without new-window support
+        yet, this notes to use copy (`c`) instead.
         """
         action, note = self._launch_target()
         if action is None or action.command is None:
@@ -772,7 +803,9 @@ class BoardApp(App[None]):
             self.notify(str(exc), severity="error")
             return
         self._runner(argv)
-        self.notify(note or f"Launched in a new terminal: {action.command}")
+        self.notify(note or f"Launched in a new window: {action.command}")
+        if action.kind == "ralph":
+            self._clear_ralph_selection()
 
 
 def refresh_cli(
