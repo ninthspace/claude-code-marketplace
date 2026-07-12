@@ -74,7 +74,7 @@ Start a one-to-one conversation with a chosen agent persona for focused problem-
 - **Invite**: "invite Bella" or "bring in the architect" — add agents to the conversation
 - **Dismiss**: "dismiss Bella" — remove agents from the conversation
 - **Lead transfer**: "Margot, take the lead" — hand facilitation to an agent who will drive the conversation with probing questions and structured exploration
-- **Exit**: "exit", "done", "quit" — end the consultation
+- **Exit**: "wrap up", "done", "end consultation", or "goodbye" — end the consultation. Use **"wrap up"** as the primary trigger; avoid "exit"/"quit", which are reserved by the Claude Code CLI and will terminate the session outright
 
 **User leads by default**. When you hand the lead to an agent, they shift to a probing, structured style — challenging assumptions and driving exploration. Reclaim the lead naturally by asking a direct question or giving a directive.
 
