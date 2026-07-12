@@ -163,7 +163,7 @@ Follow the shared **Progress File Management** procedure.
 # CPM Session State
 
 **Skill**: cpm:pivot
-**Step**: {N} of 4 — {Step Name}
+**Step**: {N} of 5 — {Step Name}
 **Target document**: {path to document being amended}
 **Chain**: {brief → spec → epics paths, or "single document"}
 
@@ -180,6 +180,9 @@ Follow the shared **Progress File Management** procedure.
 
 ### Step 4: Task Impact Flagging
 {Summary — affected tasks identified, user decisions}
+
+### Step 5: Retro Handoff (optional)
+{Summary — whether a retro was offered/captured, or skipped}
 
 {...include only completed steps...}
 
