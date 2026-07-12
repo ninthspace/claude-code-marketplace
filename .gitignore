@@ -1,2 +1,5 @@
 # macOS
 .DS_Store
+
+# CPM transient session-state files (created/deleted by running skills)
+docs/plans/.cpm-progress-*.md
