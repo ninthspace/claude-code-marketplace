@@ -1,6 +1,6 @@
 ---
 name: cpm:quick
-description: Lightweight execution for small, well-defined changes. Bypasses the full CPM pipeline — accept a description, assess scope, confirm, execute, and produce a completion record. Use for changes that skip discover/brief/spec/epics ceremony. Triggers on "/cpm:quick".
+description: Lightweight execution for small, well-defined changes. Bypasses the full CPM pipeline — classifies the input as a fix or a change (diagnosing root cause for fixes), assesses scope, confirms, executes, and produces a completion record. Use for changes that skip discover/brief/spec/epics ceremony. Triggers on "/cpm:quick".
 ---
 
 # Quick Execution

@@ -1,6 +1,6 @@
 ---
 name: cpm:retro
-description: Lightweight retrospective. Reads a completed epic doc, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Also promotes durable lessons into the reference library via "/cpm:retro learn". Triggers on "/cpm:retro".
+description: Lightweight retrospective. Reads a completed epic doc or quick record, synthesises observations, and writes a retro file for feed-forward into the next planning cycle. Promotes durable lessons into the reference library via "/cpm:retro learn" and retires spent lessons via "/cpm:retro retire". Triggers on "/cpm:retro".
 ---
 
 # Lightweight Retrospective

@@ -1,6 +1,6 @@
 ---
 name: cpm:review
-description: Adversarial review of epic docs and stories. Agents from the party roster examine planning artifacts through their professional lens, challenging assumptions, spotting gaps, and flagging risks. Triggers on "/cpm:review".
+description: Adversarial review of epic docs and stories. Agents from the party roster examine planning artifacts through their professional lens, challenging assumptions, spotting gaps, and flagging risks. Can optionally auto-generate remediation tasks or stories from the findings. Triggers on "/cpm:review".
 ---
 
 # Adversarial Review

@@ -1,6 +1,6 @@
 ---
 name: cpm:consult
-description: Focused one-to-one consultation with a chosen agent persona. Start a deep conversation with one expert, invite others as needed, and transfer the facilitation lead. Use for focused problem-solving, expert Q&A, or guided exploration. Triggers on "/cpm:consult".
+description: Focused one-to-one consultation with a chosen agent persona. Start a deep conversation with one expert, invite others as needed, and transfer the facilitation lead. Use for focused problem-solving, expert Q&A, or guided exploration. On exit, saves a discussion record to docs/discussions/ and offers handoff to /cpm:discover, /cpm:spec, or /cpm:epics. Triggers on "/cpm:consult".
 ---
 
 # Consult Mode
