@@ -14,30 +14,13 @@ import pytest
 
 from launcher import (
     NoCommandError,
-    UnsupportedTerminalError,
     clipboard_command,
+    parse_tmux_windows,
     ralph_command,
-    terminal_launch,
+    tmux_list_windows_argv,
 )
 from status_model import NextAction
 
-
-def _unescape_applescript(text: str) -> str:
-    """Reverse ``_applescript_literal`` — drop the backslash before any escaped char.
-
-    One left-to-right pass undoes both ``\\\\`` → ``\\`` and ``\\"`` → ``"`` correctly,
-    so the recovered string is the exact shell command that was embedded.
-    """
-    out: list[str] = []
-    i = 0
-    while i < len(text):
-        if text[i] == "\\" and i + 1 < len(text):
-            out.append(text[i + 1])
-            i += 2
-        else:
-            out.append(text[i])
-            i += 1
-    return "".join(out)
 
 # A project root and a command each laden with metacharacters that would break
 # or inject if interpolated into a shell string unescaped.
@@ -83,55 +66,32 @@ def test_clipboard_string_shape_for_a_benign_path():
     )
 
 
-# --- detached terminal launch (macOS): osascript argv, never a shell string ---
+# --- liveness poll: list-windows argv + parse (captures window-id handles) ----
 
 
-def test_terminal_launch_wraps_the_command_for_a_new_macos_window():
-    action = do_action("/cpm:do docs/epics/39-01-epic-foo.md")
-    argv = terminal_launch("/home/me/proj", action, platform="darwin")
-
-    # An osascript invocation whose script tells Terminal to run the exact
-    # shell-safe command in a fresh window, then bring it to the front.
-    assert argv == [
-        "osascript",
-        "-e",
-        'tell application "Terminal" to do script '
-        "\"cd /home/me/proj && claude '/cpm:do docs/epics/39-01-epic-foo.md'\"",
-        "-e",
-        'tell application "Terminal" to activate',
+def test_tmux_list_windows_argv_lists_session_and_window_id():
+    # A `session_name window_id` listing across all sessions — argv, never a shell string.
+    assert tmux_list_windows_argv() == [
+        "tmux",
+        "list-windows",
+        "-a",
+        "-F",
+        "#{session_name} #{window_id}",
     ]
 
 
-def test_terminal_launch_is_safe_across_both_escaping_layers():
-    # A path laden with a double-quote and backslash exercises the AppleScript
-    # layer on top of the shell layer.
-    path = '/tmp/a b"c\\d; rm -rf ~ #'
-    action = do_action()
-    argv = terminal_launch(path, action, platform="darwin")
-
-    prefix = 'tell application "Terminal" to do script "'
-    do_script = argv[2]
-    assert do_script.startswith(prefix) and do_script.endswith('"')
-
-    # Peel the AppleScript string layer → the inner shell command must be exactly
-    # the shlex-quoted clipboard command, and that command must still tokenise to
-    # the exact args (no metacharacter leaked out as a word or operator).
-    inner = _unescape_applescript(do_script[len(prefix):-1])
-    assert inner == clipboard_command(path, action)
-    assert shlex.split(inner) == ["cd", path, "&&", "claude", action.command]
+def test_parse_tmux_windows_maps_session_to_window_id():
+    out = "cpm-proj-1 @0\ncpm-other-2 @3\n\n  cpm-proj-3 @5  \n"
+    assert parse_tmux_windows(out) == {
+        "cpm-proj-1": "@0",
+        "cpm-other-2": "@3",
+        "cpm-proj-3": "@5",
+    }
 
 
-def test_terminal_launch_never_builds_a_bare_shell_string():
-    argv = terminal_launch(NASTY_PATH, do_action(), platform="darwin")
-    # osascript receives the AppleScript as discrete -e argv elements; the process
-    # is spawned with no shell, so nothing re-parses the path.
-    assert argv[0] == "osascript"
-    assert argv.count("-e") == 2
-
-
-def test_terminal_launch_unsupported_platform_raises():
-    with pytest.raises(UnsupportedTerminalError):
-        terminal_launch(NASTY_PATH, do_action(), platform="linux")
+def test_parse_tmux_windows_empty_output_is_empty_map():
+    # No server / no windows → empty stdout → no live sessions.
+    assert parse_tmux_windows("") == {}
 
 
 # --- ralph command: multi-epic /cpm:ralph, relative + shlex-quoted ------------
@@ -184,8 +144,3 @@ def test_ralph_command_flows_safely_through_the_clipboard_layer():
 def test_clipboard_command_rejects_action_without_command():
     with pytest.raises(NoCommandError):
         clipboard_command(NASTY_PATH, unblock_action())
-
-
-def test_terminal_launch_rejects_action_without_command():
-    with pytest.raises(NoCommandError):
-        terminal_launch(NASTY_PATH, unblock_action(), platform="darwin")

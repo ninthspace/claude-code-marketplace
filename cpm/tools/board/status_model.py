@@ -155,6 +155,39 @@ def parse_epic(path: Path) -> Epic:
     )
 
 
+def story_section(text: str, story: Story) -> str:
+    """Extract one story's ``## `` section from an epic doc's text — the heading line
+    through the line before the next ``##`` (or a top-level ``#``) heading.
+
+    Matched by story number (the ``**Story**: N`` field, the stable key) with the
+    ``##`` heading title as fallback. Returns ``""`` when no section matches.
+    """
+    lines = text.splitlines()
+    starts = [i for i, line in enumerate(lines) if re.match(r"^##\s+", line)]
+    blocks: list[tuple[str, str]] = []  # (stripped heading title, section text)
+    for k, start in enumerate(starts):
+        end = starts[k + 1] if k + 1 < len(starts) else len(lines)
+        for j in range(start + 1, end):
+            if re.match(r"^#\s+", lines[j]):  # a top-level heading closes the section
+                end = j
+                break
+        block = "\n".join(lines[start:end]).rstrip()
+        heading = _strip_tags(re.match(r"^##\s+(.*)$", lines[start]).group(1))
+        blocks.append((heading, block))
+        number = _field(block, "Story")
+        if (
+            story.number is not None
+            and number is not None
+            and number.isdigit()
+            and int(number) == story.number
+        ):
+            return block
+    for heading, block in blocks:  # number didn't match → fall back to the title
+        if story.title and heading == story.title:
+            return block
+    return ""
+
+
 def _spec_paths(root: Path) -> list[Path]:
     directory = root / "docs" / "specifications"
     return sorted(directory.glob("[0-9]*-spec-*.md")) if directory.is_dir() else []

@@ -10,7 +10,7 @@ import subprocess
 
 import pytest
 
-from status_model import State, derive_project, read_head
+from status_model import State, Story, derive_project, read_head, story_section
 
 
 def epic_md(epic_status="Pending", stories=(), blocked_by="—"):
@@ -138,3 +138,30 @@ def test_derivation_is_read_only(make_project):
         ["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True
     )
     assert porcelain.stdout.strip() == ""  # no working-tree changes
+
+
+# --- story_section: slice one story's section out of an epic doc ---------------
+
+_THREE = epic_md(
+    "In Progress", [(1, "Complete", "—"), (2, "In Progress", "—"), (3, "Pending", "—")]
+)
+
+
+def test_story_section_returns_only_the_matching_story_by_number():
+    section = story_section(_THREE, Story(number=2, status="In Progress", blocked_by="—", title="Story 2"))
+    assert "## Story 2" in section
+    assert "**Status**: In Progress" in section
+    # It is a section, not the whole file: neither sibling story nor the H1 preamble.
+    assert "## Story 1" not in section
+    assert "## Story 3" not in section
+    assert "# Test Epic" not in section
+
+
+def test_story_section_falls_back_to_the_title_when_number_is_absent():
+    section = story_section(_THREE, Story(number=None, status="", blocked_by="—", title="Story 3"))
+    assert "## Story 3" in section
+    assert "## Story 2" not in section
+
+
+def test_story_section_is_empty_when_no_story_matches():
+    assert story_section(_THREE, Story(number=99, status="", blocked_by="—", title="Nope")) == ""

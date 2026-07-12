@@ -14,6 +14,10 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from rich.console import RenderableType
+from rich.table import Table
+from rich.text import Text
+
 from status_model import _NO_DEP, Epic, NextAction, ProjectStatus, State
 
 #: Rich style per project state, on the *same palette as the epics legend* so the
@@ -72,6 +76,35 @@ def project_label(name: str, status: ProjectStatus) -> str:
     """Left-column line for a project: name · progress. The state word is dropped —
     colour (``project_style``) conveys it, matching the epics column."""
     return f"{name}  ·  {status.progress}"
+
+
+#: The "running" pill for a project with a live board-launched tmux session. Blue
+#: is unused by the project-state palette (red/yellow/green/magenta/dim), so the
+#: pill reads as distinct on any row. It is foreground-only (no background), so
+#: ``InverseOptionList``'s cursor blend — which samples a row's own colour and
+#: background — is unaffected: the label segments come first, so the row colour is
+#: still sampled from them and no background is introduced.
+_LIVE_PILL = "● live"
+_LIVE_PILL_STYLE = "bold blue"
+
+
+def project_row_text(name: str, status: ProjectStatus, *, live: bool = False) -> RenderableType:
+    """Projects-column row: the coloured name · progress label, and — when the
+    project has a running board-launched session — a "live" pill **right-aligned**
+    to the column edge.
+
+    Not live → a plain ``Text`` (the common case). Live → an expanding
+    ``Table.grid``: the label fills a ratio column and the pill sits in a
+    right-justified column, so it hugs the right regardless of column width. The
+    pill keeps its own colour (a separate cell) over the row's status colour."""
+    label = Text(project_label(name, status), style=project_style(status.state))
+    if not live:
+        return label
+    row = Table.grid(expand=True)
+    row.add_column(ratio=1)  # label — fills the remaining width
+    row.add_column(justify="right")  # pill — hugs the right edge
+    row.add_row(label, Text(_LIVE_PILL, style=_LIVE_PILL_STYLE))
+    return row
 
 
 # --- Miller-column model: epics (middle) and stories (right) ------------------
@@ -222,22 +255,13 @@ def blocking_rows(epic: Epic) -> list[tuple[str, str]]:
     return [("Blocked by:", "bold red"), *[(ref, "red") for ref in refs]]
 
 
-def spec_preview_rows(text: str) -> list[tuple[str, str]]:
-    """Right-column preview of a spec selected for break-down: its own lines, with
-    markdown headings emphasised and metadata dimmed so the spec is scannable in
-    place. A ``needs epics`` row has no stories yet — this shows the source instead.
-    """
-    rows: list[tuple[str, str]] = []
-    for raw in text.splitlines():
-        line = raw.rstrip()
-        if line.startswith("#"):
-            style = "bold"
-        elif line.startswith("**") or line.startswith(">"):
-            style = "dim"
-        else:
-            style = ""
-        rows.append((line or " ", style))
-    return rows
+def visible_stories(epic: Epic | None, *, show_complete: bool = False):
+    """The stories shown in the stories column, in order — complete ones hidden unless
+    ``show_complete``. The board maps a highlighted row back to its ``Story`` through
+    this same list, so :func:`story_rows` is defined in its terms (no drift)."""
+    if epic is None:
+        return []
+    return [s for s in epic.stories if show_complete or s.status != "Complete"]
 
 
 def story_rows(epic: Epic | None, *, show_complete: bool = False) -> list[tuple[str, str]]:
@@ -246,12 +270,8 @@ def story_rows(epic: Epic | None, *, show_complete: bool = False) -> list[tuple[
     Complete stories are hidden unless ``show_complete``; a spec-breakdown row
     (``epic is None``) has no stories.
     """
-    if epic is None:
-        return []
     rows: list[tuple[str, str]] = []
-    for story in epic.stories:
-        if not show_complete and story.status == "Complete":
-            continue
+    for story in visible_stories(epic, show_complete=show_complete):
         number = story.number if story.number is not None else "?"
         title = story.title or ""
         label = f"Story {number} · {title}  ·  {story.status or '—'}"

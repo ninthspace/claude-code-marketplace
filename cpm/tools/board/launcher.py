@@ -3,22 +3,28 @@
 Textual-free so the security-critical paths are unit-tested directly, without a
 Pilot event loop — the same split that made ``board_view`` and ``registry``
 testable. A :class:`~status_model.NextAction` and a project root become one of
-two launch forms:
+these launch forms:
 
 - a **clipboard string** — a shell command the user pastes into a terminal, with
   every interpolated path ``shlex.quote()``d;
-- a **detached-terminal argv** — an ``osascript`` invocation that opens the
-  session in a *new* terminal window, so the board never blocks on the session
-  and never re-parses a path through a shell.
+- a **tmux argv plan** — creates a detached tmux session running that same
+  shell-safe command. tmux runs the single command string via its own shell, so
+  the exact ``cd … && claude …`` clipboard string is reused verbatim as one argv
+  element — no extra escaping layer, and no shell in *our* code (every ``tmux``
+  invocation is an argv list).
 
-Neither form is ever built by unescaped string interpolation of a path.
+tmux is the sole launch backend (:func:`select_launch_backend`); where it is
+absent the TUI falls back to the clipboard string. No form is ever built by
+unescaped string interpolation of a path.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shlex
-import sys
+
+from pathlib import Path
 
 from status_model import NextAction
 
@@ -30,15 +36,6 @@ class NoCommandError(ValueError):
     to copy or launch. Callers (the TUI in Story 2) check ``command is not None``
     first and treat those candidates as no-ops; this error is the loud backstop
     if that guard is ever bypassed.
-    """
-
-
-class UnsupportedTerminalError(RuntimeError):
-    """Raised when there is no known way to open a detached terminal on this OS.
-
-    Detached-window launching is currently macOS-only (via ``osascript`` +
-    Terminal.app). On other platforms the TUI catches this and points the user at
-    the copy key instead, so launch degrades to a paste rather than a crash.
     """
 
 
@@ -84,62 +81,192 @@ def ralph_command(project_path: str, epic_paths: list[str]) -> str:
     return "/cpm:ralph " + " ".join(shlex.quote(rel) for rel in rels)
 
 
-def _applescript_literal(text: str) -> str:
-    """Escape ``text`` for embedding inside an AppleScript double-quoted string.
+# --- tmux backend (the sole launch backend) ----------------------------------
+#
+# tmux is the cross-platform launch substrate. Design mirrors bmad-loop's tmux
+# adapter (see reference_bmad_loop_architecture): one *detached* session per
+# launch, argv lists never shell strings, exact-match ``=name`` targeting. The
+# command is the same ``cd … && claude …`` string the clipboard path uses — tmux
+# runs a single trailing command string via its own shell (verified: ``cd … && …``
+# chains execute), so no new escaping layer is introduced and shell-safety carries
+# over unchanged.
 
-    AppleScript string literals recognise ``\\`` and ``"`` — escape those, backslash
-    first so the escapes we add aren't re-escaped. This is the *second* escaping
-    layer: ``text`` is already a shell-safe command (its paths are ``shlex.quote``d),
-    and this wraps it safely for the AppleScript string that ``osascript`` parses.
+#: Session names may only contain ``[A-Za-z0-9_-]`` (no ``.`` or ``:`` — tmux
+#: treats those as address separators).
+_SESSION_UNSAFE = re.compile(r"[^A-Za-z0-9_-]+")
+
+
+def tmux_session_name(project_path: str, suffix: str) -> str:
+    """A unique, tmux-safe session name for a launch: ``cpm-<project>-<suffix>``.
+
+    The project basename is sanitised to tmux's allowed character set; ``suffix``
+    (a short per-launch token the caller supplies) keeps repeated launches of the
+    same project from colliding on the shared tmux server.
     """
-    return text.replace("\\", "\\\\").replace('"', '\\"')
+    base = _SESSION_UNSAFE.sub("-", Path(project_path).name).strip("-") or "project"
+    clean_suffix = _SESSION_UNSAFE.sub("-", suffix).strip("-") or "0"
+    return f"cpm-{base}-{clean_suffix}"
 
 
-def _osascript_launch(command: str, platform: str) -> list[str]:
-    """Wrap a shell-safe ``command`` in the ``osascript`` argv that runs it in a new
-    Terminal.app window. On macOS the command is escaped for the AppleScript string
-    layer, then handed to ``osascript`` as discrete ``-e`` argv elements — no shell
-    at any layer. Non-macOS has no detached-window support yet.
+def tmux_switch_argv(session: str) -> list[str]:
+    """Argv that switches the current tmux client into ``session`` (exact ``=`` match).
 
-    :raises UnsupportedTerminalError: no detached-terminal support for ``platform``.
+    Used both when a launch happens inside tmux and by the board's attach action
+    when it is itself inside tmux (a nested ``attach`` is disallowed — switch instead)."""
+    return ["tmux", "switch-client", "-t", f"={session}"]
+
+
+def tmux_attach_argv(session: str) -> list[str]:
+    """Argv that attaches the terminal to ``session`` (exact ``=`` match).
+
+    This is a *foreground* command — it owns the terminal until the user detaches —
+    so the board runs it only after suspending its own UI (attach within the TUI)."""
+    return ["tmux", "attach", "-t", f"={session}"]
+
+
+#: The return binding: a **prefix** key (``Ctrl-b`` then ``o``) and its human label.
+#: ``o`` is bound in tmux's ``prefix`` key table, so it never shadows a bare key from
+#: the program inside the pane (Claude keeps all its own Ctrl-keys) — the trade-off
+#: for that safety is the extra prefix keystroke. A no-prefix key can't be used: any
+#: bare key would be swallowed inside launched sessions, and ``Ctrl-Space`` (the
+#: earlier attempt) is intercepted by macOS as "select previous input source".
+RETURN_KEY = "o"
+RETURN_KEY_LABEL = "C-b o"
+
+#: A session option set on every board-launched session to mark it as "ours". The
+#: return binding tests this marker (:func:`tmux_bind_return_argv`) so ``Ctrl-b o``
+#: only acts inside launched sessions and is a no-op in the board's own pane or any
+#: unrelated session on the server.
+LAUNCHED_OPTION = "@cpm_launched"
+
+
+def tmux_mark_launched_argv(session: str) -> list[str]:
+    """Argv that marks ``session`` as board-launched via the :data:`LAUNCHED_OPTION`
+    session option. Bare ``session`` target (``set-option -t`` rejects the ``=``
+    exact-match prefix — see :func:`_tmux_plan`)."""
+    return ["tmux", "set-option", "-t", session, LAUNCHED_OPTION, "1"]
+
+
+def tmux_bind_return_argv(*, attach: bool) -> list[str]:
+    """Argv binding :data:`RETURN_KEY` in tmux's **prefix** table to return to the
+    board — ``Ctrl-b`` then ``o`` from inside a launched session.
+
+    A prefix binding (``bind-key o …``, not ``-n``) is used deliberately: it never
+    shadows a bare key from the program inside the pane, so Claude keeps every one of
+    its own Ctrl-keys. It applies server-wide, so an ``if-shell -F`` guard on the
+    :data:`LAUNCHED_OPTION` marker keeps it a **no-op outside launched sessions**
+    (the board's own pane, unrelated sessions) — there is no false branch.
+
+    The return command depends on how the board runs:
+
+    - ``attach`` (board **inside** tmux) → ``switch-client -l`` flips the client back
+      to the board's session (the launch made it the last session);
+    - detached (board **outside** tmux) → ``detach-client`` drops the foreground
+      ``tmux attach`` so the suspended board UI resumes.
     """
-    if platform == "darwin":
-        literal = _applescript_literal(command)
-        return [
-            "osascript",
-            "-e",
-            f'tell application "Terminal" to do script "{literal}"',
-            "-e",
-            'tell application "Terminal" to activate',
-        ]
-    raise UnsupportedTerminalError(
-        f"Opening a new terminal window isn't supported on {platform!r} yet — "
-        "press c to copy the command and paste it into a terminal instead."
-    )
+    action = "switch-client -l" if attach else "detach-client"
+    return [
+        "tmux", "bind-key", RETURN_KEY,
+        "if-shell", "-F", f"#{{{LAUNCHED_OPTION}}}",
+        action,
+    ]
 
 
-def terminal_launch(
-    project_path: str, action: NextAction, *, platform: str = sys.platform
-) -> list[str]:
-    """Build the argv that opens the session in a **new** terminal window.
+def _return_hint() -> str:
+    """The status-line reminder pinned to a launched session: :data:`RETURN_KEY_LABEL`
+    (``Ctrl-b o``) returns to the board in both run modes (see
+    :func:`tmux_bind_return_argv`). Contains no ``#`` so tmux won't interpret it as a
+    ``#{…}`` format expansion."""
+    return f" {RETURN_KEY_LABEL} → cpm board "
 
-    Running ``claude`` in-place would block the board's TUI until the session ends
-    and fight it for the terminal. Instead we hand a ``cd <path> && claude
-    <command>`` line to the host terminal, which opens its own window and owns the
-    session's lifetime; the board spawns this, returns immediately, and stays
-    interactive.
 
-    Shell-safety holds with no shell anywhere: the inner command comes from
-    :func:`clipboard_command` (every path ``shlex.quote``d), then the AppleScript
-    layer is added by :func:`_osascript_launch`.
+def _tmux_plan(command: str, session: str, *, attach: bool) -> list[list[str]]:
+    """The argv sequence for a detached tmux launch of ``command``.
+
+    1. ``new-session -d`` creates the session detached and runs the command via
+       tmux's shell (the command already ``cd``s into the project).
+    2. ``set-option @cpm_launched`` marks the session as board-launched, so the
+       ``Ctrl-b o`` return binding acts only here (see :func:`tmux_bind_return_argv`).
+    3. ``set-option status-right`` pins a "how to get back to the board" hint to the
+       session's status line, so an attached user isn't stranded (see
+       :func:`_return_hint`).
+    4. When ``attach`` (the board is itself inside tmux), a ``switch-client`` argv
+       follows so the user is dropped into the new session; otherwise the session
+       stays detached for the caller to attach to.
+
+    ``switch-client`` targets ``=session`` (exact match, so a prefix can't hit the
+    wrong session). ``set-option -t`` is the exception: it rejects the ``=`` prefix
+    ("no such session"), so it targets the bare ``session`` name — safe here because
+    the name is already exact and unique, and tmux resolves an exact name first.
+    """
+    plan = [
+        ["tmux", "new-session", "-d", "-s", session, command],
+        tmux_mark_launched_argv(session),
+        ["tmux", "set-option", "-t", session, "status-right", _return_hint()],
+    ]
+    if attach:
+        plan.append(tmux_switch_argv(session))
+    return plan
+
+
+def tmux_launch(
+    project_path: str, action: NextAction, session: str, *, attach: bool
+) -> list[list[str]]:
+    """Build the tmux argv plan that runs the action's session detached in tmux.
 
     :raises NoCommandError: the action has no runnable command.
-    :raises UnsupportedTerminalError: no new-window support for ``platform``.
     """
-    return _osascript_launch(clipboard_command(project_path, action), platform)
+    return _tmux_plan(clipboard_command(project_path, action), session, attach=attach)
 
 
-def open_terminal_launch(project_path: str, *, platform: str = sys.platform) -> list[str]:
-    """Build the argv that opens a **plain** ``claude`` (no command) in a new window
-    at the project directory — the ``o`` "open project" launch."""
-    return _osascript_launch(open_clipboard_command(project_path), platform)
+def open_tmux_launch(project_path: str, session: str, *, attach: bool) -> list[list[str]]:
+    """Build the tmux argv plan for a **plain** ``claude`` (no command) — the ``o``
+    open-project launch, in tmux."""
+    return _tmux_plan(open_clipboard_command(project_path), session, attach=attach)
+
+
+def tmux_attach_hint(session: str) -> str:
+    """The command a user runs to attach to a detached launch session."""
+    return f"tmux attach -t ={session}"
+
+
+def select_launch_backend(*, tmux_available: bool) -> str | None:
+    """Choose the launch backend for this host.
+
+    tmux is the only backend. ``"tmux"`` when it is installed, else ``None`` — the
+    board then falls back to copy (``c``).
+    """
+    return "tmux" if tmux_available else None
+
+
+def tmux_list_windows_argv() -> list[str]:
+    """The argv that lists every live tmux window as ``<session_name> <window_id>``.
+
+    Used to poll which board-launched sessions are still running (liveness for the
+    projects-column "live" pill) *and* to capture each session's native
+    ``#{window_id}`` handle (bmad-loop's launch chokepoint primitive) — the id is a
+    stable handle that survives session rename and disambiguates a reused session
+    name. ``list-windows`` exits non-zero when no server is running; the caller
+    treats that, and any spawn failure, as "no live windows".
+    """
+    return ["tmux", "list-windows", "-a", "-F", "#{session_name} #{window_id}"]
+
+
+def parse_tmux_windows(output: str) -> dict[str, str]:
+    """Map ``session_name → window_id`` from :func:`tmux_list_windows_argv` output.
+
+    Each line is ``<session_name> <window_id>``; the id is the last space-separated
+    field (our session names are sanitised to ``[A-Za-z0-9_-]`` so they never
+    contain spaces, but splitting on the last space is robust regardless). A session
+    with several windows keeps its last-listed id — launches are one-window sessions,
+    so this is unambiguous for board-tracked sessions.
+    """
+    result: dict[str, str] = {}
+    for raw in output.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        session, _, window_id = line.rpartition(" ")
+        if session and window_id:
+            result[session] = window_id
+    return result

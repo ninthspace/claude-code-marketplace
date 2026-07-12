@@ -3,16 +3,18 @@
 `space` toggles the highlighted epic in/out of a *ralph selection* (only `do`
 epics — the runnable ones — qualify). A selected epic recolours to blue rather
 than gaining a marker. While the selection is non-empty, the whole launch family
-(`c`/`l`/`i`/`L`) retargets to a single `/cpm:ralph <epics…>` over the selection,
+(`c`/`l`) retargets to a single `/cpm:ralph <epics…>` over the selection,
 so ralph runs them autonomously. The selection is scoped to the project shown in
 the epics column and clears when the project changes or after a launch fires.
 
-The runner / clipboard / platform seams are stubbed exactly as in
+The runner / clipboard / tmux seams are stubbed exactly as in
 `test_launch_actions.py`, so the emitted command is asserted without spawning a
-terminal or touching the clipboard.
+tmux session or touching the clipboard.
 """
 
 from __future__ import annotations
+
+import contextlib
 
 import pytest
 
@@ -46,10 +48,23 @@ RALPH_BOTH = "/cpm:ralph docs/epics/39-01-epic-foo.md docs/epics/39-02-epic-bar.
 
 
 def _board(repo, cache_root, **kwargs):
+    # Launch-family tests pass runner=…; pin the tmux backend detached with a fixed
+    # session name so the emitted argv is deterministic (mirrors test_launch_actions).
+    launch_seams = (
+        dict(
+            tmux_available=True,
+            in_tmux=False,
+            session_suffix=lambda: "s",
+            attach_suspend=lambda: contextlib.nullcontext(),  # detached launch attaches
+        )
+        if "runner" in kwargs
+        else {}
+    )
     return BoardApp(
         entries=[RegistryEntry(str(repo), "Proj")],
         cache_root=cache_root,
         watch_interval=None,
+        **launch_seams,
         **kwargs,
     )
 
@@ -123,7 +138,7 @@ async def test_switching_project_clears_the_selection(make_project, cache_root):
 async def test_launch_runs_ralph_over_the_selected_epics(make_project, cache_root):
     repo = make_project(TWO_READY)
     calls: list = []
-    app = _board(repo, cache_root, runner=calls.append, platform="darwin")
+    app = _board(repo, cache_root, runner=calls.append)
     async with app.run_test() as pilot:
         await pilot.press("right")  # epics
         await pilot.press("space")  # select row 0
@@ -132,15 +147,14 @@ async def test_launch_runs_ralph_over_the_selected_epics(make_project, cache_roo
         await pilot.pause()
         await pilot.press("l")  # launch in a new window
 
-    assert len(calls) == 1
-    assert calls[0][0] == "osascript"
+    assert [c[1] for c in calls] == ["new-session", "set-option", "set-option", "bind-key", "attach"]
     assert launched_command(calls[0]) == f"cd {repo} && claude '{RALPH_BOTH}'"
 
 
 async def test_open_plain_ignores_the_ralph_selection(make_project, cache_root):
     repo = make_project(TWO_READY)
     calls: list = []
-    app = _board(repo, cache_root, runner=calls.append, platform="darwin")
+    app = _board(repo, cache_root, runner=calls.append)
     async with app.run_test() as pilot:
         await pilot.press("right")
         await pilot.press("space")  # select an epic
@@ -169,7 +183,7 @@ async def test_copy_writes_the_ralph_command_for_the_selection(make_project, cac
 async def test_launch_consumes_the_selection(make_project, cache_root):
     repo = make_project(TWO_READY)
     calls: list = []
-    app = _board(repo, cache_root, runner=calls.append, platform="darwin")
+    app = _board(repo, cache_root, runner=calls.append)
     async with app.run_test() as pilot:
         await pilot.press("right")
         await pilot.press("space")
@@ -187,7 +201,7 @@ async def test_launch_consumes_the_selection(make_project, cache_root):
 async def test_empty_selection_leaves_single_candidate_launch_unchanged(make_project, cache_root):
     repo = make_project(TWO_READY)
     calls: list = []
-    app = _board(repo, cache_root, runner=calls.append, platform="darwin")
+    app = _board(repo, cache_root, runner=calls.append)
     async with app.run_test() as pilot:
         await pilot.press("right")  # epics, nothing selected
         await pilot.press("l")

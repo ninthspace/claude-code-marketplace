@@ -1,9 +1,9 @@
 """Feature tests for launch / open / copy in the three-column browser.
 
-The launch model is deliberately simple: one **launch** (`l`) that opens the
-target in a **new terminal window** (osascript on macOS), and **open** (`o`) that
-opens a plain `claude` — no `/cpm` command — at the selected project's directory.
-Copy (`c`) writes the same shell-safe launch command to the clipboard.
+The launch model is a single backend: **tmux**. **launch** (`l`) runs the target
+in a detached tmux session; **open** (`o`) runs a plain `claude` — no `/cpm`
+command — at the selected project's directory, also in tmux. Copy (`c`) writes
+the same shell-safe launch command to the clipboard.
 
 Launch and copy pick their target by the **focused column**, analogous to
 `/cpm:do`: from the projects column, a bare `/cpm:do` (no epic — cpm:do discovers
@@ -12,11 +12,13 @@ highlighted epic candidate's own command. `o` always targets the project
 directory with no command, whatever the focused column.
 
 Stub clipboard-writer / runner seams assert the exact command without touching
-the clipboard or spawning a terminal. The `platform` seam is pinned so the
-osascript argv is deterministic.
+the clipboard or spawning tmux. The tmux seams (`tmux_available`, `in_tmux`,
+`session_suffix`) are pinned so the emitted argv is deterministic.
 """
 
 from __future__ import annotations
+
+import contextlib
 
 import pytest
 
@@ -34,15 +36,28 @@ def cache_root(tmp_path):
 
 
 def launched_command(argv: list[str]) -> str:
-    """Recover the shell command Terminal was told to run from an osascript argv.
+    """Recover the shell command from a `tmux new-session` argv.
 
-    Benign test paths need no AppleScript escaping, so the embedded literal is the
-    exact `cd … && claude …` command.
-    """
-    prefix = 'tell application "Terminal" to do script "'
-    do_script = argv[2]
-    assert do_script.startswith(prefix) and do_script.endswith('"')
-    return do_script[len(prefix):-1]
+    tmux runs the whole `cd … && claude …` command as a single trailing argv
+    element, so it is exactly `argv[-1]`."""
+    assert argv[0] == "tmux" and "new-session" in argv
+    return argv[-1]
+
+
+def _launch_app(repo, cache_root, calls):
+    """A board wired to the tmux backend with a pinned session name, detached
+    (not inside tmux). A detached launch always attaches, so the suspend is stubbed
+    with a no-op context — the headless driver can't really suspend."""
+    return BoardApp(
+        entries=[RegistryEntry(str(repo), "Proj")],
+        cache_root=cache_root,
+        watch_interval=None,
+        runner=calls.append,
+        tmux_available=True,
+        in_tmux=False,
+        session_suffix=lambda: "s",
+        attach_suspend=lambda: contextlib.nullcontext(),
+    )
 
 
 # One ready epic → the epics column has a single runnable `do` candidate.
@@ -80,6 +95,24 @@ async def test_projects_column_copy_emits_a_bare_cpm_do(make_project, cache_root
     assert copied == [f"cd {repo} && claude /cpm:do"]
 
 
+async def test_selection_copy_routes_through_the_local_clipboard_writer(make_project, cache_root):
+    # A mouse-selected panel region is copied by Textual via App.copy_to_clipboard,
+    # which base-Textual sends as an OSC 52 escape only — macOS Terminal drops that.
+    # We override it to also pipe through the local writer (pbcopy), so the copy lands.
+    repo = make_project(EPICS_READY)
+    copied: list[str] = []
+    app = BoardApp(
+        entries=[RegistryEntry(str(repo), "Proj")],
+        cache_root=cache_root,
+        watch_interval=None,
+        clipboard_writer=copied.append,
+    )
+    async with app.run_test():
+        app.copy_to_clipboard("selected text")
+
+    assert copied == ["selected text"]
+
+
 async def test_epics_column_copy_writes_the_highlighted_epic_command(make_project, cache_root):
     repo = make_project(EPICS_READY)
     copied: list[str] = []
@@ -99,38 +132,25 @@ async def test_epics_column_copy_writes_the_highlighted_epic_command(make_projec
     assert copied[0] == f"cd {repo} && claude '{primary.command}'"
 
 
-# --- launch (`l`): osascript opens a new window ------------------------------
+# --- launch (`l`): a detached tmux session -----------------------------------
 
 
-async def test_projects_column_launch_opens_a_window_with_bare_cpm_do(make_project, cache_root):
+async def test_projects_column_launch_runs_a_bare_cpm_do(make_project, cache_root):
     repo = make_project(EPICS_READY)
     calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="darwin",
-    )
-    async with app.run_test() as pilot:
+    async with _launch_app(repo, cache_root, calls).run_test() as pilot:
         await pilot.press("l")
 
-    assert len(calls) == 1
-    assert calls[0][0] == "osascript"
+    # new-session (the launch), the @cpm_launched marker + status reminder set-options,
+    # the Ctrl-Space return binding, then attach — a detached launch always attaches.
+    assert [c[1] for c in calls] == ["new-session", "set-option", "set-option", "bind-key", "attach"]
     assert launched_command(calls[0]) == f"cd {repo} && claude /cpm:do"
 
 
 async def test_launch_uses_the_highlighted_candidate(make_project, cache_root):
     repo = make_project(TWO_CANDIDATES)
     calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="darwin",
-    )
-    async with app.run_test() as pilot:
+    async with _launch_app(repo, cache_root, calls).run_test() as pilot:
         # Focus the epics column and move down to the 2nd candidate (spec-breakdown).
         await pilot.press("right")
         await pilot.press("down")
@@ -144,14 +164,7 @@ async def test_launch_uses_the_highlighted_candidate(make_project, cache_root):
 async def test_stories_column_launch_uses_the_selected_epic(make_project, cache_root):
     repo = make_project(EPICS_READY)
     calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="darwin",
-    )
-    async with app.run_test() as pilot:
+    async with _launch_app(repo, cache_root, calls).run_test() as pilot:
         # In the third (stories) column, launch still targets the parent epic —
         # a story isn't independently launchable.
         await pilot.press("right")  # epics
@@ -172,7 +185,10 @@ async def test_blocked_candidate_falls_back_to_bare_cpm_do(make_project, cache_r
         watch_interval=None,
         clipboard_writer=copied.append,
         runner=launched.append,
-        platform="darwin",
+        tmux_available=True,
+        in_tmux=False,
+        session_suffix=lambda: "s",
+        attach_suspend=lambda: contextlib.nullcontext(),
     )
     async with app.run_test() as pilot:
         assert derive_project(repo).primary_action.command is None  # sanity: blocked
@@ -182,26 +198,9 @@ async def test_blocked_candidate_falls_back_to_bare_cpm_do(make_project, cache_r
         await pilot.press("c")
         await pilot.press("l")
 
-    assert len(launched) == 1
+    assert [c[1] for c in launched] == ["new-session", "set-option", "set-option", "bind-key", "attach"]
     assert launched_command(launched[0]) == f"cd {repo} && claude /cpm:do"
     assert copied == [f"cd {repo} && claude /cpm:do"]
-
-
-async def test_launch_on_unsupported_platform_does_not_spawn(make_project, cache_root):
-    repo = make_project(EPICS_READY)
-    calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="linux",  # no new-window support
-    )
-    async with app.run_test() as pilot:
-        await pilot.press("l")
-
-    # Launch degrades to a warning toast (copy still works) — never a spawn.
-    assert calls == []
 
 
 # --- open (`o`): plain Claude at the project directory ------------------------
@@ -210,17 +209,10 @@ async def test_launch_on_unsupported_platform_does_not_spawn(make_project, cache
 async def test_open_plain_opens_claude_at_the_project_directory(make_project, cache_root):
     repo = make_project(EPICS_READY)
     calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="darwin",
-    )
-    async with app.run_test() as pilot:
+    async with _launch_app(repo, cache_root, calls).run_test() as pilot:
         await pilot.press("o")
 
-    assert len(calls) == 1
+    assert [c[1] for c in calls] == ["new-session", "set-option", "set-option", "bind-key", "attach"]
     # A plain `claude` — no /cpm command — in the project's directory.
     assert launched_command(calls[0]) == f"cd {repo} && claude"
 
@@ -228,32 +220,9 @@ async def test_open_plain_opens_claude_at_the_project_directory(make_project, ca
 async def test_open_plain_ignores_the_focused_column(make_project, cache_root):
     repo = make_project(EPICS_READY)
     calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="darwin",
-    )
-    async with app.run_test() as pilot:
+    async with _launch_app(repo, cache_root, calls).run_test() as pilot:
         # Even from the epics column, `o` opens the project, not the epic command.
         await pilot.press("right")
         await pilot.press("o")
 
     assert launched_command(calls[0]) == f"cd {repo} && claude"
-
-
-async def test_open_plain_on_unsupported_platform_does_not_spawn(make_project, cache_root):
-    repo = make_project(EPICS_READY)
-    calls: list = []
-    app = BoardApp(
-        entries=[RegistryEntry(str(repo), "Proj")],
-        cache_root=cache_root,
-        watch_interval=None,
-        runner=calls.append,
-        platform="linux",
-    )
-    async with app.run_test() as pilot:
-        await pilot.press("o")
-
-    assert calls == []

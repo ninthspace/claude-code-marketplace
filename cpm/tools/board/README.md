@@ -14,19 +14,29 @@ A Miller-columns (ranger-style) browser:
 
 ```
 ┌ Projects ────────┬ Epics ───────────────────────┬ Stories ─────────────────┐
-│ planwise · 103/… │ 94-03 · Device Registry · 0/3│ Blocked by:              │
-│ marketplace · 1… │ 31-06 · Structure Tests · 2/3│ Epic waiting on 94-02-…  │
-│                  │ 01-spec-… needs epics        │ Story 2 waiting on …     │
+│ planwise · 103/… │ 94-03 · Device Registry · 0/3│ Story 1 · Schema         │
+│ marketplace · 1… │ 31-06 · Structure Tests · 2/3│ Story 2 · Endpoint       │
+│                  │ 01-spec-… needs epics        │                          │
+│                  ├──────────────────────────────┼──────────────────────────┤
+│                  │ # Device Registry            │ ## Story 2               │
+│                  │ **Status**: In Progress      │ **Status**: In Progress  │
+│                  │ …the epic/spec/retro file…   │ …this story's section    │
 └──────────────────┴──────────────────────────────┴──────────────────────────┘
 ```
 
 - **Projects** — every registered project, `name · progress`. Colour carries the
   state (see the legend below).
 - **Epics** — for the selected project, the ordered launchable candidates (plus
-  spec-breakdown and, with `z`, completed epics).
-- **Stories** — for the selected epic, its outstanding stories. For a
-  `needs epics` row it shows a preview of the spec file; for a **blocked** epic it
-  shows what the epic is waiting on.
+  spec-breakdown and, with `z`, completed epics). Below the list, a **preview
+  panel** renders the highlighted row's source file — its epic / spec / retro
+  `.md` — as markdown; for a **blocked** epic it is prefaced with what the epic is
+  waiting on.
+- **Stories** — for the selected epic, its outstanding stories. Below the list, a
+  preview panel renders the highlighted story's own `##` section from the epic
+  doc (just that section, not the whole file) as markdown.
+
+Both preview panels are **selectable**: drag with the mouse to highlight, then
+`Ctrl+C` to copy (`Cmd+C` is intercepted by the terminal on macOS — use `Ctrl+C`).
 
 ### Colour legend
 
@@ -39,7 +49,7 @@ The Epics column header shows it, and the Projects column uses the same palette:
 | red     | blocked (waiting on a dependency)                   |
 | cyan    | complete, but no retrospective written yet (`retro`)|
 | magenta | specs exist but no epics yet (`needs epics`)        |
-| blue    | ralph-selected for a `/cpm:ralph` run (see below)   |
+| blue    | epics column: ralph-selected for a `/cpm:ralph` run · projects column: a `● live` pill on a project with a running launched session (both below) |
 | dim     | done / no planning artifacts                        |
 
 Colour conveys status, so the status word is not repeated in the row text.
@@ -50,6 +60,9 @@ Colour conveys status, so the status word is not repeated in the row text.
   dependencies. Install with `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 - Python 3.11+ (uv will fetch a suitable interpreter if needed).
 - The `claude` CLI on your `PATH` — only needed for **launching** sessions (`l`).
+  Viewing the board does not require it.
+- `tmux` on your `PATH` — the launch backend on every platform. Launches run as
+  tmux sessions (`l`/`o`); without tmux those keys fall back to copy (`c`).
   Viewing the board does not require it.
 
 The board is a [PEP 723](https://peps.python.org/pep-0723/) single-file script:
@@ -133,9 +146,11 @@ chmod +x cpm/tools/board/board.py
 | ------- | ----------------------------------------------------------- |
 | ↑ / ↓   | Move within the focused column                              |
 | ← / →   | Move focus between columns                                  |
+| Ctrl+C  | Copy text selected (mouse-drag) in a preview panel          |
 | Ctrl+P  | Command palette — opens straight to the board's actions     |
-| `l`     | Launch the target in a **new terminal window** (see below)  |
+| `l`     | Launch the target as a tmux session (see below)             |
 | `o`     | Open a plain Claude at the selected project's directory     |
+| `t`     | Attach this terminal to the project's running session       |
 | `c`     | Copy the launch command to the clipboard                    |
 | `space` | Ralph-select the highlighted epic (toggle; see below)       |
 | `a`     | Add a project — opens a directory picker (browse, don't type)|
@@ -147,11 +162,15 @@ chmod +x cpm/tools/board/board.py
 
 ### Launch (`l`), open (`o`), and copy (`c`)
 
-**`l` — launch in a new window.** The target session opens in a **new terminal
-window** (macOS `osascript` + Terminal.app), so the board never blocks — good for
-running several sessions at once. `c` copies the same command to the clipboard
-instead. Both pick their target by the **focused column**, mirroring how `/cpm:do`
-handles its own argument:
+**`l` — launch a session.** The target opens as a **tmux session**
+(`cpm-<project>-<id>`) and **always lands you in it**: if the board is itself running
+inside tmux, `l` switches you into the new session; otherwise the board suspends its
+UI and attaches in the foreground. Either way, `Ctrl-b o` returns you to the board
+(see below), where the project keeps a **`● live` pill** (see further below) while its
+session runs. Without tmux on your `PATH`, `l`/`o` show a notice; use copy (`c`).
+
+`c` copies the same command to the clipboard instead. `l` and `c` pick their
+target by the **focused column**, mirroring how `/cpm:do` handles its own argument:
 
 - **Projects column** → a bare `/cpm:do` (no epic) for the selected project —
   `cpm:do` discovers the next story itself.
@@ -159,16 +178,49 @@ handles its own argument:
   (`/cpm:do <epic>`, `/cpm:epics <spec>`, or `/cpm:retro <epic>`). A blocked or
   reference-only row falls back to a bare `/cpm:do`.
 
-**`o` — open the project.** Opens a **plain** `claude` — no `/cpm` command — in a
-new window at the selected project's directory. Use it when you just want a Claude
-session in that project, not a specific CPM step. `o` ignores the focused column
-and any ralph selection.
+**`o` — open the project.** Opens a **plain** `claude` — no `/cpm` command — as a
+tmux session at the selected project's directory. Use it when you just want a
+Claude session in that project, not a specific CPM step. `o` ignores the focused
+column and any ralph selection.
+
+**`t` — attach within the TUI.** Attach hands the board's own terminal to the
+highlighted project's running session, instead of opening a separate window. If the
+board is itself inside tmux it switches you to the session; otherwise it **suspends**
+its UI, runs `tmux attach` in the foreground, and resumes when you return. It targets
+the newest live session the board launched for that project. This is the "launch
+within the TUI" flow: fully interactive, no extra window, tmux owns the session's
+lifetime. (Because `l` already always attaches, `t` is mainly for re-attaching to a
+session you've since left.)
+
+**Getting back to the board.** From inside a launched session, **`Ctrl-b` then `o`**
+returns you to the board — in both run modes. Each launched session pins a
+` C-b o → cpm board ` reminder to its tmux status line.
+
+It's a **prefix** binding (`o` in tmux's prefix key table) on purpose: a bare key
+would be swallowed inside the session — Claude would lose it — and `Ctrl-Space` (an
+earlier attempt) is intercepted by macOS as "select previous input source" before the
+terminal ever sees it. Going through the `Ctrl-b` prefix costs one extra keystroke but
+never shadows any of Claude's own keys. The binding is guarded on the `@cpm_launched`
+session option so `Ctrl-b o` acts only inside sessions the board launched (a no-op
+elsewhere); inside one it `switch-client`s back to the board (board inside tmux) or
+`detach-client`s to resume the suspended board UI (board outside tmux). It persists
+for the tmux server's lifetime and is harmless outside launched sessions.
+
+**`● live` — running sessions.** After you return to the board from a launched
+session (`Ctrl-b o`), the project it was launched for shows a blue `● live` pill so
+you can see the session is still running — press `t` to jump back in. On its watch tick the
+board polls `tmux list-windows`, capturing each session's native `#{window_id}`
+handle and dropping the pill when the session ends (Claude exits → the tmux session
+closes) or its window id changes (the name was reused). The pill tracks sessions
+**this** board instance launched; restarting the board forgets them (the sessions
+keep running — reattach with `tmux attach`, or list them with `tmux ls`).
 
 Everything runs in the selected project's working directory. Each command is built
-shell-safely — the project path and command are `shlex.quote()`d, and a second
-AppleScript-string escaping layer is added, with no shell at any layer — so a path
-with spaces or metacharacters can neither break the command nor inject. On
-platforms without new-window support yet, `l`/`o` show a notice; use copy (`c`).
+shell-safely — the project path and command are `shlex.quote()`d into a single
+`cd … && claude …` string, which tmux runs via its own shell. There is no shell at
+any layer of *our* code and every `tmux` call is an argv list rather than a shell
+string, so a path with spaces or metacharacters can neither break the command nor
+inject.
 
 ### Ralph — autonomous multi-epic runs (`space` + launch)
 
@@ -181,11 +233,11 @@ project in the Epics column and clears if you switch project.
 
 While the selection is non-empty, `l` (and `c`) retarget: they build a single
 **`/cpm:ralph <selected epics…>`** (paths project-relative, sorted into numeric
-order) instead of a single-epic `/cpm:do`, and launch it in a new window — the
-board stays free while ralph runs unattended. A launch consumes the selection.
-Select nothing and the keys behave exactly as before. Each epic path is
-`shlex.quote()`d for ralph's own argument parse, on top of the shell/AppleScript
-layers, so the multi-epic command is built with no unescaped interpolation.
+order) instead of a single-epic `/cpm:do`, and launch it as a tmux session ralph
+runs unattended in. A launch consumes the selection. Select nothing and the keys
+behave exactly as before. Each epic path is `shlex.quote()`d for ralph's own argument
+parse, on top of the shell layer, so the multi-epic command is built with no
+unescaped interpolation.
 
 ## Where its data lives
 
