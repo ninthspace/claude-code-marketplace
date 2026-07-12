@@ -186,11 +186,14 @@ column and any ralph selection.
 **`t` — attach within the TUI.** Attach hands the board's own terminal to the
 highlighted project's running session, instead of opening a separate window. If the
 board is itself inside tmux it switches you to the session; otherwise it **suspends**
-its UI, runs `tmux attach` in the foreground, and resumes when you return. It targets
-the newest live session the board launched for that project. This is the "launch
-within the TUI" flow: fully interactive, no extra window, tmux owns the session's
-lifetime. (Because `l` already always attaches, `t` is mainly for re-attaching to a
-session you've since left.)
+its UI, runs `tmux attach` in the foreground, and resumes when you return. When a
+project has **several** live sessions, `t` returns you to the one you **most recently
+used** — the session you were last attached to, native `Ctrl-b s` switches included,
+with newest-launched breaking ties. This is the "launch within the TUI" flow: fully
+interactive, no extra window, tmux owns the session's lifetime. (Because `l` already
+always attaches, `t` is mainly for re-attaching to a session you've since left.) To
+reach a *specific* other session, use tmux's own session navigation — see
+[Running several sessions](#running-several-sessions-in-one-project) below.
 
 **Getting back to the board.** From inside a launched session, **`Ctrl-b` then `o`**
 returns you to the board — in both run modes. Each launched session pins a
@@ -208,12 +211,45 @@ for the tmux server's lifetime and is harmless outside launched sessions.
 
 **`● live` — running sessions.** After you return to the board from a launched
 session (`Ctrl-b o`), the project it was launched for shows a blue `● live` pill so
-you can see the session is still running — press `t` to jump back in. On its watch tick the
-board polls `tmux list-windows`, capturing each session's native `#{window_id}`
-handle and dropping the pill when the session ends (Claude exits → the tmux session
-closes) or its window id changes (the name was reused). The pill tracks sessions
-**this** board instance launched; restarting the board forgets them (the sessions
-keep running — reattach with `tmux attach`, or list them with `tmux ls`).
+you can see the session is still running — press `t` to jump back in. Launch a second
+session in the same project and the pill carries a **count** (`● 2 live`), so a
+project running several sessions reads as distinct from one running a single session.
+On its watch tick the board polls `tmux list-windows`, capturing each session's
+native `#{window_id}` handle and dropping the pill (or decrementing the count) when a
+session ends (Claude exits → the tmux session closes) or its window id changes (the
+name was reused). The pill tracks sessions **this** board instance launched;
+restarting the board forgets them (the sessions keep running — reattach with `tmux
+attach`, or list them with `tmux ls`).
+
+### Running several sessions in one project
+
+Because each `l`/`o` launch is an independent tmux session (`cpm-<project>-<id>`,
+where `<id>` is the launch time), you can run several at once in the same project —
+the pill shows the count (`● 2 live`) and `t` always takes you to the one you used
+most recently. The board keeps a deliberately thin handle on them: it doesn't list
+every session or let you pick a *specific* older one. For that you use **plain tmux**,
+since these are ordinary tmux sessions on the shared server.
+
+If you're new to tmux, everything starts with the **prefix** — `Ctrl-b` — pressed and
+released, *then* the next key:
+
+| Keys                | What it does                                                     |
+| ------------------- | ---------------------------------------------------------------- |
+| `Ctrl-b` then `s`   | **Session tree** — lists every session; arrow to one, `Enter` to switch. The reliable way to reach a specific session. |
+| `Ctrl-b` then `(`   | Switch to the **previous** session (by name)                     |
+| `Ctrl-b` then `)`   | Switch to the **next** session (by name)                         |
+| `Ctrl-b` then `L`   | Jump to the **last** (previously-active) session — a quick two-way toggle |
+| `Ctrl-b` then `o`   | **Return to the board** (rebound by the board — *not* tmux's usual "next pane") |
+| `Ctrl-b` then `d`   | **Detach** from tmux entirely, leaving every session running in the background |
+
+Your two sessions appear in `Ctrl-b s` as `cpm-<project>-…` entries that differ only
+by the trailing launch-time number — the **higher** number is the newer one. From a
+plain shell you can also reattach to a named session directly with `tmux attach -t
+=cpm-<project>-<id>`, or list what's running with `tmux ls`.
+
+One caveat: launching two sessions within the **same second** produces the same
+session name, so the second launch silently lands you back in the first rather than
+starting a fresh session. Leave a beat between rapid launches.
 
 Everything runs in the selected project's working directory. Each command is built
 shell-safely — the project path and command are `shlex.quote()`d into a single

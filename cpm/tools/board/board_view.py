@@ -88,22 +88,29 @@ _LIVE_PILL = "● live"
 _LIVE_PILL_STYLE = "bold blue"
 
 
-def project_row_text(name: str, status: ProjectStatus, *, live: bool = False) -> RenderableType:
-    """Projects-column row: the coloured name · progress label, and — when the
-    project has a running board-launched session — a "live" pill **right-aligned**
-    to the column edge.
+def _live_pill(count: int) -> str:
+    """The pill text for ``count`` live sessions: ``● live`` for one, ``● N live`` for
+    several — so a project running multiple sessions reads as distinct at a glance."""
+    return _LIVE_PILL if count == 1 else f"● {count} live"
 
-    Not live → a plain ``Text`` (the common case). Live → an expanding
+
+def project_row_text(name: str, status: ProjectStatus, *, live: int = 0) -> RenderableType:
+    """Projects-column row: the coloured name · progress label, and — when the
+    project has ``live`` running board-launched sessions (a count) — a "live" pill
+    **right-aligned** to the column edge.
+
+    ``live == 0`` → a plain ``Text`` (the common case). One or more → an expanding
     ``Table.grid``: the label fills a ratio column and the pill sits in a
-    right-justified column, so it hugs the right regardless of column width. The
-    pill keeps its own colour (a separate cell) over the row's status colour."""
+    right-justified column, so it hugs the right regardless of column width. The pill
+    shows the session count when more than one (``● 2 live``) and keeps its own
+    colour (a separate cell) over the row's status colour."""
     label = Text(project_label(name, status), style=project_style(status.state))
     if not live:
         return label
     row = Table.grid(expand=True)
     row.add_column(ratio=1)  # label — fills the remaining width
     row.add_column(justify="right")  # pill — hugs the right edge
-    row.add_row(label, Text(_LIVE_PILL, style=_LIVE_PILL_STYLE))
+    row.add_row(label, Text(_live_pill(live), style=_LIVE_PILL_STYLE))
     return row
 
 

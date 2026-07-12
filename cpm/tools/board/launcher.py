@@ -270,3 +270,37 @@ def parse_tmux_windows(output: str) -> dict[str, str]:
         if session and window_id:
             result[session] = window_id
     return result
+
+
+def tmux_list_sessions_activity_argv() -> list[str]:
+    """The argv that lists every session as ``<session_name> <session_last_attached>``.
+
+    ``#{session_last_attached}`` is the epoch second a client last attached to the
+    session — tmux updates it on *every* attach, including a native ``Ctrl-b s``
+    switch the board never sees. The board reads this at attach time (``t``) to pick
+    the session the user most recently used, rather than merely the newest-launched.
+    A session never yet attached renders an empty field (parsed as absent → 0).
+    ``list-sessions`` exits non-zero when no server is running; the caller treats
+    that, and any spawn failure, as "no activity data" (attach falls back to launch
+    order)."""
+    return ["tmux", "list-sessions", "-F", "#{session_name} #{session_last_attached}"]
+
+
+def parse_tmux_activity(output: str) -> dict[str, int]:
+    """Map ``session_name → last-attached epoch`` from
+    :func:`tmux_list_sessions_activity_argv` output.
+
+    Each line is ``<session_name> <epoch>``; the epoch is the last space-separated
+    field (same ``rpartition`` robustness as :func:`parse_tmux_windows`). A
+    never-attached session renders an empty trailing field, so its line collapses to
+    the bare name and is skipped — the board then treats it as unattached (0)."""
+    result: dict[str, int] = {}
+    for raw in output.splitlines():
+        session, _, epoch = raw.strip().rpartition(" ")
+        if not session:
+            continue
+        try:
+            result[session] = int(epoch)
+        except ValueError:
+            continue
+    return result

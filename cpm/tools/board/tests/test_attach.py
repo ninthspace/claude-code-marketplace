@@ -42,7 +42,7 @@ class _RecordingSuspend:
         return contextlib.nullcontext()
 
 
-def _attach_board(repo, cache_root, calls, *, in_tmux, suspend, lister):
+def _attach_board(repo, cache_root, calls, *, in_tmux, suspend, lister, activity=None):
     return BoardApp(
         entries=[RegistryEntry(str(repo), "Proj")],
         cache_root=cache_root,
@@ -52,6 +52,7 @@ def _attach_board(repo, cache_root, calls, *, in_tmux, suspend, lister):
         in_tmux=in_tmux,
         session_suffix=lambda: "s",
         window_lister=lister,
+        activity_lister=activity or (lambda: {}),
         attach_suspend=suspend,
     )
 
@@ -143,6 +144,7 @@ async def test_attach_targets_the_highlighted_projects_session(make_project, cac
         in_tmux=False,
         session_suffix=lambda: "s",
         window_lister=lambda: {session_b: "@0"},
+        activity_lister=lambda: {},
         attach_suspend=suspend,
     )
     async with app.run_test() as pilot:
@@ -154,3 +156,55 @@ async def test_attach_targets_the_highlighted_projects_session(make_project, cac
         await pilot.pause()
 
     assert calls == [["tmux", "attach", "-t", f"={session_b}"]]
+
+
+async def test_attach_targets_most_recently_accessed_session(make_project, cache_root):
+    repo = make_project(EPICS_READY)
+    older = tmux_session_name(str(repo), "1")
+    newer = tmux_session_name(str(repo), "2")
+    calls: list = []
+    suspend = _RecordingSuspend()
+    # Both sessions live; `older` was launched first (newest-launched would pick
+    # `newer`), but the user last attached to `older` (higher last_attached epoch).
+    app = _attach_board(
+        repo,
+        cache_root,
+        calls,
+        in_tmux=False,
+        suspend=suspend,
+        lister=lambda: {older: "@0", newer: "@1"},
+        activity=lambda: {older: 1720800100, newer: 1720800000},
+    )
+    async with app.run_test() as pilot:
+        app._live_sessions[older] = str(repo)
+        app._live_sessions[newer] = str(repo)
+        await pilot.press("t")
+        await pilot.pause()
+
+    # Most recently accessed wins over newest-launched.
+    assert calls == [["tmux", "attach", "-t", f"={older}"]]
+
+
+async def test_attach_falls_back_to_newest_launched_without_activity(make_project, cache_root):
+    repo = make_project(EPICS_READY)
+    older = tmux_session_name(str(repo), "1")
+    newer = tmux_session_name(str(repo), "2")
+    calls: list = []
+    suspend = _RecordingSuspend()
+    # No attach records for either (never attached) → tie broken by launch order.
+    app = _attach_board(
+        repo,
+        cache_root,
+        calls,
+        in_tmux=False,
+        suspend=suspend,
+        lister=lambda: {older: "@0", newer: "@1"},
+        activity=lambda: {},
+    )
+    async with app.run_test() as pilot:
+        app._live_sessions[older] = str(repo)
+        app._live_sessions[newer] = str(repo)
+        await pilot.press("t")
+        await pilot.pause()
+
+    assert calls == [["tmux", "attach", "-t", f"={newer}"]]

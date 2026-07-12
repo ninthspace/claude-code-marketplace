@@ -15,8 +15,10 @@ import pytest
 from launcher import (
     NoCommandError,
     clipboard_command,
+    parse_tmux_activity,
     parse_tmux_windows,
     ralph_command,
+    tmux_list_sessions_activity_argv,
     tmux_list_windows_argv,
 )
 from status_model import NextAction
@@ -92,6 +94,36 @@ def test_parse_tmux_windows_maps_session_to_window_id():
 def test_parse_tmux_windows_empty_output_is_empty_map():
     # No server / no windows → empty stdout → no live sessions.
     assert parse_tmux_windows("") == {}
+
+
+# --- session activity: most-recently-attached for `t` -------------------------
+
+
+def test_tmux_list_sessions_activity_argv_lists_session_and_last_attached():
+    # A `session_name last_attached` listing across all sessions — argv, never a shell string.
+    assert tmux_list_sessions_activity_argv() == [
+        "tmux",
+        "list-sessions",
+        "-F",
+        "#{session_name} #{session_last_attached}",
+    ]
+
+
+def test_parse_tmux_activity_maps_session_to_epoch():
+    out = "cpm-proj-1 1720800000\ncpm-proj-2 1720800042\n\n  cpm-other-3 1720800100  \n"
+    assert parse_tmux_activity(out) == {
+        "cpm-proj-1": 1720800000,
+        "cpm-proj-2": 1720800042,
+        "cpm-other-3": 1720800100,
+    }
+
+
+def test_parse_tmux_activity_skips_never_attached_and_empty():
+    # A never-attached session renders a bare name (empty trailing field) → skipped;
+    # empty output → empty map. Both mean "no attach record" → attach falls back to
+    # launch order.
+    assert parse_tmux_activity("cpm-proj-1\n") == {}
+    assert parse_tmux_activity("") == {}
 
 
 # --- ralph command: multi-epic /cpm:ralph, relative + shlex-quoted ------------

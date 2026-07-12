@@ -64,12 +64,21 @@ def _projects_text(app) -> str:
 
 def test_project_row_text_appends_pill_only_when_live(make_project, cache_root):
     status = derive_project(make_project(EPICS_READY))
-    assert "● live" not in _render(board_view.project_row_text("proj", status, live=False))
-    live = _render(board_view.project_row_text("proj", status, live=True), width=40)
+    assert "● live" not in _render(board_view.project_row_text("proj", status, live=0))
+    live = _render(board_view.project_row_text("proj", status, live=1), width=40)
     # Present, and right-aligned: the pill hugs the far right edge, well past the label.
     assert "● live" in live
     assert live.endswith("● live")
     assert live.index("proj") < live.index("●") - 5  # padding between label and pill
+
+
+def test_project_row_text_pill_shows_session_count_when_several(make_project, cache_root):
+    status = derive_project(make_project(EPICS_READY))
+    # Two live sessions → the pill carries the count so it reads as distinct from one.
+    two = _render(board_view.project_row_text("proj", status, live=2), width=40)
+    assert two.endswith("● 2 live")
+    three = _render(board_view.project_row_text("proj", status, live=3), width=40)
+    assert three.endswith("● 3 live")
 
 
 # --- launch → pill -----------------------------------------------------------
@@ -86,6 +95,34 @@ async def test_launch_marks_the_project_live(make_project, cache_root):
 
         assert app._live_sessions == {session: str(repo)}
         assert "● live" in _projects_text(app)
+
+
+async def test_two_sessions_in_one_project_show_a_count_pill(make_project, cache_root):
+    repo = make_project(EPICS_READY)
+    s1 = tmux_session_name(str(repo), "1")
+    s2 = tmux_session_name(str(repo), "2")
+    live = {s1: "@0", s2: "@1"}
+    suffixes = iter(["1", "2"])
+    app = BoardApp(
+        entries=[RegistryEntry(str(repo), "Proj")],
+        cache_root=cache_root,
+        watch_interval=None,
+        runner=lambda argv: None,
+        tmux_available=True,
+        in_tmux=False,
+        session_suffix=lambda: next(suffixes),
+        window_lister=lambda: dict(live),
+        attach_suspend=lambda: contextlib.nullcontext(),
+    )
+    async with app.run_test() as pilot:
+        await pilot.press("l")
+        await pilot.pause()
+        assert "● live" in _projects_text(app)  # one session so far
+
+        await pilot.press("l")  # a second, distinct session in the same project
+        await pilot.pause()
+        assert app._live_sessions == {s1: str(repo), s2: str(repo)}
+        assert "● 2 live" in _projects_text(app)
 
 
 async def test_watch_tick_captures_the_window_id_handle(make_project, cache_root):

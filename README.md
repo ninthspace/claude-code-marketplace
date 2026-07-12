@@ -105,7 +105,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v2.0.0)
+### Claude Planning Method (v2.7.1)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
@@ -113,7 +113,7 @@ Structured discovery, product ideation, architecture exploration, specification,
 
 v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and a reduced token footprint.
 
-**Nineteen skills forming a pipeline:**
+**Twenty skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -136,6 +136,7 @@ v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, 
 | `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
 | `/cpm:quick` | Lightweight execution for small changes | `docs/quick/{nn}-quick-{slug}.md` |
 | `/cpm:status` | Project status reconnaissance and next-step recommendations | Ephemeral (stdout only) |
+| `/cpm:clean` | On-demand cleanup of leftover session-state files | None (removes files, reports what was deleted) |
 
 **Quick Start:**
 ```bash
@@ -178,6 +179,9 @@ v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, 
 # Check project status and get next-step recommendations
 /cpm:status
 
+# Clean up leftover session-state files on demand
+/cpm:clean
+
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management
 /cpm:do 3  # work on a specific task
@@ -211,7 +215,7 @@ v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, 
 - Archive — clean up completed artefacts with staleness heuristics and chain detection
 - Project status reconnaissance — scan artifacts and git history, produce a narrative briefing with next steps
 - Customisable agent roster — override default personas per project
-- Compaction resilience — seamlessly survives Claude Code context compaction
+- Compaction resilience — seamlessly survives Claude Code context compaction, with `/cpm:clean` for on-demand cleanup of leftover session-state files
 
 **Companion tool — cpm board:** a standalone terminal UI (`cpm/tools/board/`) that shows the CPM status of every project you register — a three-column Projects → Epics → Stories browser — and launches the right `/cpm:*` session for each without leaving the board. It reads each project's `docs/` planning artifacts read-only. See [the board README](./cpm/tools/board/README.md).
 

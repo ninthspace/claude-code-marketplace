@@ -102,6 +102,25 @@ def _query_tmux_windows() -> dict[str, str]:
     return launcher.parse_tmux_windows(result.stdout)
 
 
+def _query_tmux_activity() -> dict[str, int]:
+    """Live sessions as ``session_name → last-attached epoch`` (default attach-order
+    poller). Read once when ``t`` is pressed so attach targets the session the user
+    most recently used — including one they switched to natively with ``Ctrl-b s``.
+
+    Same failure contract as :func:`_query_tmux_windows`: a missing server (non-zero
+    exit) or an absent tmux (``OSError``) both mean "no activity data", and attach
+    falls back to newest-launched order."""
+    try:
+        result = subprocess.run(
+            launcher.tmux_list_sessions_activity_argv(), capture_output=True, text=True
+        )
+    except OSError:
+        return {}
+    if result.returncode != 0:
+        return {}
+    return launcher.parse_tmux_activity(result.stdout)
+
+
 def _clamp(index: int | None, length: int) -> int:
     """Keep a preserved highlight index within ``[0, length)`` (0 when unset)."""
     if index is None:
@@ -493,6 +512,7 @@ class BoardApp(App[None]):
         tmux_available: bool | None = None,
         session_suffix: Callable[[], str] | None = None,
         window_lister: Callable[[], dict[str, str]] | None = None,
+        activity_lister: Callable[[], dict[str, int]] | None = None,
         attach_suspend: Callable[[], AbstractContextManager] | None = None,
     ) -> None:
         super().__init__()
@@ -524,6 +544,10 @@ class BoardApp(App[None]):
         )
         self._session_suffix = session_suffix or _default_session_suffix
         self._window_lister = window_lister or _query_tmux_windows
+        # Polled once per attach (not per tick) to order a project's live sessions by
+        # when each was last used, so `t` returns you to the most recently accessed —
+        # native ``Ctrl-b s`` switches included (see :func:`_query_tmux_activity`).
+        self._activity_lister = activity_lister or _query_tmux_activity
         # Attach (`t`) hands the terminal to `tmux attach`, so the board must drop
         # its own UI first. ``self.suspend`` restores the normal terminal for the
         # duration of the attach; the seam lets tests substitute a no-op CM (the
@@ -631,7 +655,8 @@ class BoardApp(App[None]):
         keep_story = self.query_one("#stories", OptionList).highlighted
         self._projects = rows if rows is not None else self._derive(force=force)
         option_list = self.query_one("#projects", OptionList)
-        live_paths = self._live_project_paths()
+        live_counts = self._live_session_counts()
+        live_paths = set(live_counts)
         self._last_live_paths = live_paths
         self._suppress = True
         option_list.clear_options()
@@ -639,7 +664,7 @@ class BoardApp(App[None]):
             option_list.add_option(
                 Option(
                     board_view.project_row_text(
-                        name, status, live=str(status.path) in live_paths
+                        name, status, live=live_counts.get(str(status.path), 0)
                     )
                 )
             )
@@ -819,11 +844,32 @@ class BoardApp(App[None]):
         """Project paths with at least one live board-launched session (→ a pill)."""
         return set(self._live_sessions.values())
 
-    def _live_session_for(self, project_path: str) -> str | None:
-        """The most recently launched still-live session for a project, or ``None``.
-        (``_live_sessions`` preserves insertion order, so the last match is newest.)"""
+    def _live_session_counts(self) -> dict[str, int]:
+        """Project path → number of live board-launched sessions it has. Drives the
+        pill's count (``● 2 live``) so a project running several sessions reads as
+        distinct from one running a single session."""
+        counts: dict[str, int] = {}
+        for path in self._live_sessions.values():
+            counts[path] = counts.get(path, 0) + 1
+        return counts
+
+    def _live_session_for(
+        self, project_path: str, last_attached: dict[str, int] | None = None
+    ) -> str | None:
+        """The still-live session a ``t`` attach should target for a project, or ``None``.
+
+        With ``last_attached`` (session → epoch from :func:`_query_tmux_activity`), the
+        **most recently accessed** session wins — so after switching between a project's
+        sessions you return to the one you were last in, not merely the newest-launched.
+        Ties, and any session with no attach record (never attached → absent → 0), fall
+        back to launch order: ``_live_sessions`` preserves insertion order, so the
+        highest-index match is newest. With no map (the default) every session scores 0,
+        so this collapses to "newest launched" — the historical behaviour."""
         matches = [name for name, path in self._live_sessions.items() if path == project_path]
-        return matches[-1] if matches else None
+        if not matches:
+            return None
+        attached = last_attached or {}
+        return max(matches, key=lambda name: (attached.get(name, 0), matches.index(name)))
 
     def _refresh_live_sessions(self) -> None:
         """Drop launch sessions that are no longer running, and capture/refresh each
@@ -1161,9 +1207,12 @@ class BoardApp(App[None]):
         board hands its own terminal to the live tmux session. Inside tmux it
         switches the client to the session; otherwise it **suspends** its UI, runs
         ``tmux attach`` in the foreground, and resumes when you return (``Ctrl-b o``
-        returns in both modes — see :func:`launcher.tmux_bind_return_argv`). Targets the newest live session the board launched for
-        the highlighted project; a stale session is pruned first so attach never
-        chases a session that has already ended.
+        returns in both modes — see :func:`launcher.tmux_bind_return_argv`). Where the
+        highlighted project has several live sessions, it targets the one you most
+        recently used (``#{session_last_attached}``, native ``Ctrl-b s`` switches
+        included; newest-launched breaks ties) — see :meth:`_live_session_for`. A
+        stale session is pruned first so attach never chases one that has already
+        ended.
         """
         if self._current_project is None:
             self.notify("No project selected", severity="warning")
@@ -1172,7 +1221,9 @@ class BoardApp(App[None]):
         self._refresh_live_sessions()
         if self._live_project_paths() != before:
             self.refresh_projects(keep_name=self._highlighted_project_name())
-        session = self._live_session_for(str(self._current_project.path))
+        session = self._live_session_for(
+            str(self._current_project.path), self._activity_lister()
+        )
         if session is None:
             self.notify("No live session here — launch one with l", severity="warning")
             return
