@@ -33,8 +33,8 @@ Before generating the prompt, validate all prerequisites.
 If explicit epic paths were provided in arguments, resolve them (expand globs). Otherwise, auto-discover:
 
 1. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
-2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Use Grep and Read tools directly (Bash loops with shell variables lose context).
-3. If no incomplete epics found, report to the user and stop: "No incomplete epics found. Nothing to run."
+2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` (`Done` reads as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn` — terminal, user-set statuses for work no longer needed; a retired epic has nothing to run). Use Grep and Read tools directly (Bash loops with shell variables lose context).
+3. If no runnable epics found (all `Complete` or retired), report to the user and stop: "No incomplete epics found. Nothing to run."
 4. Present the discovered epics and confirm with AskUserQuestion.
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.

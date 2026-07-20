@@ -70,15 +70,22 @@ Scan the four planning directories for documents and group them into artifact ch
 
 ### Step 2: Evaluate Staleness
 
-For each chain (or individual document), evaluate staleness using four signals. A chain is flagged as stale if **any** signal fires. Read documents with the Read tool as needed to check status fields.
+For each chain (or individual document), evaluate staleness using five signals. A chain is flagged as stale if **any** signal fires. Read documents with the Read tool as needed to check status fields.
 
-**Signal 1 — Epic complete**: Read the epic doc(s) in the chain. If every `## {Story Title}` heading has `**Status**: Complete` and the epic-level `**Status**:` is `Complete`, the epic is done. When a chain has multiple epic docs (1:many from a single spec), all must be complete for this signal to fire. Flag the chain as stale.
+**Signal 1 — Epic complete**: Read the epic doc(s) in the chain. If every `## {Story Title}` heading has `**Status**: Complete` (or `Done`) and the epic-level `**Status**:` is `Complete` (or `Done`), the epic is done. When a chain has multiple epic docs (1:many from a single spec), all must be complete for this signal to fire. Flag the chain as stale.
 
 **Signal 2 — Orphaned plan**: A plan document whose slug has no matching spec in `docs/specifications/`. This suggests the plan was abandoned or superseded. Flag the plan as stale.
 
 **Signal 3 — Completed retro**: A retro document whose source epic doc(s) (matched by slug or `**Source**:` back-reference) all have status Complete. The retro has served its purpose. Flag the retro as stale.
 
-**Signal 4 — Spec fully implemented**: A spec whose matching epic doc(s) (linked via `**Source spec**:` back-references in the epic docs) all have status Complete. The spec has been fully delivered. Flag the spec as stale.
+**Signal 4 — Spec fully implemented**: A spec whose matching epic doc(s) (linked via `**Source spec**:` back-references in the epic docs) are all *resolved* — status `Complete`/`Done`, or retired (`Superseded` / `Withdrawn`). The spec has been fully delivered or its work abandoned. Flag the spec as stale.
+
+**Signal 5 — Retired epic**: An epic whose epic-level `**Status**:` is `Superseded` or `Withdrawn` — a terminal, user-set status marking work no longer needed (superseded = replaced by other work; withdrawn = dropped). The epic is retired and ready to sweep out of the active tree regardless of its stories' individual statuses.
+
+What this signal flags depends on the rest of the chain — a retired epic must never drag active work or its spec into the archive:
+
+- **Whole chain resolved** — if *every* epic on the spec is resolved, Signal 4 also fires; the spec and all its epics archive together as one chain, as usual.
+- **Mixed chain** (the spec still has *active*, unresolved epics) — flag **only the retired epic and its coverage doc** as a standalone archivable unit. The spec and the live sibling epics stay in place. Signal 4 does *not* fire here, so the spec is never pulled in.
 
 For each chain, record which signals fired. Chains with no signals are still presented as candidates — the user may want to archive them for other reasons — but they are not flagged.
 
@@ -89,8 +96,9 @@ Present the discovered chains and documents to the user, grouped by chain with s
 1. **Format the candidate list**: For each chain, show:
    - The slug name as the chain heading
    - All documents in the chain (plan → spec → epics → retro order), showing each epic's attached coverage doc beneath it
-   - Which staleness signals fired (if any), as brief labels: `[epic complete]`, `[orphaned plan]`, `[completed retro]`, `[spec implemented]`
+   - Which staleness signals fired (if any), as brief labels: `[epic complete]`, `[orphaned plan]`, `[completed retro]`, `[spec implemented]`, `[epic superseded]`, `[epic withdrawn]`
    - Chains with staleness signals should be presented first
+   - **Mixed chain with a retired epic** (Signal 5, mixed case): present the retired epic and its coverage doc as their *own* archivable item nested under the chain — labelled `[epic superseded]` / `[epic withdrawn]` — clearly distinct from archiving the whole chain, which stays available (and unflagged) because its spec still has live epics.
 
 2. **Dry-run summary**: Before asking for selection, show a summary: "Found {N} artifact chains containing {M} total documents. {X} chains flagged as stale."
 
@@ -103,6 +111,10 @@ Present the discovered chains and documents to the user, grouped by chain with s
    - **Archive this chain** — Move all documents in this chain
    - **Skip this chain** — Leave it in place
 
+   For a mixed chain carrying a retired epic (Signal 5, mixed case), offer the retired epic as its own choice instead of forcing the whole chain:
+   - **Archive just the retired epic** — Move only that epic doc and its coverage doc; leave the spec and live sibling epics in place
+   - **Skip** — Leave it in place
+
 5. Build the final list of files to move based on user selections.
 
 *Progress note: capture the selected files list in the Step 3 summary.*
@@ -112,6 +124,8 @@ Present the discovered chains and documents to the user, grouped by chain with s
 Move the selected files to `docs/archive/` with mirrored subdirectory structure.
 
 1. **Completeness guard**: Before moving anything, confirm each selected chain is whole. For every chain being archived, verify its source spec and every coverage doc attached to its epics are in the move list. If a completed epic chain would be archived while its source spec or a sibling coverage doc is left behind, flag it to the user and offer to include the missing file(s). Never silently orphan a spec or coverage doc.
+
+   **Exception — standalone retired-epic move** (Signal 5, mixed chain): when the selection is a single retired epic (plus its coverage doc) whose spec still has active epics, the guard does *not* require the spec. The spec must be **left in place** — it still owns live work. Do pull the retired epic's own coverage doc along with it, but never the spec or the live sibling epics.
 
 2. **Create directories**: For each subdirectory needed (e.g. `docs/archive/plans/`, `docs/archive/specifications/`), run `mkdir -p` via Bash to ensure the target directory exists. Coverage docs mirror to `docs/archive/epics/` alongside their epic.
 

@@ -9,6 +9,8 @@ is deterministic.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from textual.widgets import DirectoryTree, Input, OptionList
 
@@ -99,6 +101,54 @@ async def test_picker_lists_directories_only(workspace, tmp_path, cache_root):
         assert "alpha" in labels and "beta" in labels  # project dirs shown
         assert "notes.txt" not in labels  # files hidden — a project is a directory
         assert ".hidden" not in labels  # dotfiles hidden to reduce clutter
+
+
+async def test_backspace_climbs_to_the_parent_directory(workspace, tmp_path, cache_root):
+    # The picker roots at `workspace`; backspace re-roots at its parent so you can
+    # browse above the starting directory instead of only ever descending from it.
+    reg = tmp_path / "registry.json"
+    app = BoardApp(
+        registry_file=reg, cache_root=cache_root, watch_interval=None, add_project_root=workspace
+    )
+    async with app.run_test() as pilot:
+        await pilot.press("a")
+        await pilot.pause()
+        await pilot.pause()
+        assert "alpha" in tree_labels(app)  # rooted at workspace
+
+        await pilot.press("backspace")
+        await pilot.pause()
+        await pilot.pause()  # let the re-rooted tree reload its children
+
+        tree = app.screen.query_one("#add-tree", DirectoryTree)
+        assert Path(tree.path) == tmp_path  # climbed one level up
+        assert "workspace" in tree_labels(app)  # the old root is now a child
+
+
+async def test_picker_resumes_from_the_last_browsed_directory(workspace, tmp_path, cache_root):
+    # Climb up a level and close the picker; the next open resumes at that higher
+    # directory instead of snapping back to the original root.
+    reg = tmp_path / "registry.json"
+    app = BoardApp(
+        registry_file=reg, cache_root=cache_root, watch_interval=None, add_project_root=workspace
+    )
+    async with app.run_test() as pilot:
+        await pilot.press("a")
+        await pilot.pause()
+        await pilot.pause()
+        assert Path(app.screen.query_one("#add-tree", DirectoryTree).path) == workspace
+
+        await pilot.press("backspace")  # climb to workspace's parent (tmp_path)
+        await pilot.pause()
+        await pilot.pause()
+        await pilot.press("escape")  # close without adding
+        await pilot.pause()
+
+        await pilot.press("a")  # reopen
+        await pilot.pause()
+        await pilot.pause()
+        tree = app.screen.query_one("#add-tree", DirectoryTree)
+        assert Path(tree.path) == tmp_path  # resumed where we left off, not workspace
 
 
 async def test_escape_cancels_without_adding(workspace, tmp_path, cache_root):

@@ -260,7 +260,10 @@ class AddProjectScreen(ModalScreen[tuple[str, str | None] | None]):
     normalisation is ``registry.add_project``'s job, unchanged.
     """
 
-    BINDINGS = [("escape", "cancel", "Cancel")]
+    BINDINGS = [
+        ("escape", "cancel", "Cancel"),
+        ("backspace", "go_up", "Up a level"),
+    ]
 
     DEFAULT_CSS = """
     AddProjectScreen {
@@ -286,10 +289,16 @@ class AddProjectScreen(ModalScreen[tuple[str, str | None] | None]):
     def __init__(self, root: Path | None = None) -> None:
         super().__init__()
         self._root = root or Path.home()
+        # The directory the tree is currently rooted at. Starts at the initial
+        # root and follows ``action_go_up``; the app reads it after the modal
+        # closes to resume the next open from where browsing left off.
+        self.final_root = self._root
 
     def compose(self) -> ComposeResult:
         with Vertical(id="add-dialog"):
-            yield Label("Add project — ↑↓ move · space open folder · Enter select · Esc cancel")
+            yield Label(
+                "Add project — ↑↓ move · space open folder · ⌫ up a level · Enter select · Esc cancel"
+            )
             yield DirectoryOnlyTree(str(self._root), id="add-tree")
             yield Input(placeholder="Label (optional)", id="add-label")
 
@@ -304,6 +313,19 @@ class AddProjectScreen(ModalScreen[tuple[str, str | None] | None]):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         # Enter in the label field just returns focus to the tree to pick a folder.
         self.query_one("#add-tree", DirectoryTree).focus()
+
+    def action_go_up(self) -> None:
+        """Re-root the tree at its parent so the picker can climb above its start
+        directory — a DirectoryTree only ever descends from its root. Assigning
+        ``path`` triggers ``watch_path`` to reset the root node and reload. When
+        the label input is focused it consumes backspace itself, so this fires
+        only from the tree."""
+        tree = self.query_one("#add-tree", DirectoryTree)
+        current = Path(tree.path)
+        parent = current.parent
+        if parent != current:  # at the filesystem root there is nothing above
+            tree.path = str(parent)
+            self.final_root = parent
 
     def action_cancel(self) -> None:
         self.dismiss(None)
@@ -566,6 +588,10 @@ class BoardApp(App[None]):
         self._projects: list[tuple[str, object]] = []  # (name, ProjectStatus), display order
         self._epic_rows: list[board_view.EpicRow] = []
         self._current_project: object | None = None  # ProjectStatus shown in the epics column
+        # Directory the add-project picker was last browsed to, so successive
+        # opens resume there instead of snapping back to the selected project's
+        # parent. Set when the picker modal closes; ``None`` until first use.
+        self._last_picker_dir: Path | None = None
         # The stories shown in the stories column and their epic's doc text, cached so
         # the story-detail panel can slice out the highlighted story's own section.
         self._stories: list[object] = []
@@ -770,10 +796,20 @@ class BoardApp(App[None]):
     def _epic_detail_content(self, row: board_view.EpicRow | None, width: int) -> Content:
         if row is None:
             return Content("")
+        # Preface the doc with attention notes: unrecognised statuses to fix (the
+        # (!) flag's explanation), then — for a blocked epic — what it waits on.
+        preface_rows: list[tuple[str, str]] = []
+        if row.epic is not None:
+            preface_rows.extend(board_view.unrecognised_rows(row.epic))
+            if row.action is not None and row.action.kind == "attention:unblock":
+                blocking = board_view.blocking_rows(row.epic)
+                if preface_rows and blocking:
+                    preface_rows.append(("", ""))  # blank line between the two blocks
+                preface_rows.extend(blocking)
         preface: Text | None = None
-        if row.epic is not None and row.action is not None and row.action.kind == "attention:unblock":
+        if preface_rows:
             preface = Text()
-            for i, (label, style) in enumerate(board_view.blocking_rows(row.epic)):
+            for i, (label, style) in enumerate(preface_rows):
                 if i:
                     preface.append("\n")
                 preface.append(label, style=style or "")
@@ -936,9 +972,13 @@ class BoardApp(App[None]):
         return None
 
     def _add_picker_root(self) -> Path | None:
-        """Where the add-project directory picker starts browsing: the selected
-        project's *parent* (so its sibling repos are right there), else an injected
-        root (tests), else ``None`` — which the modal resolves to the home dir."""
+        """Where the add-project directory picker starts browsing: the directory
+        it was last left at (so browsing survives the modal closing), else the
+        selected project's *parent* (so its sibling repos are right there), else
+        an injected root (tests), else ``None`` — which the modal resolves to
+        the home dir."""
+        if self._last_picker_dir is not None and self._last_picker_dir.is_dir():
+            return self._last_picker_dir
         if self._current_project is not None:
             parent = Path(self._current_project.path).parent
             if parent.is_dir():
@@ -948,7 +988,12 @@ class BoardApp(App[None]):
     def action_add_project(self) -> None:
         """Open the add-project modal; register the result and re-derive."""
 
+        screen = AddProjectScreen(root=self._add_picker_root())
+
         def _apply(result: tuple[str, str | None] | None) -> None:
+            # Remember where the picker was left — on cancel too — so the next
+            # open resumes there rather than re-deriving from the selection.
+            self._last_picker_dir = screen.final_root
             if result is None:
                 return
             path, label = result
@@ -956,7 +1001,7 @@ class BoardApp(App[None]):
             self.refresh_projects(force=True, keep_name=label or None)
             self.notify(f"Added: {path}")
 
-        self.push_screen(AddProjectScreen(root=self._add_picker_root()), _apply)
+        self.push_screen(screen, _apply)
 
     def action_remove_project(self) -> None:
         """Confirm, then unregister the highlighted project and re-derive."""

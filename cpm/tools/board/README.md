@@ -86,9 +86,11 @@ uv run --script board.py refresh --clear   # delete the cache entirely
 
 You can also register / remove projects from inside the TUI (`a` / `x`) — no need
 to drop back to the shell. `a` opens a directory picker (browse with ↑/↓, `space`
-to open a folder, `Enter` to select) so you never type a path by hand. It starts
+to open a folder, `⌫` to go up a level, `Enter` to select) so you never type a
+path by hand. The first open starts
 from the selected project's parent directory — so sibling repos are right there —
-falling back to your home directory when nothing is selected.
+falling back to your home directory when nothing is selected. After that it
+resumes wherever you last browsed to, so climbing up a level sticks between adds.
 
 ## Set up a shortcut
 

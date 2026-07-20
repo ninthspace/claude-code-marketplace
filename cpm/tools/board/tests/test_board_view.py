@@ -19,6 +19,7 @@ from board_view import (
     project_style,
     sort_rows,
     story_rows,
+    unrecognised_rows,
 )
 from status_model import Epic, NextAction, ProjectStatus, State, Story
 
@@ -156,6 +157,26 @@ def test_completed_epics_are_hidden_until_toggled():
     assert "1/1" in shown[0].label  # full progress, dimmed
 
 
+def test_retired_epics_render_as_dimmed_reference_rows_labelled_by_status():
+    # A superseded epic is not a candidate (absent from next_actions); under the
+    # toggle it shows dimmed, reference-only, labelled with its status word rather
+    # than a progress fraction.
+    old = epic(
+        "docs/epics/39-02-epic-old.md",
+        status="Superseded",
+        stories=[Story(1, "Pending", "—"), Story(2, "Complete", "—")],
+        title="Old Feature",
+    )
+    st = status(State.COMPLETE, actions=[], epics=[old])
+
+    assert epic_rows(st) == []  # hidden by default, like completed epics
+    (row,) = epic_rows(st, show_complete=True)
+    assert row.action is None  # reference-only, not launchable
+    assert row.style == "dim"
+    assert "Superseded" in row.label  # status word, not a "2/2"-style fraction
+    assert "Old Feature" in row.label
+
+
 def test_in_progress_and_ready_candidates_get_distinct_colours():
     in_progress = epic("docs/epics/39-01-epic-foo.md", stories=[Story(1, "In Progress", "—")], title="A")
     ready = epic("docs/epics/39-02-epic-bar.md", stories=[Story(1, "Pending", "—")], title="B")
@@ -241,3 +262,62 @@ def test_story_rows_hide_complete_and_show_titles():
 
 def test_story_rows_empty_for_a_spec_breakdown_row():
     assert story_rows(None) == []
+
+
+# --- unrecognised-status lint ------------------------------------------------
+
+
+def test_lead_token_story_renders_by_its_token_and_is_not_flagged():
+    foo = epic(
+        "docs/epics/39-01-epic-foo.md",
+        stories=[Story(1, "In Progress — mid conversion", "—", title="Convert")],
+    )
+    (label, style) = story_rows(foo)[0]
+    assert "In Progress" in label  # the token, not the note
+    assert "mid conversion" not in label
+    assert style == "yellow"
+    assert unrecognised_rows(foo) == []
+
+
+def test_story_row_flags_an_unrecognised_status():
+    foo = epic(
+        "docs/epics/39-01-epic-foo.md",
+        stories=[Story(1, "Folded into Story 10 — delivered", "—", title="Fold")],
+    )
+    (label, style) = story_rows(foo)[0]
+    assert label.startswith("⚠")
+    assert "Folded into Story 10" in label  # raw noise shown, not guessed
+    assert style == "bold red"
+
+
+def test_story_level_superseded_is_flagged():
+    # Superseded/Withdrawn are epic-level only → unrecognised on a story.
+    foo = epic("docs/epics/39-01-epic-foo.md", stories=[Story(1, "Withdrawn", "—", title="X")])
+    (label, _style) = story_rows(foo)[0]
+    assert label.startswith("⚠")
+
+
+def test_epic_row_gets_a_marker_when_a_status_is_unrecognised():
+    foo = epic(
+        "docs/epics/39-01-epic-foo.md",
+        status="In Progress",
+        stories=[Story(1, "Folded into Story 10 — delivered", "—", title="Fold")],
+        title="Foo",
+    )
+    action = NextAction("do", "/cpm:do a", "docs/epics/39-01-epic-foo.md", "Continue")
+    (row,) = epic_rows(status(State.IN_PROGRESS, actions=[action], epics=[foo]))
+    assert row.label.rstrip().endswith("(!)")
+
+
+def test_unrecognised_rows_names_only_the_bad_statuses():
+    foo = epic(
+        "docs/epics/39-01-epic-foo.md",
+        status="In Progress",
+        stories=[
+            Story(1, "Folded into Story 10", "—", title="Fold"),
+            Story(2, "Complete", "—", title="Done one"),
+        ],
+    )
+    text = " ".join(label for label, _ in unrecognised_rows(foo))
+    assert "Story 1" in text and "Folded into Story 10" in text
+    assert "Story 2" not in text  # recognised → not listed

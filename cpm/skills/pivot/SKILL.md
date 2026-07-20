@@ -68,6 +68,8 @@ Read and amend the selected document.
 
 3. **Apply edits**: Use the Edit tool to make surgical changes to the document. Multiple edits are fine — apply them one at a time. Do NOT use the Write tool for amendments — Edit only, to minimise risk of accidental content loss.
 
+   **Status fields carry a note tail.** A `**Status**:` value may be `<token> — <human note>` (e.g. `Complete — folded into Story 10; do not execute separately`). Only the leading token is the machine-read status; the tail is a preserved human note (see `cpm/shared/status-model.md`, *Status parsing*). When a pivot changes a status, edit the **token** and leave the tail intact unless the user's pivot is specifically about the note — match `**Status**: <token>`, not the whole line, so ` — <note>` survives. Never silently drop or rewrite a note the user authored.
+
 4. **Save immediately**: Each Edit call saves to disk immediately. No content is held only in memory.
 
 5. **Present change summary**: After all edits are applied, present a clear summary:

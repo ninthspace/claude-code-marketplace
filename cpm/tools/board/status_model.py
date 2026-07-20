@@ -43,11 +43,75 @@ RAG: dict[State, str] = {
 
 _NO_DEP = {"—", "-", "", None}
 
+#: Delimiters that separate a canonical status token from a trailing human note in a
+#: ``**Status**:`` field (e.g. ``Complete — folded into Story 10``): an em/en dash,
+#: an opening paren, a semicolon, or a *spaced* hyphen. A bare ``-`` (no surrounding
+#: spaces) is not a delimiter, so it never splits a hyphenated status word.
+_STATUS_NOTE_RE = re.compile(r"\s*[—–(;]|\s+-\s+")
+
+
+def _status_token(status: str) -> str:
+    """The canonical leading token of a status field — everything before the first
+    note delimiter, stripped. A field with no delimiter is returned whole; case is
+    preserved (callers lower-case). ``"Complete — folded in"`` → ``"Complete"``;
+    ``"In Progress"`` → ``"In Progress"``."""
+    return _STATUS_NOTE_RE.split(status.strip(), maxsplit=1)[0].strip()
+
+
+#: Recognised story statuses (lower-cased leading token); epics add the two
+#: user-set terminal statuses. A status whose leading token is outside its set is
+#: *unrecognised* and surfaced (never silently counted) — see :func:`_is_recognised_status`.
+_STORY_STATUSES = {"pending", "in progress", "complete", "done"}
+_EPIC_STATUSES = _STORY_STATUSES | {"superseded", "withdrawn"}
+
+#: Statuses (case-insensitive leading token) that mean a story or epic is *finished*
+#: — it counts toward progress and it *satisfies* a dependency. ``Done`` is a full
+#: synonym for ``Complete`` (CPM only ever writes ``Complete``; the board reads
+#: either, like the ``pivot`` skill). Superseded/Withdrawn are deliberately absent —
+#: see :data:`INACTIVE_EPIC_STATUSES`.
+_DONE_STATUSES = {"complete", "done"}
+
+#: Epic-level statuses a user sets by hand to *retire* an epic whose work is no
+#: longer needed — terminal, and never auto-derived from stories. A retired epic's
+#: stories still **count as done** for progress (the work is closed out) and the
+#: epic is hidden from the active surface and never nags a retro; but it does
+#: **not** satisfy a dependency — that work will never be done, so anything
+#: depending on it stays permanently blocked. ``/cpm:archive`` sweeps them up.
+INACTIVE_EPIC_STATUSES = {"Superseded", "Withdrawn"}
+_INACTIVE_LOWER = {s.lower() for s in INACTIVE_EPIC_STATUSES}
+
+
+def _is_done(status: str) -> bool:
+    """True when a status means *finished* — leading token ``Complete`` or ``Done``
+    (case-insensitive). Drives both progress counting and dependency satisfaction."""
+    return _status_token(status).lower() in _DONE_STATUSES
+
+
+def _is_pending(status: str) -> bool:
+    """True when the status's leading token is ``Pending`` (case-insensitive)."""
+    return _status_token(status).lower() == "pending"
+
+
+def _is_in_progress(status: str) -> bool:
+    """True when the status's leading token is ``In Progress`` (case-insensitive)."""
+    return _status_token(status).lower() == "in progress"
+
+
+def _is_recognised_status(status: str, *, epic: bool = False) -> bool:
+    """True when the status's leading token is in the vocabulary. An empty status is
+    *recognised* (absence is not noise) — only a non-empty, unrecognised leading
+    token (free-text prose, a typo, or a story-level ``Superseded``/``Withdrawn``,
+    which are epic-level only) is flagged for the user to normalise."""
+    token = _status_token(status).lower()
+    if not token:
+        return True
+    return token in (_EPIC_STATUSES if epic else _STORY_STATUSES)
+
 
 @dataclass(frozen=True)
 class Story:
     number: int | None
-    status: str  # "Pending" | "In Progress" | "Complete" | "" (unparsed)
+    status: str  # "Pending" | "In Progress" | "Complete"/"Done" | "" (unparsed)
     blocked_by: str  # raw field value, e.g. "—" or "Story 1"
     title: str = ""  # the `##` heading text, sans trailing workflow tags
 
@@ -223,8 +287,11 @@ def _epic_deps_satisfied(epic: Epic, epics: list[Epic]) -> bool:
 
 
 def _deps_satisfied(blocked_by: str, story_by_num: dict[int, Story], epics: list[Epic]) -> bool:
-    """A dependency string is satisfied when every referenced story/epic is Complete.
+    """A dependency string is satisfied when every referenced story/epic is *finished*
+    (``Complete`` / ``Done``).
 
+    A ``Superseded`` / ``Withdrawn`` reference is **never** satisfied — that work
+    will not be done, so anything depending on it stays permanently blocked.
     Unparseable references resolve to *not satisfied* (conservative — the contract
     says undetermined dependencies are treated as blocked, never as ready).
     """
@@ -238,11 +305,11 @@ def _deps_satisfied(blocked_by: str, story_by_num: dict[int, Story], epics: list
             if match is None:
                 return False
             target = story_by_num.get(int(match.group(1)))
-            if target is None or target.status != "Complete":
+            if target is None or not _is_done(target.status):
                 return False
         elif lowered.startswith("epic"):
             target_epic = _find_epic(ref, epics)
-            if target_epic is None or target_epic.status != "Complete":
+            if target_epic is None or not _is_done(target_epic.status):
                 return False
         else:
             return False
@@ -263,7 +330,7 @@ def _unblocked_pending(epic: Epic, epics: list[Epic]) -> list[Story]:
     epic_ok = _epic_deps_satisfied(epic, epics)
     unblocked: list[Story] = []
     for story in epic.stories:
-        if story.status != "Pending":
+        if not _is_pending(story.status):
             continue
         if epic_ok and _deps_satisfied(story.blocked_by, story_by_num, epics):
             unblocked.append(story)
@@ -271,6 +338,20 @@ def _unblocked_pending(epic: Epic, epics: list[Epic]) -> list[Story]:
 
 
 # --- state derivation --------------------------------------------------------
+
+
+def _is_inactive(epic: Epic) -> bool:
+    """True when an epic has been retired via a terminal, user-set status
+    (:data:`INACTIVE_EPIC_STATUSES`) — matched on the leading token, so a trailing
+    note is allowed (``Superseded — replaced by 12-03``)."""
+    return _status_token(epic.status).lower() in _INACTIVE_LOWER
+
+
+def _epic_is_terminal(epic: Epic) -> bool:
+    """True when the epic as a whole is closed out — retired, or its epic-level
+    status is itself done/complete. Every story of a terminal epic counts as done,
+    whatever the stories' own statuses say."""
+    return _is_inactive(epic) or _is_done(epic.status)
 
 
 def derive_state(specs: list[Path], epics: list[Epic]) -> State:
@@ -281,26 +362,34 @@ def derive_state(specs: list[Path], epics: list[Epic]) -> State:
     if not epics:
         return State.SPEC_READY  # specs exist, none derived into epics yet
 
-    stories = [s for e in epics for s in e.stories]
-    if not stories:
-        return State.COMPLETE if all(e.status == "Complete" for e in epics) else State.EPICS_READY
+    # Superseded/Withdrawn epics are retired by hand. Exclude them from the state
+    # *logic* so their (possibly Pending) stories can't peg a project to a stuck
+    # amber/red state — their stories still count as done for progress (see
+    # derive_project). Dependency resolution still sees the full epic list.
+    active = [e for e in epics if not _is_inactive(e)]
+    if not active:
+        return State.COMPLETE  # every epic retired — nothing left to action
 
-    pending = [s for s in stories if s.status == "Pending"]
-    in_progress = [s for s in stories if s.status == "In Progress"]
-    complete = [s for s in stories if s.status == "Complete"]
-    unblocked_pending = [s for e in epics for s in _unblocked_pending(e, epics)]
+    stories = [s for e in active for s in e.stories]
+    if not stories:
+        return State.COMPLETE if all(_epic_is_terminal(e) for e in active) else State.EPICS_READY
+
+    pending = [s for s in stories if _is_pending(s.status)]
+    in_progress = [s for s in stories if _is_in_progress(s.status)]
+    done = [s for s in stories if _is_done(s.status)]
+    unblocked_pending = [s for e in active for s in _unblocked_pending(e, epics)]
 
     # 3 — blocked: pending work remains but none of it is actionable.
     if pending and not unblocked_pending and not in_progress:
         return State.BLOCKED
     # 7 — complete: every story done.
-    if len(complete) == len(stories):
+    if len(done) == len(stories):
         return State.COMPLETE
     # 4 — in-progress: active work, or a partially-done set.
-    if in_progress or (complete and pending):
+    if in_progress or (done and pending):
         return State.IN_PROGRESS
     # 5 — epics-ready: epics exist, nothing started.
-    if all(s.status == "Pending" for s in stories):
+    if all(_is_pending(s.status) for s in stories):
         return State.EPICS_READY
     return State.IN_PROGRESS
 
@@ -311,25 +400,30 @@ def derive_state(specs: list[Path], epics: list[Epic]) -> State:
 def _epic_state(epic: Epic, all_epics: list[Epic]) -> str:
     """Classify one epic using the same precedence as ``derive_state``.
 
-    Returns one of ``blocked`` / ``complete`` / ``in-progress`` / ``epics-ready``.
-    ``all_epics`` is threaded through so cross-epic dependencies resolve.
+    Returns ``inactive`` for a retired (Superseded/Withdrawn) epic, else one of
+    ``blocked`` / ``complete`` / ``in-progress`` / ``epics-ready``. ``all_epics``
+    is threaded through so cross-epic dependencies resolve. No action branch in
+    :func:`compute_next_actions` matches ``inactive``, so retired epics never
+    surface as candidates.
     """
+    if _is_inactive(epic):
+        return "inactive"
     stories = epic.stories
     if not stories:
-        return "complete" if epic.status == "Complete" else "epics-ready"
+        return "complete" if _epic_is_terminal(epic) else "epics-ready"
 
-    pending = [s for s in stories if s.status == "Pending"]
-    in_progress = [s for s in stories if s.status == "In Progress"]
-    complete = [s for s in stories if s.status == "Complete"]
+    pending = [s for s in stories if _is_pending(s.status)]
+    in_progress = [s for s in stories if _is_in_progress(s.status)]
+    done = [s for s in stories if _is_done(s.status)]
     unblocked = _unblocked_pending(epic, all_epics)
 
     if pending and not unblocked and not in_progress:
         return "blocked"
-    if len(complete) == len(stories):
+    if len(done) == len(stories):
         return "complete"
-    if in_progress or (complete and pending):
+    if in_progress or (done and pending):
         return "in-progress"
-    if all(s.status == "Pending" for s in stories):
+    if all(_is_pending(s.status) for s in stories):
         return "epics-ready"
     return "in-progress"
 
@@ -347,7 +441,7 @@ def _blocking_deps(epic: Epic) -> str:
     if epic.blocked_by not in _NO_DEP:
         return epic.blocked_by
     deps = sorted(
-        {s.blocked_by for s in epic.stories if s.status == "Pending" and s.blocked_by not in _NO_DEP}
+        {s.blocked_by for s in epic.stories if _is_pending(s.status) and s.blocked_by not in _NO_DEP}
     )
     return ", ".join(deps) if deps else "an incomplete dependency"
 
@@ -450,9 +544,15 @@ def derive_project(path: Path | str) -> ProjectStatus:
         specs = _spec_paths(root)
         epics = [parse_epic(p) for p in _epic_paths(root)]
 
-        stories = [s for e in epics for s in e.stories]
-        total = len(stories)
-        complete = sum(1 for s in stories if s.status == "Complete")
+        # Everything counts: a terminal epic (retired, or done at the epic level)
+        # closes out all its stories, so they count as done regardless of their own
+        # status; otherwise a story counts only when individually done.
+        total = sum(len(e.stories) for e in epics)
+        complete = sum(
+            len(e.stories) if _epic_is_terminal(e)
+            else sum(1 for s in e.stories if _is_done(s.status))
+            for e in epics
+        )
 
         return ProjectStatus(
             path=root,

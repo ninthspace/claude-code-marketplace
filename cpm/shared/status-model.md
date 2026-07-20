@@ -24,13 +24,48 @@ mutating anything.
 | Epics | `docs/epics/[0-9]*-epic-*.md` — both flat (`NN-`) and two-part (`NN-MM-`) shapes; exclude `-coverage-` files |
 | Briefs | `docs/briefs/[0-9]*-brief-*.md` (presence only) |
 | Retros | `docs/retros/[0-9]*-retro-*.md` (presence only, for `complete` follow-up) |
-| Epic status | each epic's `**Status**:` (`Pending` / `In Progress` / `Complete`) |
+| Epic status | each epic's `**Status**:` — auto-derived `Pending` / `In Progress` / `Complete`, or the terminal, user-set `Superseded` / `Withdrawn` (see *Retired epics* below) |
 | Story status | each `##` story's `**Status**:` and `**Blocked by**:` |
 | Git HEAD | `git rev-parse HEAD` — used for **freshness only** (see the board's cache), never for state |
 
-**Unblocked story rule** (shared with `cpm:do` hydration, so the board agrees with what `do` would pick up): a `Pending` story is *unblocked* when its `**Blocked by**` is `—` or every referenced story/epic is `Complete`. Otherwise it is *blocked*.
+**`Done` is read as `Complete`.** CPM only ever *writes* `Complete`, but readers accept `Done` (case-insensitive) as a full synonym — a hand-authored or imported `**Status**: Done` counts, hides, and satisfies dependencies exactly like `Complete`. This "read tolerant, write strict" rule keeps off-spec docs working without letting `Done` leak into newly-generated artifacts.
 
-**Story progress**: `Σ (stories Complete) / Σ (total stories)` across all epics, rendered as e.g. `4/7`.
+**Unblocked story rule** (shared with `cpm:do` hydration, so the board agrees with what `do` would pick up): a `Pending` story is *unblocked* when its `**Blocked by**` is `—` or every referenced story/epic is *finished* (`Complete` / `Done`). A `Superseded` / `Withdrawn` reference is **never** satisfied (see *Retired epics*). Otherwise the story is *blocked*.
+
+**Story progress**: `Σ (stories done) / Σ (total stories)` across **all** epics, rendered as e.g. `4/7`. A story is *done* when its status is `Complete` / `Done`, and **every** story of a terminal epic (a retired `Superseded` / `Withdrawn` epic, or one whose epic-level status is `Complete` / `Done`) counts as done — everything counts, nothing is dropped from the denominator.
+
+### Status parsing (lead-token) and linting
+
+A `**Status**:` value is read by its **leading token** — the text up to the first
+delimiter (an em/en dash `—` / `–`, a spaced hyphen ` - `, an opening paren `(`,
+or a semicolon `;`). That leading token is normalised (trimmed, case-insensitive)
+against the vocabulary; **everything after the delimiter is a human note the tool
+ignores**. So:
+
+```
+**Status**: Complete — folded into Story 10; do not execute separately
+```
+
+reads as `Complete` (it counts, hides, and satisfies dependencies), while the
+tail is preserved verbatim in the source for a human reader. This lets a real,
+messy status carry triage context without breaking derivation — write the
+canonical word first, then `— your note`.
+
+**Recognised vocabulary**: stories accept `Pending` / `In Progress` / `Complete`
+/ `Done`; epics accept those plus `Superseded` / `Withdrawn`. `Superseded` /
+`Withdrawn` are **epic-level only** — on a story they are *unrecognised*.
+
+**Linting, not guessing.** A non-empty status whose leading token is *not* in the
+recognised vocabulary is **flagged, never parsed by prose**. The tool does not try
+to infer intent from free text like `Folded into Story 10` — it surfaces it so a
+human (or a `/cpm` skill) can rewrite it to the `Complete — note` form. An
+unrecognised status still **counts as not-done** (the conservative choice: it is
+made visible, never silently swept into the "done" pile). The board surfaces it as:
+
+- a trailing `(!)` marker on the epic row,
+- a `⚠` glyph and warning colour on the offending story row (showing the raw text),
+- a short preface in the epic-detail panel listing each unrecognised status,
+- a distinct callout in `/cpm:status`.
 
 ---
 
@@ -45,10 +80,10 @@ rule wins.
 | `unknown` | project path unreachable, or its artifacts cannot be parsed | grey (`?`) |
 | `no-artifacts` | no specs and no epics under `docs/` | grey |
 | `blocked` | epics have `Pending` stories, but **none are unblocked** (all remaining work waits on incomplete deps) | red |
-| `in-progress` | any story `In Progress`, or a mix of `Complete` + `Pending` stories | amber |
+| `in-progress` | any story `In Progress`, or a mix of *done* (`Complete`/`Done`) + `Pending` stories | amber |
 | `epics-ready` | epic files exist and **every** story is still `Pending` (nothing started) | amber |
 | `spec-ready` | spec(s) exist but no epic files derived yet | amber |
-| `complete` | all epics `Complete` | green |
+| `complete` | every active epic finished (all stories done), or every epic retired | green |
 
 Two deliberate choices:
 
@@ -56,6 +91,33 @@ Two deliberate choices:
   story is blocked." A project that is actively moving is never mislabelled red.
 - `unknown` is the graceful-degradation state: an unreachable path or a
   half-written / malformed artifact resolves here rather than aborting the sweep.
+
+### Retired epics (`Superseded` / `Withdrawn`)
+
+`Superseded` and `Withdrawn` are **terminal** epic statuses a user sets by hand
+when an epic's work is no longer needed — `Superseded` for work replaced by
+another epic, `Withdrawn` for work simply dropped. They are **never
+auto-derived** from stories (unlike `Pending` / `In Progress` / `Complete`), and
+CPM never sets them on your behalf — you action them explicitly.
+
+A retired epic is **closed out, not deleted**. Its stories all **count as done**
+toward story-progress (the work is finished with, so it swells the numerator, not
+the "still to do" pile), and the epic is removed from the state *logic* and the
+next-action list so a deliberately-abandoned epic can't peg a project to a stuck
+amber/red state or nag a `/cpm:retro` — there is nothing to reflect on, so it is
+`/cpm:archive`'s job, not the retro's. A project whose only remaining epics are
+retired (or `Complete`) resolves to `complete`.
+
+**But a retired epic never satisfies a dependency.** Cross-epic dependency
+resolution still *sees* it, and because its work will never be done, anything
+depending on it stays **permanently blocked** — retiring a depended-upon epic
+surfaces as a real blocker, not a silent skip. This is the one place `Superseded`
+/ `Withdrawn` diverge from `Complete` / `Done`: they count as done everywhere
+*except* as a satisfied dependency.
+
+Retired epics are swept out of the active `docs/` tree by `/cpm:archive` (a
+dedicated staleness signal). In the board they appear only under the
+show-complete toggle, dimmed and labelled with their status word.
 
 ---
 

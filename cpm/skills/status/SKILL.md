@@ -58,7 +58,9 @@ Scan CPM documentation directories for artifacts. For each directory, use the Gl
 
 **For each directory**, count the files found. Report only the count, not individual files.
 
-**Epic deep-read:** For each epic file, use the Read tool to extract the `**Status**:` field and story completion counts. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). Only report epics that have **remaining work** (Status is not Complete). Completed epics are summarised as a single count (e.g. "17 epics complete"). Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
+**Epic deep-read:** For each epic file, use the Read tool to extract the `**Status**:` field and story completion counts. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). **Read each status by its leading token** — the text up to the first delimiter (`—` / `–`, ` - `, `(`, `;`); normalise *that* against the vocabulary and treat any tail as a human note (see `cpm/shared/status-model.md`, *Status parsing*). So `Complete — folded into Story 10` reads as `Complete`. Only report epics that have **remaining work** — Status is not `Complete`/`Done` (readers treat `Done` as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn`, the terminal user-set statuses for work no longer needed). A retired epic has no remaining work: its stories still count as done in progress counts (the work is closed out), and it never appears as something needing attention. Completed epics are summarised as a single count (e.g. "17 epics complete"); retired epics are likewise summarised as a count (e.g. "2 epics superseded/withdrawn"), with `/cpm:archive` suggested to sweep them. Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
+
+**Unrecognised statuses:** a status whose leading token is *not* in the recognised vocabulary (story: `Pending`/`In Progress`/`Complete`/`Done`; epic: those plus `Superseded`/`Withdrawn` — story-level `Superseded`/`Withdrawn` is unrecognised, those being epic-level only) is **flagged, never guessed**. Do not infer intent from free prose; record the raw text and its location. Such a status **counts as not-done** (conservative). Collect these for a callout in the report — do not silently drop them.
 
 **Progress files:** Glob `docs/plans/.cpm-progress-*.md`. If any exist, read the first few lines to extract `**Skill**:` and `**Current task**:`/`**Phase**:` fields. Report which skills have active sessions.
 
@@ -104,6 +106,8 @@ Combine data from Phase 1 and Phase 2 into a **narrative summary** that tells th
 3. **What happened recently**: Read the commit subjects from Phase 2 and identify the themes of recent work. Group related commits into a narrative thread (e.g. "Recent work focused on coverage matrix improvements and adding the consult skill"). Mention the time since last commit if there's been a notable gap.
 
 4. **What needs attention now** (if anything): In-progress epics or stories, active CPM sessions, uncommitted changes, feature branches with in-flight work, stale progress files. If everything is clean and complete, say so — that's useful information too.
+
+**Unrecognised-status callout:** if the Phase 1 scan collected any unrecognised statuses, add a distinct callout here — e.g. "⚠ Unrecognised statuses: docs/epics/05-…, Story 3 — `Folded into Story 10`. These count as not-done; rewrite to `Complete — note` (or the correct status) to resolve." Name each offending epic/story and show its raw status verbatim. This is the only place the report exposes off-vocabulary statuses; keep it separate from the normal progress narrative so it reads as an anomaly to fix, not a state to accept.
 
 If no CPM artifacts exist, say: "No CPM planning artifacts found. This project hasn't started the CPM planning pipeline yet."
 

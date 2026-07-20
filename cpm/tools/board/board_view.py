@@ -18,7 +18,19 @@ from rich.console import RenderableType
 from rich.table import Table
 from rich.text import Text
 
-from status_model import _NO_DEP, Epic, NextAction, ProjectStatus, State
+from status_model import (
+    _NO_DEP,
+    Epic,
+    NextAction,
+    ProjectStatus,
+    State,
+    _is_done,
+    _is_inactive,
+    _is_pending,
+    _is_recognised_status,
+    _status_token,
+)
+from status_model import _is_in_progress as _status_in_progress
 
 #: Rich style per project state, on the *same palette as the epics legend* so the
 #: two columns read alike: green = ready to pick up · yellow = in-progress ·
@@ -121,12 +133,22 @@ def project_row_text(name: str, status: ProjectStatus, *, live: int = 0) -> Rend
 # actionable work is a candidate, so complete-and-retro'd epics never appear here;
 # the `show_complete` toggle appends them (dimmed, unlaunchable) for reference.
 
-#: Rich style per story status for the right column.
-_STORY_STYLE: dict[str, str] = {
-    "Complete": "green",
-    "In Progress": "yellow",
-    "Pending": "",
-}
+#: Marker + style for a status the tool doesn't recognise (free-text prose, a typo,
+#: or a story-level Superseded/Withdrawn). The board *surfaces* it rather than
+#: counting it — the user (or a /cpm skill) normalises the source.
+_WARN_GLYPH = "⚠"
+_WARN_MARKER = "(!)"
+_WARN_STYLE = "bold red"
+
+
+def _story_style(status: str) -> str:
+    """Rich style for a story row by its status token: green = done, yellow =
+    in-progress, unstyled otherwise."""
+    if _is_done(status):
+        return "green"
+    if _status_in_progress(status):
+        return "yellow"
+    return ""
 
 
 @dataclass
@@ -149,14 +171,14 @@ def _epic_prefix(epic: Epic) -> str:
 
 def _progress(epic: Epic) -> str:
     total = len(epic.stories)
-    done = sum(1 for story in epic.stories if story.status == "Complete")
+    done = sum(1 for story in epic.stories if _is_done(story.status))
     return f"{done}/{total}" if total else "—"
 
 
 def _is_in_progress(epic: Epic) -> bool:
     statuses = [story.status for story in epic.stories]
-    return any(s == "In Progress" for s in statuses) or (
-        any(s == "Complete" for s in statuses) and any(s == "Pending" for s in statuses)
+    return any(_status_in_progress(s) for s in statuses) or (
+        any(_is_done(s) for s in statuses) and any(_is_pending(s) for s in statuses)
     )
 
 
@@ -216,9 +238,31 @@ def _done_row(epic: Epic) -> EpicRow:
     )
 
 
+def _inactive_row(epic: Epic) -> EpicRow:
+    """A retired (Superseded/Withdrawn) epic: reference-only, labelled with its
+    terminal status word rather than a progress fraction — its stories no longer
+    count toward the project's progress."""
+    title = epic.title or epic.path.stem
+    return EpicRow(
+        label=f"{_epic_prefix(epic)} · {title}  ·  {epic.status}",
+        style="dim",
+        action=None,
+        epic=epic,
+    )
+
+
+def _epic_has_unrecognised(epic: Epic) -> bool:
+    """True when the epic's own status or any of its stories' statuses is
+    unrecognised — the trigger for the row's ``(!)`` flag."""
+    if not _is_recognised_status(epic.status, epic=True):
+        return True
+    return any(not _is_recognised_status(s.status) for s in epic.stories)
+
+
 def epic_rows(status: ProjectStatus, *, show_complete: bool = False) -> list[EpicRow]:
     """Middle-column rows for a project: the ordered candidates, plus (when
-    ``show_complete``) the finished-and-retro'd epics as dimmed reference rows."""
+    ``show_complete``) the finished-and-retro'd epics — and any retired
+    (Superseded/Withdrawn) epics — as dimmed reference rows."""
     by_path = {str(epic.path): epic for epic in status.epics}
     seen: set[str] = set()
     rows: list[EpicRow] = []
@@ -234,7 +278,13 @@ def epic_rows(status: ProjectStatus, *, show_complete: bool = False) -> list[Epi
     if show_complete:
         for epic in status.epics:
             if str(epic.path) not in seen:
-                rows.append(_done_row(epic))
+                row = _inactive_row(epic) if _is_inactive(epic) else _done_row(epic)
+                rows.append(row)
+    # Flag any epic carrying an unrecognised status so it reads as "needs a look"
+    # at a glance — this only marks; it never changes the epic's counts.
+    for row in rows:
+        if row.epic is not None and _epic_has_unrecognised(row.epic):
+            row.label = f"{row.label}  {_WARN_MARKER}"
     return rows
 
 
@@ -248,7 +298,7 @@ def blocking_rows(epic: Epic) -> list[tuple[str, str]]:
     list rather than one run-on line that wraps. Duplicate references are collapsed.
     A blocked epic always has at least one real dependency; the fallback is defensive.
     """
-    sources = [epic.blocked_by, *(s.blocked_by for s in epic.stories if s.status == "Pending")]
+    sources = [epic.blocked_by, *(s.blocked_by for s in epic.stories if _is_pending(s.status))]
     refs: list[str] = []
     for blocked_by in sources:
         if blocked_by in _NO_DEP:
@@ -262,13 +312,28 @@ def blocking_rows(epic: Epic) -> list[tuple[str, str]]:
     return [("Blocked by:", "bold red"), *[(ref, "red") for ref in refs]]
 
 
+def unrecognised_rows(epic: Epic) -> list[tuple[str, str]]:
+    """Detail lines naming each unrecognised status on an epic — its own and each
+    story's — so a flagged ``(!)`` row explains itself. Empty when all recognised."""
+    rows: list[tuple[str, str]] = []
+    if not _is_recognised_status(epic.status, epic=True):
+        rows.append((f"Epic status not recognised: {epic.status}", "red"))
+    for s in epic.stories:
+        if not _is_recognised_status(s.status):
+            num = s.number if s.number is not None else "?"
+            rows.append((f"Story {num} status not recognised: {s.status}", "red"))
+    if rows:
+        rows.insert(0, (f"{_WARN_GLYPH} Unrecognised — normalise to Pending / In Progress / Complete:", "bold red"))
+    return rows
+
+
 def visible_stories(epic: Epic | None, *, show_complete: bool = False):
     """The stories shown in the stories column, in order — complete ones hidden unless
     ``show_complete``. The board maps a highlighted row back to its ``Story`` through
     this same list, so :func:`story_rows` is defined in its terms (no drift)."""
     if epic is None:
         return []
-    return [s for s in epic.stories if show_complete or s.status != "Complete"]
+    return [s for s in epic.stories if show_complete or not _is_done(s.status)]
 
 
 def story_rows(epic: Epic | None, *, show_complete: bool = False) -> list[tuple[str, str]]:
@@ -281,6 +346,13 @@ def story_rows(epic: Epic | None, *, show_complete: bool = False) -> list[tuple[
     for story in visible_stories(epic, show_complete=show_complete):
         number = story.number if story.number is not None else "?"
         title = story.title or ""
-        label = f"Story {number} · {title}  ·  {story.status or '—'}"
-        rows.append((label, _STORY_STYLE.get(story.status, "")))
+        if not _is_recognised_status(story.status):
+            # Surface the raw noise (with a glyph) so a human can normalise it —
+            # never guess what the prose meant.
+            label = f"{_WARN_GLYPH} Story {number} · {title}  ·  {story.status or '—'}"
+            rows.append((label, _WARN_STYLE))
+        else:
+            shown = _status_token(story.status) or "—"
+            label = f"Story {number} · {title}  ·  {shown}"
+            rows.append((label, _story_style(story.status)))
     return rows

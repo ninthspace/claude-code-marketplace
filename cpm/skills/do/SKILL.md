@@ -18,8 +18,8 @@ Resolve the epic doc first, then select a task.
    a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
    b. If no epic files found, proceed without one (tasks still work via their descriptions).
    c. If only one epic file exists, use it — no need to ask.
-   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`. Use Grep and Read tools directly (Bash loops with shell variables lose context). If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
-   e. If all epics are `Complete`, tell the user there's nothing to do.
+   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` (`Done` reads as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn` — terminal, user-set statuses for work no longer needed; there is nothing to do on a retired epic). Use Grep and Read tools directly (Bash loops with shell variables lose context). If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
+   e. If all epics are `Complete` or retired (`Superseded` / `Withdrawn`), tell the user there's nothing to do.
 3. If no epic docs exist, proceed without one (tasks still work via their descriptions).
 
 The epic doc, once resolved, applies to the entire work loop. Parse it once and reuse the result across all tasks.
@@ -136,7 +136,7 @@ When hydration is triggered:
 1. **Read the epic doc** using the Read tool. Parse all `##` story headings and their metadata fields (`**Story**:`, `**Status**:`, `**Blocked by**:`).
 
 2. **Identify the next unblocked story**:
-   - A story is unblocked when its `**Blocked by**` field is either `—` (no dependencies) or all referenced stories have `**Status**: Complete`.
+   - A story is unblocked when its `**Blocked by**` field is either `—` (no dependencies) or all referenced stories have `**Status**: Complete` (or `Done`, which reads the same). A referenced `Superseded` / `Withdrawn` epic never satisfies the dependency — that work will not be done — so the story stays blocked.
    - Among unblocked stories, pick the lowest-numbered one with `**Status**: Pending`.
    - If no unblocked pending stories remain, the epic is done — proceed to batch summary.
 
@@ -199,6 +199,7 @@ For each task, follow these steps in order.
 - If epic doc integration is active, use the Edit tool to update the matched entry's status. The entry may be a `##` story or a `###` task — locate the correct `**Status**: Pending` field near the matched heading:
   - `old_string`: `**Status**: Pending` (scoped near the matched heading)
   - `new_string`: `**Status**: In Progress`
+- **Preserve any note tail.** A status may carry a human note after a delimiter — `**Status**: Pending — waiting on API keys`. Match only the **status token** (`**Status**: Pending`), never the whole line, so the ` — waiting on API keys` tail is left untouched (the result becomes `**Status**: In Progress — waiting on API keys`). Do not widen `old_string` to swallow the tail, and never rewrite or drop a note you did not author.
 
 ### 3. Plan (when warranted)
 
@@ -321,6 +322,7 @@ This step has three parts: mark complete, capture an observation, and write the 
 - If epic doc integration is active, use the Edit tool to update the matched entry's status (whether `##` story or `###` task):
   - `old_string`: `**Status**: In Progress` (scoped near the matched heading)
   - `new_string`: `**Status**: Complete`
+- **Preserve any note tail** (as in Step 2): match only the `**Status**: In Progress` token, not the whole line, so a trailing ` — note` survives the transition (`**Status**: In Progress — folded into Story 10` → `**Status**: Complete — folded into Story 10`). Never widen the match to consume or rewrite a human note.
 - Call `TaskUpdate` to set the task status to `completed`.
 
 **Part B — Capture observations (retro)**:
@@ -388,7 +390,7 @@ When the work loop finishes (no more pending unblocked tasks):
    a. **If the epic was specified explicitly** (a file path was passed via `$ARGUMENTS`, not auto-discovered): the user asked for this specific epic. Delete the progress file and stop.
    b. **If the epic was auto-discovered** (resolved via smart discovery, not an explicit path): check if other epics are available to work on:
       i. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
-      ii. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete` (excluding the epic just finished). Use Grep and Read tools directly (Bash loops with shell variables lose context).
+      ii. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` and not retired (`Superseded` / `Withdrawn`) (excluding the epic just finished). Use Grep and Read tools directly (Bash loops with shell variables lose context).
       iii. If **no remaining epics** have work: delete the progress file and stop.
       iv. If **one or more epics** have remaining work: present the choice using AskUserQuestion — "Epic {name} is complete. What would you like to do?" with options:
          - **Continue to {next epic name}** — auto-select the next epic by number order and start a new work loop (re-run Input resolution, the **Retro Check** consumption gate, Library Check, Test Runner Discovery, Framework Detection, and Story Hydration for the new epic). Re-running the Retro Check per epic is load-bearing: it re-globs `docs/retros/` so this epic consumes any retro written by an earlier epic **in the same run** — without it, mid-run lessons are never seen.
