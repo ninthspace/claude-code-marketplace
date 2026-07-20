@@ -139,10 +139,14 @@ of candidate next actions**, not a single value.
 2. `/cpm:do {epic}` — one per **In-Progress** epic (continue), lowest epic number first.
 3. `/cpm:do {epic}` — one per **epics-ready** epic (start), lowest epic number first.
 4. `/cpm:epics {spec}` — one per spec with no derived epics, lowest spec number first.
-5. `/cpm:retro {epic}` (then `/cpm:archive`) — one per `Complete` epic lacking a retro.
+5. `/cpm:retro {epic}` (then `/cpm:archive`) — one per `Complete` epic lacking a retro **and not waived** (see *Retro waiver* below).
 6. `/cpm:discover` — only when the project is `no-artifacts`.
 
 Each candidate is a record: `{ kind, command | null, target_path, label }`.
+
+### Retro waiver (`**Retro waived**:`)
+
+A retro is never mandatory: `cpm:do` deliberately skips end-of-epic retro generation for a clean epic (no retro-trigger signal fired). To stop such an epic nagging as "retro pending" forever, a completed epic may carry an epic-level **`**Retro waived**:`** marker (a header-block field, distinct from the story-level `**Retro**:` observation fields). A `Complete` epic bearing this marker is treated as **retro-satisfied** — exactly like one with an actual `docs/retros/` retro — so it produces **no** `/cpm:retro` candidate (rule 5) and no board retro row/summary. The marker is set by **`/cpm:retro triage`** on epics it classifies as clean, and is a plain, reversible record: deleting the line restores the nudge. It affects only the retro follow-up — counting, state, hiding, and dependency logic are unchanged.
 
 ### State ↔ primary-action consistency
 

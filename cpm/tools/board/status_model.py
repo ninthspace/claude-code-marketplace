@@ -124,6 +124,7 @@ class Epic:
     blocked_by: str  # epic-level Blocked by field
     stories: list[Story]
     title: str = ""  # the epic doc's `# ` H1 heading
+    retro_waived: bool = False  # epic-level `**Retro waived**:` marker (set by /cpm:retro triage)
 
 
 @dataclass
@@ -216,6 +217,7 @@ def parse_epic(path: Path) -> Epic:
         blocked_by=_field(preamble, "Blocked by") or "—",
         stories=stories,
         title=h1.group(1).strip() if h1 else "",
+        retro_waived=_field(preamble, "Retro waived") is not None,
     )
 
 
@@ -494,10 +496,16 @@ def compute_next_actions(root: Path, specs: list[Path], epics: list[Epic]) -> li
         if number is not None and number not in covered:
             command = f"/cpm:epics {_rel(spec, root)}"
             actions.append(NextAction("epics", command, str(spec), f"Break down {spec.name}"))
-    # 5 — complete epics lacking a retro: reflect.
+    # 5 — complete epics lacking a retro: reflect. A `**Retro waived**:` marker
+    # (set by /cpm:retro triage on a clean epic) satisfies this just like an actual
+    # retro does, so a deliberately-waived epic never nags.
     retro_texts = _retro_texts(root)
     for epic in epics:
-        if classified[id(epic)] == "complete" and not _epic_has_retro(epic, retro_texts):
+        if (
+            classified[id(epic)] == "complete"
+            and not epic.retro_waived
+            and not _epic_has_retro(epic, retro_texts)
+        ):
             command = f"/cpm:retro {_rel(epic.path, root)}"
             actions.append(NextAction("retro", command, str(epic.path), f"Retro {epic.path.name}"))
 

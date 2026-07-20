@@ -643,6 +643,11 @@ class BoardApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        # Launch-time cleanup: drop registered projects whose path no longer exists
+        # (see registry.prune_missing). Only when reading the persisted registry —
+        # injected `_entries` (tests / programmatic use) are left untouched.
+        if self._entries is None:
+            registry.prune_missing(registry_file=self._registry_file)
         self.refresh_projects()
         self.query_one("#projects", OptionList).focus()
         if self._watch_interval:

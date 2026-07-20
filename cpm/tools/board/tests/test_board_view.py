@@ -177,6 +177,93 @@ def test_retired_epics_render_as_dimmed_reference_rows_labelled_by_status():
     assert "Old Feature" in row.label
 
 
+# --- retro-nudge collapse under show/hide-done -------------------------------
+
+
+def _retro(path):
+    return NextAction("retro", f"/cpm:retro {path}", path, f"Retro {path}")
+
+
+def test_toggle_off_collapses_retro_candidates_into_a_summary():
+    # A complete-but-not-retro'd epic is surfaced by the engine as a `retro`
+    # candidate. With completed work hidden it must not pin its own row; instead a
+    # single summary line carries the nudge, so "hide done" hides it like any other
+    # finished epic.
+    done = epic(
+        "docs/epics/39-01-epic-foo.md",
+        status="Complete",
+        stories=[Story(1, "Complete", "—")],
+        title="Foo",
+    )
+    rows = epic_rows(status(State.COMPLETE, actions=[_retro("docs/epics/39-01-epic-foo.md")], epics=[done]))
+
+    assert all(r.action is None or r.action.kind != "retro" for r in rows)  # no individual retro row
+    summaries = [r for r in rows if "retro pending" in r.label]
+    assert len(summaries) == 1
+    assert "1 complete epic " in summaries[0].label  # singular, count carried
+    assert summaries[0].style == "cyan"  # same signal colour as the per-epic nudge
+
+
+def test_retro_summary_row_is_not_launchable():
+    done = epic("docs/epics/39-01-epic-foo.md", status="Complete", stories=[Story(1, "Complete", "—")])
+    (summary,) = [
+        r
+        for r in epic_rows(status(State.COMPLETE, actions=[_retro("docs/epics/39-01-epic-foo.md")], epics=[done]))
+        if "retro pending" in r.label
+    ]
+    assert summary.action is None  # nothing to launch / copy / ralph-select
+    assert summary.epic is None  # drives no stories column
+
+
+def test_retro_summary_counts_and_pluralises():
+    epics_, actions = [], []
+    for n in (1, 2, 3):
+        path = f"docs/epics/39-0{n}-epic-e{n}.md"
+        epics_.append(epic(path, status="Complete", stories=[Story(1, "Complete", "—")]))
+        actions.append(_retro(path))
+    (summary,) = [
+        r for r in epic_rows(status(State.COMPLETE, actions=actions, epics=epics_)) if "retro pending" in r.label
+    ]
+    assert "3 complete epics " in summary.label  # plural for more than one
+
+
+def test_toggle_on_shows_individual_retro_rows_and_no_summary():
+    done = epic(
+        "docs/epics/39-01-epic-foo.md",
+        status="Complete",
+        stories=[Story(1, "Complete", "—")],
+        title="Foo",
+    )
+    rows = epic_rows(
+        status(State.COMPLETE, actions=[_retro("docs/epics/39-01-epic-foo.md")], epics=[done]),
+        show_complete=True,
+    )
+
+    retro_rows = [r for r in rows if r.action is not None and r.action.kind == "retro"]
+    assert len(retro_rows) == 1  # individual cyan row restored under the toggle
+    assert retro_rows[0].style == "cyan"
+    assert not any("retro pending" in r.label for r in rows)  # summary suppressed when expanded
+
+
+def test_waived_complete_epic_shows_no_retro_row_or_summary(make_project):
+    # End-to-end: a `**Retro waived**:` epic produces no retro NextAction, so the
+    # board renders neither a cyan retro row nor a "retro pending" summary for it.
+    from status_model import derive_project
+
+    from test_derivation import epic_md
+
+    repo = make_project(
+        {
+            "docs/epics/39-01-epic-foo.md": epic_md(
+                "Complete", [(1, "Complete", "—")], retro_waived="2026-07-20 — clean epic"
+            ),
+        }
+    )
+    rows = epic_rows(derive_project(repo))  # default: completed work hidden
+    assert not any(r.action is not None and r.action.kind == "retro" for r in rows)
+    assert not any("retro pending" in r.label for r in rows)
+
+
 def test_in_progress_and_ready_candidates_get_distinct_colours():
     in_progress = epic("docs/epics/39-01-epic-foo.md", stories=[Story(1, "In Progress", "—")], title="A")
     ready = epic("docs/epics/39-02-epic-bar.md", stories=[Story(1, "Pending", "—")], title="B")
@@ -215,8 +302,12 @@ def test_epic_rows_are_ordered_for_display_not_by_engine_priority():
         NextAction("epics", "/cpm:epics x", "docs/specifications/40-spec-x.md", "Break down x"),
         NextAction("retro", "/cpm:retro d", "docs/epics/39-04-epic-d.md", "Retro D"),
     ]
+    # show_complete=True so the retro candidate stays an inline row — the default
+    # view collapses it into a summary (covered by the retro-collapse tests above);
+    # here we assert the display ordering of the candidates themselves.
     rows = epic_rows(
-        status(State.IN_PROGRESS, actions=actions, epics=[in_progress, ready, blocked, done_no_retro])
+        status(State.IN_PROGRESS, actions=actions, epics=[in_progress, ready, blocked, done_no_retro]),
+        show_complete=True,
     )
     # Colour is a 1:1 proxy for the category, so the style sequence reads the order.
     assert [r.style for r in rows] == ["yellow", "green", "red", "cyan", "magenta"]

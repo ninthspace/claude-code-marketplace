@@ -13,9 +13,13 @@ import pytest
 from status_model import State, Story, derive_project, read_head, story_section
 
 
-def epic_md(epic_status="Pending", stories=(), blocked_by="—"):
-    """Render a minimal epic doc. `stories` = iterable of (num, status, blocked_by)."""
-    lines = ["# Test Epic", "", f"**Status**: {epic_status}", f"**Blocked by**: {blocked_by}", ""]
+def epic_md(epic_status="Pending", stories=(), blocked_by="—", retro_waived=None):
+    """Render a minimal epic doc. `stories` = iterable of (num, status, blocked_by).
+    `retro_waived`, when given, adds an epic-level `**Retro waived**:` marker line."""
+    lines = ["# Test Epic", "", f"**Status**: {epic_status}", f"**Blocked by**: {blocked_by}"]
+    if retro_waived is not None:
+        lines.append(f"**Retro waived**: {retro_waived}")
+    lines.append("")
     for num, status, dep in stories:
         lines += [f"## Story {num}", f"**Story**: {num}", f"**Status**: {status}", f"**Blocked by**: {dep}", ""]
     return "\n".join(lines)
@@ -259,6 +263,24 @@ def test_status_token_and_recognition():
     assert not _is_recognised_status("Superseded")
     assert _is_recognised_status("Superseded", epic=True)
     assert _is_recognised_status("Superseded — replaced by 12-03", epic=True)
+
+
+# --- retro-waived marker -----------------------------------------------------
+
+
+def test_parse_epic_reads_the_retro_waived_marker(make_project):
+    from status_model import parse_epic
+
+    repo = make_project(
+        {
+            "docs/epics/39-01-epic-foo.md": epic_md(
+                "Complete", [(1, "Complete", "—")], retro_waived="2026-07-20 — clean epic"
+            ),
+            "docs/epics/39-02-epic-bar.md": epic_md("Complete", [(1, "Complete", "—")]),
+        }
+    )
+    assert parse_epic(repo / "docs/epics/39-01-epic-foo.md").retro_waived is True
+    assert parse_epic(repo / "docs/epics/39-02-epic-bar.md").retro_waived is False
 
 
 # --- contract conformance (table-driven from status-model.md) ---------------

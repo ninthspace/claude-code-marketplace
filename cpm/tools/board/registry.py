@@ -10,6 +10,13 @@ here and flagged later at render time (via :meth:`RegistryEntry.exists`), so a
 project that is temporarily unmounted or renamed is surfaced, not silently
 dropped at ``add`` time.
 
+The board *launch* path is the one exception: :func:`prune_missing` runs once at
+TUI startup and unregisters every path that is no longer a directory, so a
+deleted project doesn't linger as an "unreachable" row. This is a deliberate
+trade-off against the "surface, don't drop" stance above — a project on a
+temporarily-unmounted drive is dropped and must be re-added once the drive
+returns. The ``add`` / ``remove`` / ``list`` CLI never prunes.
+
 This module deliberately imports nothing from Textual — the registry CLI surface
 is usable (and testable) without the TUI.
 """
@@ -90,6 +97,21 @@ def remove_project(path: str, *, registry_file: Path | None = None) -> list[Regi
     entries = [entry for entry in load_registry(registry_file) if _normalise(entry.path) != key]
     save_registry(entries, registry_file)
     return entries
+
+
+def prune_missing(registry_file: Path | None = None) -> list[RegistryEntry]:
+    """Drop every registered path that is not currently a directory, returning the
+    survivors. The registry file is rewritten **only if** something was removed, so
+    the common all-present case causes no disk churn.
+
+    This is the board's launch-time cleanup (see the module docstring): a project
+    deleted — or on an unmounted drive — since it was registered is unregistered on
+    the next launch rather than lingering as an "unreachable" row."""
+    entries = load_registry(registry_file)
+    survivors = [entry for entry in entries if entry.exists()]
+    if len(survivors) != len(entries):
+        save_registry(survivors, registry_file)
+    return survivors
 
 
 def list_projects(*, registry_file: Path | None = None) -> list[RegistryEntry]:

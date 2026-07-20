@@ -11,16 +11,18 @@ Read a completed (or partially completed) epic doc, synthesise observations capt
 
 This skill operates on two source types: **epic docs** (`docs/epics/`) and **quick records** (`docs/quick/`). Both produce retro-eligible observations during execution; the retro skill consumes either kind.
 
-This skill has three mutually exclusive modes, selected by `$ARGUMENTS`:
+This skill has four mutually exclusive modes, selected by `$ARGUMENTS`:
 
 - **Synthesis** (the default) — read a completed source and *write* a retro file from its observations. This is everything documented below from **Process** onward.
 - **Lesson promotion** (`learn`) — *promote* a durable lesson out of an existing retro into the reference library, then retire it at the source. This is a separate flow; see the **Lesson Promotion (`learn` action)** section below.
 - **Lesson retirement** (`retire`) — *retire* a spent lesson at its source: mark it with a durable `**Retired**` marker so it stops resurfacing in Retro Awareness, without deleting it or losing the audit trail. Use this when a lesson is no longer true anywhere — the module it warned about is gone, the constraint no longer holds, the pattern was superseded. This is the deliberate, out-of-cycle home for retirement (`cpm:do`'s in-cycle Obsolete retire is the rare exception). See the **Lesson Retirement (`retire` action)** section below.
+- **Triage** (`triage`) — *scan* the project's completed epics and *waive* the ones that don't warrant a retro (clean epics with no lessons to synthesise), so the board and `/cpm:status` stop nagging them as "retro pending". Writes a durable epic-level `**Retro waived**:` marker; never synthesises, promotes, or retires. See the **Triage (`triage` action)** section below.
 
-The three never run together: synthesis produces a retro from execution observations; `learn` graduates an observation into permanent reference (and retires it as it goes); `retire` retires a spent observation outright. Decide the mode first:
+The four never run together: synthesis produces a retro from execution observations; `learn` graduates an observation into permanent reference (and retires it as it goes); `retire` retires a spent observation outright; `triage` waives clean completed epics so they stop asking for a retro. Decide the mode first:
 
 - **If `$ARGUMENTS` is exactly `learn`, or begins with `learn` followed by an optional retro path/filter** (e.g. `learn`, `learn docs/retros/04-retro-foo.md`), enter the **Lesson Promotion (`learn` action)** flow and ignore the synthesis steps. Any trailing text after `learn` is treated as an optional scope hint (a retro path or keyword) for candidate gathering, not as a synthesis source.
 - **If `$ARGUMENTS` is exactly `retire`, or begins with `retire` followed by an optional retro path/filter** (e.g. `retire`, `retire docs/retros/04-retro-foo.md`), enter the **Lesson Retirement (`retire` action)** flow and ignore the synthesis steps. Any trailing text after `retire` is treated as an optional scope hint (a retro path or keyword) for candidate gathering, not as a synthesis source.
+- **If `$ARGUMENTS` is exactly `triage`, or begins with `triage` followed by an optional path/filter** (e.g. `triage`, `triage docs/epics/01-01-epic-foo.md`), enter the **Triage (`triage` action)** flow and ignore the synthesis steps. Any trailing text after `triage` is an optional scope hint (an epic path or keyword) that narrows which completed epics are scanned, not a synthesis source.
 - **Otherwise**, run synthesis. Check for input in this order:
 
 1. If `$ARGUMENTS` references a file path, use it. Accept paths under `docs/epics/` (epic doc) or `docs/quick/` (quick record).
@@ -250,6 +252,28 @@ For each lesson confirmed in Step R1, retire the source observation in its retro
 **Idempotency**: if a selected observation already carries a `**Retired` marker, it is a no-op — do not append a second marker. (Step R1 already excludes retired observations from candidates; this is the belt-and-braces guard.)
 
 Report each retired lesson with its source retro location and the marker applied.
+
+## Triage (`triage` action)
+
+`/cpm:retro triage` sweeps the project's **completed** epics and, with confirmation, **waives** the ones that finished clean — epics with nothing worth reflecting on. A retro is not mandatory in CPM: `cpm:do` deliberately skips end-of-epic retro generation for a clean epic (no retro-trigger signal fired), yet the board and `/cpm:status` keep flagging every retro-less completed epic as "retro pending". Triage is how you clear that nag honestly — it records a durable epic-level `**Retro waived**:` marker that the board, `/cpm:status`, and the status-model contract treat as retro-satisfied.
+
+This flow **never synthesises, promotes, or retires** — it only waives clean epics and *reports* the ones that still merit attention. It is **mutually exclusive** with the other modes and runs only when `$ARGUMENTS` selects it (see **Input**). It proceeds in two steps: scan and classify, then confirm and waive.
+
+### Step T1: Scan and Classify
+
+1. **Find completed epics.** Glob `docs/epics/[0-9]*-epic-*.md` (exclude `-coverage-` files). If a scope hint was passed after `triage`, narrow to matching epics. Read each and consider only those whose **epic-level `**Status**:` reads Complete/Done** (by its leading token — see `cpm/shared/status-model.md`, *Status parsing*). **Skip** epics that are Pending / In Progress (not finished) and retired `Superseded` / `Withdrawn` epics (those never nag a retro anyway).
+2. **Classify each completed epic** using only durable, persistent signals (the ephemeral `cpm:do` retro-trigger flags are gone once an epic finishes):
+   - **Already settled — skip silently**: the epic already carries a `**Retro waived**:` marker, **or** a standalone `docs/retros/` retro references it (its filename appears in a retro's text). Nothing to do.
+   - **Waivable (clean)**: no matching `docs/retros/` retro **and** no substantive inline observations — i.e. it has zero story-level `**Retro**:` fields, or only `[Smooth delivery]`-category ones, and carries no `**Inline change**` breadcrumbs.
+   - **Has observations — report, don't waive**: no retro yet, but the epic carries substantive inline `**Retro**:` observations (any category other than `[Smooth delivery]`). These hold real lessons; recommend `/cpm:retro <epic>` to synthesise them rather than waiving them away.
+3. **Present the findings.** Show two lists: the **waivable** epics (each with the one-line reason it reads clean — e.g. "no retro, no observations" or "only Smooth-delivery notes"), and, separately and informationally, the **has-observations** epics as "consider `/cpm:retro <epic>`". If there are no waivable candidates, say so and stop (still surface the has-observations list if any).
+
+### Step T2: Confirm and Waive
+
+1. **Confirm before any write.** Present the waivable candidates via `AskUserQuestion` (or a numbered list) and **support per-epic opt-out** — the user may waive all, some, or none. Never waive without confirmation; never waive a has-observations epic.
+2. **Write the marker.** For each confirmed epic, use the Edit tool to insert a `**Retro waived**: {YYYY-MM-DD} — clean epic, no lessons to synthesise` line **immediately after the epic-level `**Status**:` line** (in the epic header block, before the first `##` story). This is a distinct field from the story-level `**Retro**:` observations — do not confuse or merge the two.
+3. **Idempotency.** If a `**Retro waived**:` marker already exists on the epic, it is a no-op — never write a second (Step T1 already skips settled epics; this is the belt-and-braces guard).
+4. **Report.** List each epic waived (with the marker date) and, separately, restate the has-observations epics left for `/cpm:retro`. Waiving is reversible — deleting the marker line restores the nudge.
 
 ## Guidelines
 

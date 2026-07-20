@@ -105,6 +105,52 @@ def test_missing_path_is_flagged_only_at_render_via_exists(tmp_path):
     assert RegistryEntry(str(tmp_path / "absent")).exists() is False
 
 
+# --- launch-time prune -------------------------------------------------------
+
+
+def test_prune_removes_missing_and_keeps_existing(registry_file, tmp_path):
+    live = tmp_path / "live"
+    live.mkdir()
+    add_project(str(live), registry_file=registry_file)
+    add_project(str(tmp_path / "gone"), registry_file=registry_file)  # never created
+
+    survivors = registry.prune_missing(registry_file)
+
+    assert [e.path for e in survivors] == [str(live)]
+    assert [e.path for e in load_registry(registry_file)] == [str(live)]  # dead entry gone from disk too
+
+
+def test_prune_preserves_survivor_labels(registry_file, tmp_path):
+    live = tmp_path / "keep"
+    live.mkdir()
+    add_project(str(live), label="Keep", registry_file=registry_file)
+    add_project(str(tmp_path / "missing"), registry_file=registry_file)
+
+    (survivor,) = registry.prune_missing(registry_file)
+    assert survivor.path == str(live)
+    assert survivor.label == "Keep"
+
+
+def test_prune_does_not_rewrite_when_all_exist(registry_file, tmp_path, monkeypatch):
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    add_project(str(a), registry_file=registry_file)
+    add_project(str(b), registry_file=registry_file)
+
+    saved: list[object] = []
+    monkeypatch.setattr(registry, "save_registry", lambda *a, **k: saved.append(1))
+    survivors = registry.prune_missing(registry_file)
+
+    assert len(survivors) == 2
+    assert saved == []  # no churn — the file is untouched when nothing is missing
+
+
+def test_prune_of_empty_registry_stays_empty_and_writes_nothing(registry_file):
+    assert registry.prune_missing(registry_file) == []
+    assert not registry_file.exists()  # never created as a side effect
+
+
 # --- XDG path resolution -----------------------------------------------------
 
 

@@ -60,6 +60,8 @@ Scan CPM documentation directories for artifacts. For each directory, use the Gl
 
 **Epic deep-read:** For each epic file, use the Read tool to extract the `**Status**:` field and story completion counts. Read each file individually with the Read tool directly (Bash loops with shell variables lose context). **Read each status by its leading token** — the text up to the first delimiter (`—` / `–`, ` - `, `(`, `;`); normalise *that* against the vocabulary and treat any tail as a human note (see `cpm/shared/status-model.md`, *Status parsing*). So `Complete — folded into Story 10` reads as `Complete`. Only report epics that have **remaining work** — Status is not `Complete`/`Done` (readers treat `Done` as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn`, the terminal user-set statuses for work no longer needed). A retired epic has no remaining work: its stories still count as done in progress counts (the work is closed out), and it never appears as something needing attention. Completed epics are summarised as a single count (e.g. "17 epics complete"); retired epics are likewise summarised as a count (e.g. "2 epics superseded/withdrawn"), with `/cpm:archive` suggested to sweep them. Epics with remaining work get individual lines: "{Epic name}: {completed}/{total} stories — {status}".
 
+**Retro waiver:** when deciding whether a completed epic needs a retro, honour an epic-level `**Retro waived**:` marker (a header-block field, distinct from the story-level `**Retro**:` observation fields; set by `/cpm:retro triage` on a clean epic — see `cpm/shared/status-model.md`, *Retro waiver*). A waived completed epic is **retro-satisfied**: do not flag it as needing a retro, exactly as if a `docs/retros/` retro existed for it.
+
 **Unrecognised statuses:** a status whose leading token is *not* in the recognised vocabulary (story: `Pending`/`In Progress`/`Complete`/`Done`; epic: those plus `Superseded`/`Withdrawn` — story-level `Superseded`/`Withdrawn` is unrecognised, those being epic-level only) is **flagged, never guessed**. Do not infer intent from free prose; record the raw text and its location. Such a status **counts as not-done** (conservative). Collect these for a callout in the report — do not silently drop them.
 
 **Progress files:** Glob `docs/plans/.cpm-progress-*.md`. If any exist, read the first few lines to extract `**Skill**:` and `**Current task**:`/`**Phase**:` fields. Report which skills have active sessions.
@@ -121,7 +123,8 @@ If the project has active work (in-progress epics or sessions), lead with that �
 | Briefs exist but no specs | "Turn your brief into a spec with `/cpm:spec {brief path}`" |
 | Specs exist but no epics | "Break your spec into epics with `/cpm:epics {spec path}`" |
 | Epics with pending/in-progress stories | "Continue work with `/cpm:do {epic path}`" (show the specific epic with remaining work) |
-| All epic stories complete, no retro | "Run a retrospective with `/cpm:retro {epic path}`" |
+| All epic stories complete, no retro **and not waived** | "Run a retrospective with `/cpm:retro {epic path}`" |
+| Completed epic carries a `**Retro waived**:` marker | Retro-satisfied — do **not** suggest a retro (waived clean epics; see below) |
 | Retros exist, completed epics | "Archive completed work with `/cpm:archive`" |
 | Active progress files | "Resume active session — {skill name} is in progress" |
 | Uncommitted changes | "You have uncommitted changes — consider committing before starting new work" |

@@ -281,7 +281,10 @@ unescaped interpolation.
 
 - **Registry** (the projects you've added):
   `$XDG_CONFIG_HOME/cpm-board/registry.json` (default
-  `~/.config/cpm-board/registry.json`).
+  `~/.config/cpm-board/registry.json`). Launching the TUI prunes it: any
+  registered project whose path is no longer a directory is silently
+  unregistered (a deleted project won't linger — but a project on a
+  temporarily-unmounted drive is dropped too, and must be re-added).
 - **Status cache** (per-project derived status, keyed by absolute path):
   `$XDG_CACHE_HOME/cpm-board/` (default `~/.cache/cpm-board/`). Freshness is
   stamped on git `HEAD` + `docs/` mtimes; a schema bump invalidates old entries.

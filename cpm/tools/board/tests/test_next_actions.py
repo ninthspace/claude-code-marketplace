@@ -134,3 +134,27 @@ def test_complete_epic_with_matching_retro_yields_no_retro_candidate(make_projec
     )
     actions = derive_project(repo).next_actions
     assert [a for a in actions if a.kind == "retro"] == []
+
+
+def test_retro_waived_epic_yields_no_retro_candidate(make_project):
+    # A `**Retro waived**:` marker (set by /cpm:retro triage) satisfies the retro
+    # requirement just like an actual retro file — no /cpm:retro nag.
+    repo = make_project(
+        {
+            "docs/epics/39-01-epic-foo.md": epic_md(
+                "Complete", [(1, "Complete", "—")], retro_waived="2026-07-20 — clean epic"
+            ),
+        }
+    )
+    actions = derive_project(repo).next_actions
+    assert [a for a in actions if a.kind == "retro"] == []
+
+
+def test_complete_epic_without_waiver_or_retro_still_recommends_retro(make_project):
+    # Guard: the waiver is the only thing that suppresses the nudge — an ordinary
+    # completed epic still gets its /cpm:retro candidate.
+    repo = make_project(
+        {"docs/epics/39-01-epic-foo.md": epic_md("Complete", [(1, "Complete", "—")])}
+    )
+    actions = derive_project(repo).next_actions
+    assert [a.kind for a in actions if a.kind == "retro"] == ["retro"]

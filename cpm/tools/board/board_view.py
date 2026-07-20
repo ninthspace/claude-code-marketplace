@@ -251,6 +251,28 @@ def _inactive_row(epic: Epic) -> EpicRow:
     )
 
 
+#: Style + glyph for the collapsed retro-nudge summary. Cyan matches the per-epic
+#: retro candidate colour (see ``_row_style``) so the summary reads as the same
+#: "reflect on this" signal, just rolled up.
+_RETRO_SUMMARY_STYLE = "cyan"
+_RETRO_GLYPH = "⟳"
+
+
+def _retro_summary_row(count: int) -> EpicRow:
+    """A single, non-launchable line standing in for the complete-but-not-retro'd
+    epics that are hidden when completed work is collapsed — so the retro nudge
+    survives the hide instead of vanishing with the rows. ``action``/``epic`` are
+    ``None`` (like the dimmed reference rows), so it can't be launched, copied, or
+    ralph-selected."""
+    noun = "epic" if count == 1 else "epics"
+    return EpicRow(
+        label=f"{_RETRO_GLYPH} {count} complete {noun} · retro pending",
+        style=_RETRO_SUMMARY_STYLE,
+        action=None,
+        epic=None,
+    )
+
+
 def _epic_has_unrecognised(epic: Epic) -> bool:
     """True when the epic's own status or any of its stories' statuses is
     unrecognised — the trigger for the row's ``(!)`` flag."""
@@ -266,10 +288,17 @@ def epic_rows(status: ProjectStatus, *, show_complete: bool = False) -> list[Epi
     by_path = {str(epic.path): epic for epic in status.epics}
     seen: set[str] = set()
     rows: list[EpicRow] = []
+    retro_pending = 0
     for action in status.next_actions:
         epic = by_path.get(action.target_path) if action.target_path else None
         if epic is not None:
             seen.add(str(epic.path))
+        # A retro candidate is a complete epic still awaiting reflection. When
+        # completed work is collapsed, don't pin it as its own row — count it and
+        # roll the nudge into one summary line below, so "hide done" hides it too.
+        if action.kind == "retro" and not show_complete:
+            retro_pending += 1
+            continue
         rows.append(_action_row(action, epic))
     # Re-order for display only — the engine's next_actions order drives launch
     # precedence and must not change. Stable sort keeps engine/filename order
@@ -280,6 +309,8 @@ def epic_rows(status: ProjectStatus, *, show_complete: bool = False) -> list[Epi
             if str(epic.path) not in seen:
                 row = _inactive_row(epic) if _is_inactive(epic) else _done_row(epic)
                 rows.append(row)
+    elif retro_pending:
+        rows.append(_retro_summary_row(retro_pending))
     # Flag any epic carrying an unrecognised status so it reads as "needs a look"
     # at a glance — this only marks; it never changes the epic's counts.
     for row in rows:
