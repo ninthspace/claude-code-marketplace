@@ -1,5 +1,5 @@
 ---
-name: cpm:ralph
+name: ralph
 description: Autonomous multi-epic execution via the Ralph Wiggum plugin. Discovers epics, generates a Ralph-compatible prompt that wraps /cpm:do with autonomous behaviour overrides, validates prerequisites, and launches the loop. Triggers on "/cpm:ralph".
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: cpm:epics
+name: epics
 description: Break a spec into epic documents with stories and tasks. Reads a specification (or a brief/description) and produces multiple epic docs — each with stories, sub-tasks, and a companion coverage matrix. Also offers a read-only dependency/readiness view (HTML) on request. Triggers on "/cpm:epics".
 ---
 

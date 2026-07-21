@@ -1,5 +1,5 @@
 ---
-name: cpm:discover
+name: discover
 description: Facilitated problem discovery. Understand the problem before proposing solutions. Produces a problem brief through guided conversation. Use when starting a new product, complex feature, or any work where the problem isn't well-defined yet. Triggers on "/cpm:discover".
 ---
 

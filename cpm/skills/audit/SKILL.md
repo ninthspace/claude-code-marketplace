@@ -1,5 +1,5 @@
 ---
-name: cpm:audit
+name: audit
 description: Codebase audit skill. Produces a commit-pinned audit document with `file:line (symbol)` citations across nine dimensions of code health (architectural decay, consistency rot, type & contract debt, test debt, dependency & config debt, performance, error handling & observability, security, documentation drift), then offers pipeline handoffs to library / spec / quick. Triggers on "/cpm:audit".
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: cpm:archive
+name: archive
 description: Archive old or completed planning documents. Scans for stale artifacts, groups them by chain, and moves them to docs/archive/ with user confirmation. Triggers on "/cpm:archive".
 ---
 

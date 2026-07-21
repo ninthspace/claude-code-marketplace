@@ -1,5 +1,5 @@
 ---
-name: cpm:do
+name: do
 description: Execute tasks from an epic doc. Picks the next unblocked task, reads context and acceptance criteria, does the work, verifies criteria, updates the epic doc, and loops until done — updating coverage matrices and generating a retro on completion. Triggers on "/cpm:do".
 ---
 

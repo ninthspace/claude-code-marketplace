@@ -1,5 +1,5 @@
 ---
-name: cpm:clean
+name: clean
 description: On-demand cleanup of CPM session state files. Exhaustively lists every progress file and its compact-summary companion with age and session label, then deletes only the files you name — no staleness filter, no sentinel, always confirmed first. Triggers on "/cpm:clean".
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: cpm:templates
+name: templates
 description: Template discoverability and scaffolding. Lists all CPM artifact templates showing each skill, its output format, whether structural or presentational, and the override path if applicable. Previews any template skeleton. Scaffolds override files for presentational templates. Triggers on "/cpm:templates".
 ---
 

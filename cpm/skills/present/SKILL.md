@@ -1,5 +1,5 @@
 ---
-name: cpm:present
+name: present
 description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content. Regenerable when source artifacts change. Triggers on "/cpm:present".
 ---
 

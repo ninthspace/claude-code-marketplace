@@ -1,5 +1,5 @@
 ---
-name: cpm:architect
+name: architect
 description: Facilitated architecture exploration. Takes a product brief as input, identifies key architectural decisions derived from the product, explores trade-offs per decision, captures dependencies between decisions, and produces Architecture Decision Records (ADRs) — with optional HTML companion diagrams and an on-request HTML render. Triggers on "/cpm:architect".
 ---
 

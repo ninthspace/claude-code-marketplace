@@ -1,5 +1,5 @@
 ---
-name: cpm:spec
+name: spec
 description: Build a structured requirements and architecture specification through facilitated conversation. Takes a problem brief or user description as input and produces a spec document with functional requirements, architecture decisions, scope boundaries, and a testing strategy. Triggers on "/cpm:spec".
 ---
 

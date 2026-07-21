@@ -1,5 +1,5 @@
 ---
-name: cpm:pivot
+name: pivot
 description: Course correction. Revisit any planning artefact, surgically amend it, and cascade changes through downstream documents. Triggers on "/cpm:pivot".
 ---
 

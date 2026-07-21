@@ -1,5 +1,5 @@
 ---
-name: cpm:brief
+name: brief
 description: Facilitated product ideation. Takes a problem brief as input, explores solution approaches, and produces a product brief artifact with vision, value propositions, key features, differentiation, and user journey narratives. Triggers on "/cpm:brief".
 ---
 

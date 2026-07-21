@@ -1,5 +1,5 @@
 ---
-name: cpm:library
+name: library
 description: Curate a project reference library. Import external documents with structured front-matter so other CPM skills can discover and use them as context; also consolidates accumulated amendments into clean docs and batch back-fills missing front-matter. Triggers on "/cpm:library".
 ---
 

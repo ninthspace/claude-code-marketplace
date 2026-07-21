@@ -1,5 +1,5 @@
 ---
-name: cpm:status
+name: status
 description: Project status reconnaissance. Scans CPM artifacts, git history, and codebase changes to produce an ephemeral status report with recommended next steps, plus an optional full-picture HTML dashboard on request. Triggers on "/cpm:status".
 ---
 

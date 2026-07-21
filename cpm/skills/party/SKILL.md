@@ -1,5 +1,5 @@
 ---
-name: cpm:party
+name: party
 description: Multi-perspective discussion with named agent personas. Bring your whole team into one conversation — PM, Architect, Developer, UX Designer, Test Engineer, and more. Use for brainstorming, decision-making, or exploring trade-offs from diverse viewpoints. On exit, saves a discussion record to docs/discussions/ and offers handoff to /cpm:discover, /cpm:spec, or /cpm:epics. Triggers on "/cpm:party".
 ---
 
