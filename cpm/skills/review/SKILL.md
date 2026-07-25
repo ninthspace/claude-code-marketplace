@@ -139,14 +139,14 @@ Each finding must be tagged with exactly one severity level:
 
 #### Review Execution
 
-**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state. Spawn parallel subagents via the Agent tool, one per reviewer agent — fan-out is the expected path here, not an optional optimisation. Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, and the finding format. Consolidate findings from all subagents after they complete.
+**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state, which is the case the shared **Subagent Delegation** convention treats as genuinely parallelisable. Spawn at most one subagent per selected reviewer agent: the selected agent count is the cap, and the spawn count never exceeds it. (This tightens spec 32's R1, which framed fan-out here as the expected path — Opus 5 delegates readily enough that the encouragement now over-applies.) Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, the finding format, and the coverage-first instruction from step 2 below. A subagent not told to report everything will curate on its own, which is the suppression Step 2b exists to prevent. Consolidate findings from all subagents after they complete.
 
 **Inline execution** (when 2 agents are selected or fan-out is unavailable): Review with each agent in turn within the main context.
 
 For each agent (whether via subagent or inline):
 
 1. Review the artifact through the agent's professional lens.
-2. Produce 2-5 findings (not a comprehensive audit — focus on the most impactful observations).
+2. Report every finding the lens surfaces. This is the finding stage, and its job is maximum coverage rather than curation — do not suppress an observation for seeming minor, and do not pre-rank. Filtering and ranking happen later, at Step 2b.
 3. Tag each finding with a concern type and severity.
 4. Reference specific stories, tasks, or acceptance criteria by number.
 5. If library documents were loaded, reference relevant standards or constraints where they apply.
@@ -158,9 +158,19 @@ Format each finding as:
 → {story/task reference}: {specific issue and why it matters}
 ```
 
-After all agents have reviewed, present the findings to the user grouped by concern type (not by agent). Within each concern type, order by severity (critical first, then warning, then suggestion).
+### Step 2b: Filter and Rank
 
-*Progress note: capture concern types found and finding counts by severity in the Step 2 summary.*
+Consolidate every agent's findings, then curate. The finding stage above stays comprehensive; selection happens here — the same find/rank separation `audit` keeps between its complete findings table and its Executive Summary.
+
+Weigh severity against how well each finding is evidenced, then select down to the review's depth: 3-8 findings for a single-story review, 5-15 for a full epic review. Findings that do not make the cut stay in this session and are not carried into the review document, whose schema records the curated set (Step 3).
+
+*(Spec 32 listed a find/filter split for `review` as a Won't-Have, on the reasoning that the skill was small enough not to need one. Opus 5 follows a conservative finding cap literally and surfaces less as a result, which is what makes the split worth its cost now.)*
+
+### Step 2c: Present
+
+After filtering, present the curated findings to the user grouped by concern type (not by agent). Within each concern type, order by severity (critical first, then warning, then suggestion).
+
+*Progress note: capture concern types and the finding count by severity as reported in the Step 2 summary, and the curated count in the Step 2b summary.*
 
 ### Step 3: Write Review File
 
@@ -427,6 +437,9 @@ Follow the shared **Progress File Management** procedure.
 ### Step 2: Conduct Adversarial Review
 {Summary — finding counts by severity and concern type, key themes}
 
+### Step 2b: Filter and Rank
+{Summary — findings consolidated vs findings carried forward, and what the cut turned on}
+
 ### Step 3: Write Review File
 {Summary — file path written, finding totals}
 
@@ -458,8 +471,8 @@ Every scenario below specifies an explicit action sequence ending with a visible
 
 ## Guidelines
 
-- **Adversarial, not hostile.** The review should challenge assumptions and find real issues, not manufacture criticism. If something is well-designed, say so. Not every story needs 5 findings.
+- **Adversarial, not hostile.** The review should challenge assumptions and find real issues, not manufacture criticism. If something is well-designed, say so. Not every story yields many findings.
 - **Specific over vague.** "Story 2's acceptance criteria are unclear" is useless. "Story 2, criterion 3 says 'handles errors gracefully' — what does gracefully mean? Which errors? This will be interpreted differently by different implementers" is actionable.
 - **Severity matters.** Tag each finding at its true severity level. A genuinely critical finding (blocks execution) is rare. Most findings will be warnings or suggestions. That's fine.
 - **Reference the artifact.** Every finding should point to a specific story, task, or acceptance criterion. Reviewers who can't point to what they're criticising aren't being helpful.
-- **Match depth to scope.** A single-story review should take 2-3 agents and produce 3-8 findings. A full epic review should take 3-4 agents and produce 5-15 findings. Scale review depth to artifact size.
+- **Match depth to scope.** A single-story review should take 2-3 agents and produce 3-8 findings. A full epic review should take 3-4 agents and produce 5-15 findings. Scale review depth to artifact size — these are the targets Step 2b curates to, not a cap on what the agents report.

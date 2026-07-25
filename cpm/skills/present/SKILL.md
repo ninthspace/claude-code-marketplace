@@ -81,6 +81,8 @@ Render the full draft in the message body. Then use AskUserQuestion as a short g
 
 ### Step 4: Save Output
 
+Follow the shared **Written Deliverable Length** convention — let the document's length match what the task needs, without padding, redundant summaries, or boilerplate sections.
+
 Save the communication to `docs/communications/{nn}-{format}-{slug}.md`.
 
 - `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).

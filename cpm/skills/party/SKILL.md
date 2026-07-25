@@ -196,6 +196,7 @@ If `$ARGUMENTS` provides a topic, skip the "what would you like to discuss?" que
 
 ## Guidelines
 
+- **Correct yourself sparingly.** Follow the shared **Correcting yourself** convention — narrate a correction to something you said earlier only when the error would change the user's conclusions or decisions.
 - **Facilitate first.** The agents serve the user's thinking, not the other way around. If the user wants to steer the conversation, let them.
 - **Quality over quantity.** Two sharp, distinct perspectives are better than three that all say roughly the same thing.
 - **Natural disagreement.** Let genuine conflict surface organically and let it stand. Real teams disagree — that's where good decisions come from.

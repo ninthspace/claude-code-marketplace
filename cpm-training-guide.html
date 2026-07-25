@@ -61,6 +61,16 @@
 
   header h1 span { color: var(--accent); }
 
+  .version-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted, #8b949e);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+
   .preset-bar {
     display: flex;
     gap: 6px;
@@ -363,6 +373,7 @@
 
 <header>
   <h1><span>/cpm</span> Training Guide</h1>
+  <span class="version-badge">v3.0.0 &middot; tuned for Claude Opus 5</span>
   <div class="preset-bar">
     <button class="preset-btn active" data-preset="full" onclick="applyPreset('full')">Full Pipeline</button>
     <button class="preset-btn" data-preset="quick" onclick="applyPreset('quick')">Quick Start</button>
@@ -511,10 +522,10 @@ const SKILLS = [
     color: '#3fb950',
     category: 'planning',
     short: 'Break spec into work items with test tags',
-    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria with test approach tags propagated from the spec, auto-generated testing tasks for stories with automated tags, and integration testing stories for cross-story verification. Stories include dependencies and spec requirement traceability. When ADRs exist, they\'re referenced for architectural work.',
+    description: 'Convert a specification into epic documents with stories and tasks. Each epic is a separate file. Stories have acceptance criteria with test approach tags propagated from the spec, auto-generated testing tasks for stories with automated tags, and integration testing stories for cross-story verification. Stories include dependencies and spec requirement traceability. Stories whose design needs agreement up front — data model changes, API contracts, cross-system integration — are tagged [plan], which makes /cpm:do pause for a formal plan before implementing. When ADRs exist, they\'re referenced for architectural work.',
     input: 'Specification from spec (auto-detected)',
-    output: 'Multiple epic docs with stories, tasks, test tags, and testing tasks',
-    outputFile: 'docs/epics/{nn}-epic-{slug}.md (one per epic)',
+    output: 'Multiple epic docs with stories, tasks, test tags, and testing tasks — each with a companion coverage matrix tracing every spec requirement to the story criterion that covers it',
+    outputFile: 'docs/epics/{parent}-{seq}-epic-{slug}.md + docs/epics/{parent}-{seq}-coverage-{slug}.md (one pair per epic; {parent} is the source spec\'s number)',
     phases: ['Read source specification + ADRs', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria + test tags', 'Auto-generate testing tasks for automated criteria', 'Add integration testing stories where needed', 'Add spec requirement traceability per story', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
     tip: 'Test approach tags ([unit], [integration], [feature], [manual]) flow from specs to story acceptance criteria. Testing tasks are auto-generated for stories with automated tags. Integration testing stories are created for epics with significant cross-story interactions.',
     next: ['do', 'review']
@@ -527,11 +538,11 @@ const SKILLS = [
     color: '#f0883e',
     category: 'execution',
     short: 'Execute tasks with test verification',
-    description: 'Works through stories and tasks from epic documents. At startup, discovers the project\'s test runner (from library docs, config files like composer.json/package.json/Makefile, or by asking the user) and caches it for the session. Hydrates one story at a time into Claude Code tasks, executes each task, runs tests in verification gates when criteria carry automated test tags ([unit]/[integration]/[feature]), and captures retro observations (including testing gaps). Task ordering enables TDD when testing tasks precede implementation. Reads ADRs when touching architectural boundaries. On epic completion, verifies against source spec.',
+    description: 'Works through stories and tasks from epic documents. At startup, discovers the project\'s test runner (from library docs, config files like composer.json/package.json/Makefile, or by asking the user) and caches it for the session. Hydrates one story at a time into Claude Code tasks, executes each task, runs tests in verification gates when criteria carry automated test tags ([unit]/[integration]/[feature]), and captures retro observations (including testing gaps). Task ordering enables TDD when testing tasks precede implementation. Reads ADRs when touching architectural boundaries. Survives context compaction — a progress file lets an interrupted run pick up where it left off. Stories tagged [plan] pause for a formal plan before implementation begins.',
     input: 'Epic doc (auto-detected or user provides)',
     output: 'Completed code + updated epic docs with retro observations',
     outputFile: '(updates epic docs in place)',
-    phases: ['Resolve epic doc + scan ADRs', 'Startup — apply prior-epic retros (disposition gate)', 'Discover test runner (library → config → ask user)', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria — run tests for [unit]/[integration]/[feature], self-assess for [manual]', 'Mark complete + capture retro observation (including testing gaps)', 'Loop until story done → hydrate next', 'Epic-level verification against source spec, then generate the retro (enforced when execution signals fired)'],
+    phases: ['Resolve epic doc + scan ADRs', 'Startup — apply prior-epic retros (disposition gate)', 'Discover test runner (library → config → ask user)', 'Hydrate next unblocked story into tasks', 'Load task context from epic', 'Plan (when warranted) → do the work (ADR-aware)', 'Verify acceptance criteria — run tests for [unit]/[integration]/[feature], self-assess for [manual]', 'Mark complete + capture retro observation (including testing gaps)', 'Loop until story done → hydrate next', 'Record proof in the coverage matrix, anchored to the story gates that passed', 'Generate the retro (enforced when execution signals fired; a clean epic can skip it)'],
     tip: 'Test runner discovery is convention-based: library docs → project config files (composer.json, package.json, Makefile, pyproject.toml, Cargo.toml) → ask user. The cached command is used in all verification gates. TDD is supported by task ordering — place testing tasks before implementation tasks in the epic doc.',
     next: ['ralph', 'retro', 'review', 'pivot']
   },
@@ -591,7 +602,7 @@ const SKILLS = [
     color: '#f85149',
     category: 'quality',
     short: 'Retrospective with testing gap analysis',
-    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (smooth delivery, scope surprise, criteria gap, complexity underestimate, codebase discovery, testing gap, pattern worth reusing), extracts patterns, and produces actionable recommendations. Testing gaps capture when tests revealed issues criteria didn\'t anticipate, or criteria that proved untestable. In v2, /cpm:do also generates this retro automatically at epic completion (synthesising the same observations) and applies prior-epic retros at startup. Can write learnings back to library docs.',
+    description: 'Synthesizes observations from a completed epic. Groups retro observations by category (smooth delivery, scope surprise, criteria gap, complexity underestimate, codebase discovery, testing gap, pattern worth reusing), extracts patterns, and produces actionable recommendations. Testing gaps capture when tests revealed issues criteria didn\'t anticipate, or criteria that proved untestable. /cpm:do also generates this retro automatically at epic completion (synthesising the same observations) and applies prior-epic retros at startup through a disposition gate — each relevant lesson is consciously applied, deferred, or judged not relevant before work begins. Four actions: synthesis (the default), learn (graduate an observation into permanent library reference), retire (durably retire a spent observation), and triage (waive completed epics that finished clean, so the board and /cpm:status stop flagging them as retro-pending). Can write learnings back to library docs.',
     input: 'Completed epic doc',
     output: 'Retro file with patterns, observations (including testing gaps), and recommendations',
     outputFile: 'docs/retros/{nn}-retro-{slug}.md',
@@ -610,7 +621,7 @@ const SKILLS = [
     description: 'Run a structured audit of the existing codebase, producing a commit-pinned audit document with concrete file:line (symbol) citations across nine dimensions of code health: architectural decay, consistency rot, type & contract debt, test debt, dependency & config debt, performance, error handling & observability, security, and documentation drift. Existing planning artifacts are read as passive context only — never to skip a dimension or shortcut a finding. Ends by offering to pipe findings into library, spec, or quick.',
     input: 'Optional scope hint (a path or area); runs against the current codebase',
     output: 'Audit document with prioritised findings, severity/effort ratings, and citations',
-    outputFile: 'docs/audits/{nn}-audit-{slug}.md',
+    outputFile: 'docs/audits/{nn}-audit-{slug}.md — plus a wrapper entry at docs/library/{nn}-library-audit-{slug}.md if you take the library handoff',
     phases: ['Orient on the codebase — structure, stack, conventions', 'Sweep nine dimensions of code health independently', 'Cite every finding with file:line (symbol) at a pinned commit', 'Rate findings by severity and effort; pick the Top 5 priorities', 'Pipeline handoff to library / spec / quick'],
     tip: 'The audit is independent observation: existing specs, epics, and briefs are read for context only and never used to claim a finding is "already planned". It records symptoms, not rewrite recommendations — wholesale rewrites are a conversation for spec and architect.',
     next: ['library', 'spec', 'quick']
@@ -626,7 +637,7 @@ const SKILLS = [
     description: 'Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering, stakeholders) and format (memo, slide deck, email), and get derived content tailored to the readers. Regenerable when sources change.',
     input: 'One or more CPM artifact file paths',
     output: 'Audience-tailored communication derived from source artifacts',
-    outputFile: 'docs/communications/{nn}-{format}-{slug}.md',
+    outputFile: 'docs/communications/{nn}-{format}-{slug}.md — plus a self-contained .html companion alongside it when a rendered version is asked for',
     phases: ['Discover and select source artifacts', 'Choose audience and format', 'Extract and transform content', 'Write communication file'],
     tip: 'Content is derived from source artifacts — not written from scratch. Create multiple presentations from the same sources for different audiences. Regenerate when sources change.',
     next: []
@@ -690,7 +701,7 @@ const SKILLS = [
     description: 'Execute small, well-defined changes with minimal ceremony. Bypasses the full pipeline — accept a description, assess scope, confirm the plan, do the work, and produce a completion record for traceability.',
     input: 'Change description or file path',
     output: 'Implemented change + completion record',
-    outputFile: 'docs/quick/{nn}-quick-{slug}.md',
+    outputFile: 'docs/quick/{nn}-quick-{slug}-spec.md (written as a confirmed spec before execution, then promoted in place to the completion record)',
     phases: ['Scope Assessment — explore codebase, evaluate fit', 'Propose & Confirm — present plan with acceptance criteria', 'Execute — create tasks, implement the change', 'Completion Record — verify criteria, write record'],
     tip: 'Use quick when the change is clear and the full pipeline would add more ceremony than value. If scope turns out larger than expected, quick offers to escalate to discover/spec/epics.',
     next: []
@@ -708,8 +719,24 @@ const SKILLS = [
     output: 'Narrative status report with recommended next steps',
     outputFile: '(ephemeral — stdout only)',
     phases: ['Phase 1: Artifact inventory scan (Glob + Read)', 'Phase 2: Git activity scan (adaptive time window)', 'Phase 3: Narrative synthesis and recommendations'],
-    tip: 'Status is read-only and stateless — it never creates, modifies, or deletes files. The adaptive git time window widens automatically when there\'s been a gap since the last commit.',
+    tip: 'Status is read-only and stateless — it never creates, modifies, or deletes files. The adaptive git time window widens automatically when there\'s been a gap since the last commit. Ask for the HTML dashboard and you get a full epic/story completion grid as a self-contained page. For the same picture across every project at once, the companion cpm board terminal UI reads the same artifacts read-only and launches the right /cpm:* session for whichever project you pick.',
     next: ['do', 'retro', 'archive', 'discover']
+  },
+  {
+    id: 'clean',
+    name: '/cpm:clean',
+    label: 'Clean',
+    icon: '🧹',
+    color: '#8b949e',
+    category: 'support',
+    short: 'On-demand session-state cleanup',
+    description: 'Delete leftover CPM session-state files on demand. This is the exhaustive, user-driven counterpart to the passive once-per-session Stale-Progress Check: where that safety-net surfaces only stale other-session files at most once per session, /cpm:clean lists every progress file and compact-summary companion every time it runs — regardless of age, session, or whether the safety-net has already fired — and removes exactly the ones you choose.',
+    input: 'Optional file names or session IDs; no arguments runs the full interactive flow',
+    output: 'An exhaustive listing of session-state files, then deletion of only the ones you name',
+    outputFile: '(removes files — creates none, not even its own progress file)',
+    phases: ['Step 1: List every session-state file (exhaustive — age, session label, owning skill)', 'Step 2: Ask what to remove', 'Step 3: Confirm the exact paths, then delete only those'],
+    tip: 'Interactive-only — /cpm:clean is never part of autonomous execution, and cpm:ralph never invokes it. It deletes nothing without showing you the file first and getting your confirmation. Arguments are a convenience, never a licence to skip that confirmation.',
+    next: []
   }
 ];
 
@@ -742,11 +769,11 @@ const EDGES = [
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','ralph','pivot','retro','audit','present','templates','library','archive','quick','status'], knowledge: {} },
-  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', ralph:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know' } },
-  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', ralph:'know', review:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know' } },
-  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','audit','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', ralph:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know' } },
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','ralph','pivot','retro','audit','present','templates','library','archive','quick','status','clean'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', ralph:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know', clean:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', ralph:'know', review:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know', clean:'know' } },
+  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status','clean'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know' } },
+  review: { highlight: ['review','retro','pivot','audit','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', ralph:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know', clean:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────

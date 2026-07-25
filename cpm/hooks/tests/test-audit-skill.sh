@@ -17,6 +17,11 @@ MARKETPLACE_MANIFEST="$REPO_ROOT/.claude-plugin/marketplace.json"
 AUDITS_DIR="$REPO_ROOT/docs/audits"
 LIBRARY_DIR="$REPO_ROOT/docs/library"
 
+# First "version" field in a JSON blob read from stdin.
+manifest_version() {
+  awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}'
+}
+
 echo "Testing: cpm:audit skill"
 echo "========================="
 
@@ -29,10 +34,10 @@ else
   test_fail "File not found: $SKILL_FILE"
 fi
 
-test_start "Frontmatter contains 'name: cpm:audit'"
+test_start "Frontmatter contains 'name: audit'"
 if [ -f "$SKILL_FILE" ]; then
   FRONTMATTER=$(awk '/^---$/{c++; next} c==1' "$SKILL_FILE")
-  assert_contains "$FRONTMATTER" "name: cpm:audit"
+  assert_contains "$FRONTMATTER" "name: audit"
 else
   test_fail "SKILL.md missing — cannot inspect frontmatter"
 fi
@@ -47,10 +52,14 @@ fi
 
 # --- Plugin manifests (Story 2) ---
 
-test_start "cpm/.claude-plugin/plugin.json has version 2.0.0"
+test_start "cpm/.claude-plugin/plugin.json declares a semver version"
 if [ -f "$PLUGIN_MANIFEST" ]; then
-  VERSION=$(awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}' "$PLUGIN_MANIFEST")
-  assert_equals "2.0.0" "$VERSION"
+  VERSION=$(manifest_version < "$PLUGIN_MANIFEST")
+  if printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    test_pass
+  else
+    test_fail "plugin.json version is not semver: '$VERSION'"
+  fi
 else
   test_fail "plugin.json missing at $PLUGIN_MANIFEST"
 fi
@@ -62,13 +71,14 @@ else
   test_fail "plugin.json missing"
 fi
 
-test_start ".claude-plugin/marketplace.json cpm entry has version 2.0.0"
-if [ -f "$MARKETPLACE_MANIFEST" ]; then
+test_start ".claude-plugin/marketplace.json cpm entry version agrees with plugin.json"
+if [ -f "$MARKETPLACE_MANIFEST" ] && [ -f "$PLUGIN_MANIFEST" ]; then
+  PLUGIN_VERSION=$(manifest_version < "$PLUGIN_MANIFEST")
   CPM2_BLOCK=$(awk '/"name": "cpm"/,/\]/' "$MARKETPLACE_MANIFEST")
-  CPM2_VERSION=$(echo "$CPM2_BLOCK" | awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}')
-  assert_equals "2.0.0" "$CPM2_VERSION"
+  CPM2_VERSION=$(echo "$CPM2_BLOCK" | manifest_version)
+  assert_equals "$PLUGIN_VERSION" "$CPM2_VERSION"
 else
-  test_fail "marketplace.json missing"
+  test_fail "marketplace.json or plugin.json missing"
 fi
 
 test_start ".claude-plugin/marketplace.json cpm keywords contain 'audit'"

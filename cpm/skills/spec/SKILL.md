@@ -224,6 +224,8 @@ This is a faithful projection — the full spec, reframed for navigation, not an
 
 ## Output
 
+Follow the shared **Written Deliverable Length** convention — let the document's length match what the task needs, without padding, redundant summaries, or boilerplate sections.
+
 Save the spec to `docs/specifications/{nn}-spec-{slug}.md` in the current project.
 
 - `{nn}` is assigned by the shared **Numbering** procedure (from the CPM Shared Skill Conventions loaded at session start).
@@ -357,6 +359,7 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
+- **Correct yourself sparingly.** Follow the shared **Correcting yourself** convention — narrate a correction to something you said earlier only when the error would change the user's conclusions or decisions.
 - **Facilitate, then let the user decide.** Present options and trade-offs. The user owns the decision.
 - **Build on existing context.** If there's a brief or existing code, use it. Carry forward what's already established.
 - **Stay practical.** Skip sections that are unnecessary at the project's scale.

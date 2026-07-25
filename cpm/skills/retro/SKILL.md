@@ -82,6 +82,8 @@ Gather the observations from the source resolved in Step 1, then hand them to th
 
 ### Step 3: Write Retro File
 
+Follow the shared **Written Deliverable Length** convention — let the document's length match what the task needs, without padding, redundant summaries, or boilerplate sections.
+
 The shared **Retro Synthesis** procedure (invoked in Step 2) performs the write: it assigns `{nn}` via the shared **Numbering** procedure, derives `{slug}` from the source artefact name (e.g. epic doc `01-epic-auth.md` produces retro slug `auth`), creates `docs/retros/` if it doesn't exist, and writes the retro file to `docs/retros/{nn}-retro-{slug}.md` in the shared retro-file format.
 
 Tell the user the retro file path after saving.

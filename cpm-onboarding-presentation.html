@@ -465,9 +465,9 @@
   <!-- 1: Title -->
   <div class="slide centered active" data-slide="0">
     <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
-      <div class="title-badge">Technical Onboarding</div>
+      <div class="title-badge">Technical Onboarding &middot; v3.0.0</div>
       <h1>Getting Started with <span class="hl">CPM</span></h1>
-      <p class="subtitle">A practical guide to structured planning in Claude Code.<br>What it is, how it works, and when to use it.</p>
+      <p class="subtitle">A practical guide to structured planning in Claude Code.<br>What it is, how it works, and when to use it.<br><span style="opacity:.65;font-size:.85em;">20 skills &middot; tuned for Claude Opus 5</span></p>
     </div>
   </div>
 
@@ -614,7 +614,11 @@
         </div>
         <div class="support-card">
           <div class="card-cmd">/cpm:status</div>
-          <p>Project status reconnaissance — narrative briefing with next-step recommendations</p>
+          <p>Project status reconnaissance — narrative briefing with next-step recommendations, plus an optional HTML dashboard</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/cpm:clean</div>
+          <p>On-demand cleanup of leftover session-state files — lists everything, deletes only what you name</p>
         </div>
       </div>
     </div>
@@ -853,7 +857,23 @@
   </div>
 
   <!-- 11: Get Started -->
-  <div class="slide centered" data-slide="10">
+  <!-- 11: What's new in v3 -->
+  <div class="slide" data-slide="10">
+    <div class="slide-inner">
+      <div class="tag">What's New</div>
+      <h2>New since v2</h2>
+      <ul class="bullets">
+        <li><strong>Tuned for Claude Opus 5.</strong> Skills lean on the model's own verification and planning rather than instructing it to re-check itself, and delegate to subagents only where fan-out genuinely pays.</li>
+        <li><strong>cpm board</strong> — a terminal UI showing every registered project's CPM state in three columns (Projects &rarr; Epics &rarr; Stories), launching the right <code>/cpm:*</code> session for whichever you pick. Read-only: it never writes to a tracked repo.</li>
+        <li><strong>Epics carry a coverage matrix.</strong> Every spec requirement is traced to the story criterion covering it, and marked verified only when that story's gate actually passed.</li>
+        <li><strong>Stories can be tagged <code>[plan]</code></strong> — data-model changes, API contracts and cross-system work pause for an agreed plan before implementation starts.</li>
+        <li><strong>Retired work stays visible.</strong> Epics can be marked <code>Superseded</code> or <code>Withdrawn</code>, and <code>/cpm:retro triage</code> waives epics that finished clean so the board stops flagging them as retro-pending.</li>
+        <li><strong>Compaction resilience.</strong> Sessions survive context compaction via progress files, with <code>/cpm:clean</code> for on-demand cleanup of anything left behind.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="slide centered" data-slide="11">
     <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
       <div class="tag">Let's Go</div>
       <h1>Start with <span class="hl">what you need</span></h1>

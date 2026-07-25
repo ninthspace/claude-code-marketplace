@@ -167,7 +167,7 @@ At the **Architecture Decisions** and **Scope Boundary** sections, agent persona
 Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. Stories include traceability to spec requirements, showing which functional requirements each story satisfies. When the spec has a testing strategy, test approach tags are propagated to story acceptance criteria, testing tasks are auto-generated for stories with automated test tags, and integration testing stories are created for epics with significant cross-story interactions. When ADRs exist in `docs/architecture/`, they're referenced when breaking down architectural work.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
-**Output**: `docs/epics/{nn}-epic-{slug}.md` (one per epic)
+**Output**: `docs/epics/{parent}-{seq}-epic-{slug}.md` (one per epic, where `{parent}` is the source spec's number), each with a companion coverage matrix at `docs/epics/{parent}-{seq}-coverage-{slug}.md`
 
 ```
 /cpm:epics docs/specifications/01-spec-customer-portal.md
@@ -365,7 +365,7 @@ Execute small, well-defined changes with minimal ceremony. Bypasses the full pip
 If the scope turns out larger than expected, `/cpm:quick` offers to escalate to `/cpm:discover`, `/cpm:spec`, or `/cpm:epics` — but only once, then honours your decision.
 
 **Input**: A change description, a file path, or no arguments (prompts interactively).
-**Output**: `docs/quick/{nn}-quick-{slug}.md` (auto-numbered completion record)
+**Output**: `docs/quick/{nn}-quick-{slug}-spec.md` (auto-numbered — written as a confirmed spec before execution, then promoted in place to the completion record)
 
 ```
 /cpm:quick add a --verbose flag to the deploy script

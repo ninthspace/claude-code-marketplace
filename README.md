@@ -105,13 +105,13 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v2.9.0)
+### Claude Planning Method (v3.0.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
 Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots — and consult mode for focused one-to-one expert dialogue with dynamic membership. Inspired by the BMAD-METHOD.
 
-v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and a reduced token footprint.
+v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and a reduced token footprint.
 
 **Twenty skills forming a pipeline:**
 
@@ -123,7 +123,7 @@ v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, 
 | `/cpm:brief` | Product ideation — vision, features, user journeys | `docs/briefs/01-brief-{slug}.md` |
 | `/cpm:architect` | Architecture exploration — ADRs with trade-offs | `docs/architecture/01-adr-{slug}.md` |
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
-| `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{nn}-epic-{slug}.md` |
+| `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{parent}-{seq}-epic-{slug}.md` + coverage matrix |
 | `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
 | `/cpm:ralph` | Autonomous multi-epic execution (Ralph Wiggum loop) | Ralph loop command + execution log |
 | `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
@@ -134,7 +134,7 @@ v2 is tuned for Opus 4.7 and later: all skills use positive-voice instructions, 
 | `/cpm:templates` | Template discoverability & scaffolding | Template previews + override files at `docs/templates/` |
 | `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
 | `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
-| `/cpm:quick` | Lightweight execution for small changes | `docs/quick/{nn}-quick-{slug}.md` |
+| `/cpm:quick` | Lightweight execution for small changes | `docs/quick/{nn}-quick-{slug}-spec.md` |
 | `/cpm:status` | Project status reconnaissance and next-step recommendations | Ephemeral (stdout only) |
 | `/cpm:clean` | On-demand cleanup of leftover session-state files | None (removes files, reports what was deleted) |
 

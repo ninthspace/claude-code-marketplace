@@ -6,7 +6,7 @@ Skills that reference this document will say "Follow the shared [Convention Name
 
 ## Roster Loading
 
-Load the agent roster so that Perspectives and other agent-driven features use real names, roles, and personalities from the roster — never invented ones.
+Load the agent roster so that Perspectives and other agent-driven features use real names, roles, and personalities from the roster rather than invented ones.
 
 1. **Project override**: Read `docs/agents/roster.yaml` in the current project directory. If it exists, use it as the complete roster (no merging with defaults).
 2. **Plugin default**: If no project override exists, read the plugin's `agents/roster.yaml` (located at `../../agents/roster.yaml` relative to the active skill's SKILL.md file).
@@ -18,9 +18,9 @@ After loading, store the roster in memory for the session. Do not re-load betwee
 
 Some skill sections include a **Perspectives** block where agent personas briefly weigh in before the user makes a decision. To use perspectives:
 
-1. **Ensure the roster is loaded** — follow the Roster Loading procedure above if not already done.
+1. **Confirm the roster is loaded** — follow the Roster Loading procedure above if not already done.
 2. **Select 2-3 agents** whose expertise is relevant to the current section and topic. Use the `role` and `personality` fields from the roster to pick agents who would have a meaningful perspective.
-3. **Each agent provides a brief perspective** (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`. Use the agent's actual `icon`, `displayName`, `personality`, and `communicationStyle` from the roster — never invent names, icons, or roles. Actively render each agent's voice from their roster `communicationStyle` and `personality` fields — let those traits drive word choice, tone, and framing so each persona stays distinct rather than collapsing into one flat voice. Draw only on traits the roster defines; never invent characteristics beyond it.
+3. **Each agent provides a brief perspective** (1-2 sentences) in character, using the format: `{icon} **{displayName}**: {perspective}`. Use the agent's actual `icon`, `displayName`, `personality`, and `communicationStyle` from the roster. Actively render each agent's voice from their roster `communicationStyle` and `personality` fields — let those traits drive word choice, tone, and framing so each persona stays distinct rather than collapsing into one flat voice. Draw only on the names, icons, roles, and traits the roster defines, inventing nothing beyond it.
 4. **Perspectives should add value** — surface trade-offs, challenge assumptions, or highlight concerns. If a perspective would just echo what's already been said, skip it.
 5. **Present perspectives naturally**, woven into the facilitation before the user makes a decision — not as a separate section.
 
@@ -35,7 +35,7 @@ Check the project library for reference documents relevant to the current skill.
 3. **Report to user**: "Found {N} library documents relevant to this session: {titles}. I'll reference these as context." If none match the scope filter, skip silently.
 4. **Deep-read selectively** during the skill's phases/sections when a library document's content is relevant.
 
-**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. Never block the skill's process due to a malformed library document.
+**Graceful degradation**: If any library document has malformed or missing front-matter, fall back to using the filename as context. A malformed library document does not block the skill's process.
 
 **Compaction resilience**: Include library scan results (files found, scope matches) in the progress file so post-compaction continuation doesn't re-scan.
 
@@ -43,12 +43,12 @@ Check the project library for reference documents relevant to the current skill.
 
 Some skills check past retrospectives at startup so they can incorporate lessons from prior work into the current session. Lessons are selected **across all retros**, not just the newest file — the most recent retro is simply whatever epic or change finished last, which is rarely the same as the most *relevant* lesson for the work now starting. To use:
 
-1. **Glob** `docs/retros/[0-9]*-retro-*.md`. If no files found or directory doesn't exist, skip silently — never block the skill.
+1. **Glob** `docs/retros/[0-9]*-retro-*.md`. If no files found or directory doesn't exist, skip silently rather than blocking the skill.
 2. **Gather and select across all retros.** Read the retros (most recent first) and collect their observations — **excluding any observation carrying a `**Retired` marker** (see **Retro Retirement** below) — then select the most *relevant* few rather than everything from a single file. Judge relevance by:
    - **Source/domain match** — does the retro's `**Source**:` artefact or observation text overlap with the current work's subject (same feature area, files, or domain keywords)?
    - **Category match** — is the observation in one of the categories this skill acts on (see the skill's own **Retro incorporation** block)? Observations outside those categories are not surfaced.
    Use **recency only as a tiebreaker** between otherwise equally relevant observations. **Cap the selection** to a handful (≈3–5 observations) so signal is preserved — "two sharp observations beat ten vague ones" applies here as much as in synthesis. If reading every retro is impractical, scan from most recent backwards and stop once the cap is filled with strong matches; note that older retros were not exhausted.
-3. Present a brief summary of the **selected observations** to the user, naming the source retro (filename / `**Source**:`) for each so a stale or mis-matched selection is never silent.
+3. Present a brief summary of the **selected observations** to the user, naming the source retro (filename / `**Source**:`) for each so a stale or mis-matched selection stays visible.
 4. Use AskUserQuestion: "Retros have observations relevant to this skill. Incorporate?" with options `Yes, incorporate` / `No, skip`.
 5. If yes: apply the skill's incorporation guidance to active context throughout the session — not as a prompt one-off, but as a lens applied to each phase/section/step.
 
@@ -56,17 +56,17 @@ Some skills check past retrospectives at startup so they can incorporate lessons
 - Which of the seven retro observation categories matter most to this skill (smooth deliveries, scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps, patterns worth reusing).
 - What concrete actions to take when those categories surface — not vague "use as context," but specific operations the skill performs differently.
 
-Without per-skill guidance, "incorporate" defaults to vague awareness and the retro effectively goes unused. Skills must say what changes.
+Without per-skill guidance, "incorporate" defaults to vague awareness and the retro effectively goes unused. Each skill states what changes.
 
-**Graceful degradation**: If no retro files exist, skip silently. If front-matter or content is malformed, fall back to filename context. Never block on retro check failures — the retro is advisory input, not a gate.
+**Graceful degradation**: If no retro files exist, skip silently. If front-matter or content is malformed, fall back to filename context. A retro check failure does not block — the retro is advisory input, not a gate.
 
 ## Retro Retirement
 
 A retro lesson can outlive its usefulness — the module it warned about is gone, the constraint it captured no longer holds, the pattern was superseded. Retirement marks a single observation as no longer relevant so it stops resurfacing, **without** deleting the retro or losing the audit trail.
 
 - **Marker**: append `**Retired {YYYY-MM-DD}**: {reason}` to the observation's bullet, **in place** under its existing category heading in the source retro file. The bullet is not moved or deleted — keeping it where it lives preserves category context and leaves a visible, greppable, reversible record (un-retire by removing the marker). Example: `- Config loader fails silently: callers must null-check. **Retired 2026-06-17**: loader now throws on missing file.`
-- **Effect**: the **Retro Awareness** selection step (step 2 above) excludes any observation carrying a `**Retired` marker. Retired observations never enter the relevance ranking, so they cannot be surfaced, capped-in, or gated on.
-- **Who retires**: three deliberate paths, never an automatic or default one — (1) **`/cpm:retro retire`**, the out-of-cycle review pass that is retirement's normal home; (2) **`cpm:do`'s consumption gate**, via its deliberately-confirmed in-cycle **Obsolete** retire — reserved for the rare case where a lesson's usefulness has demonstrably passed mid-run (see that skill); and (3) the **promote-to-library flow** (`/cpm:retro learn`), which retires an observation once its lesson has graduated to the durable reference library, pointing the reason at the new library doc. The `cpm:do` gate's per-run **Not relevant here** disposition is **not** retirement — it is a local, reversible judgement of fit that leaves the source retro untouched, so the lesson is re-judged on the next run.
+- **Effect**: the **Retro Awareness** selection step (step 2 above) excludes any observation carrying a `**Retired` marker. Retired observations stay out of the relevance ranking, so they cannot be surfaced, capped-in, or gated on.
+- **Who retires**: three deliberate paths, none of them automatic or default — (1) **`/cpm:retro retire`**, the out-of-cycle review pass that is retirement's normal home; (2) **`cpm:do`'s consumption gate**, via its deliberately-confirmed in-cycle **Obsolete** retire — reserved for the rare case where a lesson's usefulness has demonstrably passed mid-run (see that skill); and (3) the **promote-to-library flow** (`/cpm:retro learn`), which retires an observation once its lesson has graduated to the durable reference library, pointing the reason at the new library doc. The `cpm:do` gate's per-run **Not relevant here** disposition is **not** retirement — it is a local, reversible judgement of fit that leaves the source retro untouched, so the lesson is re-judged on the next run.
 - **Granularity**: retirement is per-observation. To retire an entire retro's worth of lessons (e.g. a whole epic's context is obsolete), prefer `cpm:archive`, which moves the file out of `docs/retros/` so consumption no longer globs it.
 
 ## Retro Synthesis
@@ -86,8 +86,8 @@ Given a set of collected retro observations and story outcomes, synthesise them 
 1. **Group observations by category.** Place each observation under its declared category heading. Skip categories with no entries.
 2. **Synthesise, don't list.** For each category with entries, write a brief synthesis — a sentence or two about what the pattern means and what to do differently next time — not a reformatted list of the raw notes.
 3. **Status-only fallback.** If there are no observations at all, replace the Observations section with a simpler **Batch Outcome** section summarising story completion: which stories completed, which were blocked or stuck, and the overall outcome.
-4. **Assign the file number and slug — recompute both here, never inherit them.** Compute `{nn}` fresh via the shared **Numbering** procedure for `docs/retros/` (`max(active ∪ archived) + 1`), and derive `{slug}` from *this* synthesis's source artefact name (e.g. epic `01-epic-auth.md` → slug `auth`). Both values are derived at write time — from the Numbering glob and the current source — and **never** from a retro filename already sitting in context. In particular, a caller's retro-awareness/consumption step may have read one or more existing retro files earlier in the run; those are files you *consumed*, not the file you *write*. Reading a retro and writing a retro are independent operations: do not reuse the consumed retro's number, slug, or path for the new file.
-5. **Write the retro file** to `docs/retros/{nn}-retro-{slug}.md` (create the directory if absent). **The target path must not already exist.** A correct `max + 1` cannot collide with an existing file, so if `{nn}-retro-{slug}.md` is already present you have miscomputed `{nn}` (typically by inheriting a consumed retro's number instead of recomputing it in step 4): stop, recompute `{nn}` via Numbering, and **never overwrite** the existing retro. Scope this guard precisely — a *repeated slug* across runs is normal, not a collision: re-running synthesis for the same source epic is expected to produce a new number with the same slug (e.g. `12-retro-auth.md` written after an earlier `08-retro-auth.md`), and ad-hoc retros legitimately share slugs too. Only an existing **full path** (`{nn}-retro-{slug}.md`) is the error condition; a recurring slug alone is not. Write the file using this format:
+4. **Assign the file number and slug — recompute both here.** Compute `{nn}` fresh via the shared **Numbering** procedure for `docs/retros/` (`max(active ∪ archived) + 1`), and derive `{slug}` from *this* synthesis's source artefact name (e.g. epic `01-epic-auth.md` → slug `auth`). Both values are derived at write time — from the Numbering glob and the current source — rather than from a retro filename already sitting in context. A caller's retro-awareness or consumption step may have read existing retro files earlier in the run; those are files you *consumed*, not the file you *write*. Reading a retro and writing a retro are independent operations, so the consumed retro's number, slug, and path have no bearing on the new file.
+5. **Write the retro file** to `docs/retros/{nn}-retro-{slug}.md` (create the directory if absent). **The target path is always a new file.** A correct `max + 1` cannot collide with an existing file, so if `{nn}-retro-{slug}.md` is already present you have miscomputed `{nn}` (typically by inheriting a consumed retro's number instead of recomputing it in step 4): stop, recompute `{nn}` via Numbering, and write to the fresh path — the existing retro stays as it is. Scope this guard precisely — a *repeated slug* across runs is normal, not a collision: re-running synthesis for the same source epic is expected to produce a new number with the same slug (e.g. `12-retro-auth.md` written after an earlier `08-retro-auth.md`), and ad-hoc retros legitimately share slugs too. Only an existing **full path** (`{nn}-retro-{slug}.md`) is the error condition; a recurring slug alone is not. Write the file using this format:
 
    ```markdown
    # Retro: {Title}
@@ -139,7 +139,7 @@ CPM skills that maintain a progress file at `docs/plans/.cpm-progress-{session_i
 
 **Why this matters**: The progress file is the only recovery point if context compaction fires mid-flow. A stale or missing file means the user loses session state with no recovery — treat the Write call with the same care as saving user code.
 
-**Path resolution**: All paths in skills are relative to the current Claude Code session's working directory. When calling Write, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Always write to the current session's working directory only — cross-project or cross-session writes corrupt state.
+**Path resolution**: All paths in skills are relative to the current Claude Code session's working directory. When calling Write, Read, or any file tool, construct the absolute path by prepending the session's primary working directory. Write to the current session's working directory only — cross-project or cross-session writes corrupt state.
 
 **Session ID**: The `{session_id}` in the filename comes from `CPM_SESSION_ID` — a unique identifier for the current Claude Code session, injected into context by the CPM hooks on startup and after compaction. Use this value verbatim when constructing the progress file path. If `CPM_SESSION_ID` is not present in context (e.g. hooks not installed), fall back to `.cpm-progress.md` (no session suffix) for backwards compatibility.
 
@@ -154,7 +154,7 @@ Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (u
 
 **Write semantics**: Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale on every update).
 
-**Late deletion**: Always delete the progress file *after* output artifacts are confirmed written, never before. If compaction fires between an early deletion and a pending output, all session state is lost.
+**Late deletion**: Delete the progress file only once output artifacts are confirmed written. If compaction fires between an early deletion and a pending output, all session state is lost.
 
 **Per-skill responsibility**: Each skill's `## State Management` section specifies its own:
 - **Lifecycle**: when to create, update, and delete (using the skill's natural unit of progress: phase, section, step, task, turn, etc.).
@@ -164,7 +164,7 @@ Skills reference this procedure with: "Follow the shared **Progress File Managem
 
 ## Stale-Progress Check
 
-Every `/cpm:*` skill runs this once-per-session safety-net as an early startup step, so leftover progress files from other sessions are surfaced to the user even when a slash-command invocation would otherwise steamroll the SessionStart hook's advisory output. The rules live in two shipped helpers so they never drift: the **guard** (`hooks/lib/cleancheck-guard.sh`) decides *whether* to run this session, and the **classifier** (`hooks/lib/progress-classify.sh`) decides *how each file is labelled*. Both sit under the CPM plugin root — invoke them at `${CLAUDE_PLUGIN_ROOT}/hooks/lib/…` (the same token `hooks.json` uses to locate the hook scripts).
+Every `/cpm:*` skill runs this once-per-session safety-net as an early startup step, so leftover progress files from other sessions are surfaced to the user even when a slash-command invocation would otherwise steamroll the SessionStart hook's advisory output. The rules live in two shipped helpers so they stay in one place: the **guard** (`hooks/lib/cleancheck-guard.sh`) decides *whether* to run this session, and the **classifier** (`hooks/lib/progress-classify.sh`) decides *how each file is labelled*. Both sit under the CPM plugin root — invoke them at `${CLAUDE_PLUGIN_ROOT}/hooks/lib/…` (the same token `hooks.json` uses to locate the hook scripts).
 
 **When to run**: As an early startup step, in the same startup-checks region as Roster Loading — before the skill begins its own work.
 
@@ -173,7 +173,7 @@ Every `/cpm:*` skill runs this once-per-session safety-net as an early startup s
 1. **Consult the guard.** Run:
    `CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/cleancheck-guard.sh"`
    It prints exactly one token:
-   - `SUPPRESS` — an active ralph loop is present (`.claude/ralph-loop.local.md`). Do **nothing**: no prompt, no output, no action. This is the FR11 autonomous carve-out — the safety-net is fully silent during ralph runs.
+   - `SUPPRESS` — an active ralph loop is present (`.claude/ralph-loop.local.md`). Do nothing — the safety-net is fully silent during ralph runs (the FR11 autonomous carve-out).
    - `SKIP` — this session already ran the check. Do **nothing**.
    - `RUN` — proceed to step 2. (The guard has just recorded this session's sentinel, so later skills in the same session receive `SKIP`.)
 
@@ -181,12 +181,14 @@ Every `/cpm:*` skill runs this once-per-session safety-net as an early startup s
    `CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/progress-classify.sh"`
    It emits one tab-delimited record per progress file — `CLASSIFICATION<TAB>PATH<TAB>SKILL<TAB>PHASE<TAB>AGE_SECONDS<TAB>AGE_LABEL`, where CLASSIFICATION is `CURRENT`, `FRESH`, or `STALE`. No records → nothing to surface; stop.
 
-3. **Present — three-way and non-blocking.** Never halt the user's request; surface the following, then carry on with what they asked:
-   - **`CURRENT`** — the current session's own progress file. Already injected as active state by the hooks; never a cleanup candidate.
+3. **Present — three-way and non-blocking.** Surface the following without halting the user's request, then carry on with what they asked:
+   - **`CURRENT`** — the current session's own progress file. Already injected as active state by the hooks, and not a cleanup candidate.
    - **`STALE`** (other session, ≥3 days old) — offer these for cleanup. List each (skill, phase, age, path) and ask which to delete.
-   - **`FRESH`** (other session, <3 days old) — informational only ("active/recent parallel session"). Show them for awareness; **never** offer them for deletion, and never silently drop them.
+   - **`FRESH`** (other session, <3 days old) — informational only ("active/recent parallel session"). Show them for awareness, keep them out of the deletion offer, and surface them rather than dropping them silently.
 
 4. **Deletion is strictly user-confirmed.** Delete only files the user explicitly names, and only after they have seen exactly what will be removed. No path — here or in the helpers — auto-executes a delete. When the user confirms deleting a progress file, also remove its `.cpm-compact-summary-{id}.md` companion if present.
+
+**Trigger reviewed and unchanged** (spec 40 R11, 2026-07-25). The guard already makes this once-per-session — the first `/cpm:*` skill of a session gets `RUN`, every later one gets `SKIP` from a single call — so "early startup step in every skill" describes where the hook sits, not how often the work happens. Its subject is *other* sessions' leftover files, which a larger context window and rarer compaction do not make less likely.
 
 Skills reference this procedure with: "Follow the shared **Stale-Progress Check** procedure."
 
@@ -194,7 +196,7 @@ Skills reference this procedure with: "Follow the shared **Stale-Progress Check*
 
 Assign the next numeric prefix when a skill creates a new numbered artifact (`docs/specifications/`, `docs/epics/`, `docs/plans/`, `docs/briefs/`, `docs/reviews/`, `docs/retros/`, `docs/architecture/`, `docs/quick/`, `docs/discussions/`, etc.). The same rule applies to every artifact type — skills reference this procedure rather than restating the logic inline.
 
-> **Invariant**: Numeric prefix is an integer identifier, not a fixed-width string. Never pad existing files to match new widths.
+> **Invariant**: Numeric prefix is an integer identifier, not a fixed-width string. Existing files keep the width they were created with.
 
 ### Procedure
 
@@ -202,17 +204,17 @@ For a given artifact type with directory `docs/{type}/` and filename pattern `{n
 
 1. **Glob the active directory**: `docs/{type}/[0-9]*-{type}-*.md`.
 2. **Glob the archive mirror**: `docs/archive/{type}/[0-9]*-{type}-*.md`. If the archive directory does not exist (fresh project, nothing ever archived), treat this set as empty and continue — the lookup degrades cleanly to active-only.
-3. **Extract the leading numeric prefix** from each matched filename. Parse it as an **integer**, not a string. Lexical comparison is forbidden: `"100"` must compare as greater than `"99"`, which only works under integer comparison.
+3. **Extract the leading numeric prefix** from each matched filename. Parse it as an **integer**, not a string: `"100"` sorts below `"99"` lexically and above it as an integer.
 4. **Take the union** of the two sets and compute `max + 1`. If both sets are empty, start at `1`.
 5. **Format the new number** with a **minimum of 2 digits**, zero-padded. Numbers `< 100` render as `01`, `02`, …, `99`. Numbers `≥ 100` use their natural width: `100`, `101`, and so on. Do not pad beyond 2 digits; do not truncate or reformat existing files.
 
 ### Rules
 
-- **Numbers are retired on archive, never reused.** Because the glob unions active and archived directories, a number that has ever been assigned remains reserved even after its artifact is moved to `docs/archive/`. New artifacts always receive `max(active ∪ archived) + 1`.
+- **Numbers are retired on archive and not reused.** Because the glob unions active and archived directories, a number that has ever been assigned remains reserved even after its artifact is moved to `docs/archive/`. New artifacts always receive `max(active ∪ archived) + 1`.
 - **Integer comparison, not lexical.** Any implementation detail that sorts or compares filenames by string ordering will break the moment a directory crosses `99 → 100`. Parse the prefix as an integer before comparing.
-- **No bulk renaming.** Existing 2-digit files are never re-padded to 3 digits when a directory crosses `99 → 100`. The new file is written at its natural width (`100-…`) next to the existing 2-digit files. Mixed-width coexistence is a permanent invariant the glob handles natively via integer comparison.
+- **No bulk renaming.** Existing 2-digit files keep their width when a directory crosses `99 → 100`. The new file is written at its natural width (`100-…`) next to the existing 2-digit files. Mixed-width coexistence is a permanent invariant the glob handles natively via integer comparison.
 - **No auto-widening migration.** There is no "renumber on save of #100" operation. Growth past 99 is transparent to the user.
-- **Archive must preserve the mirrored directory structure** (`docs/archive/{type}/`) for the archive-side glob to find retired numbers. This is a load-bearing contract with `cpm:archive`.
+- **Archive preserves the mirrored directory structure** (`docs/archive/{type}/`) so the archive-side glob can find retired numbers. This is a load-bearing contract with `cpm:archive`.
 
 ### Scenarios
 
@@ -238,7 +240,7 @@ When a change to existing planning artefacts is needed — discovered mid-execut
 
 **Inline edit breadcrumb**: When applying an inline edit to a story or task, record an `**Inline change**: {one-line summary} ({YYYY-MM-DD})` field on the story (alongside any existing `**Retro**:` field). This preserves a trail that downstream skills (drift detection, retro synthesis) can see.
 
-**Skill responsibility**: Skills that may surface change moments during execution (`cpm:do`, `cpm:quick`) reference this convention when a change-worthy situation appears. The decision is presented as a structured `AskUserQuestion` gate (per the **Gate Presentation** convention) with the four options above as labels — never as a freeform "should we change this?" prompt.
+**Skill responsibility**: Skills that may surface change moments during execution (`cpm:do`, `cpm:quick`) reference this convention when a change-worthy situation appears. The decision is presented as a structured `AskUserQuestion` gate (per the **Gate Presentation** convention) with the four options above as labels, rather than as a freeform "should we change this?" prompt.
 
 ## Tool Operations
 
@@ -257,11 +259,11 @@ Use whichever tool the current harness actually provides for each operation. Rea
 
 **Precedence**: Project `CLAUDE.md` tool preferences win over anything implied by these operation names. If a project says "prefer fff" or "use ripgrep," follow that — the skill's vocabulary is general; the project's stack is specific.
 
-**Compatibility note**: Skill text written before this convention may read as if `Glob` and `Grep` are literal tool names. Treat all such references as semantic operations. No skill file rewrites are required.
+**Compatibility note**: Skill text written before this convention may read as if `Glob` and `Grep` are literal tool names. Treat all such references as semantic operations. No skill file rewrites are needed.
 
 ## Gate Presentation
 
-`AskUserQuestion` is for the *gate*, never the *content*. The Claude Code preview panel that renders the question is sized for short prompts and short option labels — long content gets truncated and becomes unreadable.
+`AskUserQuestion` is for the *gate*, not the *content*. The Claude Code preview panel that renders the question is sized for short prompts and short option labels — long content gets truncated and becomes unreadable.
 
 **Rule**: Documents, drafts, alternatives, ADRs, specs, briefs, planning options, lists of proposed changes — render in the assistant's message body **before** the `AskUserQuestion` call. The `AskUserQuestion` itself carries only the decision: "Approve", "Request changes", "Stop", "Choose A / B / C", etc. Question text and option labels stay short enough to fit the preview panel comfortably.
 
@@ -275,50 +277,96 @@ Use whichever tool the current harness actually provides for each operation. Rea
 
 > `AskUserQuestion`: "Here is the draft: [200 lines pasted into question text]. Approve?"
 
-**Option previews**: `AskUserQuestion` options can carry an optional `preview` field that renders in a transient side-by-side pane. Reserve it for small *presentational* choices where the user is comparing concrete variants — a short layout mockup, a wording or naming option, a brief snippet shown side by side. Keep artifacts and any content the user needs to keep out of it: drafts, specs, ADRs, briefs, plans, and lists of proposed changes go in the message body, never in `preview`. The preview pane is transient and easy to miss, and it is not part of the saved message output — so reserve it for a quick visual aid on a presentational pick, and render everything substantive in the body.
+**Option previews**: `AskUserQuestion` options can carry an optional `preview` field that renders in a transient side-by-side pane. Reserve it for small *presentational* choices where the user is comparing concrete variants — a short layout mockup, a wording or naming option, a brief snippet shown side by side. Anything the user needs to keep — drafts, specs, ADRs, briefs, plans, lists of proposed changes — goes in the message body instead, because the preview pane is transient, easy to miss, and not part of the saved message output.
 
 When in doubt: if the content the user needs to read is more than a sentence or two, it belongs in the message body, not in the question or its option previews.
 
+## Conversational Output
+
+How much to say between gates, and in what shape. Opus 5's default responses run longer than prior models', and the effort parameter does not reliably shorten them — length responds to being asked for, so ask for it explicitly rather than assuming a lower effort level will deliver it.
+
+Aim for the shortest response that does the job. A CPM skill's product is the artefact on disk; the conversation around it is scaffolding, and scaffolding earns its space by being brief.
+
+### Narration cadence
+
+Between `AskUserQuestion` gates, the update a user wants is short and specific. The shapes that work:
+
+- **Before a gate**: the content itself — draft, table, list — rendered in the message body, then the gate. The content carries the detail; the prose around it is a sentence or two of framing.
+- **After a decision**: one line recording what was decided and where it went — "`quick` holds at `high`; folded into Story 2's must-NOT."
+- **During a production loop**: name the step and what it found, not the process — "Read the three skill files; the removal surface is concentrated in `do`."
+- **When something unexpected turns up**: say it plainly with its evidence, in the flow of the work, rather than saving it for a summary at the end.
+
+The test is whether someone skimming only the narration still knows where they are and what was decided.
+
+### Correcting yourself
+
+Narrate a correction to something you said earlier when the error would change the user's conclusions or decisions. When it would not — a slip in phrasing, a detail that changes nothing downstream — make the correction and carry on without remarking on it.
+
+Opus 5 reaches for self-correction more readily than earlier models. In a facilitated conversation that reads as a running commentary on your own earlier wording, and it spends attention the user was giving to the decision in front of them.
+
+## Written Deliverable Length
+
+Applies to every skill that writes a file — specs, briefs, ADRs, epics, coverage matrices, reviews, audits, retros, communications, and completion records alike.
+
+Let a document's length match what the task actually needs. A spec covering three requirements is shorter than one covering thirty, and that is the right outcome rather than an incomplete one. Opus 5 writes longer by default, so length is worth a look before saving rather than after.
+
+What to leave out:
+
+- **Padding** — restating a point in different words because a section looked thin.
+- **Redundant summaries** — a closing recap of what the reader has just read. A summary earns its place when it carries something the body does not: a decision, a count, a next step.
+- **Boilerplate sections** — a heading kept because the template offers it, then filled with "N/A" or a sentence of throat-clearing. A section with nothing to say reads better omitted.
+
+This is calibration rather than a budget. No artefact carries a fixed word or section count, and none should gain one — a long document that earns its length is correct, and a short one that leaves out something the reader needs is not.
+
 ## Effort Recommendations
 
-Map each CPM skill to a reasoning effort level. Skills that reference this document inherit the recommended level automatically.
+Reference for choosing a session's reasoning effort level. Effort is a session setting, fixed before any skill's instructions load — nothing here applies itself, and no skill raises the level or asks for it to be raised. The table is for whoever sets the level.
+
+In practice a session runs at one level throughout. The per-skill rows are most useful when picking that level for a run dominated by a single skill, or when reconsidering a level that has stopped fitting the work.
 
 | Skill | Level | Rationale |
 |-------|-------|-----------|
 | do | xhigh | Multi-step execution loop with verification, TDD, and state management |
 | epics | xhigh | Spec analysis, story decomposition, coverage matrix construction |
-| spec | xhigh | Facilitated requirements gathering across 7 sections with architecture decisions |
-| architect | xhigh | Multi-phase architecture exploration with trade-off analysis |
 | ralph | xhigh | Autonomous multi-epic execution with failure handling and task budgets |
-| consult | xhigh | Deep one-to-one consultation with dynamic expert transfer |
-| party | xhigh | Multi-perspective discussion with roster-driven agent simulation |
-| review | xhigh | Adversarial analysis with multi-agent review perspectives |
-| brief | xhigh | Facilitated product ideation with vision and value proposition synthesis |
-| discover | xhigh | Facilitated problem discovery across 6 phases with perspectives |
+| spec | high | Facilitated requirements gathering across 7 sections; the architecture decisions it fixes are expensive to revisit later |
+| architect | high | Multi-phase architecture exploration with trade-off analysis; these decisions constrain everything downstream |
+| review | high | Adversarial analysis across several reviewer perspectives; finding what the author missed rewards depth |
 | pivot | high | Surgical amendment with cascade analysis and downstream propagation |
 | quick | high | Scoped implementation with verification, but bypasses full pipeline ceremony |
-| library | medium | Bounded document intake and front-matter generation; strict medium adherence fits the well-scoped transformation — no under-thinking risk |
-| archive | medium | Mechanical file relocation with user confirmation; strict medium adherence is sufficient for work that needs no deep reasoning |
-| retro | medium | Synthesis over already-structured epic doc fields; categorisation is bounded, so medium holds under strict effort adherence |
-| present | medium | Artifact transformation with audience selection; scoped enough that strict medium adherence carries no under-thinking risk |
-| status | medium | Scan-and-report with no implementation; strict medium adherence is adequate for read-and-summarise work |
-| templates | medium | List-and-scaffold with no analysis; strict medium adherence is more than sufficient |
+| audit | high | Nine-dimension sweep of an unfamiliar codebase, where the finding quality depends on how much of the code is genuinely understood |
+| consult | medium | Deep one-to-one consultation with dynamic expert transfer — conversational work Opus 5 handles well below `xhigh` |
+| party | medium | Multi-perspective discussion with roster-driven agent simulation; the difficulty is voice and coverage, not depth of reasoning |
+| brief | medium | Facilitated product ideation with vision and value proposition synthesis |
+| discover | medium | Facilitated problem discovery across 6 phases with perspectives |
+| library | medium | Bounded document intake and front-matter generation |
+| retro | medium | Synthesis over already-structured epic doc fields; categorisation is bounded |
+| present | medium | Artifact transformation with audience selection |
+| archive | low | Mechanical file relocation with user confirmation; the judgement is the user's |
+| status | low | Scan-and-report with no implementation |
+| templates | low | List-and-scaffold with no analysis |
+| clean | low | Enumerate session-state files and delete the ones named; every step is confirmed |
 
-> **Effort note**: Extended thinking is off by default and the model adheres to the chosen effort level strictly — it will not silently over-think a `low`/`medium` task to compensate. Pair the reasoning-heavy skills at `xhigh`/`max` with a large output budget (~64k tokens) so there is room for the reasoning the level implies. The medium-tier rationales above are deliberate floors: each task is bounded enough that strict adherence to `medium` carries no under-thinking risk.
+> **Effort note**: Thinking is on by default on Opus 5, and can be turned off only at effort `high` or below — at `xhigh` and above it stays on. Pair the reasoning-heavy skills at `xhigh`/`max` with a large output budget (~64k tokens) so there is room for the reasoning the level implies. Opus 5 also gets more out of `low` and `medium` than earlier models did at the same settings, so a level that once looked too low for a skill may now be the right fit — the levels above are a starting point to revise against real sessions, not a fixed allocation.
 
 ## Subagent Delegation
 
-When to use subagents (the Agent tool) vs. working inline. Subagents are valuable for parallelising independent work and protecting the main context window from excessive results — but they add overhead and lose conversational context.
+When to use subagents (the Agent tool) vs. working inline. Subagents are valuable for parallelising large, genuinely independent work and protecting the main context window from excessive results — but they add overhead and lose conversational context.
 
-The model spawns few subagents by default, so the fan-out guidance below is load-bearing: when one of the "Delegate (fan-out) when" cases applies, actively reach for the Agent tool rather than defaulting to inline work. The "Work inline when" cases are the deliberate counterweight that keeps this from tipping into over-spawning — both lists stay in force.
+Opus 5 delegates readily, so the guidance below is about restraint rather than encouragement. Delegation earns its overhead only when the work is large, genuinely independent, and parallelisable; anything smaller is faster and clearer done inline. This reverses spec 32's R1, which told the model to actively reach for fan-out because prior models under-delegated — that correction now pushes the wrong way. Both the "Delegate (fan-out) when" and "Work inline when" lists below stay in force.
 
 ### Delegate (fan-out) when
 
-These cases are actively encouraged — treat fan-out as the expected path when one applies, not an optional optimisation.
+Each case below assumes the work is large enough to repay the overhead. Where it is not, work inline.
 
-- **Reading multiple independent files**: e.g. reading 5+ library documents, scanning multiple epic docs, or auditing files across directories. Each read is independent — fan out to avoid bloating the main context.
-- **Per-item work across a list**: e.g. processing each epic independently in a production loop, or reviewing each story in isolation. The items share no state — parallelise them.
-- **Exploratory research**: e.g. searching the codebase for patterns, finding all usages of a function, or surveying project structure. The search results inform a decision but are not themselves the deliverable.
+- **Reading many independent files**: e.g. reading 5+ library documents, scanning multiple epic docs, or auditing files across directories. Each read is independent, and fanning out keeps the results out of the main context.
+- **Per-item work across a long list**: e.g. processing each epic independently in a production loop, or reviewing each story in isolation. The items share no state, so they parallelise cleanly.
+- **Broad exploratory research**: e.g. sweeping the codebase for a pattern across many directories, or surveying an unfamiliar project structure. The search results inform a decision but are not themselves the deliverable.
+
+Two cases fall outside this even when they look like the ones above:
+
+- **Work completable in a handful of tool calls stays inline.** A search you could run yourself in two or three calls costs more to delegate than to do — the spawn overhead and the round trip outweigh the saving.
+- **Verification of your own work stays inline.** Do not use subagents to verify, double-check, or second-guess something you just did. A subagent starting from no context is a poor auditor of work it did not see, and the pattern compounds with the self-checking the model already performs.
 
 ### Work inline when
 
@@ -330,6 +378,7 @@ These cases are actively encouraged — treat fan-out as the expected path when 
 ### Rules
 
 - Subagents start with no context from the current conversation — the prompt must be self-contained.
+- If one subagent can complete the task, use one rather than several, and keep spawn counts low.
 - Assign subagents to research and exploration, not to implementation decisions that require conversational context.
 - When delegating, specify whether the subagent should write code or just research. The subagent cannot infer intent from the conversation.
 
@@ -339,7 +388,7 @@ Cross-cutting rules for all CPM skills that edit files during execution (do, qui
 
 ### No bulk programmatic edits
 
-Never use `sed`, `perl`, `awk`, or other stream-processing tools via the Bash tool to edit files. Always use the **Edit tool**, applied file-by-file, so that each change is visible, reviewable, and reversible.
+Edit existing files with the **Edit tool**, applied file-by-file, so that each change is visible, reviewable, and reversible. Stream-processing tools — `sed`, `perl`, `awk`, and the like — have no role in editing files.
 
 - **Why**: Bulk programmatic edits are opaque — they bypass the tool's diffing and review affordances, risk corrupting files on partial matches, and make it impossible to audit what changed after the fact. The Edit tool produces a clear before/after for every change.
 - **Scope**: This applies to *editing existing files*. Using Bash for read-only operations (`grep`, `find`, `git`) or running build/test commands is unaffected. Writing *new* files with the Write tool is also fine — the constraint is about modifying existing content.
@@ -353,25 +402,25 @@ Prefer clarity and correctness over speed in all implementation work. Getting it
 
 ### Version control stays with the user
 
-Do not run mutating git operations on your own initiative — no `git commit`, no `git add`/staging, no `git branch` or `git checkout -b`, no `git push`, no `git merge`/`rebase`/`reset`. Version control is the user's responsibility, performed outside the skill loop. Read-only git inspection (`git status`, `git log`, `git diff`) is always fine and often useful.
+Do not run mutating git operations on your own initiative — no `git commit`, no `git add`/staging, no `git branch` or `git checkout -b`, no `git push`, no `git merge`/`rebase`/`reset`. Version control is the user's responsibility, performed outside the skill loop. Read-only git inspection (`git status`, `git log`, `git diff`) is fine and often useful.
 
 - **Why**: Self-initiated commits and branches surprise the user, fragment history on their behalf, and can move work onto a branch they never asked for. Leaving the working tree as edited files keeps the user in control of when and how changes are recorded.
 - **When git changes are allowed**: only when explicitly directed — a task whose acceptance criteria call for a git action, a user instruction in the conversation, or a wrapper that mandates it (e.g. `cpm:ralph`'s "commit after each story"). Outside those, finish the work and leave committing to the user.
 
 ## HTML Output
 
-CPM2 artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in three explicitly-bounded roles: **companion assets** (visual content the Markdown references — a UI mockup, a data-flow diagram), **faithful renders** (a navigable HTML view of a whole `spec`/ADR/`review`), and **`present` HTML communications** (audience-reframed output in a styled medium). HTML is never a parsed/consumed data substrate — downstream skills read the Markdown for requirements, never the markup. Skills that generate HTML reference this convention.
+CPM2 artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in three explicitly-bounded roles: **companion assets** (visual content the Markdown references — a UI mockup, a data-flow diagram), **faithful renders** (a navigable HTML view of a whole `spec`/ADR/`review`), and **`present` HTML communications** (audience-reframed output in a styled medium). HTML is not a parsed or consumed data substrate — downstream skills read the Markdown for requirements, not the markup. Skills that generate HTML reference this convention.
 
 ### Consume the shared template — do not fork it
 
-There is exactly **one** shared styling/layout asset: `cpm/assets/html/template.html` (relative to the plugin root). Every HTML output that **presents a CPM2 artifact** draws its styling and layout from this single asset so all such generated HTML is visually consistent and no skill grows divergent CSS/layout. **Never** fork the template's CSS, copy its `<style>` block into a skill, or hand-roll a parallel stylesheet.
+There is exactly **one** shared styling/layout asset: `cpm/assets/html/template.html` (relative to the plugin root). Every HTML output that **presents a CPM2 artifact** draws its styling and layout from this single asset so all such generated HTML is visually consistent and no skill grows divergent CSS/layout. Forking the template's CSS, copying its `<style>` block into a skill, or hand-rolling a parallel stylesheet all sit outside this convention.
 
 **The one carve-out**: a companion asset that represents **deliverable functionality** — a mockup of the UI of the system being built — is *system-specific* and must look like the target system, not CPM2. Those mockups deliberately do **not** consume or wear the shared chrome. See *Companion-asset content: shared chrome vs. system-specific mockups* below. Everything else (faithful renders, `present` communications, and documentation visuals that explain the artifact) uses the shared template.
 
 The template is a complete, valid, self-contained HTML5 document with an inline `<style>` design system and **placeholder comment tokens** that consumers substitute. The consumption model is:
 
 1. Read `cpm/assets/html/template.html`.
-2. Replace each placeholder token with generated content — **never edit the `<style>` block**:
+2. Replace each placeholder token with generated content, leaving the `<style>` block untouched:
    - `<!-- CPM:TITLE -->` — document title (also used in `<title>`)
    - `<!-- CPM:SUBTITLE -->` — kicker / eyebrow line (optional; collapses when empty)
    - `<!-- CPM:META -->` — date / source-artifact line (optional)
@@ -390,11 +439,11 @@ The template ships reusable component classes so consumers express each role wit
 | Faithful render | `docs/{type}/html/{nn}-{slug}.html` | Navigable view of the whole artifact |
 | `present` HTML communication | `docs/communications/` | Alongside `present`'s Markdown output |
 
-`{type}` is the artifact directory (`specifications`, `architecture`, `reviews`, …); `{nn}` and `{slug}` match the source Markdown's number and slug. Numbering globs match `*.md`, so these HTML siblings never collide with the numbering scheme.
+`{type}` is the artifact directory (`specifications`, `architecture`, `reviews`, …); `{nn}` and `{slug}` match the source Markdown's number and slug. Numbering globs match `*.md`, so these HTML siblings do not collide with the numbering scheme.
 
 ### Self-contained rule
 
-Every generated HTML file is a **single self-contained file**: inline CSS and inline SVG / `data:` URIs only — no external CSS, JS, images, or fonts, no CDN, no network request to render, no server, and no build step. A file must open correctly when double-clicked or sent to someone. This is Tier 1: **static only — no JavaScript**. (The `[integration]` self-containment validator in `cpm/hooks/tests/html-test-helpers.sh` enforces this.)
+Every generated HTML file is a **single self-contained file**: inline CSS and inline SVG / `data:` URIs only — no external CSS, JS, images, or fonts, no CDN, no network request to render, no server, and no build step. A file opens correctly when double-clicked or sent to someone. This is Tier 1: **static only — no JavaScript**. (The `[integration]` self-containment validator in `cpm/hooks/tests/html-test-helpers.sh` enforces this.)
 
 ### Tier 2 — export affordances (tracking documents only)
 
@@ -408,8 +457,8 @@ Where it adds value, a Tier 2 document offers:
 Rules for every export affordance:
 
 1. **Inline vanilla JS only.** No external `<script src>`, no framework, no bundler, no build step. The script is inline in the document and the file stays self-contained (the self-containment validator passes inline `<script>` and rejects external ones).
-2. **Read-only / export-only.** The *only* effect of any interaction is placing text on the clipboard via `navigator.clipboard.writeText(...)` (with a graceful no-op when the clipboard API is unavailable). An interaction **never** writes back to an epic doc or any source artifact — mutation of source docs stays exclusively with `cpm:do`.
-3. **Export data is embedded at generation time.** The prompt strings and the JSON snapshot are baked into the document when it is generated (e.g. a `data-prompt` attribute on the button, or a `<script type="application/json">` block read by the handler) — export needs no network call and never re-reads a source file.
+2. **Read-only / export-only.** The *only* effect of any interaction is placing text on the clipboard via `navigator.clipboard.writeText(...)` (with a graceful no-op when the clipboard API is unavailable). Mutation of an epic doc or any source artifact stays exclusively with `cpm:do`.
+3. **Export data is embedded at generation time.** The prompt strings and the JSON snapshot are baked into the document when it is generated (e.g. a `data-prompt` attribute on the button, or a `<script type="application/json">` block read by the handler) — export needs no network call and does not re-read a source file.
 
 Canonical minimal shape (consume this rather than hand-rolling divergent handlers): a button carrying its payload in a `data-*` attribute plus one delegated click handler that copies it.
 
@@ -425,7 +474,7 @@ Canonical minimal shape (consume this rather than hand-rolling divergent handler
 </script>
 ```
 
-A purely static Tier 2 document (no export controls) is always a valid fallback — interactivity is an enhancement, not a requirement.
+A purely static Tier 2 document (no export controls) remains a valid fallback — interactivity is an enhancement, not a requirement.
 
 ### Generate-from-source, never replace
 
@@ -436,6 +485,14 @@ No HTML generation step ever mutates or replaces the source Markdown. Generation
 Companion assets are two different things, and they are styled differently:
 
 - **Documentation visuals** — diagrams that *explain* the artifact (architecture, data-flow, sequence). This is CPM2 explaining its own content, so it wears the shared chrome: render the diagram (inline SVG) inside a `.cpm-figure` within the shared shell. Use the template's styling; do not fork it.
-- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's, never the template's.
+- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's rather than the template's.
 
-**Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template. Faithful renders and `present` communications always use the shared template directly.
+**Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template. Faithful renders and `present` communications use the shared template directly.
+
+## A Closing Note on Length and Tone
+
+Placed last because it applies to everything above.
+
+**Length**: say what the step found and what happens next, then stop. When two phrasings carry the same meaning, use the shorter one. Let the artefacts hold the detail — they are what the user keeps.
+
+**Tone**: plain and direct, warm enough to be good company across a long facilitation. State confidence where the evidence supports it and uncertainty where it does not; neither needs padding.

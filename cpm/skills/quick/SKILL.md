@@ -61,6 +61,10 @@ After the Library Check and before Step 1, discover the project's test runner co
 
 ### Step 1: Classify and Assess
 
+- **Scope**: deliver what was asked, at the scope intended — no narrower, no wider. Make the routine judgment calls yourself, and check in only when different readings of the request would lead to materially different work. If a better approach than the one requested becomes apparent, raise it in a sentence and carry on with what was asked, rather than silently transforming the task. Finish the whole task, and stop short of actions that are clearly beyond what was asked.
+
+This governs the classification below and the execution in Step 3.
+
 #### Input Classification
 
 Read the change description and classify it as a **fix** or a **change**:

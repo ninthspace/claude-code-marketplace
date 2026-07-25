@@ -270,6 +270,7 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
 ## Guidelines
 
+- **Correct yourself sparingly.** Follow the shared **Correcting yourself** convention — narrate a correction to something you said earlier only when the error would change the user's conclusions or decisions.
 - **Facilitate, stay conversational.** These are conversations, not forms.
 - **Build on answers.** Each question should respond to what the user just said.
 - **Skip what's obvious.** If the input brief already covers a phase, acknowledge it and move on.

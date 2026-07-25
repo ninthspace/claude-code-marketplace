@@ -322,6 +322,7 @@ Follow the shared **Library Check** procedure with scope keyword `consult`. Deep
 
 ## Guidelines
 
+- **Correct yourself sparingly.** Follow the shared **Correcting yourself** convention — narrate a correction to something you said earlier only when the error would change the user's conclusions or decisions.
 - **The user leads by default.** Agents serve the user's thinking, not the other way around. The user controls who's in the room and who's driving.
 - **Depth over breadth.** Consult mode exists for focused exploration. One sharp, deep perspective is better than three surface-level ones.
 - **Natural disagreement.** When multiple agents are active and have different perspectives, let them disagree constructively. This tension surfaces trade-offs.

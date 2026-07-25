@@ -297,6 +297,7 @@ Every scenario below specifies an explicit action sequence ending with a visible
 
 ## Guidelines
 
+- **Correct yourself sparingly.** Follow the shared **Correcting yourself** convention — narrate a correction to something you said earlier only when the error would change the user's conclusions or decisions.
 - **Explore before proposing.** Always understand the existing codebase and constraints before suggesting architecture.
 - **Product-derived decisions.** Every decision should trace back to a product need. If you can't explain why a decision matters for this specific product, it's boilerplate — skip it.
 - **Honest trade-offs.** Present every option with its genuine costs. Every choice has downsides worth acknowledging.

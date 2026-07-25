@@ -249,6 +249,8 @@ Re-orientation runs once per conflict; do not loop. If a third dimension surface
 
 ### Step 3: Deliverable Generation
 
+Follow the shared **Written Deliverable Length** convention — let the document's length match what the task needs, without padding, redundant summaries, or boilerplate sections.
+
 The deliverable is a numbered markdown document at `docs/audits/{nn}-audit-{slug}.md`. Follow the shared **Numbering** procedure to assign `{nn}` — integer comparison across active and archived audits in `docs/audits/`, retired numbers stay retired, growth past 99 is transparent. The slug is derived from the scope hint (when supplied) or "full-sweep" otherwise, lowercase-hyphenated.
 
 If `docs/audits/` does not exist, create it before writing the deliverable.

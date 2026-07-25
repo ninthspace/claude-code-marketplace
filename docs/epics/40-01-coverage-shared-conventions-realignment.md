@@ -1,0 +1,42 @@
+# Coverage Matrix: Shared Conventions Realignment
+
+**Source spec**: docs/specifications/40-spec-opus-5-alignment.md
+**Epic**: docs/epics/40-01-epic-shared-conventions-realignment.md
+**Date**: 2026-07-24
+
+> **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
+
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
+|---|---|---|---|---|---|---|
+| 1 | R1 — Subagent delegation | "Amend the `Subagent Delegation` section of `shared/skill-conventions.md` so it no longer states that the model under-delegates or that fan-out is "load-bearing"" | "`Subagent Delegation` no longer states that the model under-delegates or that fan-out is "load-bearing"" | Story 1 | `[manual]` | ✓ |
+| 2 | R1 — Subagent delegation | "state instead that Opus 5 delegates readily and that delegation is warranted only for large, genuinely independent, parallelisable work" | "Delegation is framed as warranted only for large, genuinely independent, parallelisable work" | Story 1 | `[manual]` | ✓ |
+| 3 | R1 — Subagent delegation | "add an explicit "do not delegate work completable in a handful of tool calls" clause" | "An explicit "do not delegate work completable in a handful of tool calls" clause is present" | Story 1 | `[manual]` | ✓ |
+| 4 | R1 — Subagent delegation | "add "do not use subagents to verify or double-check your own work"" | "A "do not use subagents to verify or double-check your own work" clause is present" | Story 1 | `[manual]` | ✓ |
+| 5 | R1 — Subagent delegation | "Retain both the "Delegate (fan-out) when" and "Work inline when" lists" | "Both the "Delegate (fan-out) when" and "Work inline when" lists are retained" | Story 1 | `[manual]` | ✓ |
+| 6 | R1 — Subagent delegation | "must NOT remove the "Work inline when" list or the self-contained-prompt rules" | "must NOT remove the "Work inline when" list or the self-contained-prompt rules" | Story 1 | `[manual]` | ✓ |
+| 7 | Maintainability NFR | "Reversals of prior specs (R1, R8) name the spec they reverse and why, so the 29 → 32 → 40 chain reads as a deliberate sequence rather than churn." | "The section names spec 32 as the spec it reverses and why, so the 29 → 32 → 40 chain reads as a deliberate sequence" | Story 1 | — | ✓ |
+| 8 | R3 — Effort table | "Rewrite the effort note: thinking is **on** by default on Opus 5 and can be disabled only at effort `high` or below" | "Effort note states thinking is **on** by default on Opus 5 and can be disabled only at effort `high` or below" | Story 2 | `[manual]` | ✓ |
+| 9 | R3 — Effort table | "so the "extended thinking is off by default" premise and the strict-adherence rationale both go" | "The "extended thinking is off by default" premise and the strict-adherence rationale are both removed from the note" | Story 2 | `[manual]` | ✓ |
+| 10 | R3 — Effort table | "Replace the medium-tier "strict adherence carries no under-thinking risk" rationales, which are 4.8 artefacts." | "4.8 strict-adherence rationales removed from every tier of the table" | Story 2 | `[manual]` | ✓ |
+| 11 | R3 — Effort table | "Re-assess the ten `xhigh` facilitation skills — Opus 5's `low`/`medium` outperform the same settings on prior Opus models, so the 4.8 under-thinking floor no longer justifies `xhigh` for conversational work." | "The ten `xhigh` facilitation skills are re-assessed, with rationales rewritten for any level that changes" | Story 2 | `[manual]` | ✓ |
+| 12 | R3 — Effort table | "must NOT downgrade `do`, `epics`, `ralph`, or `quick` below their coding/agentic starting point" | "must NOT downgrade `do`, `epics`, `ralph`, or `quick` below their coding/agentic starting point (`xhigh` for `do`/`epics`/`ralph`, `high` for `quick`)" | Story 2 | `[manual]` | ✓ |
+| 13 | R4 — Response length | "Add a new shared convention section covering conversational output." | "A new shared convention section covering conversational output is present" | Story 3 | `[manual]` | ✓ |
+| 14 | R4 — Response length | "Opus 5's default responses run longer than prior models' and effort does not reliably shorten them, so length must be prompted explicitly." | "The section states that default responses run longer than prior models' and that effort does not reliably shorten them, so length must be prompted explicitly" | Story 3 | `[manual]` | ✓ |
+| 15 | R4 — Response length | "Include a conciseness instruction and a short tone reminder placed near the end of the conventions document." | "A conciseness instruction plus a short tone reminder sit near the end of the conventions document" | Story 3 | `[manual]` | ✓ |
+| 16 | R4 — Response length | "Add narration-cadence guidance describing the update shape wanted between `AskUserQuestion` gates, expressed as positive examples of the desired style rather than prohibitions." | "Narration-cadence guidance describes the update shape wanted between `AskUserQuestion` gates, expressed as positive examples of the desired style rather than prohibitions" | Story 3 | `[manual]` | ✓ |
+| 17 | Style Fidelity NFR | "All additions match CPM's positive-prose voice: no XML behavioural blocks, no ALL-CAPS, no CRITICAL/MUST framing." | "Additions match CPM's positive-prose voice — no XML behavioural blocks, no ALL-CAPS, no CRITICAL/MUST framing" | Story 3 | — | ✓ |
+| 18 | R5 — Deliverable length | "Add length calibration to the shared conventions covering every skill that writes a file" | "Length calibration added to the shared conventions, covering every skill that writes a file" | Story 4 | `[manual]` | ✓ |
+| 19 | R5 — Deliverable length | "instructing that document length match what the task needs without padding, redundant summaries, or boilerplate sections" | "The instruction states that document length should match what the task needs, without padding, redundant summaries, or boilerplate sections" | Story 4 | `[manual]` | ✓ |
+| 20 | R5 — Deliverable length | "Verify the instruction reaches the highest-volume producers: `present`, `audit`, `spec`, `epics`, `retro`." | "The instruction reaches `present`, `audit`, `spec`, `epics`, `retro` — verified in each" | Story 4 | `[manual]` | ✓ |
+| 21 | R5 — Deliverable length | "must NOT impose fixed word or section counts on any artefact template" | "must NOT impose fixed word or section counts on any artefact template" | Story 4 | `[manual]` | ✓ |
+| 22 | R9 — Correction narration | "Add a shared instruction limiting correction narration to errors that would change the user's conclusions or decisions." | "A shared instruction limits correction narration to errors that would change the user's conclusions or decisions" | Story 5 | `[manual]` | ✓ |
+| 23 | R9 — Correction narration | "Applies to `party`, `consult`, `discover`, `brief`, `spec`, `architect`." | "Identical correction-narration wording present across `party`, `consult`, `discover`, `brief`, `spec`, `architect`" | Story 5 | `[manual]` | ✓ |
+| 24 | Consistency NFR | "R4, R5, and R9 use identical phrasing wherever they appear across skills." | "R4, R5, and R9 use identical phrasing at every site they appear" | Story 6 | — | ✓ |
+| 25 | Integration Boundaries — Shared → skill coherence | "R1/R3/R4/R5/R9 wording must stay consistent with how `do`, `epics`, `review`, and the facilitation skills reference those conventions. Verified by cross-reference after the shared edits land." | "R1/R3/R4/R5/R9 wording is consistent with how `do`, `epics`, `review`, and the facilitation skills reference those conventions — verified by cross-reference after the shared edits land" | Story 6 | — | ✓ |
+| 26 | — *(story-originated)* | — | "No skill references a convention section by a name the realignment changed" | Story 6 | — | ✓ |
+
+## Notes
+
+- **Row 12** — the parenthetical `(`xhigh` for `do`/`epics`/`ralph`, `high` for `quick`)` is not in the spec. R3's prose lists `quick` among skills "retaining" `xhigh` while the table has it at `high`; Chris resolved this on 2026-07-24 in favour of `high`. The parenthetical is what makes the must-NOT testable as written.
+- **Row 26** — story-originated, no spec origin. A consequence of renaming convention sections rather than a spec requirement; retained at Chris's confirmation.
+- **Rows 7, 17, 24, 25** — trace to non-functional requirements and integration boundaries rather than numbered requirements, so the spec's Acceptance Criteria Coverage table assigns them no tag.

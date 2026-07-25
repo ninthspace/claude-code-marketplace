@@ -283,6 +283,8 @@ Use AskUserQuestion for final confirmation.
 
 ## Output
 
+Follow the shared **Written Deliverable Length** convention — let the document's length match what the task needs, without padding, redundant summaries, or boilerplate sections.
+
 Save each epic document to `docs/epics/{parent}-{seq}-epic-{slug}.md`. Create the `docs/epics/` directory if it doesn't exist.
 
 - `{parent}-{seq}` is the two-part numeric prefix assigned during Step 2 — see the Epic Filename Convention subsection.
