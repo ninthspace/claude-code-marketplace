@@ -87,10 +87,17 @@ for skill in $SKILLS; do
   fi
 done
 
-# --- Criterion: exactly one unique string, count 10 ---
+# --- Criterion: exactly one unique string, one per publishing skill ---
 # The story's gate. Run as the criterion states it, over cpm/skills/ — the epic's edit
 # scope. Repo-wide would also match the convention's own fenced copy, which is the
 # definition rather than a use site.
+#
+# The expected count is a roster size, not a derived value, and it is the one number in
+# this suite that has to be maintained by hand: which skills produce something worth
+# publishing is a judgement with no signal in the repository to read it from, so a skill
+# joining or leaving the set edits this line. Spec 41 set it at 10; `inspect` (spec 42 R8)
+# is the first addition since. The count still earns its place — without it, a site that
+# silently lost the line would leave `sort -u` reporting one unique string and passing.
 
 UNIQUE=$(ref_lines "$SKILLS_DIR" | sort -u)
 TOTAL=$(ref_lines "$SKILLS_DIR" | grep -c .)
@@ -102,13 +109,15 @@ else
   test_fail "expected 1 unique string, got:"$'\n'"$UNIQUE"
 fi
 
-test_start "The one unique string is the canonical line, with a count of 10"
-# One claim, two halves: a count of 10 over the *wrong* string is not a pass, and the
-# canonical string at 9 sites is not either.
-if [ "$UNIQUE" = "$CANONICAL" ] && [ "$TOTAL" -eq 10 ]; then
+EXPECTED_SITES=11
+
+test_start "The one unique string is the canonical line, once per publishing skill"
+# One claim, two halves: the right count of the *wrong* string is not a pass, and the
+# canonical string at one site fewer than the roster is not either.
+if [ "$UNIQUE" = "$CANONICAL" ] && [ "$TOTAL" -eq "$EXPECTED_SITES" ]; then
   test_pass
 else
-  test_fail "expected the canonical line ×10, got ×$TOTAL of: $UNIQUE"
+  test_fail "expected the canonical line ×$EXPECTED_SITES, got ×$TOTAL of: $UNIQUE"
 fi
 
 # --- Criterion: must NOT introduce a variant phrasing, prefix, or suffix ---

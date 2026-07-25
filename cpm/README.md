@@ -565,6 +565,8 @@ cpm/
 │   │   └── SKILL.md         # Adversarial review skill
 │   ├── audit/
 │   │   └── SKILL.md         # Independent codebase audit skill
+│   ├── inspect/
+│   │   └── SKILL.md         # Change-set review skill (provenance, orphans, findings)
 │   ├── retro/
 │   │   └── SKILL.md         # Lightweight retrospective skill
 │   ├── pivot/
