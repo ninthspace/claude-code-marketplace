@@ -199,7 +199,7 @@ Some requirements are inherently visual — a UI screen the spec describes, a la
 **Conservative heuristic — the visual must earn its place.** Generate an asset *only* when a visual genuinely adds something the Markdown cannot carry. Do **not** generate one for non-visual requirements (business rules, data validation, API contracts, process logic). When in doubt, don't. A spec with no inherently-visual requirements produces no companion assets — that is the expected, common case.
 
 **Two kinds of visual, styled differently** (per the shared convention's *shared chrome vs. system-specific mockups*):
-- A **documentation diagram** that *explains* the spec (a data-flow or sequence diagram) consumes the shared template (`.cpm-figure`) — it is CPM2 explaining its own content.
+- A **documentation diagram** that *explains* the spec (a data-flow or sequence diagram) consumes the shared template (`.cpm-figure`) — it is CPM explaining its own content.
 - A **deliverable-functionality mockup** — a preview of the UI of the system being specified — is *system-specific*: build it standalone in the target system's own design language (the `frontend-design` skill is appropriate here), **not** the shared template. It is still self-contained and stored at the same companion-asset path.
 
 **Reference and note (both kinds).** After writing the asset to `docs/specifications/assets/{nn}-{slug}-{label}.html`, do two things in the Markdown:

@@ -135,11 +135,11 @@ check_source_unchanged() {
 
 # --- HTML validity check --------------------------------------------------------
 #
-# A lightweight well-formedness check for the kind of self-contained document CPM2
+# A lightweight well-formedness check for the kind of self-contained document CPM
 # generates — not a full HTML validator, but enough to catch a truncated or
 # structurally broken template/render. Confirms the document declares HTML5 and
 # carries the core structural elements: a doctype, an <html> element (opened and
-# closed), <head>, <body>, and an inline <style> block (every CPM2 HTML file styles
+# closed), <head>, <body>, and an inline <style> block (every CPM HTML file styles
 # itself inline, since external stylesheets are forbidden by the self-contained rule).
 #
 # Returns: 0 if all required markers are present, 1 if any are missing (each printed
@@ -283,19 +283,19 @@ check_reference_resolves() {
 
 # --- Shared-template consumption check ------------------------------------------
 #
-# A documentation visual that *explains* a CPM2 artifact — an architecture, data-flow,
+# A documentation visual that *explains* a CPM artifact — an architecture, data-flow,
 # or sequence diagram stored as a companion asset — must consume the one shared
 # template (cpm/assets/html/template.html), not a forked stylesheet. (The two other
 # roles this once covered, faithful renders and present's HTML communication, are
 # retired: published artifacts are composed per `artifact-design` as body fragments and
 # never consume the template.) The template
 # stamps a stable signature into its <head>: <meta name="generator"
-# content="CPM2 shared HTML template">. Consumers substitute the body tokens but leave
+# content="CPM shared HTML template">. Consumers substitute the body tokens but leave
 # the <head> intact, so the signature survives.
 #
 # This check also expresses the inverse contract for the deliverable-functionality
 # mockup carve-out: a system-specific mockup is built standalone and must NOT bear the
-# shared signature (it wears the target system's design, not CPM2's documentation
+# shared signature (it wears the target system's design, not CPM's documentation
 # chrome). Such a mockup is still self-contained — assert that with check_self_contained.
 #
 # Returns: 0 if the file bears the shared-template signature, 1 if not, 2 if missing.
@@ -305,7 +305,7 @@ check_uses_shared_template() {
     echo "FILE_NOT_FOUND: $file"
     return 2
   fi
-  if grep -iqE '<meta[^>]*name=["'\'']?generator["'\'']?[^>]*content=["'\'']?CPM2 shared HTML template' "$file"; then
+  if grep -iqE '<meta[^>]*name=["'\'']?generator["'\'']?[^>]*content=["'\'']?CPM shared HTML template' "$file"; then
     return 0
   fi
   echo "NO_SHARED_TEMPLATE: $file"

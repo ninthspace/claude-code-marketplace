@@ -74,17 +74,17 @@ fi
 test_start ".claude-plugin/marketplace.json cpm entry version agrees with plugin.json"
 if [ -f "$MARKETPLACE_MANIFEST" ] && [ -f "$PLUGIN_MANIFEST" ]; then
   PLUGIN_VERSION=$(manifest_version < "$PLUGIN_MANIFEST")
-  CPM2_BLOCK=$(awk '/"name": "cpm"/,/\]/' "$MARKETPLACE_MANIFEST")
-  CPM2_VERSION=$(echo "$CPM2_BLOCK" | manifest_version)
-  assert_equals "$PLUGIN_VERSION" "$CPM2_VERSION"
+  CPM_BLOCK=$(awk '/"name": "cpm"/,/\]/' "$MARKETPLACE_MANIFEST")
+  CPM_VERSION=$(echo "$CPM_BLOCK" | manifest_version)
+  assert_equals "$PLUGIN_VERSION" "$CPM_VERSION"
 else
   test_fail "marketplace.json or plugin.json missing"
 fi
 
 test_start ".claude-plugin/marketplace.json cpm keywords contain 'audit'"
 if [ -f "$MARKETPLACE_MANIFEST" ]; then
-  CPM2_BLOCK=$(awk '/"name": "cpm"/,/\]/' "$MARKETPLACE_MANIFEST")
-  assert_contains "$CPM2_BLOCK" '"audit"'
+  CPM_BLOCK=$(awk '/"name": "cpm"/,/\]/' "$MARKETPLACE_MANIFEST")
+  assert_contains "$CPM_BLOCK" '"audit"'
 else
   test_fail "marketplace.json missing"
 fi

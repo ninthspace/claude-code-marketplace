@@ -410,7 +410,7 @@ Do not run mutating git operations on your own initiative — no `git commit`, n
 
 ## HTML Output
 
-CPM2 artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in one explicitly-bounded role: **companion assets**, visual content the Markdown references — a UI mockup, a data-flow diagram. HTML is not a parsed or consumed data substrate; downstream skills read the Markdown for requirements, not the markup. Skills that generate HTML reference this convention.
+CPM artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in one explicitly-bounded role: **companion assets**, visual content the Markdown references — a UI mockup, a data-flow diagram. HTML is not a parsed or consumed data substrate; downstream skills read the Markdown for requirements, not the markup. Skills that generate HTML reference this convention.
 
 An HTML file that merely mirrors a Markdown artifact earns nothing — Markdown already renders anywhere you would read it. A companion asset earns its place by carrying what the prose cannot. Human-facing *interpretations* — a status dashboard, a dependency view, an audience-reframed communication — are not HTML outputs at all: they are published as hosted pages. See **Artifact Publishing**.
 
@@ -420,7 +420,7 @@ There is exactly **one** shared styling/layout asset: `cpm/assets/html/template.
 
 The template governs **local companion assets only**. A published page is composed per the `artifact-design` skill instead — see **Artifact Publishing**. The two solve different problems: committed files accumulate and drift without a single enforced stylesheet, whereas a hosted page is generated fresh and read once.
 
-**The one carve-out**: a companion asset that represents **deliverable functionality** — a mockup of the UI of the system being built — is *system-specific* and must look like the target system, not CPM2. Those mockups deliberately do **not** consume or wear the shared chrome. See *Companion-asset content: shared chrome vs. system-specific mockups* below. Documentation visuals that explain the artifact use the shared template.
+**The one carve-out**: a companion asset that represents **deliverable functionality** — a mockup of the UI of the system being built — is *system-specific* and must look like the target system, not CPM. Those mockups deliberately do **not** consume or wear the shared chrome. See *Companion-asset content: shared chrome vs. system-specific mockups* below. Documentation visuals that explain the artifact use the shared template.
 
 The template is a complete, valid, self-contained HTML5 document with an inline `<style>` design system and **placeholder comment tokens** that consumers substitute. The consumption model is:
 
@@ -460,8 +460,8 @@ No HTML generation step ever mutates or replaces the source Markdown. Generation
 
 Companion assets are two different things, and they are styled differently:
 
-- **Documentation visuals** — diagrams that *explain* the artifact (architecture, data-flow, sequence). This is CPM2 explaining its own content, so it wears the shared chrome: render the diagram (inline SVG) inside a `.cpm-figure` within the shared shell. Use the template's styling; do not fork it.
-- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's rather than the template's.
+- **Documentation visuals** — diagrams that *explain* the artifact (architecture, data-flow, sequence). This is CPM explaining its own content, so it wears the shared chrome: render the diagram (inline SVG) inside a `.cpm-figure` within the shared shell. Use the template's styling; do not fork it.
+- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's rather than the template's.
 
 **Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template.
 
