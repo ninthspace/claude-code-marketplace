@@ -167,11 +167,14 @@ At the **Architecture Decisions** and **Scope Boundary** sections, agent persona
 
 Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. Stories include traceability to spec requirements, showing which functional requirements each story satisfies. When the spec has a testing strategy, test approach tags are propagated to story acceptance criteria, testing tasks are auto-generated for stories with automated test tags, and integration testing stories are created for epics with significant cross-story interactions. When ADRs exist in `docs/architecture/`, they're referenced when breaking down architectural work.
 
+Asked for a **dependency view** instead, it runs the inverse: a read-only projection over the epic docs that already exist, answering "what can I start now?" — an answer that lives across the epics rather than in any one of them. That view can be published as a shareable page on request, confirmed separately; the epic docs are never modified either way.
+
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
 **Output**: `docs/epics/{parent}-{seq}-epic-{slug}.md` (one per epic, where `{parent}` is the source spec's number), each with a companion coverage matrix at `docs/epics/{parent}-{seq}-coverage-{slug}.md`
 
 ```
 /cpm:epics docs/specifications/01-spec-customer-portal.md
+/cpm:epics what's ready to pick up?            # dependency view over existing epics
 ```
 
 ### `/cpm:do` — Task Execution
@@ -298,7 +301,7 @@ The workflow: select a document, describe your changes in natural language, revi
 Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering team, stakeholders, etc.) and format (memo, slide deck, email, etc.), and get derived content tailored to the readers.
 
 **Input**: One or more CPM artifact file paths, or auto-discovers available artifacts for selection.
-**Output**: `docs/communications/{nn}-{format}-{slug}.md` (auto-numbered), optionally alongside a self-contained `.html` version, and optionally published as a shareable hosted page
+**Output**: `docs/communications/{nn}-{format}-{slug}.md` (auto-numbered), optionally published as a shareable hosted page
 
 ```
 /cpm:present docs/specifications/01-spec-customer-portal.md          # transform a spec
@@ -308,7 +311,7 @@ Transform CPM planning artifacts into audience-appropriate communications. Selec
 
 Content is derived from source artifacts — regenerable when sources change. Multiple presentations from the same sources are encouraged for different audiences.
 
-Both extra outputs are opt-in and confirmed separately. Publishing is confirmed on its own terms every time, because it puts the content on the open web under a URL you can pass on; the URL is written back into the Markdown's `**Artifact**` field so regenerating the communication updates the page already shared rather than minting a new link.
+Publishing is opt-in and confirmed on its own terms every time, because it puts the content on the open web under a URL you can pass on; the URL is written back into the Markdown's `**Artifact**` field so regenerating the communication updates the page already shared rather than minting a new link. The Markdown is the record either way — publishing changes the medium, never the record, so there is no version of this that exists only as a link.
 
 ### `/cpm:templates` — Template Discoverability & Scaffolding
 
@@ -378,17 +381,20 @@ If the scope turns out larger than expected, `/cpm:quick` offers to escalate to 
 
 ### `/cpm:status` — Project Status Reconnaissance
 
-Scan the current project's CPM artifacts and git history to produce a narrative status report with recommended next steps. Read-only and ephemeral — prints to stdout, no files created or modified.
+Scan the current project's CPM artifacts and git history to produce a narrative status report with recommended next steps. The scan is read-only, and on the default path nothing is written at all — the report prints to stdout.
 
 The report orients someone picking up the project for the first time: what it is, what's been built, what happened recently, and what needs attention now. Recommended next steps include copy-pasteable CPM commands based on the current project state.
 
+Ask for the *full picture* and the same scan can additionally be published as a shareable page — the completion grid, blocked panel and RAG view at a size stdout cannot carry. That is offered, never automatic, and confirmed on its own terms; a declined offer still leaves a complete status run behind it. When you accept, the only file touched is the register row appended to `docs/artifacts/index.md`, which for a skill with no saved document of its own is the artifact's one durable trace.
+
 **Input**: Optional focus context — a file path to emphasise a specific artifact, or a description to guide the report.
-**Output**: Ephemeral — printed to stdout, no file saved.
+**Output**: Ephemeral — printed to stdout. No document is saved; a confirmed publish appends one register row.
 
 ```
 /cpm:status                                    # full project status
 /cpm:status docs/epics/02-epic-auth.md         # focus on a specific epic
 /cpm:status what's the state of auth work?     # guided emphasis
+/cpm:status give me the full picture           # …and offer to publish it as a page
 ```
 
 ### `/cpm:clean` — Clean Session State
@@ -409,12 +415,14 @@ This is the user-driven counterpart to the passive once-per-session safety-net (
 
 Keep a durable record of the published artifacts produced alongside a project's CPM work. A published artifact's only handle is its URL, and an unregistered URL exists solely in the transcript of the session that made it — so a page built three weeks ago is effectively lost while still being live.
 
-The register records four things per artifact: **what it is, why it was made, when, and which planning documents it belongs to**. It lives at `docs/artifacts/index.md` as plain Markdown — greppable, diffable, and versioned with the repo — and each associated document gains an `**Artifacts**:` backlink, so the relationship reads from either end.
+The register records four things per artifact: **what it is, why it was made, when, and which planning documents it belongs to**. It lives at `docs/artifacts/index.md` as plain Markdown — greppable, diffable, and versioned with the repo. Where the artifact was published *from* a saved document, that document gains an `**Artifacts**:` backlink so the relationship reads from either end.
 
-Skills that publish artifacts register them as part of publishing (`/cpm:present` does this). Use `/cpm:artifact` directly for the ones made ad hoc mid-session, which is most of them.
+Not every publish has one. `/cpm:status` and `/cpm:epics` project over every epic in the project rather than rendering one document, so there is no single source to link back from — and writing into the documents they scan would break the read-only guarantee both state. For those, the register row **is** the durable trace: the artifact lives at a URL, and this file is the only thing in the repo that remembers it exists.
+
+Skills that publish artifacts register them as part of publishing. Use `/cpm:artifact` directly for the ones made ad hoc mid-session, which is most of them.
 
 **Input**: A URL with an optional description, `list`, a search term, or nothing (review flow).
-**Output**: `docs/artifacts/index.md` + `**Artifacts**:` backlinks in the associated documents.
+**Output**: `docs/artifacts/index.md`, plus an `**Artifacts**:` backlink in each associated document that has one to give.
 
 ```
 /cpm:artifact https://… auth flow explorer for the client review, from spec 12
@@ -521,6 +529,12 @@ cpm/
 │   └── plugin.json          # Plugin metadata
 ├── agents/
 │   └── roster.yaml          # Default agent personas for party mode and review
+├── assets/
+│   └── html/
+│       └── template.html    # Shared stylesheet/shell for companion assets
+├── shared/
+│   ├── skill-conventions.md # Conventions injected into every session at startup
+│   └── status-model.md      # Shared status vocabulary for board and status
 ├── hooks/
 │   ├── hooks.json           # Hook configuration (SessionStart)
 │   ├── session-start-compact.sh  # Re-injects state after compaction
@@ -545,8 +559,12 @@ cpm/
 │   │   └── SKILL.md         # Work breakdown skill
 │   ├── do/
 │   │   └── SKILL.md         # Task execution skill
+│   ├── ralph/
+│   │   └── SKILL.md         # Autonomous multi-epic execution skill
 │   ├── review/
 │   │   └── SKILL.md         # Adversarial review skill
+│   ├── audit/
+│   │   └── SKILL.md         # Independent codebase audit skill
 │   ├── retro/
 │   │   └── SKILL.md         # Lightweight retrospective skill
 │   ├── pivot/
@@ -563,8 +581,10 @@ cpm/
 │   │   └── SKILL.md         # Quick execution skill
 │   ├── status/
 │   │   └── SKILL.md         # Project status reconnaissance skill
-│   └── clean/
-│       └── SKILL.md         # On-demand session-state cleanup skill
+│   ├── clean/
+│   │   └── SKILL.md         # On-demand session-state cleanup skill
+│   └── artifact/
+│       └── SKILL.md         # Published-artifact register skill
 ├── tools/
 │   └── board/               # cpm board — cross-project status TUI & launcher
 │       ├── board.py         # The Textual TUI (PEP 723 single-file script)

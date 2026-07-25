@@ -1,15 +1,15 @@
 ---
 name: status
-description: Project status reconnaissance. Scans CPM artifacts, git history, and codebase changes to produce an ephemeral status report with recommended next steps, plus an optional full-picture HTML dashboard on request. Triggers on "/cpm:status".
+description: Project status reconnaissance. Scans CPM artifacts, git history, and codebase changes to produce an ephemeral status report with recommended next steps, plus an optional full-picture dashboard published as a shareable artifact on request. Triggers on "/cpm:status".
 ---
 
 # Project Status
 
-Scan the current project's CPM artifacts and git history to produce a structured status report. Print the report to stdout — no files saved, no state modified.
+Scan the current project's CPM artifacts and git history to produce a structured status report. Print the report to stdout — nothing scanned is modified, and on the default path nothing is written at all.
 
 This is a read-only reconnaissance skill. It gathers information and reports it. All scan operations are read-only — source files and git state remain untouched.
 
-**Optional full-picture HTML document.** On request, `status` can *additionally* generate a standalone, self-contained HTML document that presents the comprehensive project picture the one-screen narrative deliberately omits — full epic/story completion grid, in-progress + blocked panel, RAG indicators, recent git activity, and recommended next steps. This is an **opt-in extra, never the default**: the stdout narrative below is always produced and unchanged. See **Phase 4** for the mechanics.
+**Optional full-picture artifact.** On request, `status` can *additionally* publish a hosted page presenting the comprehensive project picture the one-screen narrative deliberately omits — full epic/story completion grid, in-progress + blocked panel, RAG indicators, recent git activity, and recommended next steps. This is an **opt-in extra, never the default**: the stdout narrative below is always produced and unchanged. See **Phase 4** for the mechanics.
 
 ## Input
 
@@ -17,21 +17,21 @@ If `$ARGUMENTS` is provided, use it as focus context:
 
 - If it's a **file path** (e.g. `docs/epics/02-epic-auth.md`), focus the report on that specific artifact and its related context.
 - If it's a **description** (e.g. "what's the state of authentication work?"), use it to guide which parts of the report to emphasise.
-- If it **requests the HTML document** (e.g. contains `html`, `dashboard`, "full picture", or "open it in a browser"), produce the stdout narrative as usual **and** generate the optional full-picture HTML document (Phase 4). A focus path/description still applies — it shapes both outputs.
+- If it **requests the full picture** (e.g. contains `dashboard`, `artifact`, "full picture", "share it", or "open it in a browser"), produce the stdout narrative as usual **and** offer the full-picture artifact (Phase 4). A focus path/description still applies — it shapes both outputs. `html` is no longer a trigger word: `status` produces no HTML file, so a request phrased that way is asking about a capability that no longer exists — say what is produced instead rather than silently treating it as an artifact request.
 
-If no arguments are given, produce a full project status report covering all CPM artifacts and recent activity. Do **not** generate the HTML document unless it is requested.
+If no arguments are given, produce a full project status report covering all CPM artifacts and recent activity. Do **not** offer the artifact unless it is requested.
 
 ## State Management
 
 **This skill is stateless and ephemeral.** No progress file is created or maintained. The stdout report is printed and the skill is done. If the user needs to discuss or act on the status, they can invoke other CPM skills (e.g. `/cpm:do`, `/cpm:retro`, `/cpm:archive`).
 
-**The optional HTML document is ephemeral by default — and must NOT be persisted unless the user asks.** This preserves `status`'s stateless nature; the document is a regenerated-on-demand view, not a tracked artifact.
+**The optional artifact does not change that.** The page is regenerated from a live scan on each request; it is a view, not stored state.
 
-- **Default status run** (no HTML requested): nothing is written at all — stdout only, exactly as before.
-- **HTML requested** (Phase 4): write the document to the ephemeral scratch path **`docs/plans/status-dashboard.html`** so it can be opened in a browser, then tell the user the path and that it is **ephemeral — regenerated on demand and overwritten in place**, safe to delete. This file is deliberately **not** a numbered/tracked CPM artifact: it carries no `{nn}` prefix, the skill never commits it, and re-running with an HTML request simply overwrites it. Writing this regenerated view is *not* "saving" — it is the rendering mechanism; the document is never persisted as durable, user-owned state on its own.
-- **Persist on request only**: if the user explicitly asks to keep the document, save a copy to a durable location they specify (or, if they don't specify one, offer a sensible default and confirm before writing). Only this explicit step "saves" the document. Absent such a request, the ephemeral file is the only output and remains throwaway.
+- **Default status run** (no artifact requested): nothing is written at all — stdout only.
+- **Artifact requested** (Phase 4): publishing composes a body fragment at the shared convention's scratch path, `docs/plans/status-artifact-full-picture.html`. That file is a **build intermediate**, not an output — overwritten on each publish and safe to delete. `status` carries no `{nn}`, having no numbered artifact of its own; the slug is fixed so re-publishing redeploys to the same URL rather than minting a second one.
+- **The register row is the exception, and it is deliberate.** Publishing writes a row to `docs/artifacts/index.md` as part of the same step. It is the one durable thing a `status` run leaves behind, and it is what makes a published URL findable later. This does not make `status` stateful in the sense the read-only guarantee protects: it appends to the register, and touches no scanned artifact.
 
-This is the ephemeral-default / save-on-request contract: the user must ask for the HTML at all (it never appears on the default path), and must ask again to persist it durably.
+The user must ask for the artifact at all — it never appears on the default path — and publishing is separately confirmed on top of that.
 
 ## Stale-Progress Check
 
@@ -39,7 +39,7 @@ Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill 
 
 ## Process
 
-Work through three phases sequentially. Each phase gathers data; the final phase synthesises everything into the report.
+Work through Phases 1–3 sequentially: each gathers data, and Phase 3 synthesises everything into the report. Phase 4 is optional and runs only on request.
 
 ### Phase 1: Artifact Inventory Scan
 
@@ -131,27 +131,26 @@ If the project has active work (in-progress epics or sessions), lead with that �
 
 Multiple recommendations can apply simultaneously. List them in priority order — the most impactful action first.
 
-### Phase 4: Optional Full-Picture HTML Document (on request only)
+### Phase 4: Optional Full-Picture Artifact (on request only)
 
-This phase runs **only when the HTML document was requested** (see Input). If it was not requested, skip Phase 4 entirely — the skill ends after the stdout report. Phase 4 never alters Phases 1–3: the stdout narrative is produced and printed exactly as before, then the document is generated *in addition*.
+This phase runs **only when the full picture was requested** (see Input). If it was not requested, skip Phase 4 entirely — the skill ends after the stdout report. Phase 4 never alters Phases 1–3: the stdout narrative is produced and printed exactly as before, then the artifact is offered *in addition*. Offered, not published — publishing is confirmed separately, and a declined offer still leaves a complete status run behind it.
 
-The document is **HTML-native** — synthesised directly from the Phase 1 + Phase 2 scan data already gathered, with **no Markdown intermediate**. There is no stored status artifact to render *from*; the same read-only scan that fed the narrative feeds the document. Because both draw from one scan, their numbers must agree — the document's completion counts, in-progress/blocked lists, and git activity are the same data the narrative reports, just shown in full rather than synthesised to a screenful.
+The page is **synthesised directly from the Phase 1 + Phase 2 scan data already gathered**, with no Markdown intermediate. There is no stored status document to render *from*; the same read-only scan that fed the narrative feeds the page. Because both draw from one scan, their numbers must agree — the page's completion counts, in-progress/blocked lists, and git activity are the same data the narrative reports, just shown in full rather than synthesised to a screenful.
 
-Follow the shared **HTML Output** convention for the template mechanics; this phase states only the `status`-specific particulars.
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
 
-Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+For `status` the artifact is the full project picture the one-screen narrative deliberately omits: the completion grid, the blocked panel, and the RAG view, all at a size stdout cannot carry. That justification is also the test for anything *else* the page might carry — as with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
 
-1. **Consume the shared template** (`cpm/assets/html/template.html`) — substitute the `CPM:` tokens, **never fork the `<style>` block**. Populate: `CPM:TITLE` (e.g. "Project Status — Full Picture"), `CPM:SUBTITLE` (the project name / focus), `CPM:META` (scan date + "generated from a live scan"), `CPM:NAV` (a `.cpm-toc` contents list of in-page anchors to the sections below), `CPM:CONTENT` (the sections), `CPM:FOOTER` (a one-line "ephemeral — regenerated on demand" note).
-2. **Sections** (give each an `id` so the nav anchors resolve):
-   - **At a glance (RAG)** — green = complete, amber = in progress, red = blocked/partial, using the template's `.sev-minor` / `.sev-major` / `.sev-critical` / `.sev-info` badges for the colour language. State the headline figure as **"{complete} of {total} epics complete"** — the canonical agreement statement that must match the count the stdout narrative reports.
-   - **In progress & blocked** — the active and blocked stories/epics, as `.cpm-callout--warn` / `.cpm-callout--note` panels.
-   - **Epic / story completion grid** — every epic with its complete/total story count and a status pill, in a `<table>`. Apply the **graceful schema tolerance** rule: where an epic doc's structure varies (missing status, partial counts), render what parsed and visibly flag the gap rather than omitting the row or erroring.
+1. **Sections** (give each an `id` so in-page anchors resolve):
+   - **At a glance (RAG)** — green = complete, amber = in progress, red = blocked/partial. State the headline figure as **"{complete} of {total} epics complete"** — the canonical agreement statement that must match the count the stdout narrative reports.
+   - **In progress & blocked** — the active and blocked stories/epics.
+   - **Epic / story completion grid** — every epic with its complete/total story count and a status indicator, in a table. Apply the **graceful schema tolerance** rule: where an epic doc's structure varies (missing status, partial counts), render what parsed and visibly flag the gap rather than omitting the row or erroring.
    - **Recent git activity** — the Phase 2 commit list.
    - **Recommended next steps** — the same actions as the stdout report's Section 2.
-3. **Tier 2 — optional export affordances.** Unlike Spec 1's static-only renders, this document **may** include inline vanilla JS for **copy-as-prompt / copy-as-JSON** export — follow the shared **HTML Output → Tier 2 export affordances** convention for the canonical pattern and rules (inline-only, read-only/export-only, data embedded at generation time). Useful here: **copy-as-prompt** on each recommended next step (e.g. `/cpm:do docs/epics/05-…`) and **copy-as-JSON** of the status summary (the completion counts + in-progress/blocked lists). Interactivity is an *enhancement, not the point* — a purely static document is a valid deliverable.
-4. **Self-contained** — a single file: inline CSS/SVG and inline JS only, no external CSS/JS/images/fonts, no CDN, no build step. It must open correctly when double-clicked or sent to someone.
+2. **Optional export affordances.** The page **may** include inline vanilla JS for **copy-as-prompt / copy-as-JSON** export — follow the shared **Artifact Publishing → Export affordances** convention for the canonical pattern and rules. Useful here: **copy-as-prompt** on each recommended next step (e.g. `/cpm:do docs/epics/05-…`) and **copy-as-JSON** of the status summary (the completion counts + in-progress/blocked lists). Interactivity is an *enhancement, not the point* — a purely static page is a valid deliverable.
+3. **Register the URL.** Publishing writes the register row in `docs/artifacts/index.md` as part of the same step, per the shared convention. `status` writes no `**Artifacts**:` backlink: it has no single source artifact — the scan covers every epic and spec in the project — and writing one into those files would break the read-only guarantee stated in **Guidelines**. The register row is therefore the *only* durable trace this skill leaves, which is why it is not optional.
 
-For where the file is written and the save-on-request lifecycle, see **State Management** below.
+**When the Artifact tool is absent**, say so plainly and stop after Phase 3 — the stdout narrative from Phases 1–3 is the degradation path, and it is complete on its own. Never hard-fail: the tool's absence removes an extra, not the skill's output. There is **no local-HTML fallback** — nothing is written to disk in its place, and the narrative is not downgraded to compensate.
 
 ## Report Format
 
@@ -171,7 +170,7 @@ Print the report to stdout using this structure:
 
 ## Guidelines
 
-- **Read-only.** Use only read-only operations: `git log`, `git status`, `git diff`, `git branch`. All files and git state remain untouched.
+- **Read-only.** Use only read-only operations: `git log`, `git status`, `git diff`, `git branch`. Every file the scan reads — epic docs, specs, retros — is left untouched, as is git state. The sole write is the register row an explicitly-confirmed publish appends to `docs/artifacts/index.md` (see **State Management**).
 - **Graceful degradation.** If a directory doesn't exist, skip it silently. If no artifacts are found, say so and suggest where to start. Always degrade gracefully on missing data.
 - **Scannable output.** Use clear section headers, concise summaries, and bullet points. The entire report should be digestible in under a minute.
 - **Actionable recommendations.** Every recommended next step should include a copy-pasteable command (e.g. `` `/cpm:do docs/epics/02-epic-auth.md` ``).

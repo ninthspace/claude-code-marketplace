@@ -255,6 +255,10 @@ The deliverable is a numbered markdown document at `docs/audits/{nn}-audit-{slug
 
 If `docs/audits/` does not exist, create it before writing the deliverable.
 
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `audit` the artifact is a nine-dimension findings dashboard: severity, confidence, and effort read across all nine dimensions at once, so where the debt clusters is visible without holding a findings table of dozens of rows in the head. The Executive Summary already ranks up to ten; the dashboard shows the distribution that ranking is drawn from. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
+
 #### 3a. Deliverable structure
 
 The deliverable opens with a header, then proceeds through eight sections in fixed order. Use exactly the section headings shown — downstream skills key off them.

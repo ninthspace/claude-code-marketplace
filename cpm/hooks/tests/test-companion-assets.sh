@@ -171,4 +171,56 @@ test_start "Deliverable mockup lands at the same conventional asset path"
 check_asset_path "docs/specifications/assets/05-spec-foo-booking.html"; RC=$?
 assert_equals "0" "$RC"
 
+# --- R6 carve-out: the two protected consumer sites (epic 41-04 Story 3) ----------
+#
+# Story 3's criteria were phrased against `git diff`, which stops meaning anything the
+# moment the work is committed. These assertions make the same guarantee durable:
+# they name the rules the two blocks exist to carry, so a future edit that removes or
+# softens them fails here rather than passing unnoticed.
+#
+# The risk is specific. Spec 41 moved three outputs from repo files to published URLs;
+# companion assets are the one HTML role deliberately left behind, because `cpm:do`
+# opens them mid-execution and a URL would make a pipeline step depend on network
+# reachability. The carve-out is a boundary in a pivot, which is exactly the kind of
+# exception a later sweep "tidies up".
+
+DO_SKILL="$SCRIPT_DIR/../../skills/do/SKILL.md"
+EPICS_SKILL="$SCRIPT_DIR/../../skills/epics/SKILL.md"
+CONV_FILE="$SCRIPT_DIR/../../shared/skill-conventions.md"
+
+test_start "cpm:do still treats a companion asset as a visual design target"
+# Two halves of one claim: the asset is opened as a design target, AND it is not
+# parsed for requirements. Either half alone permits the wrong behaviour.
+if grep -qF 'visual design target' "$DO_SKILL" \
+  && grep -qF 'Do **not** parse the companion HTML to extract requirements' "$DO_SKILL"; then
+  test_pass
+else
+  test_fail "the companion-asset awareness block lost one of its two rules"
+fi
+
+test_start "cpm:do reaches companion assets by relative path, not URL"
+assert_empty "$(grep -nE 'https?://' "$DO_SKILL")"
+
+test_start "cpm:epics still tags mockup-conformance criteria manual, never automated"
+if grep -qF 'design target' "$EPICS_SKILL" \
+  && grep -qF 'never** an automated markup-parsing test' "$EPICS_SKILL"; then
+  test_pass
+else
+  test_fail "the mockup-referencing-criteria block lost one of its two rules"
+fi
+
+test_start "The convention still states companion assets are not published"
+# The reason is asserted with the rule: a rule whose rationale is deleted is a rule
+# the next sweep reads as arbitrary.
+CONV_TEXT=$(cat "$CONV_FILE")
+if printf '%s' "$CONV_TEXT" | grep -qF 'Companion assets stay repo files' \
+  && printf '%s' "$CONV_TEXT" | grep -qF 'depend on network reachability'; then
+  test_pass
+else
+  test_fail "the carve-out rule or its rationale is missing from the convention"
+fi
+
+test_start "The companion-asset storage path survives in the convention"
+assert_contains "$CONV_TEXT" 'docs/{type}/assets/{nn}-{slug}-{label}.html'
+
 test_summary

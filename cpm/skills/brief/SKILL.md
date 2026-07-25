@@ -211,6 +211,10 @@ Use this format:
 
 After saving, tell the user the document path.
 
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `brief` the artifact is a value-proposition canvas: each proposition set against the user need it answers and the features that serve it — so a proposition nothing delivers shows up as an empty column, and a feature serving nothing shows up as an orphan. The document states both halves; only the canvas makes the mismatch a shape rather than a cross-reference. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
+
 ## Arguments
 
 If `$ARGUMENTS` is provided, use it as the starting context for Phase 1 instead of asking from scratch. Still confirm understanding with the user before proceeding.

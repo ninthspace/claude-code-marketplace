@@ -236,23 +236,9 @@ Step 4 may append a `## Remediation` section to this file — see Autofix below.
 
 Tell the user the review file path after saving.
 
-#### Faithful Render (on request)
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
 
-A review's findings, grouped and severity-sorted, read well as a navigable HTML view. Produce one **only on request** — when the user asks for an HTML version of the review (to read or share) — never automatically as part of writing the review file. Follow the shared **HTML Output** convention for the mechanics; this section states the review-specific particulars.
-
-Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
-
-When requested:
-
-1. Read the saved review Markdown (`docs/reviews/{nn}-review-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.
-2. Generate a single self-contained HTML view by consuming the shared template (substitute the `CPM:` tokens — do not fork the `<style>` block): the Summary and per-category Findings become the `CPM:CONTENT`; the review title/date become `CPM:TITLE`/`CPM:META`. The template ships severity classes (`.sev-critical`/`.sev-major`/`.sev-minor`/`.sev-info`) and `.finding` blocks for exactly this content — use them rather than inventing styling.
-3. Write it to `docs/reviews/html/{nn}-{slug}.html` — same `{nn}` and `{slug}` as the source review. Tell the user the path.
-
-**Regeneration in place.** Because that path is a deterministic function of the source's `{nn}`/`{slug}`, re-rendering after the review changes **overwrites the same file in place** — it updates the existing render rather than spawning a duplicate, and the shared path keeps the render traceable to its source.
-
-This is a faithful projection of the review, not an audience-reframed *transform* (that is `cpm:present`'s job).
-
-**Navigation (artifact-appropriate).** A review is a list of findings, so **group and sort by severity**: order findings most-severe-first (critical → major → minor → info) and tag each with the matching template badge class (`.sev-critical`/`.sev-major`/`.sev-minor`/`.sev-info`) inside a `.finding` block, so the reader sees the worst problems first. This is **static only** — ordering and badges via the template's CSS, no JavaScript.
+For `review` the artifact is a findings explorer by severity: findings ordered worst-first and filterable across the concern-type categories, so a long review is triaged in one pass. The Markdown groups by category because a document has to pick one ordering; the explorer lets the reader pick the other. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
 
 ### Step 4: Autofix
 

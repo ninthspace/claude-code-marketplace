@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Facilitated architecture exploration. Takes a product brief as input, identifies key architectural decisions derived from the product, explores trade-offs per decision, captures dependencies between decisions, and produces Architecture Decision Records (ADRs) — with optional HTML companion diagrams and an on-request HTML render. Triggers on "/cpm:architect".
+description: Facilitated architecture exploration. Takes a product brief as input, identifies key architectural decisions derived from the product, explores trade-offs per decision, captures dependencies between decisions, and produces Architecture Decision Records (ADRs) — with optional HTML companion diagrams, and an artifact publishable from the ADRs on request. Triggers on "/cpm:architect".
 ---
 
 # Facilitated Architecture Exploration
@@ -158,25 +158,7 @@ Some architectural decisions are inherently visual — the shape of a system is 
 
 **Reference and note.** After writing the asset to `docs/architecture/assets/{nn}-{slug}-{label}.html`, do two things in the ADR Markdown:
 1. Reference the asset by its stable **relative** path from the section it illustrates — typically Context or Decision (e.g. `See diagram: [request flow](assets/{nn}-{slug}-flow.html)`).
-2. Record a one-line note explaining **why this asset exists** — what the diagram carries that the prose cannot. If you cannot write that one-line justification, the diagram has not earned its place — don't generate it.
-
-#### Faithful Render (on request)
-
-A companion asset captures *one visual decision*; a **faithful render** is a navigable HTML view of a **whole ADR**. It is produced **only on request** — when the user asks for an HTML version of an ADR (to read, share, or review) — never automatically as part of writing the ADR. Follow the shared **HTML Output** convention for the mechanics; this section states the ADR-specific particulars.
-
-Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
-
-When requested:
-
-1. Read the saved ADR Markdown (`docs/architecture/{nn}-adr-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.
-2. Generate a single self-contained HTML view by consuming the shared template (substitute the `CPM:` tokens — do not fork the `<style>` block): the ADR's Context/Options/Decision/Rationale/Consequences become the `CPM:CONTENT`, the decision title/date become `CPM:TITLE`/`CPM:META`.
-3. Write it to `docs/architecture/html/{nn}-{slug}.html` — same `{nn}` and `{slug}` as the source ADR. Tell the user the path.
-
-**Regeneration in place.** Because that path is a deterministic function of the source's `{nn}`/`{slug}`, re-rendering after the ADR changes **overwrites the same file in place** — it updates the existing render rather than spawning a duplicate, and the shared path keeps the render traceable to its source.
-
-This is a faithful projection of the ADR, not an audience-reframed *transform* (that is `cpm:present`'s job).
-
-**Navigation (artifact-appropriate).** An ADR is a comparison, so render the **Options Considered side-by-side**: wrap them in the template's `.adr-options` container with one `.adr-option` per option, and mark the selected option `.is-chosen` so the decision reads at a glance against its alternatives. This is **static only** — layout via the template's CSS, no JavaScript.
+2. Record a one-line note explaining **why this asset exists** — what the diagram carries that the prose cannot. This note is what keeps generation honest: if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place — don't generate it.
 
 ## Output
 
@@ -233,6 +215,10 @@ Use this format:
 ```
 
 After saving each ADR, tell the user the document path.
+
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `architect` the artifact is an architecture explorer: the ADRs as one connected set, drawn from the `## Dependencies` field each records — what a decision depends on, what it constrains — so the accumulated shape is visible, including the decision everything hangs off and the one nothing references. A single ADR cannot show that, because the relation lives between documents. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
 
 ## Arguments
 

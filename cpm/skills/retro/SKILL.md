@@ -88,6 +88,10 @@ The shared **Retro Synthesis** procedure (invoked in Step 2) performs the write:
 
 Tell the user the retro file path after saving.
 
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `retro` the artifact is a trend view across retros: this retro's observations set against the ones before it, category by category, so a lesson recurring across several epics reads as a run rather than as one bullet in one file. That is the judgement no single retro document can carry — the pattern only exists in the sequence. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
+
 ### Step 3.5: Library Write-Back
 
 After writing the retro file, check if any retro observations should be fed back into library documents. This step closes the loop: `library → ... → retro → library`.

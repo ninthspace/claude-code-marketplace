@@ -175,6 +175,59 @@ EOF
   return $missing
 }
 
+# --- Artifact fragment validity -------------------------------------------------
+#
+# The inverse of check_valid_html. A page published via the Artifact tool is written
+# to an ephemeral scratch path (docs/plans/{skill}-artifact-{nn}-{slug}.html) as a
+# BODY FRAGMENT, not a document: the tool supplies its own doctype, <head> and <body>,
+# so emitting those makes the published page structurally wrong. A fragment leads with
+# its <style> block and carries content directly.
+#
+# Self-containment still applies — the Artifact tool's CSP blocks every external host,
+# so a fragment referencing a CDN stylesheet or a remote image renders broken. That is
+# why this delegates to check_self_contained rather than duplicating the reference scan.
+# Inline <script> is permitted here (export affordances) and check_self_contained
+# already passes inline script while rejecting external src.
+#
+# Returns: 0 if the file is a valid self-contained fragment; 1 if a forbidden
+# structural element is present (each printed as "FORBIDDEN <marker>") or an external
+# reference was found; 2 if the file does not exist.
+
+check_valid_fragment() {
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    echo "FILE_NOT_FOUND: $file"
+    return 2
+  fi
+
+  local bad=0
+  # marker label | case-insensitive extended regex that must NOT match
+  local forbidden='doctype|<!doctype
+<html>|<html[^>]*>
+</html>|</html>
+<head>|<head[^>]*>
+<body>|<body[^>]*>'
+
+  local label pattern
+  while IFS='|' read -r label pattern; do
+    [ -z "$label" ] && continue
+    if grep -iqE "$pattern" "$file"; then
+      echo "FORBIDDEN $label"
+      bad=1
+    fi
+  done <<EOF
+$forbidden
+EOF
+
+  # A fragment that reaches the network fails for the same reason a companion asset
+  # does, so reuse the one implementation rather than a parallel scan.
+  local external
+  external=$(check_self_contained "$file") || bad=1
+  [ -n "$external" ] && echo "$external"
+
+  return $bad
+}
+
 # --- Companion-asset path convention --------------------------------------------
 #
 # Companion assets are stored at docs/{type}/assets/{nn}-{slug}-{label}.html, where
@@ -230,9 +283,12 @@ check_reference_resolves() {
 
 # --- Shared-template consumption check ------------------------------------------
 #
-# Output that PRESENTS a CPM2 artifact — faithful renders, present communications,
-# and documentation diagrams that *explain* an artifact — must consume the one shared
-# template (cpm/assets/html/template.html), not a forked stylesheet. The template
+# A documentation visual that *explains* a CPM2 artifact — an architecture, data-flow,
+# or sequence diagram stored as a companion asset — must consume the one shared
+# template (cpm/assets/html/template.html), not a forked stylesheet. (The two other
+# roles this once covered, faithful renders and present's HTML communication, are
+# retired: published artifacts are composed per `artifact-design` as body fragments and
+# never consume the template.) The template
 # stamps a stable signature into its <head>: <meta name="generator"
 # content="CPM2 shared HTML template">. Consumers substitute the body tokens but leave
 # the <head> intact, so the signature survives.
@@ -253,27 +309,6 @@ check_uses_shared_template() {
     return 0
   fi
   echo "NO_SHARED_TEMPLATE: $file"
-  return 1
-}
-
-# --- Faithful-render path convention --------------------------------------------
-#
-# A faithful render — a navigable HTML view of a whole spec / ADR / review — is stored
-# at docs/{type}/html/{nn}-{slug}.html, where {type} is the artifact directory
-# (specifications, architecture, reviews, …) and {nn}/{slug} match the source Markdown's
-# number and slug. Unlike a companion asset (which carries a distinguishing {label},
-# so {nn}-{slug}-{label}), a render mirrors a single source artifact, so its filename is
-# just {nn}-{slug} — a number plus the slug.
-#
-# This is a pure string check on the path shape; it does not require the file to exist.
-#
-# Returns: 0 if <path> matches the convention, 1 if not (printing "BAD_RENDER_PATH").
-check_render_path() {
-  local path="$1"
-  if printf '%s\n' "$path" | grep -qE '^docs/[a-z0-9_-]+/html/[0-9]+(-[a-z0-9]+)+\.html$'; then
-    return 0
-  fi
-  echo "BAD_RENDER_PATH: $path (expected docs/{type}/html/{nn}-{slug}.html)"
   return 1
 }
 
@@ -316,32 +351,6 @@ check_section_contains() {
   return 1
 }
 
-# --- Tracking-document count agreement ------------------------------------------
-#
-# A `status` full-picture HTML document and the stdout narrative are synthesised from
-# one read-only scan, so their figures must agree (Spec 34, [integration]). The document
-# states the headline figure in a canonical form — "{complete} of {total} epics complete"
-# — and this check confirms that exact pairing is present for the expected counts. Pass
-# the counts derived from the same scan/fixtures; a document that rendered a different
-# figure (a disagreement, or a generation bug) fails the check.
-#
-#   check_counts_agree dashboard.html 46 50
-#
-# Returns: 0 if the document states "<complete> of <total> epics complete", 1 if it does
-# not (printing "COUNTS_DISAGREE"), 2 if the file does not exist.
-check_counts_agree() {
-  local file="$1" complete="$2" total="$3"
-  if [ ! -f "$file" ]; then
-    echo "FILE_NOT_FOUND: $file"
-    return 2
-  fi
-  if grep -qE "${complete}[[:space:]]+of[[:space:]]+${total}[[:space:]]+epics[[:space:]]+complete" "$file"; then
-    return 0
-  fi
-  echo "COUNTS_DISAGREE: expected '${complete} of ${total} epics complete' in $file"
-  return 1
-}
-
 # --- JSON validity (Tier 2 copy-as-JSON export) ---------------------------------
 #
 # A Tier 2 tracking document's copy-as-JSON export must produce well-formed JSON. This
@@ -379,25 +388,4 @@ extract_json_block() {
   local file="$1"
   awk 'BEGIN{RS="</script>"}
     /type="application\/json"/ { sub(/.*type="application\/json"[^>]*>/,""); print; exit }' "$file"
-}
-
-# --- present HTML communication path convention ---------------------------------
-#
-# `present`'s HTML output is written alongside its Markdown communication at
-# docs/communications/{nn}-{format}-{slug}.html — {nn} is the communication's number,
-# {format} the kebab format name (summary-memo, onboarding-guide, …), and {slug} a short
-# content slug. The filename therefore carries a number plus at least two kebab segments
-# (the format and the slug). Unlike a faithful render, the communications directory is
-# flat (no per-type html/ subdir), since present output is not per-artifact-type.
-#
-# This is a pure string check on the path shape; it does not require the file to exist.
-#
-# Returns: 0 if <path> matches the convention, 1 if not (printing "BAD_COMMUNICATION_PATH").
-check_communication_path() {
-  local path="$1"
-  if printf '%s\n' "$path" | grep -qE '^docs/communications/[0-9]+(-[a-z0-9]+){2,}\.html$'; then
-    return 0
-  fi
-  echo "BAD_COMMUNICATION_PATH: $path (expected docs/communications/{nn}-{format}-{slug}.html)"
-  return 1
 }

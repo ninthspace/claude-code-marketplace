@@ -1,6 +1,6 @@
 ---
 name: epics
-description: Break a spec into epic documents with stories and tasks. Reads a specification (or a brief/description) and produces multiple epic docs — each with stories, sub-tasks, and a companion coverage matrix. Also offers a read-only dependency/readiness view (HTML) on request. Triggers on "/cpm:epics".
+description: Break a spec into epic documents with stories and tasks. Reads a specification (or a brief/description) and produces multiple epic docs — each with stories, sub-tasks, and a companion coverage matrix. Also offers a read-only dependency/readiness view, publishable as a shareable artifact, on request. Triggers on "/cpm:epics".
 ---
 
 # Work Breakdown into Epics
@@ -16,7 +16,7 @@ Check for input in this order:
 3. Look for planning docs — check `docs/specifications/` first, then `docs/plans/`.
 4. If nothing found, ask the user what work they want to break down.
 
-**Dependency-view mode (on request).** If `$ARGUMENTS` asks for a **dependency / readiness / "what's ready to pick up" view** of the existing epics (e.g. contains `dependency view`, `dependencies`, `unblocked`, `ready to pick up`, or "what can I work on") rather than naming work to break down, do **not** run the production process below. Instead run the **Dependency View (on request)** section (after `## Output`) — a read-only HTML projection over the epic docs that already exist. The two modes are mutually exclusive: breaking a spec into epics *writes* epic docs; the dependency view only *reads* them.
+**Dependency-view mode (on request).** If `$ARGUMENTS` asks for a **dependency / readiness / "what's ready to pick up" view** of the existing epics (e.g. contains `dependency view`, `dependencies`, `unblocked`, `ready to pick up`, or "what can I work on") rather than naming work to break down, do **not** run the production process below. Instead run the **Dependency View (on request)** section (after `## Output`) — a read-only projection over the epic docs that already exist. The two modes are mutually exclusive: breaking a spec into epics *writes* epic docs; the dependency view only *reads* them.
 
 ## Process
 
@@ -356,28 +356,31 @@ When starting implementation of a task, read the relevant epic document first to
 
 ## Dependency View (on request)
 
-`cpm:epics` *writes* epic docs from a spec; the **dependency view** is the inverse — a **read-only HTML projection over the epic docs that already exist**, showing what is ready to pick up versus what is still blocked. It runs **only when requested** (see *Dependency-view mode* under Input), never as part of the production loop. Follow the shared **HTML Output** convention for the template mechanics; this section states only the `epics`-specific particulars.
+`cpm:epics` *writes* epic docs from a spec; the **dependency view** is the inverse — a **read-only projection over the epic docs that already exist**, showing what is ready to pick up versus what is still blocked. It runs **only when requested** (see *Dependency-view mode* under Input), never as part of the production loop.
 
-Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
 
-**The epic docs are the read-only source of truth.** This mode parses them but **must never modify, rewrite, or re-save any epic doc** — no Edit/Write to anything under `docs/epics/`. The only file written is the HTML view itself, at a separate path. Mutation of epic docs stays exclusively with `cpm:do`.
+For `epics` the artifact is the readiness picture no single epic doc holds: it spans every epic at once, and the answer to "what can I start now?" only exists across them. That justification is also the test for anything *else* the view might carry — as with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
+
+**The epic docs are the read-only source of truth.** This mode parses them but **must never modify, rewrite, or re-save any epic doc** — no Edit/Write to anything under `docs/epics/`. Mutation of epic docs stays exclusively with `cpm:do`.
 
 1. **Scan all epics** with the general glob `docs/epics/[0-9]*-epic-*.md` (matches both two-part and legacy flat shapes — never narrow this, or legacy epics vanish from the view). Read each **read-only**. From each, parse the epic-level `**Status**` and, for every `##` story, its `**Status**` and `**Blocked by**` fields.
 2. **Compute readiness** using the *same rule `cpm:do` hydration applies*, so the view agrees with what `do` would actually pick up:
    - A story's dependency is satisfied when the referenced story/epic has `**Status**: Complete` (or the `**Blocked by**` field is `—`).
    - A **Pending** story whose dependencies are *all* satisfied is **Ready to pick up** (unblocked). A Pending story with any unsatisfied dependency is **Blocked** — record *what* it waits on.
    - **In progress** and **Complete** stories are shown in their own groups.
-3. **Render via the shared template** — substitute the `CPM:` tokens, **never fork the `<style>` block**. Use **unblocked-first ordering** with these sections (give each an `id` for the `.cpm-toc` nav): **Ready to pick up** (unblocked Pending stories, each with its parent epic and a `/cpm:do {epic path}` next-step), **Blocked** (each with the unmet dependency named, as `.cpm-callout--note`), **In progress**, **Complete**. Use the template's `.sev-*` badges for the readiness colour language and a `<table>` or callouts for grouping.
-4. **Tier 2 — optional export affordances.** The view **may** include inline vanilla JS for **copy-as-prompt / copy-as-JSON** export — follow the shared **HTML Output → Tier 2 export affordances** convention for the canonical pattern and rules (inline-only, read-only/export-only, data embedded at generation time). Useful here: **copy-as-prompt** on each ready item (e.g. `/cpm:do docs/epics/05-…`) and **copy-as-JSON** of the ready-to-pick-up list for downstream tooling. A purely static view is an equally valid deliverable.
-5. **Self-contained** — a single file: inline CSS/SVG and inline JS only, no external CSS/JS/images/fonts, no build step.
-6. **Write to the ephemeral scratch path `docs/plans/epics-dependency-view.html`** — a regenerated-on-demand projection, **not** a numbered/tracked artifact (no `{nn}` prefix, never committed by the skill). Re-running overwrites it in place. Tell the user the path and that it is ephemeral. If the user asks to keep it durably, save a copy to a location they specify (or offer a sensible default and confirm).
+3. **Sections, unblocked-first** (give each an `id` so in-page anchors resolve): **Ready to pick up** (unblocked Pending stories, each with its parent epic and a `/cpm:do {epic path}` next-step), **Blocked** (each with the unmet dependency named), **In progress**, **Complete**. Ordering is the point: the reader's question is "what can I start now?", so the answer comes first.
+4. **Optional export affordances.** The page **may** include inline vanilla JS for **copy-as-prompt / copy-as-JSON** export — follow the shared **Artifact Publishing → Export affordances** convention for the canonical pattern and rules. Useful here: **copy-as-prompt** on each ready item (e.g. `/cpm:do docs/epics/05-…`) and **copy-as-JSON** of the ready-to-pick-up list for downstream tooling. A purely static page is an equally valid deliverable.
+5. **Register the URL.** Publishing writes the register row in `docs/artifacts/index.md` as part of the same step, per the shared convention. `epics` writes no `**Artifacts**:` backlink here: the view has no single source artifact — it is a projection across every epic doc — and writing one into them would break the read-only guarantee stated above. The register row is therefore the only durable trace this mode leaves.
+
+**When the Artifact tool is absent**, say so plainly and state the readiness picture in the conversation instead: the ready-to-pick-up list first, then what each blocked story waits on. Never hard-fail, and never fall back to writing a local HTML file — the projection is the valuable part, and it survives in plain text.
 
 **Schema tolerance — render what parsed, flag the rest, never error out.** Epic docs drift: a story may be missing its `**Status**` or `**Blocked by**` field, an epic may lack a parseable header, or a file may have no `##` stories at all. A single malformed doc must **never** abort the whole view or blank a section. Degrade gracefully:
 
-- **Missing `**Status**` on a story** — do *not* guess a readiness bucket. Render the story in a dedicated **Needs attention** group, visibly flagged (a `.sev-major` "status unparsed" badge inside a `.cpm-callout--warn`), so the gap is obvious rather than silently mis-bucketed.
+- **Missing `**Status**` on a story** — do *not* guess a readiness bucket. Render the story in a dedicated **Needs attention** group, visibly flagged with a "status unparsed" marker, so the gap is obvious rather than silently mis-bucketed.
 - **Missing or unparseable `**Blocked by**`** — treat dependencies as undetermined for ordering, render the story, and flag it "dependencies unparsed" rather than assuming it is ready.
 - **An epic file that cannot be parsed** (no recognisable stories, malformed structure) — list it by filename under a **Could not parse** entry in the Needs-attention group and **continue with every other epic**. One bad file costs one line, not the view.
-- **Always emit a valid, self-contained document.** Even if every epic is malformed, the view renders its shell and the Needs-attention group; it does not throw, abort, or produce a broken file.
+- **Always emit a valid, complete output.** Even if every epic is malformed, the view renders its structure and the Needs-attention group; it does not throw, abort, or produce a broken page. This holds on the degraded path too — with no Artifact tool, the conversation still states what parsed and what did not.
 
 The flagged gaps are visible by design — the view shows what it could read and names what it couldn't, so the reader trusts the parts that rendered.
 

@@ -204,25 +204,7 @@ Some requirements are inherently visual — a UI screen the spec describes, a la
 
 **Reference and note (both kinds).** After writing the asset to `docs/specifications/assets/{nn}-{slug}-{label}.html`, do two things in the Markdown:
 1. Reference the asset from the requirement it illustrates, by the stable **relative** path (e.g. `See mockup: [booking screen](assets/{nn}-{slug}-booking.html)`).
-2. Record a one-line note explaining **why this asset exists** — what the visual carries that the prose cannot (e.g. *"Companion mockup: the multi-step booking flow's screen states are clearer shown than described."*). This note is what keeps generation honest: if you cannot write a one-line justification, the visual has not earned its place — don't generate it.
-
-### Faithful Render (on request)
-
-A companion asset captures *one visual requirement*; a **faithful render** is a navigable HTML view of the **whole spec**. It is produced **only on request** — when the user asks for an HTML version of the spec (to read, share, or review) — never automatically as part of writing the spec. Follow the shared **HTML Output** convention for the mechanics; this section only states the spec-specific particulars.
-
-Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
-
-When requested:
-
-1. Read the saved spec Markdown (`docs/specifications/{nn}-spec-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.
-2. Generate a single self-contained HTML view by consuming the shared template (substitute the `CPM:` tokens — do not fork the `<style>` block): the spec's headings/prose/tables become the `CPM:CONTENT`, the title/date become `CPM:TITLE`/`CPM:META`.
-3. Write it to `docs/specifications/html/{nn}-{slug}.html` — same `{nn}` and `{slug}` as the source Markdown. Tell the user the path.
-
-**Regeneration in place.** Because that path is a deterministic function of the source's `{nn}`/`{slug}`, re-rendering after the spec changes **overwrites the same file in place** — it updates the existing render rather than spawning a duplicate, and the shared path keeps the render traceable to its source.
-
-This is a faithful projection — the full spec, reframed for navigation, not an audience-reframed *transform* (that is `cpm:present`'s job).
-
-**Navigation (artifact-appropriate).** A spec is long, so populate `CPM:NAV` with a **contents sidebar**: a `<ul>` of in-page anchor links to the spec's top-level (`##`) sections — Problem Summary, Functional Requirements, Non-Functional Requirements, Architecture Decisions, Scope, Testing Strategy — styled by the template's `.cpm-toc`. Give each rendered `<h2>` a matching `id` so the anchors resolve. This is **static only** — plain `#anchor` links, no JavaScript.
+2. Record a one-line note explaining **why this asset exists** — what the visual carries that the prose cannot (e.g. *"Companion mockup: the multi-step booking flow's screen states are clearer shown than described."*). This note is what keeps generation honest: if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place — don't generate it.
 
 ## Output
 
@@ -309,6 +291,10 @@ Test approach tags used in this spec:
 ### Unit Testing
 Unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.
 ```
+
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `spec` the artifact is a requirement explorer: requirements filterable by MoSCoW priority and test approach tag, each shown with its acceptance criteria and paired must-NOTs — so an untagged criterion or a must-have with nothing automated behind it reads as a gap at a glance, rather than being found by counting across Sections 2 and 6. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
 
 After saving, suggest next steps:
 - `/cpm:epics` to break the spec into epic documents with stories and tasks (recommended)

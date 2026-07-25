@@ -373,7 +373,7 @@
 
 <header>
   <h1><span>/cpm</span> Training Guide</h1>
-  <span class="version-badge">v3.0.0 &middot; tuned for Claude Opus 5</span>
+  <span class="version-badge">v3.1.0 &middot; tuned for Claude Opus 5</span>
   <div class="preset-bar">
     <button class="preset-btn active" data-preset="full" onclick="applyPreset('full')">Full Pipeline</button>
     <button class="preset-btn" data-preset="quick" onclick="applyPreset('quick')">Quick Start</button>
@@ -527,7 +527,7 @@ const SKILLS = [
     output: 'Multiple epic docs with stories, tasks, test tags, and testing tasks — each with a companion coverage matrix tracing every spec requirement to the story criterion that covers it',
     outputFile: 'docs/epics/{parent}-{seq}-epic-{slug}.md + docs/epics/{parent}-{seq}-coverage-{slug}.md (one pair per epic; {parent} is the source spec\'s number)',
     phases: ['Read source specification + ADRs', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria + test tags', 'Auto-generate testing tasks for automated criteria', 'Add integration testing stories where needed', 'Add spec requirement traceability per story', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
-    tip: 'Test approach tags ([unit], [integration], [feature], [manual]) flow from specs to story acceptance criteria. Testing tasks are auto-generated for stories with automated tags. Integration testing stories are created for epics with significant cross-story interactions.',
+    tip: 'Test approach tags ([unit], [integration], [feature], [manual]) flow from specs to story acceptance criteria. Testing tasks are auto-generated for stories with automated tags. Integration testing stories are created for epics with significant cross-story interactions. Asked for a dependency view instead, epics runs the inverse — a read-only projection over the epic docs that already exist, answering "what can I start now?", which is an answer that lives across the epics rather than in any one of them. That view can be published as a shareable page on request; the epic docs are never modified either way.',
     next: ['do', 'review']
   },
   {
@@ -637,9 +637,9 @@ const SKILLS = [
     description: 'Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering, stakeholders) and format (memo, slide deck, email), and get derived content tailored to the readers. Regenerable when sources change.',
     input: 'One or more CPM artifact file paths',
     output: 'Audience-tailored communication derived from source artifacts',
-    outputFile: 'docs/communications/{nn}-{format}-{slug}.md — plus a self-contained .html companion alongside it when a rendered version is asked for, and optionally a published, shareable hosted page',
-    phases: ['Discover and select source artifacts', 'Choose audience and format', 'Extract and transform content', 'Write communication file', 'Optionally emit styled HTML, and optionally publish it as a shareable page'],
-    tip: 'Content is derived from source artifacts — not written from scratch. Create multiple presentations from the same sources for different audiences. Regenerate when sources change. Publishing is confirmed separately from producing the HTML, since it puts the content on the open web; the resulting URL is recorded in the Markdown so regenerating updates the page you already shared instead of creating a second one.',
+    outputFile: 'docs/communications/{nn}-{format}-{slug}.md — optionally published as a shareable hosted page as well',
+    phases: ['Discover and select source artifacts', 'Choose audience and format', 'Extract and transform content', 'Write communication file', 'Optionally publish it as a shareable page'],
+    tip: 'Content is derived from source artifacts — not written from scratch. Create multiple presentations from the same sources for different audiences. Regenerate when sources change. Publishing is confirmed separately from producing the communication, since it puts the content on the open web; the resulting URL is recorded in the Markdown so regenerating updates the page you already shared instead of creating a second one. The Markdown stays the record either way — publishing changes the medium, never the record.',
     next: []
   },
   {
@@ -714,12 +714,12 @@ const SKILLS = [
     color: '#58a6ff',
     category: 'support',
     short: 'Project status reconnaissance',
-    description: 'Scan CPM artifacts and git history to produce a narrative status report. Orients someone picking up the project for the first time: what it is, what\'s been built, what happened recently, and what needs attention. Recommends concrete next steps with copy-pasteable CPM commands. Read-only and ephemeral — prints to stdout, no files created.',
-    input: 'Optional focus context (file path or description)',
-    output: 'Narrative status report with recommended next steps',
-    outputFile: '(ephemeral — stdout only)',
-    phases: ['Phase 1: Artifact inventory scan (Glob + Read)', 'Phase 2: Git activity scan (adaptive time window)', 'Phase 3: Narrative synthesis and recommendations'],
-    tip: 'Status is read-only and stateless — it never creates, modifies, or deletes files. The adaptive git time window widens automatically when there\'s been a gap since the last commit. Ask for the HTML dashboard and you get a full epic/story completion grid as a self-contained page. For the same picture across every project at once, the companion cpm board terminal UI reads the same artifacts read-only and launches the right /cpm:* session for whichever project you pick.',
+    description: 'Scan CPM artifacts and git history to produce a narrative status report. Orients someone picking up the project for the first time: what it is, what\'s been built, what happened recently, and what needs attention. Recommends concrete next steps with copy-pasteable CPM commands. The scan is read-only, and on the default path nothing is written at all — the report prints to stdout.',
+    input: 'Optional focus context (file path or description), optionally asking for the full picture',
+    output: 'Narrative status report with recommended next steps — plus, on request, a shareable page carrying the full picture',
+    outputFile: '(ephemeral — stdout only; a confirmed publish appends one row to docs/artifacts/index.md)',
+    phases: ['Phase 1: Artifact inventory scan (Glob + Read)', 'Phase 2: Git activity scan (adaptive time window)', 'Phase 3: Narrative synthesis and recommendations', 'Phase 4 (on request): offer to publish the full picture as an artifact'],
+    tip: 'The scan never creates, modifies, or deletes anything it reads. The adaptive git time window widens automatically when there\'s been a gap since the last commit. Ask for the full picture and you get the completion grid, blocked panel and RAG view published as a shareable page — offered, never automatic, and confirmed on its own terms; the register row is the only file it touches, and for a skill with no saved document of its own that row is the artifact\'s one durable trace. For the same picture across every project at once, the companion cpm board terminal UI reads the same artifacts read-only and launches the right /cpm:* session for whichever project you pick.',
     next: ['do', 'retro', 'archive', 'discover']
   },
   {
@@ -746,12 +746,12 @@ const SKILLS = [
     color: '#a371f7',
     category: 'support',
     short: 'Register published artifacts',
-    description: 'Keep a durable record of the published artifacts produced alongside a project\'s CPM work. A published artifact\'s only handle is its URL, and an unregistered URL exists solely in the transcript of the session that made it — so a page built weeks ago is effectively lost while still being live. The register records what it is, why it was made, when, and which planning documents it belongs to, and adds an **Artifacts** backlink to each of those documents so the relationship reads from either end.',
+    description: 'Keep a durable record of the published artifacts produced alongside a project\'s CPM work. A published artifact\'s only handle is its URL, and an unregistered URL exists solely in the transcript of the session that made it — so a page built weeks ago is effectively lost while still being live. The register records what it is, why it was made, when, and which planning documents it belongs to. Where the artifact was published from a saved document, that document gains an **Artifacts** backlink so the relationship reads from either end.',
     input: 'A URL with an optional description, `list`, a search term, or nothing (review flow)',
-    output: 'A register entry plus backlinks in the associated planning documents',
+    output: 'A register entry, plus a backlink in each associated document that has one to give',
     outputFile: 'docs/artifacts/index.md + **Artifacts** fields in the associated documents',
-    phases: ['Read the register (creating it on first registration)', 'Establish the four facts — URL, name, why, association', 'Write the row, newest first; re-registering a URL updates in place', 'Write the backlink into each associated document', 'Report the entry and the paths touched'],
-    tip: 'Skills that publish artifacts register them as part of publishing — /cpm:present does this automatically. Use /cpm:artifact directly for the ones made ad hoc mid-session, which is most of them. Superseded artifacts are struck through rather than deleted, so the register can still answer "what happened to that page?".',
+    phases: ['Read the register (creating it on first registration)', 'Establish the four facts — URL, name, why, association', 'Write the row, newest first; re-registering a URL updates in place', 'Write the backlink into each associated document that has a source artifact', 'Report the entry and the paths touched'],
+    tip: 'Skills that publish artifacts register them as part of publishing. Use /cpm:artifact directly for the ones made ad hoc mid-session, which is most of them. Not every publish has a backlink: /cpm:status and /cpm:epics project over every epic in the project rather than rendering one document, so there is no single source to link back from — and writing into the documents they scan would break the read-only guarantee both state. For those the register row IS the durable trace, and this file is the only thing in the repo that remembers the page exists. Superseded artifacts are struck through rather than deleted, so the register can still answer "what happened to that page?".',
     next: []
   }
 ];

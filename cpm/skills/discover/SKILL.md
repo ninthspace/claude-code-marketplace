@@ -141,6 +141,10 @@ Use this format:
 {What's explicitly in and out of scope}
 ```
 
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `discover` the artifact is a problem map: the problem at the centre with who it affects, how it is solved today, what constrains a fix, and where the scope boundary falls arranged around it — so which constraint bites which user is visible at a glance, where six sequential sections leave it to be inferred. As with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
+
 After saving, suggest next steps:
 - `/cpm:brief` to explore product ideation — vision, value propositions, and key features (recommended for most problems)
 - `/cpm:spec` to jump straight to requirements if the solution approach is already clear

@@ -1,6 +1,6 @@
 ---
 name: present
-description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content — optionally as styled HTML, and optionally published as a shareable hosted page. Regenerable when source artifacts change. Triggers on "/cpm:present".
+description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content — optionally published as a shareable hosted page. Regenerable when source artifacts change. Triggers on "/cpm:present".
 ---
 
 # Audience-Aware Artifact Transformation
@@ -113,24 +113,21 @@ The `**Source artifacts**` field enables regeneration — when source artifacts 
 
 After saving, tell the user the document path.
 
-**HTML output (optional).** In addition to the Markdown above, `present` can emit the communication as **styled HTML** — the same reframed, audience-targeted content in a shareable medium. This is `present`'s own verb (reframe-for-audience) in a new medium; it is **not** a faithful render (that preserves full fidelity and lives in the producing skills). Offer it via AskUserQuestion (e.g. "Also produce an HTML version?"). When the user opts in, follow the shared **HTML Output** convention for the mechanics:
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
 
-- **Consume the shared template** — substitute the `CPM:` tokens, never fork the `<style>` block: the derived content becomes `CPM:CONTENT`; the title/audience/format/date populate `CPM:TITLE`/`CPM:SUBTITLE`/`CPM:META`. The template ships `.cpm-memo` / `.cpm-memo-fields` for memo and onboarding layouts — use them rather than inventing styling. `present` HTML always uses the shared chrome (it is CPM2 presenting its own communication — the deliverable-mockup carve-out does not apply here).
-- **Write it alongside the Markdown** at `docs/communications/{nn}-{format}-{slug}.html` — same `{nn}`/`{format}`/`{slug}` as the `.md`. Because the path is deterministic, re-emitting overwrites it in place.
-- It is **self-contained** — inline CSS/SVG only, no external resources, no JS. The Markdown is the source form; the HTML is generated from the same derived content, never parsed back.
+For `present` the artifact is the communication itself in a form the recipient can open — the audience the content was reframed *for* is usually the audience without the repository, which is the whole reason this skill exists.
 
-Tell the user the HTML path.
+The Markdown above is the record of what was communicated: it stays committed and greppable, and publishing never replaces it. There is no local HTML copy — a second file carrying the same content earns nothing that the Markdown and the hosted page do not already cover between them.
 
-Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+Three `present`-specific particulars:
 
-Two `present`-specific particulars:
+- The scratch fragment path is `docs/plans/present-artifact-{nn}-{format}-{slug}.html`. It stays out of `docs/communications/` deliberately — that directory's path contract describes complete documents, and a fragment is neither.
+- The URL is recorded in the communication's own `**Artifact**` field (see the format above), in the progress file, and in the register the shared procedure requires. **`**Artifact**` *is* this skill's backlink** — the shared convention calls that field `**Artifacts**:`, but `present` had its own singular field for the same purpose first, and it holds the same URL for the same reason: so the relationship reads from both ends. Do **not** add a second `**Artifacts**:` field beside it. The near-identical names are a known collision; one URL, one field.
+- **The prohibitions bite hardest here.** `present` writes client-facing and executive communications, which are the outputs most likely to carry an organisation's branding. Where a communication presents itself as issued by an organisation the user does not represent, keep it local and do not offer publishing. "Keep it local" means the Markdown alone — the absence of a local HTML option is not a reason to publish something that should not be published.
 
-- The scratch fragment path is `docs/plans/present-artifact-{nn}-{format}-{slug}.html`. It stays out of `docs/communications/` deliberately — that directory's `{nn}-{format}-{slug}.html` contract describes complete, self-contained documents, and a fragment is neither.
-- The URL is recorded in the communication's own `**Artifact**` field (see the format above) and in the progress file, as well as in the register the shared procedure requires. The `**Artifact**` field is what a later `present` run reads to update the existing page instead of minting a second URL.
+**When the Artifact tool is absent**, say so plainly. The Markdown is already written and is the deliverable of record, so nothing is lost — do not hard-fail, and do not write a local HTML file in its place.
 
-The Artifact tool's prohibitions bite hardest on this skill: `present` writes client-facing and executive communications, which are the outputs most likely to carry an organisation's branding. Where a communication presents itself as issued by an organisation the user does not represent, keep it local and do not offer publishing.
-
-**Regeneration**: If the user runs `cpm:present` and an existing communication already exists for the same source artifacts, audience, and format, offer to update it in place rather than creating a new file. Use AskUserQuestion to confirm. This applies to the Markdown, the HTML output (if produced), and the published artifact (if one exists) — for the artifact, "update in place" means republishing to the URL recorded in the `**Artifact**` field, not publishing afresh.
+**Regeneration**: If the user runs `cpm:present` and an existing communication already exists for the same source artifacts, audience, and format, offer to update it in place rather than creating a new file. Use AskUserQuestion to confirm. This covers two outputs: the Markdown, and the published artifact if one exists. For the artifact, "update in place" means republishing to the URL recorded in the `**Artifact**` field — passing that URL is what redeploys the existing page instead of minting a second one and leaving every link already shared pointing at a stale copy.
 
 ## Arguments
 
@@ -184,4 +181,4 @@ The "Completed Steps" section grows as steps complete.
 - **Audience dictates tone.** An executive summary is crisp and outcome-focused. An onboarding guide is thorough and explanatory. Let the audience drive every writing decision.
 - **Format dictates structure.** A presentation outline needs slide headings. A changelog needs chronological entries. Follow the format's conventions.
 - **Source traceability enables regeneration.** Always record which artifacts were used so the output can be updated when sources change.
-- **Publishing is a separate decision from producing.** The Markdown is the artifact of record and the local HTML is a portable copy of it; both stay inside the repository. Publishing puts the content on the open web under a URL the user can pass on, so it is confirmed on its own terms every time — and the URL is recorded, because an unrecorded one becomes a stale link the moment the communication is regenerated.
+- **Publishing is a separate decision from producing.** The Markdown is the artifact of record and stays inside the repository. Publishing puts the content on the open web under a URL the user can pass on, so it is confirmed on its own terms every time — and the URL is recorded, because an unrecorded one becomes a stale link the moment the communication is regenerated.

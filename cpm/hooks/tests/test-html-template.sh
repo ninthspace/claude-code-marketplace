@@ -34,8 +34,9 @@ OUT=$(check_valid_html "$TEMPLATE"); RC=$?
 assert_equals "0" "$RC"
 assert_empty "$OUT"
 
-test_start "Shared template asset declares no JavaScript (Tier 1 static)"
-# Self-contained Tier-1 output is static — there must be no <script> element.
+test_start "Shared template asset declares no JavaScript (static)"
+# Companion assets are static — there must be no <script> element. Export
+# affordances live on published artifacts, not on the local template.
 SCRIPTS=$(grep -icE '<script' "$TEMPLATE")
 assert_equals "0" "$SCRIPTS"
 

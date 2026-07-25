@@ -14,7 +14,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
 source "$SCRIPT_DIR/html-test-helpers.sh"
 
-TEMPLATE="$SCRIPT_DIR/../../assets/html/template.html"
+# No template dependency since spec 41 — the view is an artifact body fragment, and the
+# skill-prose contract for the pivot is asserted in test-epics-dependency-view.sh.
 
 echo "Testing: epics dependency view — schema tolerance"
 echo "================================================="
@@ -88,27 +89,29 @@ assert_equals "unknown" "$(classify "")"
 # --- Rendered view degrades gracefully --------------------------------------------
 # A view built from this tree: the good story under ready, the gaps under needs-attention
 # (the headless story flagged "status unparsed", the empty epic named "Could not parse").
-VIEW="$TEST_TMPDIR/docs/plans/epics-dependency-view.html"
+#
+# Composed as an artifact body fragment since spec 41 (epic 41-02 Story 2) — the medium
+# moved from a template-built local file to a published page, but the tolerance rule
+# under test is unchanged: malformed input must still produce a valid, complete output.
+VIEW="$TEST_TMPDIR/docs/plans/epics-artifact-dependency-view.html"
 mkdir -p "$(dirname "$VIEW")"
 CONTENT='<section id="ready"><h2>Ready to pick up</h2><ul><li>Good story — 91-01-epic-partial</li></ul></section>'\
 '<section id="needs-attention"><h2>Needs attention</h2>'\
-'<div class="cpm-callout cpm-callout--warn">'\
-'<p><span class="sev sev-major">status unparsed</span> Headless story — 91-01-epic-partial</p>'\
+'<div class="callout callout--warn">'\
+'<p><span class="badge badge--major">status unparsed</span> Headless story — 91-01-epic-partial</p>'\
 '<p>Could not parse: 91-02-epic-empty.md</p></div></section>'
-sed "s#<!-- CPM:CONTENT -->#${CONTENT}#" "$TEMPLATE" > "$VIEW"
+{
+  printf '<style>\n  .badge--major { font-weight: 700; }\n</style>\n'
+  printf '%s\n' "$CONTENT"
+} > "$VIEW"
 
-test_start "View renders a valid HTML5 document despite the malformed input"
-OUT=$(check_valid_html "$VIEW"); RC=$?
-assert_equals "0" "$RC"
-assert_empty "$OUT"
-
-test_start "View is self-contained despite the malformed input"
-OUT=$(check_self_contained "$VIEW"); RC=$?
-assert_equals "0" "$RC"
-assert_empty "$OUT"
-
-test_start "View consumes the shared template"
-check_uses_shared_template "$VIEW"; assert_equals "0" "$?"
+test_start "View is a valid artifact fragment despite the malformed input"
+OUT=$(check_valid_fragment "$VIEW"); RC=$?
+if [ "$RC" -eq 0 ] && [ -z "$OUT" ]; then
+  test_pass
+else
+  test_fail "expected rc 0 and no output, got rc $RC: $OUT"
+fi
 
 test_start "Missing-status story is flagged under Needs attention"
 check_section_contains "$VIEW" needs-attention "Headless story"; assert_equals "0" "$?"
@@ -123,8 +126,12 @@ test_start "The well-formed story still renders under ready (partial data preser
 check_section_contains "$VIEW" ready "Good story"; assert_equals "0" "$?"
 
 test_start "The flagged story is NOT mis-bucketed as ready (negative control)"
+# rc and reason are one claim — asserted together so the count stays honest.
 OUT=$(check_section_contains "$VIEW" ready "Headless story"); RC=$?
-assert_equals "1" "$RC"
-assert_contains "$OUT" "NOT_IN_SECTION"
+if [ "$RC" -eq 1 ] && [[ "$OUT" == *"NOT_IN_SECTION"* ]]; then
+  test_pass
+else
+  test_fail "expected rc 1 naming NOT_IN_SECTION, got rc $RC: $OUT"
+fi
 
 test_summary

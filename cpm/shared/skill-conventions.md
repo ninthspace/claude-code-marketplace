@@ -410,13 +410,17 @@ Do not run mutating git operations on your own initiative — no `git commit`, n
 
 ## HTML Output
 
-CPM2 artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in three explicitly-bounded roles: **companion assets** (visual content the Markdown references — a UI mockup, a data-flow diagram), **faithful renders** (a navigable HTML view of a whole `spec`/ADR/`review`), and **`present` HTML communications** (audience-reframed output in a styled medium). HTML is not a parsed or consumed data substrate — downstream skills read the Markdown for requirements, not the markup. Skills that generate HTML reference this convention.
+CPM2 artifacts are Markdown — the parsed source of truth. Some skills additionally emit **HTML** in one explicitly-bounded role: **companion assets**, visual content the Markdown references — a UI mockup, a data-flow diagram. HTML is not a parsed or consumed data substrate; downstream skills read the Markdown for requirements, not the markup. Skills that generate HTML reference this convention.
+
+An HTML file that merely mirrors a Markdown artifact earns nothing — Markdown already renders anywhere you would read it. A companion asset earns its place by carrying what the prose cannot. Human-facing *interpretations* — a status dashboard, a dependency view, an audience-reframed communication — are not HTML outputs at all: they are published as hosted pages. See **Artifact Publishing**.
 
 ### Consume the shared template — do not fork it
 
-There is exactly **one** shared styling/layout asset: `cpm/assets/html/template.html` (relative to the plugin root). Every HTML output that **presents a CPM2 artifact** draws its styling and layout from this single asset so all such generated HTML is visually consistent and no skill grows divergent CSS/layout. Forking the template's CSS, copying its `<style>` block into a skill, or hand-rolling a parallel stylesheet all sit outside this convention.
+There is exactly **one** shared styling/layout asset: `cpm/assets/html/template.html` (relative to the plugin root). Companion assets draw their styling and layout from this single asset so they stay visually consistent as they accumulate across a project, and no skill grows divergent CSS/layout. Forking the template's CSS, copying its `<style>` block into a skill, or hand-rolling a parallel stylesheet all sit outside this convention.
 
-**The one carve-out**: a companion asset that represents **deliverable functionality** — a mockup of the UI of the system being built — is *system-specific* and must look like the target system, not CPM2. Those mockups deliberately do **not** consume or wear the shared chrome. See *Companion-asset content: shared chrome vs. system-specific mockups* below. Everything else (faithful renders, `present` communications, and documentation visuals that explain the artifact) uses the shared template.
+The template governs **local companion assets only**. A published page is composed per the `artifact-design` skill instead — see **Artifact Publishing**. The two solve different problems: committed files accumulate and drift without a single enforced stylesheet, whereas a hosted page is generated fresh and read once.
+
+**The one carve-out**: a companion asset that represents **deliverable functionality** — a mockup of the UI of the system being built — is *system-specific* and must look like the target system, not CPM2. Those mockups deliberately do **not** consume or wear the shared chrome. See *Companion-asset content: shared chrome vs. system-specific mockups* below. Documentation visuals that explain the artifact use the shared template.
 
 The template is a complete, valid, self-contained HTML5 document with an inline `<style>` design system and **placeholder comment tokens** that consumers substitute. The consumption model is:
 
@@ -437,29 +441,63 @@ The template ships reusable component classes so consumers express each role wit
 | Role | Path | Notes |
 |------|------|-------|
 | Companion asset | `docs/{type}/assets/{nn}-{slug}-{label}.html` | Referenced from the Markdown by a stable **relative** path; `{label}` distinguishes multiple assets for one artifact |
-| Faithful render | `docs/{type}/html/{nn}-{slug}.html` | Navigable view of the whole artifact |
-| `present` HTML communication | `docs/communications/` | Alongside `present`'s Markdown output |
 
 `{type}` is the artifact directory (`specifications`, `architecture`, `reviews`, …); `{nn}` and `{slug}` match the source Markdown's number and slug. Numbering globs match `*.md`, so these HTML siblings do not collide with the numbering scheme.
 
+Companion assets stay repo files. They are not published, and `cpm:do` opens them mid-execution as visual design targets — a URL would make a pipeline step depend on network reachability.
+
 ### Self-contained rule
 
-Every generated HTML file is a **single self-contained file**: inline CSS and inline SVG / `data:` URIs only — no external CSS, JS, images, or fonts, no CDN, no network request to render, no server, and no build step. A file opens correctly when double-clicked or sent to someone. This is Tier 1: **static only — no JavaScript**. (The `[integration]` self-containment validator in `cpm/hooks/tests/html-test-helpers.sh` enforces this.)
+Every companion asset is a **single self-contained file**: inline CSS and inline SVG / `data:` URIs only — no external CSS, JS, images, or fonts, no CDN, no network request to render, no server, and no build step. It is **static — no JavaScript**. A file opens correctly when double-clicked or sent to someone. (The `[integration]` self-containment validator in `cpm/hooks/tests/html-test-helpers.sh` enforces this.)
 
-### Tier 2 — export affordances (tracking documents only)
+Export affordances — copy-as-prompt and copy-as-JSON — belong to published pages, not to companion assets. See **Artifact Publishing → Export affordances**.
 
-The **tracking documents** — the `status` full-picture document and the `epics` dependency view — are **Tier 2**: they may carry **inline vanilla JavaScript** for optional **export affordances**. This is a bounded exception to the static-only rule above; it applies **only** to those two tracking surfaces. Tier 1 outputs (faithful renders, `present` communications, companion assets) remain static — no JavaScript.
+### Generate-from-source, never replace
 
-Where it adds value, a Tier 2 document offers:
+No HTML generation step ever mutates or replaces the source Markdown. Generation reads the Markdown read-only and writes HTML to a separate path; the Markdown remains the parsed source of truth. Re-rendering after the Markdown changes updates the existing HTML file in place rather than spawning duplicates. (The source-immutability check in `html-test-helpers.sh` enforces the no-mutation guarantee.)
 
-- **Copy-as-prompt** — a control that copies a ready-to-run CPM command to the clipboard (e.g. `/cpm:do docs/epics/05-epic-foo.md` for the recommended next step), so the reader stays in the loop by pasting it back into a session.
-- **Copy-as-JSON** — a control that copies a **well-formed JSON** snapshot of the relevant selection (e.g. the ready-to-pick-up list, or the status summary counts) for downstream tooling.
+### Companion-asset content: shared chrome vs. system-specific mockups
 
-Rules for every export affordance:
+Companion assets are two different things, and they are styled differently:
 
-1. **Inline vanilla JS only.** No external `<script src>`, no framework, no bundler, no build step. The script is inline in the document and the file stays self-contained (the self-containment validator passes inline `<script>` and rejects external ones).
-2. **Read-only / export-only.** The *only* effect of any interaction is placing text on the clipboard via `navigator.clipboard.writeText(...)` (with a graceful no-op when the clipboard API is unavailable). Mutation of an epic doc or any source artifact stays exclusively with `cpm:do`.
-3. **Export data is embedded at generation time.** The prompt strings and the JSON snapshot are baked into the document when it is generated (e.g. a `data-prompt` attribute on the button, or a `<script type="application/json">` block read by the handler) — export needs no network call and does not re-read a source file.
+- **Documentation visuals** — diagrams that *explain* the artifact (architecture, data-flow, sequence). This is CPM2 explaining its own content, so it wears the shared chrome: render the diagram (inline SVG) inside a `.cpm-figure` within the shared shell. Use the template's styling; do not fork it.
+- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's rather than the template's.
+
+**Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template.
+
+## Artifact Publishing
+
+A skill's output can be **published** as a hosted, shareable web page using the **Artifact** tool. Publishing composes a page from the artifact's content and returns a URL that can be passed to someone who does not have the repository. It is not a storage mechanism: where the skill also writes a local file, that file remains the output of record, self-contained and openable offline; where it does not, the register entry below is the durable trace.
+
+Skills reference this procedure with exactly this line — copy it byte-for-byte, adding no prefix, suffix, or rewording:
+
+```
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+```
+
+Each site pairs that line with one skill-specific sentence naming what an artifact would show for *that* skill's output. The shared line carries the rule; the local sentence carries the judgement.
+
+**Always separately confirmed.** Producing the output and publishing it are two decisions, and agreement to the first is never agreement to the second. Ask on its own terms, and say in the question what publishing does: the page is hosted on claude.ai, private to the user by default and shareable by them afterwards, and content sent there may be cached or indexed even after the artifact is deleted. Publishing is never offered as a default, and autonomous runs (`cpm:ralph`) never publish.
+
+**What is never published.** A page that presents itself as issued by a real organisation the user does not represent, that contains fabricated records or approvals presented as genuine, or that targets a private individual. Where an output has that shape, keep it local and do not offer publishing. This bites hardest on `present` communications and deliverable-functionality mockups, which are the outputs most likely to carry someone else's branding.
+
+**Availability.** If the Artifact tool is not present in the session, say so plainly and skip. The skill's own work is unaffected: it still produces whatever it produces, and a skill whose only visual form was the artifact degrades to stating the same content in the conversation. Never treat the tool's absence as a failure of the skill.
+
+### Mechanics
+
+1. **Load the `artifact-design` skill first** — the Artifact tool requires it before a page is written.
+2. **Compose the page per `artifact-design`, and emit it as a body fragment.** The Artifact tool supplies its own `<!doctype html>`, `<head>`, and `<body>`, so a complete document is the wrong shape: emit the content with its `<style>` block at the top and no structural tags. Do **not** consume `cpm/assets/html/template.html` here — that template governs local companion assets, which are committed files that drift apart without one enforced stylesheet. A published page is composed fresh and read once, so `artifact-design` governs it instead.
+3. **Write the fragment to an ephemeral scratch path** — `docs/plans/{skill}-artifact-{nn}-{slug}.html` — then publish that path. It is a build intermediate, not a tracked CPM artifact, and stays out of the storage directories above, whose path contracts describe complete self-contained documents. The path is per-output and deterministic, so re-publishing the same output redeploys to the same URL rather than minting a second one. It is overwritten on each publish and safe to delete.
+4. **Set the page's identity**: a `<title>` matching the artifact, a one-sentence `description`, and a `favicon` kept stable across redeploys of the same output — readers find a tab by its icon, and a changed one reads as a different page.
+
+### Export affordances
+
+Where it adds value, a published page may carry **inline vanilla JavaScript** for export controls:
+
+- **Copy-as-prompt** — copies a ready-to-run CPM command to the clipboard (e.g. `/cpm:do docs/epics/05-epic-foo.md` for the recommended next step), so the reader stays in the loop by pasting it back into a session.
+- **Copy-as-JSON** — copies a **well-formed JSON** snapshot of the relevant selection (e.g. the ready-to-pick-up list, or the status summary counts) for downstream tooling.
+
+Three rules hold for every export affordance. **Inline vanilla JS only** — no external `<script src>`, no framework, no bundler, no build step; the Artifact tool's CSP blocks external hosts, and the page must stay self-contained. **Read-only / export-only** — the only effect of any interaction is placing text on the clipboard; mutation of an epic doc or any source artifact stays exclusively with `cpm:do`. **Export data is embedded at generation time** — the prompt strings and the JSON snapshot are baked in when the page is composed (a `data-*` attribute, or a `<script type="application/json">` block), so export needs no network call and does not re-read a source file.
 
 Canonical minimal shape (consume this rather than hand-rolling divergent handlers): a button carrying its payload in a `data-*` attribute plus one delegated click handler that copies it.
 
@@ -475,41 +513,13 @@ Canonical minimal shape (consume this rather than hand-rolling divergent handler
 </script>
 ```
 
-A purely static Tier 2 document (no export controls) remains a valid fallback — interactivity is an enhancement, not a requirement.
+**Clipboard access inside the artifact frame is verified working** (2026-07-25, tested on a live published page). The page reported `window !== top`, a secure context, and `navigator.clipboard.writeText` present; both a copy-as-prompt and a copy-as-JSON control wrote successfully, confirmed by pasting. Notably `permissions.query("clipboard-write")` came back **unsupported** on that engine and the write still succeeded — so treat that query as a diagnostic, never as a gate to branch on.
 
-### Generate-from-source, never replace
+Two things follow. **Keep the `navigator.clipboard` guard**: it costs one condition and covers the engines this was not tested on. **Keep rendering the payload as selectable `<pre>` text alongside the control** — not as a fallback for a dead button any more, but because a reader who wants to read the command rather than paste it should not have to click to see it. A purely static page (no export controls) remains a valid deliverable — interactivity is an enhancement, not the point.
 
-No HTML generation step ever mutates or replaces the source Markdown. Generation reads the Markdown read-only and writes HTML to a separate path; the Markdown remains the parsed source of truth. Re-rendering after the Markdown changes updates the existing HTML file in place rather than spawning duplicates. (The source-immutability check in `html-test-helpers.sh` enforces the no-mutation guarantee.)
+### Recording is part of publishing
 
-### Companion-asset content: shared chrome vs. system-specific mockups
-
-Companion assets are two different things, and they are styled differently:
-
-- **Documentation visuals** — diagrams that *explain* the artifact (architecture, data-flow, sequence). This is CPM2 explaining its own content, so it wears the shared chrome: render the diagram (inline SVG) inside a `.cpm-figure` within the shared shell. Use the template's styling; do not fork it.
-- **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's rather than the template's.
-
-**Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template. Faithful renders and `present` communications use the shared template directly.
-
-### Publishing as an artifact
-
-Any HTML output above may additionally be **published** as a hosted, shareable web page using the **Artifact** tool. Publishing is never the storage mechanism — the file written to its storage path above remains the output of record, self-contained and openable offline. Publishing adds a URL that can be passed to someone who does not have the repository.
-
-Skills reference this procedure with: "Follow the shared **Artifact Publishing** procedure."
-
-**Always separately confirmed.** Producing HTML and publishing it are two decisions, and agreement to the first is never agreement to the second. Ask on its own terms, and say in the question what publishing does: the page is hosted on claude.ai, private to the user by default and shareable by them afterwards, and content sent there may be cached or indexed even after the artifact is deleted. Publishing is never offered as a default, and autonomous runs (`cpm:ralph`) never publish.
-
-**What is never published.** A page that presents itself as issued by a real organisation the user does not represent, that contains fabricated records or approvals presented as genuine, or that targets a private individual. Where an output has that shape, keep it local and do not offer publishing. This bites hardest on `present` communications and deliverable-functionality mockups, which are the outputs most likely to carry someone else's branding.
-
-**Availability.** If the Artifact tool is not present in the session, say so plainly and skip — every local output is unaffected. Never treat its absence as a failure of the skill.
-
-**Mechanics**:
-
-1. **Load the `artifact-design` skill first** — the Artifact tool requires it before a page is written.
-2. **Emit the content as a body fragment.** The Artifact tool supplies its own `<!doctype html>`, `<head>`, and `<body>`, so a complete document is the wrong shape: strip those structural tags from the composed output and place its `<style>` block at the top of the fragment. For outputs that wear the shared chrome this is a re-emission of `cpm/assets/html/template.html`, not a fork of it, so the no-forking rule holds unchanged. A deliverable-functionality mockup publishes its own styling the same way.
-3. **Write the fragment to an ephemeral scratch path** — `docs/plans/{skill}-artifact-{nn}-{slug}.html` — then publish that path. It is a build intermediate, not a tracked CPM artifact, and stays out of the storage directories above, whose path contracts describe complete self-contained documents. The path is per-output and deterministic, so re-publishing the same output redeploys to the same URL rather than minting a second one. It is overwritten on each publish and safe to delete.
-4. **Set the page's identity**: a `<title>` matching the artifact, a one-sentence `description`, and a `favicon` kept stable across redeploys of the same output — readers find a tab by its icon, and a changed one reads as a different page.
-
-**Recording is part of publishing, not a follow-up.** As soon as the URL comes back:
+Recording is part of publishing, not a follow-up. As soon as the URL comes back:
 
 - **Register it** in `docs/artifacts/index.md` per the `cpm:artifact` skill's Register format — URL, what it is, the date, the source artifact(s) as the association, and one sentence on why it was published.
 - **Record it on the source artifact** in an `**Artifacts**:` metadata field, so the relationship reads from both ends.
