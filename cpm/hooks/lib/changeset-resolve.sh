@@ -2,9 +2,14 @@
 # changeset-resolve.sh — Git-anchored selector resolution (spec 42 R1, AD5)
 #
 # Resolves the four git-anchored selector forms to the change-set structure defined in
-# changeset.sh. This is AD5's *reverse* traversal — files ← commits ← selector. Forward
-# resolution from an intent-anchored selector lands in Story 3 and converges on the same
-# structure, which is what lets the join, the gap queries and the review be written once.
+# changeset.sh: files ← commits ← selector.
+#
+# This and `changeset.sh` are what survived spec 42's library tier. Everything that once
+# sat above them — the adapters, the join, the gap queries, the deterministic record — was
+# retired when `/cpm:inspect` was rewritten to read the repository directly rather than
+# resolve provenance mechanically. Selector resolution stayed because it is genuinely
+# fiddly and genuinely deterministic: fork points, merge commits and the working tree each
+# have a right answer that a reader should not have to re-derive.
 #
 # Usage (library):
 #   source changeset.sh; source changeset-resolve.sh
@@ -81,6 +86,17 @@ _changeset_die() {
 # rather than this branch having split from it, so those candidates are dropped. When
 # none survive, the branch has nothing to have split from and the caller errors.
 #
+# **The branch's own remote-tracking refs are not candidates.** `origin/feature` is not a
+# line `feature` split from — it is a snapshot of this same line, taken at the last push.
+# The tip check above only removes it while the remote is level or ahead; once the branch
+# has a commit that has not been pushed, the merge base is the remote tip, which is an
+# ancestor of the branch with a very high ancestor count and therefore wins the contest
+# below. The branch would then measure from its own last push and report only its
+# unpushed commits — a truncated change set that is non-zero, so `changeset_resolve_git`'s
+# emptiness check never fires and the wrong answer arrives looking like a right one.
+# Both the configured upstream and any `refs/remotes/*/<branch>` are excluded, because a
+# pushed branch does not always have an upstream configured.
+#
 # Ties are resolved by ref order, which `for-each-ref` sorts by refname — so a repository
 # in a given state always yields the same fork point.
 _changeset_fork_point() {
@@ -90,11 +106,18 @@ _changeset_fork_point() {
   local tip
   tip=$(git -C "$repo" rev-parse "refs/heads/$branch" 2>/dev/null) || return 1
 
+  local upstream
+  upstream=$(git -C "$repo" rev-parse --symbolic-full-name "$branch@{upstream}" 2>/dev/null)
+
   local best="" best_count=-1
   local ref base count
 
   while IFS= read -r ref; do
     [ "$ref" = "refs/heads/$branch" ] && continue
+    [ -n "$upstream" ] && [ "$ref" = "$upstream" ] && continue
+    case "$ref" in
+      refs/remotes/*/"$branch") continue ;;
+    esac
     base=$(git -C "$repo" merge-base "$tip" "$ref" 2>/dev/null) || continue
     [ -n "$base" ] && [ "$base" != "$tip" ] || continue
     count=$(git -C "$repo" rev-list --count "$base" 2>/dev/null) || continue
@@ -120,10 +143,11 @@ _changeset_files_for_commits() {
 
 # Emit a change set from commit SHAs on stdin, in the order given.
 #
-# This is where AD5's "both converge on one change-set structure" is actually made true.
-# Reverse resolution (below) and forward resolution (changeset-intent.sh) reach their
-# commits by opposite traversals and then hand them here, so the structure is produced
-# by one implementation rather than by two that have to be kept in agreement.
+# Emitting the structure through one function rather than inline in each selector form is
+# what keeps the four forms producing identical output. It also kept a second, forward
+# resolution direction honest while one existed; that direction was retired when
+# `/cpm:inspect` stopped resolving intent-anchored selectors through adapters, and this
+# function stayed because the four git-anchored forms still share it.
 changeset_emit_from_commits() {
   local repo="$1"
 

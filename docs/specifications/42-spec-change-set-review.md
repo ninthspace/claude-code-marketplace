@@ -1,7 +1,76 @@
 # Spec: Change-Set Review and Provenance
 
 **Date**: 2026-07-25
+**Status**: Retired 2026-07-26 — architecture withdrawn in cpm 3.3.0
+**Superseded by**: `cpm/skills/inspect/SKILL.md`, rewritten as a model-driven skill
 **Brief**: —  (facilitated from a conversation following spec 41's completion)
+
+## Retirement
+
+**Everything below was built, shipped in cpm 3.2.0, and withdrawn the next day.** Five epics
+delivered 15 libraries and 20 test files. `/cpm:inspect` was then rewritten to read the
+repository directly, and 13 of those libraries and all 20 test files were deleted —
+`cpm/hooks/lib/` went from 17 files to 4. What survives is selector resolution:
+`changeset.sh`, `changeset-resolve.sh`, and `test-changeset-resolve.sh` behind them.
+
+This document is kept verbatim because it is what five completed epics and their coverage
+matrices were written against. **Read it as a record of what was specified, not as live
+intent.**
+
+### Why it was withdrawn
+
+Not because the implementation was wrong. Because the premise was.
+
+The Problem Summary's second half claims that joining the diff to the intent record makes two
+questions answerable that neither can answer alone. The first real change set put that to the
+test, and the join answered R3 with a confident *no orphan changes* that was structurally
+guaranteed rather than measured. The git-native adapter linked every file in the change set
+through the branch name; the CPM adapter's co-commit rule linked every file to every record
+that landed in the same commit. Two independent mechanisms, each sufficient on its own to
+empty the orphan list. The query could not have returned anything else — and R7's `derived`
+label, the one place the design put its honesty, was doing exactly what it promised while the
+answer it qualified was worthless.
+
+A model reading `docs/epics/` directly produced a better account of the same change set, and
+could say *this signal does not discriminate here*, which no adapter can. That is the whole of
+it: the deterministic join buys reproducibility, and reproducibility is not worth having when
+what is reproduced is an artefact of the mechanism.
+
+A second reason arrived independently and is about scope rather than provenance. R5's findings
+are `/cpm:audit`'s question asked over a narrower range, and spending the skill's model budget
+there left it saying a great deal about reviewing and almost nothing about what the work
+actually did. The rewritten skill characterises the change instead, and points at `/cpm:audit`
+for the rest.
+
+**The withdrawal was not about defects.** Twenty suites were green when it happened; a
+deliberate read of the same code then found six, none of them findable by any assertion in the
+suite that covered its criterion. That is retro 20's lesson and it is about the tests, not
+about the architecture.
+
+### What became of each requirement
+
+| | Fate | Where it went |
+|---|---|---|
+| **R1** — Dual scope resolution | Half kept | `changeset_resolve_git` still resolves `--since`, a range, a branch and the working tree. The intent-anchored direction went with the adapters. |
+| **R2** — Bidirectional provenance | Retired | With one direction left and no join, there is nothing to be bidirectional about. |
+| **R3** — Orphan changes | Falsified | See above. The *question* survives as prose the skill asks of the repository, where an answer can say a signal does not discriminate. |
+| **R4** — Unbacked claims | Retired as a query | Also asked in prose now. Its durable contribution was the distinction between *none found* and *not answerable*, which the skill keeps. |
+| **R5** — Code review of the change set | Withdrawn deliberately | The findings half was `/cpm:audit`'s question. Only the disclosure attached to it survives — see Behaviour at Scale below. |
+| **R6** — JSON record | Retired | A deterministic record needs a deterministic join. The Could-Have it existed to enable — the run-to-run delta — was never built. |
+| **R7** — Pluggable adapters, confidence labelling | Retired | The load-bearing decision, and the one the premise failed at. |
+| **R8** — Artifact projection | Kept, differently | Publishing survives through the shared **Artifact Publishing** procedure. It is no longer projected from a JSON record, because there is none. |
+| **R9** — Graceful degradation | Kept | Now a degradation table in the skill. The requirement to say *which* channel was missing survives intact — it was always the part that mattered. |
+| **AD1** — A new skill; `audit` unchanged | Kept | The only decision that survives whole, including "must not require CPM artifacts in the target repository". |
+| **AD2** — Pluggable adapters, git-native baseline | Retired | With R7. |
+| **AD3** — Hard split, join vs. review | Moot | No join, so no boundary to police. |
+| **AD4** — JSON is the record | Retired | With R6. |
+| **AD5** — Resolution order is selector-shaped | Half kept | With R1. |
+
+Of the non-functional requirements: **Determinism** narrowed to selector resolution, which is
+the only thing left that claims it. **Behaviour at Scale** carried over almost word for word
+and is the skill's *Say what you did not read*. **Offline Integrity** and **Publishing
+Hygiene** both hold — the page still carries counts and paths rather than wholesale source.
+**Confidence Integrity** went moot with the labels it governed.
 
 ## Problem Summary
 

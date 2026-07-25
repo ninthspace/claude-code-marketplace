@@ -176,4 +176,37 @@ assert_selector_error "--frobnicate" "$REPO" --frobnicate
 test_start "a missing repository directory errors with the path echoed back"
 assert_selector_error "$TEST_TMPDIR/no-such-repo" "$TEST_TMPDIR/no-such-repo" --working-tree
 
+# A branch that has been pushed and then advanced has a remote-tracking ref sitting at an
+# older commit *on its own line*. That ref is not something the branch split from, but the
+# tip check alone does not exclude it — it only removes a remote that is level or ahead.
+# Left in the candidate set it wins outright: it is an ancestor of the branch with more
+# ancestors than the real fork point, so the branch would measure from its own last push.
+#
+# The fixture has to contain this case to arbitrate at all. A branch whose remote is level
+# with it, or which has never been pushed, resolves identically under both readings — which
+# is exactly the blind spot retro 20 recorded for default-branch versus fork-point
+# semantics, one level down.
+test_start "a pushed branch that has since advanced measures from its fork point, not its last push"
+PUSHED=$(git_fixture_create pushed)
+git_fixture_commit "$PUSHED" "chore: seed" -- README.md "seed"
+git_fixture_branch "$PUSHED" "feature/PUSH-1"
+git_fixture_commit "$PUSHED" "first" -- a.txt "a"
+git_fixture_commit "$PUSHED" "second" -- b.txt "b"
+git_fixture_git "$PUSHED" update-ref refs/remotes/origin/feature/PUSH-1 "$(git_fixture_git "$PUSHED" rev-parse HEAD)"
+git_fixture_commit "$PUSHED" "third" -- c.txt "c"
+PUSHED_OUT=$(changeset_resolve_git "$PUSHED" "feature/PUSH-1")
+assert_equals "a.txt b.txt c.txt" "$(printf '%s\n' "$PUSHED_OUT" | changeset_files | tr '\n' ' ' | sed 's/ $//')"
+
+# The control for the assertion above: without the remote ref the answer is the same, so a
+# suite that only ever saw this shape could not tell the two readings apart.
+test_start "the same branch with no remote-tracking ref resolves identically"
+UNPUSHED=$(git_fixture_create unpushed)
+git_fixture_commit "$UNPUSHED" "chore: seed" -- README.md "seed"
+git_fixture_branch "$UNPUSHED" "feature/PUSH-1"
+git_fixture_commit "$UNPUSHED" "first" -- a.txt "a"
+git_fixture_commit "$UNPUSHED" "second" -- b.txt "b"
+git_fixture_commit "$UNPUSHED" "third" -- c.txt "c"
+assert_equals "$(printf '%s\n' "$PUSHED_OUT" | changeset_files | tr '\n' ' ')" \
+              "$(changeset_resolve_git "$UNPUSHED" "feature/PUSH-1" | changeset_files | tr '\n' ' ')"
+
 test_summary

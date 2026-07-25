@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/42-spec-change-set-review.md
 **Date**: 2026-07-25
-**Status**: Complete
+**Status**: Complete — delivered 2026-07-25, deleted in full 2026-07-26. Both link adapters, the intent adapter, the link set, the join and the JSON record went with spec 42's architecture; this epic is the one whose premise failed, and the source spec's Retirement section says how.
 **Blocked by**: Epic 42-01-epic-change-set-resolution
 **Retro applied**: 20 · Testing Gaps · Applied — Story 1's conformance suite covers the adapter contract's whole surface rather than only the three story criteria; it ships as the harness Stories 2 and 3 run against, so a branch it omits is a branch no adapter is ever checked on.
 **Retro applied**: 20 · Patterns Worth Reusing · Applied — precedence is resolved in one place both adapters feed rather than implemented per-adapter and compared, and JSON determinism comes from one canonical serialiser, so both properties are structural rather than agreements between two code paths.

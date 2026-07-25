@@ -6,6 +6,16 @@
 
 > **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
 
+> **Partly retired 2026-07-26.** Spec 42's architecture was withdrawn — see the Retirement
+> section of the source spec. The `SKILL.md` this epic assembled was rewritten, and Story 2's
+> artifact projection (`inspect-project.sh`, `inspect-findings.sh`, `inspect-record.sh` and
+> their suites) was deleted. **The AD1 rows outlived the architecture**: the two `description`
+> fields still lead with their subject, `/cpm:audit` is still untouched, and
+> `test-inspect-skill.sh` still guards both — it is the one suite from this epic that
+> survives. Rows covering the projection, the JSON source and the register backlink describe
+> deleted code. Every `✓` records what was verified on 2026-07-25, not what the current tree
+> does.
+
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
 | 1 | AD1 | Change-set review ships as a new skill (`/cpm:inspect`), sitting between `do` and `retro`. | The skill accepts every selector form from R1 and dispatches to the resolution built in Epic 42-01 | Story 1 | — | ✓ |

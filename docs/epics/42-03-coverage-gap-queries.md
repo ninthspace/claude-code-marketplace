@@ -6,6 +6,17 @@
 
 > **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
 
+> **Retired 2026-07-26.** `gap-queries.sh` and its three suites were deleted with the join
+> they queried — see the Retirement section of the source spec. The `✓` marks are left as
+> they stand: they record what was verified on 2026-07-25, not what the current tree does.
+>
+> **The rows held; the query they covered did not.** Every criterion here is about the
+> *plumbing* — an orphan appears, a linked file does not, an unanswerable query renders
+> differently from an empty one — and all of it worked exactly as specified. What no row
+> could ask is whether an empty orphan list ever meant anything, and on the first real change
+> set it did not. R3 and R4 are now asked in prose by the rewritten `/cpm:inspect`, where the
+> answer is allowed to say that a signal does not discriminate.
+
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
 | 1 | R3 | Report files in the change set that no adapter can link to any intent record. This is where unreviewed scope creep hides. | A file with no adapter link appears in the orphan list; a file with a declared link does not | Story 1 | `[integration]` | ✓ |

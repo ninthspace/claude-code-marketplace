@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/42-spec-change-set-review.md
 **Date**: 2026-07-25
-**Status**: Complete
+**Status**: Complete — delivered 2026-07-25, deleted 2026-07-26. R5's findings half was withdrawn as `/cpm:audit`'s question asked over a narrower range. Story 2's disclosure discipline is the part that survives, carried into the rewritten skill as *Say what you did not read*. See the Retirement section of the source spec.
 **Blocked by**: Epic 42-01-epic-change-set-resolution
 **Retro applied**: 17 · Testing Gaps · Applied — every criterion here is structural, and none can tell whether a finding is any good; the suite header names what it does not test, so a green run cannot be mistaken for a verified review. The coverage matrix already records the same gap at row level.
 **Retro applied**: 19 · Testing Gaps · Applied — Story 2's ordering and unexamined-file expectations are derived from the fixture at run time (the unexamined list asserted as the set complement of the examined one) rather than pinned as literals, which would be a snapshot wearing an invariant's clothes.

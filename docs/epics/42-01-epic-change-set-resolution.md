@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/42-spec-change-set-review.md
 **Date**: 2026-07-25
-**Status**: Complete
+**Status**: Complete — delivered 2026-07-25. Stories 1 and 2 survive as `cpm/hooks/lib/changeset.sh`, `changeset-resolve.sh` and `test-changeset-resolve.sh`; Story 3's forward direction was deleted 2026-07-26 with the adapters it was built for. See the Retirement section of the source spec.
 **Blocked by**: —
 **Retro applied**: 15 · Codebase Discoveries · Applied — every new suite groups related checks under one `test_start` (combined assert helpers where a call returns both a code and a reason), so all three stories report a 1:1 pass/test ratio; pre-existing inflated suites are left alone.
 **Retro applied**: 19 · Testing Gaps · Applied — git fixtures produce non-deterministic SHAs, so assertions read expected values back from the fixture at run time rather than pinning literals; constrains Story 1's tests and Story 3's `[tdd]` tests before they are written.

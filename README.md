@@ -105,7 +105,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v3.2.0)
+### Claude Planning Method (v3.3.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
@@ -113,7 +113,7 @@ Structured discovery, product ideation, architecture exploration, specification,
 
 v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and a reduced token footprint.
 
-**Twenty skills forming a pipeline:**
+**Twenty-two skills forming a pipeline:**
 
 | Skill | Purpose | Output |
 |-------|---------|--------|
@@ -128,6 +128,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 | `/cpm:ralph` | Autonomous multi-epic execution (Ralph Wiggum loop) | Ralph loop command + execution log |
 | `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
 | `/cpm:audit` | Independent codebase health audit across nine dimensions | `docs/audits/{nn}-audit-{slug}.md` |
+| `/cpm:inspect` | What a change set did, and where it sits in the repo | Ephemeral (+ optional published artifact) |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
 | `/cpm:present` | Audience-aware artifact transformation | `docs/communications/{nn}-{format}-{slug}.md` (+ optional HTML, + optional published artifact) |

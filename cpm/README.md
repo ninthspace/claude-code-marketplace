@@ -19,6 +19,7 @@ After installation, use any skill independently or as a pipeline:
 /cpm:templates (explore and customise artifact templates)
 /cpm:present (transform artifacts for different audiences)
 /cpm:audit (independent codebase health audit — feeds findings into spec/library/quick)
+/cpm:inspect (what a change set did, and where it sits in the repo)
 /cpm:artifact (register published artifacts against the work that produced them)
 ```
 
@@ -37,6 +38,7 @@ Each step is optional. Use what fits your situation:
 - Want autonomous overnight execution? `/cpm:ralph` wraps `/cpm:do` in a Ralph Wiggum loop
 - Want a critical review before starting? `/cpm:review` runs adversarial review of epics/stories
 - Want an independent codebase health check? `/cpm:audit` sweeps nine dimensions and feeds findings into spec/library/quick
+- Need to understand what a branch or commit range actually did? `/cpm:inspect` characterises the change and situates it in the repo
 - Need to share planning artifacts with stakeholders? `/cpm:present` transforms them for any audience
 - Want to explore or customise artifact templates? `/cpm:templates` lists, previews, and scaffolds overrides
 - Have reference docs (coding standards, architecture decisions)? `/cpm:library` imports them for all skills
@@ -250,6 +252,24 @@ Run a structured audit of the existing codebase, producing a commit-pinned audit
 ```
 
 **On exit**: Offers to pipe findings into `/cpm:library` (wrap as a reference doc), `/cpm:spec` (promote the Top 5 priorities into a spec), or `/cpm:quick` (work the quick wins item-by-item).
+
+### `/cpm:inspect` — Change-Set Inspection
+
+Answers one question about work that has already happened: **what did this change do, and where does it sit?** Resolves a selector to a set of commits and files, works out the axis that best explains the change for *this* repository (static vs. dynamic means something different in a Laravel app than in a plugin of prose), then situates the change — how large each touched area is relative to what was already there, which layers it crosses, and what sits immediately adjacent and was deliberately **not** touched. That negative space is often the highest-signal part. It joins the change to whatever records intent, preferring CPM artifacts and falling back through ADRs, CHANGELOG, commit trailers and branch names, and it names every file it did not read rather than letting a partial pass read as complete.
+
+This is not a code review — findings about code quality are `/cpm:audit`'s output, and the skill points there rather than drifting into them. **The target repository does not need to be a CPM project**; everything degrades to what the repo actually has, and the report says which channel it fell back to.
+
+**Input**: A selector — `--since <ref>`, a commit range, a branch, `--working-tree`, or a phrase like "3 days ago". Absent, it derives a sensible baseline and says which it chose. Uncommitted changes are always included and always reported separately.
+**Output**: The report in conversation. Nothing is written to the repository unless you ask for an artifact, which is always separately confirmed.
+
+```
+/cpm:inspect --since HEAD~20
+/cpm:inspect feature/billing-rework
+/cpm:inspect abc1234..def5678
+/cpm:inspect --working-tree
+```
+
+**On exit**: Offers `/cpm:audit` when the change raised code-quality questions worth a proper sweep, `/cpm:quick` or `/cpm:spec` for work the analysis turned up, or `/cpm:retro` when the change set closes an epic chain.
 
 ### `/cpm:retro` — Lightweight Retrospective
 
@@ -566,7 +586,7 @@ cpm/
 │   ├── audit/
 │   │   └── SKILL.md         # Independent codebase audit skill
 │   ├── inspect/
-│   │   └── SKILL.md         # Change-set review skill (provenance, orphans, findings)
+│   │   └── SKILL.md         # Change-set analysis skill (what changed, and where it sits)
 │   ├── retro/
 │   │   └── SKILL.md         # Lightweight retrospective skill
 │   ├── pivot/

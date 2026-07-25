@@ -12,8 +12,9 @@
 # skills' subjects differ. A description could satisfy every assertion here and still be
 # unhelpful; the gate read is what covers that, not this file.
 #
-# **Whether the skill works.** Nothing here invokes anything. Dispatch is covered by
-# test-inspect-resolve.sh, and the libraries the skill calls each have their own suite.
+# **Whether the skill works.** Nothing here invokes anything. The one library the skill
+# calls, `changeset-resolve.sh`, has its own suite; everything else the skill does is a
+# reading, which no assertion can stand in for.
 #
 # --- Two pinned literals, deliberately -----------------------------------------------------
 #

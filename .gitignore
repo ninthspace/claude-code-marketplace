@@ -2,4 +2,9 @@
 .DS_Store
 
 # CPM transient session-state files (created/deleted by running skills)
+# All three are per-session scratch keyed by CPM_SESSION_ID. Only the progress file
+# was ignored, so summaries and cleancheck markers from dead sessions accumulated in
+# git — three of them were committed before this was noticed.
 docs/plans/.cpm-progress-*.md
+docs/plans/.cpm-compact-summary-*.md
+docs/plans/.cpm-cleancheck-*

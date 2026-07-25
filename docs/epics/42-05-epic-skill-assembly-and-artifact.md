@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/42-spec-change-set-review.md
 **Date**: 2026-07-25
-**Status**: Complete
+**Status**: Complete — delivered 2026-07-25. The `SKILL.md` Story 1 wrote was replaced 2026-07-26 and Story 2's artifact projection deleted; Story 1's description-field amendments and the *`/cpm:audit` untouched* invariant both survive, still guarded by `test-inspect-skill.sh`. See the Retirement section of the source spec.
 **Blocked by**: Epic 42-01-epic-change-set-resolution, Epic 42-02-epic-intent-adapters-and-join, Epic 42-03-epic-gap-queries, Epic 42-04-epic-change-set-review
 **Retro applied**: 16 · Criteria Gaps · Applied — Story 2's backlink criterion is checked against `/cpm:inspect`'s actual shape *before* the story starts, not discovered mid-execution as retro 16's two instances were. Its source artifact is the JSON record, whose byte-determinism (R6) and frozen schema (`cpm.inspect/1`) both collide with writing a backlink into it; the resolution is recorded as a Story 2 decision.
 **Retro applied**: 15 · Patterns Worth Reusing · Applied — Story 1 is prose end to end, so the new `SKILL.md` and both amended `description` fields are read in place at the gate. Structural assertions can say a section exists, never that what it claims is still true.

@@ -6,6 +6,18 @@
 
 > **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
 
+> **Retired 2026-07-26.** Every file behind this matrix — both link adapters, the intent
+> adapter, the link set, the join, the JSON record, the conformance harness and their seven
+> suites — was deleted when spec 42's architecture was withdrawn. See the Retirement section
+> of the source spec. The `✓` marks are left as they stand: they record what was verified on
+> 2026-07-25, which is what this document is for, and not a claim about the current tree.
+>
+> **One row was already known to be over-marked before the retirement.** The branch-name row
+> was verified against a fixture in which the branch signal linked the one file under test;
+> in a real change set the same signal linked *every* file, which is the observation that
+> retired the architecture. The criterion was satisfiable by a reading much weaker than it
+> appeared to promise — retro 20's lesson, arriving a second time.
+
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
 | 1 | R7 | The join reads every intent channel present and **owns none of them**. | Each adapter implements one contract: given a change set, return a link set | Story 1 | `[unit]` | ✓ |

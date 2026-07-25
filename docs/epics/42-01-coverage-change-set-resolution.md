@@ -6,6 +6,15 @@
 
 > **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
 
+> **Partly retired 2026-07-26.** Spec 42's architecture was withdrawn — see the Retirement
+> section of the source spec. **This matrix is the one that is still mostly live.** Rows 1–4
+> (Story 1's fixture helper, Story 2's git-anchored resolution) are backed by
+> `test-git-fixtures.sh` and `test-changeset-resolve.sh`, both of which still exist and still
+> pass. Rows 5–8 cover Story 3's forward direction, whose code and suite
+> (`changeset-intent.sh`, `test-changeset-intent.sh`, `stub-intent-adapter.sh`) were deleted.
+> Every `✓` is left as it stands: it records what was verified on 2026-07-25, which is what
+> this document is for. Rows 5–8 are not a claim about the current tree.
+
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
 | 1 | Test Infrastructure | this spec needs fixtures that are real repositories with known commits, trailers, branch names and co-committed planning documents, built and torn down per test | A fixture helper creates a temporary git repository with a specified commit sequence — including commit trailers, conventional-commit subjects, branch names, and co-committed files — and tears it down on exit | Story 1 | — | ✓ |

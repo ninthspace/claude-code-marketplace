@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/42-spec-change-set-review.md
 **Date**: 2026-07-25
-**Status**: Complete
+**Status**: Complete — delivered 2026-07-25, deleted 2026-07-26 with the join it queried. R3 and R4 are now questions the rewritten `/cpm:inspect` asks in prose rather than answers with a query; Story 2's *none found* vs *not answerable* distinction survives in that form. See the Retirement section of the source spec.
 **Blocked by**: Epic 42-02-epic-intent-adapters-and-join
 **Retro applied**: 20 · Testing Gaps · Applied — Story 2's suite exercises all three adapter exit codes against the answerability report, not only the two its criteria name; an erroring adapter must render as not-answerable, since retro 20 found exactly that conflation in `changeset_intent_answerable` and named R4 as the requirement it would defeat.
 **Retro applied**: 20 · Testing Gaps · Applied — every absence assertion in this epic (empty orphan list, empty unbacked list, zero-adapter run) carries a positive control proving the fixture had something to report, so "none found" can never be satisfied by "nothing looked".

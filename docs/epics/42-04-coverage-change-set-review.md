@@ -6,6 +6,21 @@
 
 > **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
 
+> **Retired 2026-07-26.** `review.sh` and its two suites were deleted when R5 was withdrawn —
+> see the Retirement section of the source spec. The `✓` marks record what was verified on
+> 2026-07-25, not what the current tree does.
+>
+> **Rows 3 and 4 are the ones that survived the design, not just the record.** The overflow
+> disclosure is the rewritten skill's *Say what you did not read*, and the reasoning behind
+> row 4's must-NOT — a review that silently samples reads as clean when it means unexamined —
+> is quoted there almost verbatim.
+>
+> **The last note below aged into the reason for the retirement.** It says every criterion
+> here is structural, that whether the findings are *good* has no automatable oracle, and
+> that the gap was accepted knowingly. The findings turned out not to be the right output at
+> all: they are `/cpm:audit`'s question asked over a narrower range. An untested surface was
+> recorded; that it might be the wrong surface was not a question the matrix could pose.
+
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
 | 1 | R5 | Produce findings with `file:line` citations. | Findings carry `file:line` citations | Story 1 | `[integration]` | ✓ |
