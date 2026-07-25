@@ -164,6 +164,8 @@ Some architectural decisions are inherently visual — the shape of a system is 
 
 A companion asset captures *one visual decision*; a **faithful render** is a navigable HTML view of a **whole ADR**. It is produced **only on request** — when the user asks for an HTML version of an ADR (to read, share, or review) — never automatically as part of writing the ADR. Follow the shared **HTML Output** convention for the mechanics; this section states the ADR-specific particulars.
 
+Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
 When requested:
 
 1. Read the saved ADR Markdown (`docs/architecture/{nn}-adr-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.

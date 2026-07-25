@@ -130,13 +130,14 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 | `/cpm:audit` | Independent codebase health audit across nine dimensions | `docs/audits/{nn}-audit-{slug}.md` |
 | `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
 | `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
-| `/cpm:present` | Audience-aware artifact transformation | `docs/communications/{nn}-{format}-{slug}.md` |
+| `/cpm:present` | Audience-aware artifact transformation | `docs/communications/{nn}-{format}-{slug}.md` (+ optional HTML, + optional published artifact) |
 | `/cpm:templates` | Template discoverability & scaffolding | Template previews + override files at `docs/templates/` |
 | `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
 | `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
 | `/cpm:quick` | Lightweight execution for small changes | `docs/quick/{nn}-quick-{slug}-spec.md` |
 | `/cpm:status` | Project status reconnaissance and next-step recommendations | Ephemeral (stdout only) |
 | `/cpm:clean` | On-demand cleanup of leftover session-state files | None (removes files, reports what was deleted) |
+| `/cpm:artifact` | Register published artifacts against the work that produced them | `docs/artifacts/index.md` + backlinks in associated documents |
 
 **Quick Start:**
 ```bash
@@ -181,6 +182,9 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 # Clean up leftover session-state files on demand
 /cpm:clean
+
+# Register a published artifact against the work that produced it
+/cpm:artifact https://claude.ai/code/artifact/... auth flow explorer, from spec 12
 
 # Or jump to any step independently
 /cpm:spec I need a REST API for inventory management

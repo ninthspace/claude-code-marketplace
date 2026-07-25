@@ -637,9 +637,9 @@ const SKILLS = [
     description: 'Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering, stakeholders) and format (memo, slide deck, email), and get derived content tailored to the readers. Regenerable when sources change.',
     input: 'One or more CPM artifact file paths',
     output: 'Audience-tailored communication derived from source artifacts',
-    outputFile: 'docs/communications/{nn}-{format}-{slug}.md — plus a self-contained .html companion alongside it when a rendered version is asked for',
-    phases: ['Discover and select source artifacts', 'Choose audience and format', 'Extract and transform content', 'Write communication file'],
-    tip: 'Content is derived from source artifacts — not written from scratch. Create multiple presentations from the same sources for different audiences. Regenerate when sources change.',
+    outputFile: 'docs/communications/{nn}-{format}-{slug}.md — plus a self-contained .html companion alongside it when a rendered version is asked for, and optionally a published, shareable hosted page',
+    phases: ['Discover and select source artifacts', 'Choose audience and format', 'Extract and transform content', 'Write communication file', 'Optionally emit styled HTML, and optionally publish it as a shareable page'],
+    tip: 'Content is derived from source artifacts — not written from scratch. Create multiple presentations from the same sources for different audiences. Regenerate when sources change. Publishing is confirmed separately from producing the HTML, since it puts the content on the open web; the resulting URL is recorded in the Markdown so regenerating updates the page you already shared instead of creating a second one.',
     next: []
   },
   {
@@ -737,6 +737,22 @@ const SKILLS = [
     phases: ['Step 1: List every session-state file (exhaustive — age, session label, owning skill)', 'Step 2: Ask what to remove', 'Step 3: Confirm the exact paths, then delete only those'],
     tip: 'Interactive-only — /cpm:clean is never part of autonomous execution, and cpm:ralph never invokes it. It deletes nothing without showing you the file first and getting your confirmation. Arguments are a convenience, never a licence to skip that confirmation.',
     next: []
+  },
+  {
+    id: 'artifact',
+    name: '/cpm:artifact',
+    label: 'Artifact',
+    icon: '🔗',
+    color: '#a371f7',
+    category: 'support',
+    short: 'Register published artifacts',
+    description: 'Keep a durable record of the published artifacts produced alongside a project\'s CPM work. A published artifact\'s only handle is its URL, and an unregistered URL exists solely in the transcript of the session that made it — so a page built weeks ago is effectively lost while still being live. The register records what it is, why it was made, when, and which planning documents it belongs to, and adds an **Artifacts** backlink to each of those documents so the relationship reads from either end.',
+    input: 'A URL with an optional description, `list`, a search term, or nothing (review flow)',
+    output: 'A register entry plus backlinks in the associated planning documents',
+    outputFile: 'docs/artifacts/index.md + **Artifacts** fields in the associated documents',
+    phases: ['Read the register (creating it on first registration)', 'Establish the four facts — URL, name, why, association', 'Write the row, newest first; re-registering a URL updates in place', 'Write the backlink into each associated document', 'Report the entry and the paths touched'],
+    tip: 'Skills that publish artifacts register them as part of publishing — /cpm:present does this automatically. Use /cpm:artifact directly for the ones made ad hoc mid-session, which is most of them. Superseded artifacts are struck through rather than deleted, so the register can still answer "what happened to that page?".',
+    next: []
   }
 ];
 
@@ -769,11 +785,11 @@ const EDGES = [
 ];
 
 const PRESETS = {
-  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','ralph','pivot','retro','audit','present','templates','library','archive','quick','status','clean'], knowledge: {} },
-  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', ralph:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know', clean:'know' } },
-  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', ralph:'know', review:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know', clean:'know' } },
-  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status','clean'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know' } },
-  review: { highlight: ['review','retro','pivot','audit','archive'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', ralph:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know', clean:'know' } },
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','ralph','pivot','retro','audit','present','templates','library','archive','quick','status','clean','artifact'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do','quick'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', ralph:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know', clean:'know', artifact:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', ralph:'know', review:'know', pivot:'know', retro:'know', audit:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know', clean:'know', artifact:'know' } },
+  execution: { highlight: ['do','ralph','pivot','review','retro','quick','status','clean'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', audit:'know', present:'know', templates:'know', library:'know', archive:'know', artifact:'know' } },
+  review: { highlight: ['review','retro','pivot','audit','archive','artifact'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', ralph:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know', clean:'know' } },
 };
 
 // ── State ───────────────────────────────────────────────────────────────

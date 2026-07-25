@@ -19,6 +19,7 @@ After installation, use any skill independently or as a pipeline:
 /cpm:templates (explore and customise artifact templates)
 /cpm:present (transform artifacts for different audiences)
 /cpm:audit (independent codebase health audit — feeds findings into spec/library/quick)
+/cpm:artifact (register published artifacts against the work that produced them)
 ```
 
 `/cpm:consult` and `/cpm:party` both feed into the planning pipeline — consult for focused one-to-one conversations, party for multi-perspective discussions. `/cpm:review` sits between planning and execution — review an epic before or after `/cpm:do`. `/cpm:pivot` amends any artefact mid-flow. `/cpm:archive` cleans up completed artefacts. `/cpm:present` transforms artifacts for stakeholder consumption. `/cpm:templates` helps you explore and customise the output formats.
@@ -297,7 +298,7 @@ The workflow: select a document, describe your changes in natural language, revi
 Transform CPM planning artifacts into audience-appropriate communications. Select source artifacts, choose an audience (executives, engineering team, stakeholders, etc.) and format (memo, slide deck, email, etc.), and get derived content tailored to the readers.
 
 **Input**: One or more CPM artifact file paths, or auto-discovers available artifacts for selection.
-**Output**: `docs/communications/{nn}-{format}-{slug}.md` (auto-numbered)
+**Output**: `docs/communications/{nn}-{format}-{slug}.md` (auto-numbered), optionally alongside a self-contained `.html` version, and optionally published as a shareable hosted page
 
 ```
 /cpm:present docs/specifications/01-spec-customer-portal.md          # transform a spec
@@ -306,6 +307,8 @@ Transform CPM planning artifacts into audience-appropriate communications. Selec
 ```
 
 Content is derived from source artifacts — regenerable when sources change. Multiple presentations from the same sources are encouraged for different audiences.
+
+Both extra outputs are opt-in and confirmed separately. Publishing is confirmed on its own terms every time, because it puts the content on the open web under a URL you can pass on; the URL is written back into the Markdown's `**Artifact**` field so regenerating the communication updates the page already shared rather than minting a new link.
 
 ### `/cpm:templates` — Template Discoverability & Scaffolding
 
@@ -401,6 +404,26 @@ This is the user-driven counterpart to the passive once-per-session safety-net (
 /cpm:clean                                     # list everything, choose what to remove
 /cpm:clean a1b2c3                              # pre-select a session, still confirmed first
 ```
+
+### `/cpm:artifact` — Artifact Register
+
+Keep a durable record of the published artifacts produced alongside a project's CPM work. A published artifact's only handle is its URL, and an unregistered URL exists solely in the transcript of the session that made it — so a page built three weeks ago is effectively lost while still being live.
+
+The register records four things per artifact: **what it is, why it was made, when, and which planning documents it belongs to**. It lives at `docs/artifacts/index.md` as plain Markdown — greppable, diffable, and versioned with the repo — and each associated document gains an `**Artifacts**:` backlink, so the relationship reads from either end.
+
+Skills that publish artifacts register them as part of publishing (`/cpm:present` does this). Use `/cpm:artifact` directly for the ones made ad hoc mid-session, which is most of them.
+
+**Input**: A URL with an optional description, `list`, a search term, or nothing (review flow).
+**Output**: `docs/artifacts/index.md` + `**Artifacts**:` backlinks in the associated documents.
+
+```
+/cpm:artifact https://… auth flow explorer for the client review, from spec 12
+/cpm:artifact                                  # review the register, add / amend / retire
+/cpm:artifact list                             # print it and stop
+/cpm:artifact auth                             # find the auth-related entries
+```
+
+Superseded artifacts are struck through rather than deleted — a register that silently drops entries can't answer "what happened to that page?", which is one of the questions it exists to answer.
 
 ## Compaction Resilience
 

@@ -240,6 +240,8 @@ Tell the user the review file path after saving.
 
 A review's findings, grouped and severity-sorted, read well as a navigable HTML view. Produce one **only on request** — when the user asks for an HTML version of the review (to read or share) — never automatically as part of writing the review file. Follow the shared **HTML Output** convention for the mechanics; this section states the review-specific particulars.
 
+Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
 When requested:
 
 1. Read the saved review Markdown (`docs/reviews/{nn}-review-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.

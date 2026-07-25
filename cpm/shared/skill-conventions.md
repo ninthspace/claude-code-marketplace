@@ -343,6 +343,7 @@ In practice a session runs at one level throughout. The per-skill rows are most 
 | retro | medium | Synthesis over already-structured epic doc fields; categorisation is bounded |
 | present | medium | Artifact transformation with audience selection |
 | archive | low | Mechanical file relocation with user confirmation; the judgement is the user's |
+| artifact | low | Read the register, write a row and its backlinks; the facts come from the user |
 | status | low | Scan-and-report with no implementation |
 | templates | low | List-and-scaffold with no analysis |
 | clean | low | Enumerate session-state files and delete the ones named; every step is confirmed |
@@ -488,6 +489,32 @@ Companion assets are two different things, and they are styled differently:
 - **Deliverable-functionality mockups** — a mockup that represents the **UI of the system being built** (a preview of what the deliverable will look like). These are **system-specific**: the mockup must represent the target system's own design language, *not* CPM2's documentation chrome. They therefore **do not consume, embed, or inherit the shared template** — a producing skill builds the mockup as a standalone HTML file, and the `frontend-design` skill is appropriate here precisely because the design must be bespoke to the target system. The mockup is still **self-contained** (single file, inline CSS/SVG, no external resources, no JS — per the self-contained rule) and is stored at the same companion-asset path, but its styling is the deliverable's rather than the template's.
 
 **Rule of thumb**: if the visual *explains the artifact*, it wears the shared chrome; if the visual *is a preview of the deliverable*, it wears the deliverable's own design and stays clear of the shared template. Faithful renders and `present` communications use the shared template directly.
+
+### Publishing as an artifact
+
+Any HTML output above may additionally be **published** as a hosted, shareable web page using the **Artifact** tool. Publishing is never the storage mechanism — the file written to its storage path above remains the output of record, self-contained and openable offline. Publishing adds a URL that can be passed to someone who does not have the repository.
+
+Skills reference this procedure with: "Follow the shared **Artifact Publishing** procedure."
+
+**Always separately confirmed.** Producing HTML and publishing it are two decisions, and agreement to the first is never agreement to the second. Ask on its own terms, and say in the question what publishing does: the page is hosted on claude.ai, private to the user by default and shareable by them afterwards, and content sent there may be cached or indexed even after the artifact is deleted. Publishing is never offered as a default, and autonomous runs (`cpm:ralph`) never publish.
+
+**What is never published.** A page that presents itself as issued by a real organisation the user does not represent, that contains fabricated records or approvals presented as genuine, or that targets a private individual. Where an output has that shape, keep it local and do not offer publishing. This bites hardest on `present` communications and deliverable-functionality mockups, which are the outputs most likely to carry someone else's branding.
+
+**Availability.** If the Artifact tool is not present in the session, say so plainly and skip — every local output is unaffected. Never treat its absence as a failure of the skill.
+
+**Mechanics**:
+
+1. **Load the `artifact-design` skill first** — the Artifact tool requires it before a page is written.
+2. **Emit the content as a body fragment.** The Artifact tool supplies its own `<!doctype html>`, `<head>`, and `<body>`, so a complete document is the wrong shape: strip those structural tags from the composed output and place its `<style>` block at the top of the fragment. For outputs that wear the shared chrome this is a re-emission of `cpm/assets/html/template.html`, not a fork of it, so the no-forking rule holds unchanged. A deliverable-functionality mockup publishes its own styling the same way.
+3. **Write the fragment to an ephemeral scratch path** — `docs/plans/{skill}-artifact-{nn}-{slug}.html` — then publish that path. It is a build intermediate, not a tracked CPM artifact, and stays out of the storage directories above, whose path contracts describe complete self-contained documents. The path is per-output and deterministic, so re-publishing the same output redeploys to the same URL rather than minting a second one. It is overwritten on each publish and safe to delete.
+4. **Set the page's identity**: a `<title>` matching the artifact, a one-sentence `description`, and a `favicon` kept stable across redeploys of the same output — readers find a tab by its icon, and a changed one reads as a different page.
+
+**Recording is part of publishing, not a follow-up.** As soon as the URL comes back:
+
+- **Register it** in `docs/artifacts/index.md` per the `cpm:artifact` skill's Register format — URL, what it is, the date, the source artifact(s) as the association, and one sentence on why it was published.
+- **Record it on the source artifact** in an `**Artifacts**:` metadata field, so the relationship reads from both ends.
+
+An artifact whose URL exists only in the transcript is one nobody finds again — that is the failure this step exists to prevent, and it is why registration happens at the moment of publishing rather than being left to a later tidy-up. A later session updating the same output passes the recorded URL when publishing; without it, a session that did not itself publish mints a *new* URL and every link already shared goes stale.
 
 ## A Closing Note on Length and Tone
 

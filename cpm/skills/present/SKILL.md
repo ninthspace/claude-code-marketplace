@@ -1,6 +1,6 @@
 ---
 name: present
-description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content. Regenerable when source artifacts change. Triggers on "/cpm:present".
+description: Audience-aware transformation of CPM artifacts. Takes one or more CPM artifacts as input, offers audience and format selection, and produces derived communication content — optionally as styled HTML, and optionally published as a shareable hosted page. Regenerable when source artifacts change. Triggers on "/cpm:present".
 ---
 
 # Audience-Aware Artifact Transformation
@@ -102,13 +102,14 @@ Use this format:
 **Source artifacts**:
 - {path to source artifact 1}
 - {path to source artifact 2}
+**Artifact**: {published URL — omit this field entirely when the communication has not been published}
 
 ---
 
 {Derived content appropriate to audience and format}
 ```
 
-The `**Source artifacts**` field enables regeneration — when source artifacts change, re-running `cpm:present` with the same sources and audience/format selections produces an updated output.
+The `**Source artifacts**` field enables regeneration — when source artifacts change, re-running `cpm:present` with the same sources and audience/format selections produces an updated output. The `**Artifact**` field, when present, is what lets a later session update the published page at its existing URL instead of minting a new one.
 
 After saving, tell the user the document path.
 
@@ -120,7 +121,16 @@ After saving, tell the user the document path.
 
 Tell the user the HTML path.
 
-**Regeneration**: If the user runs `cpm:present` and an existing communication already exists for the same source artifacts, audience, and format, offer to update it in place rather than creating a new file. Use AskUserQuestion to confirm. This applies to both the Markdown and (if produced) the HTML output.
+Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+Two `present`-specific particulars:
+
+- The scratch fragment path is `docs/plans/present-artifact-{nn}-{format}-{slug}.html`. It stays out of `docs/communications/` deliberately — that directory's `{nn}-{format}-{slug}.html` contract describes complete, self-contained documents, and a fragment is neither.
+- The URL is recorded in the communication's own `**Artifact**` field (see the format above) and in the progress file, as well as in the register the shared procedure requires. The `**Artifact**` field is what a later `present` run reads to update the existing page instead of minting a second URL.
+
+The Artifact tool's prohibitions bite hardest on this skill: `present` writes client-facing and executive communications, which are the outputs most likely to carry an organisation's branding. Where a communication presents itself as issued by an organisation the user does not represent, keep it local and do not offer publishing.
+
+**Regeneration**: If the user runs `cpm:present` and an existing communication already exists for the same source artifacts, audience, and format, offer to update it in place rather than creating a new file. Use AskUserQuestion to confirm. This applies to the Markdown, the HTML output (if produced), and the published artifact (if one exists) — for the artifact, "update in place" means republishing to the URL recorded in the `**Artifact**` field, not publishing afresh.
 
 ## Arguments
 
@@ -143,6 +153,7 @@ Follow the shared **Progress File Management** procedure.
 **Skill**: cpm:present
 **Step**: {N} of 4 — {Step Name}
 **Output target**: docs/communications/{nn}-{format}-{slug}.md
+**Artifact URL**: {published URL, or "not published"}
 
 ## Source Artifacts
 {List of selected source artifact paths}
@@ -173,3 +184,4 @@ The "Completed Steps" section grows as steps complete.
 - **Audience dictates tone.** An executive summary is crisp and outcome-focused. An onboarding guide is thorough and explanatory. Let the audience drive every writing decision.
 - **Format dictates structure.** A presentation outline needs slide headings. A changelog needs chronological entries. Follow the format's conventions.
 - **Source traceability enables regeneration.** Always record which artifacts were used so the output can be updated when sources change.
+- **Publishing is a separate decision from producing.** The Markdown is the artifact of record and the local HTML is a portable copy of it; both stay inside the repository. Publishing puts the content on the open web under a URL the user can pass on, so it is confirmed on its own terms every time — and the URL is recorded, because an unrecorded one becomes a stale link the moment the communication is regenerated.

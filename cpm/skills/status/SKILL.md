@@ -139,6 +139,8 @@ The document is **HTML-native** — synthesised directly from the Phase 1 + Phas
 
 Follow the shared **HTML Output** convention for the template mechanics; this phase states only the `status`-specific particulars.
 
+Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
 1. **Consume the shared template** (`cpm/assets/html/template.html`) — substitute the `CPM:` tokens, **never fork the `<style>` block**. Populate: `CPM:TITLE` (e.g. "Project Status — Full Picture"), `CPM:SUBTITLE` (the project name / focus), `CPM:META` (scan date + "generated from a live scan"), `CPM:NAV` (a `.cpm-toc` contents list of in-page anchors to the sections below), `CPM:CONTENT` (the sections), `CPM:FOOTER` (a one-line "ephemeral — regenerated on demand" note).
 2. **Sections** (give each an `id` so the nav anchors resolve):
    - **At a glance (RAG)** — green = complete, amber = in progress, red = blocked/partial, using the template's `.sev-minor` / `.sev-major` / `.sev-critical` / `.sev-info` badges for the colour language. State the headline figure as **"{complete} of {total} epics complete"** — the canonical agreement statement that must match the count the stdout narrative reports.

@@ -210,6 +210,8 @@ Some requirements are inherently visual — a UI screen the spec describes, a la
 
 A companion asset captures *one visual requirement*; a **faithful render** is a navigable HTML view of the **whole spec**. It is produced **only on request** — when the user asks for an HTML version of the spec (to read, share, or review) — never automatically as part of writing the spec. Follow the shared **HTML Output** convention for the mechanics; this section only states the spec-specific particulars.
 
+Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
 When requested:
 
 1. Read the saved spec Markdown (`docs/specifications/{nn}-spec-{slug}.md`) **read-only** — the render generates *from* the Markdown and must never modify or replace it. The Markdown remains the parsed source of truth.

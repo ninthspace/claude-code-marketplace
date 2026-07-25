@@ -358,6 +358,8 @@ When starting implementation of a task, read the relevant epic document first to
 
 `cpm:epics` *writes* epic docs from a spec; the **dependency view** is the inverse — a **read-only HTML projection over the epic docs that already exist**, showing what is ready to pick up versus what is still blocked. It runs **only when requested** (see *Dependency-view mode* under Input), never as part of the production loop. Follow the shared **HTML Output** convention for the template mechanics; this section states only the `epics`-specific particulars.
 
+Any HTML output here can additionally be published as a shareable hosted page — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
 **The epic docs are the read-only source of truth.** This mode parses them but **must never modify, rewrite, or re-save any epic doc** — no Edit/Write to anything under `docs/epics/`. The only file written is the HTML view itself, at a separate path. Mutation of epic docs stays exclusively with `cpm:do`.
 
 1. **Scan all epics** with the general glob `docs/epics/[0-9]*-epic-*.md` (matches both two-part and legacy flat shapes — never narrow this, or legacy epics vanish from the view). Read each **read-only**. From each, parse the epic-level `**Status**` and, for every `##` story, its `**Status**` and `**Blocked by**` fields.
