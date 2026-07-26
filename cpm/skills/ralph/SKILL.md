@@ -39,6 +39,16 @@ If explicit epic paths were provided in arguments, resolve them (expand globs). 
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.
 
+**All three input shapes converge on one resolved list**, and the prompt's variables are derived from that list rather than from the arguments that produced it:
+
+| Variable | Value |
+|---|---|
+| `{epic_count}` | the number of resolved epic files |
+| `{epic_range}` | a human-readable label for the set (e.g. `23 through 26`, or the epic names when there is no range) |
+| `{epic_glob}` | the resolved epic **paths**, space separated, exactly as they will be passed to a command |
+
+`{epic_glob}` is a path list, not a pattern — every shape resolves to files before the prompt is assembled, so the loop never re-expands a glob against a directory that may have changed since launch. It is passed verbatim to `coverage-rollup.sh --epic` in the completion check (Step 2), which is why its form is fixed here rather than left to the assembly step. CPM epic filenames are numbered kebab-case and contain no spaces, so a space-separated list is unambiguous; a path containing a space would need quoting and does not occur.
+
 #### 1b. Strip `[plan]` Tags
 
 Formal plan mode (`EnterPlanMode`) creates an interactive approval gate that stalls autonomous execution. Strip `[plan]` tags from epic docs before launching the loop so `/cpm:do` uses inline planning for all stories.
@@ -76,22 +86,36 @@ Check for evidence of a previous Ralph run:
 3. Use Grep to check the target epic docs' `**Status**:` fields to confirm the current state. Use Grep and Read tools directly.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
 
+#### 1f. Roll-Up Script Resolution
+
+The generated prompt gates its completion promise on `coverage-rollup.sh`'s exit code, so the path to that script has to be in the prompt as an **absolute path resolved here**, not as a variable the loop expands later.
+
+1. Resolve the plugin's `hooks/lib/coverage-rollup.sh` to an absolute path and store it as `{rollup_script}`.
+2. Confirm the file is readable. If it is not, warn the user: "The coverage roll-up script was not found at {path}. The loop will run, but its completion promise will not be script-backed — it would fall back to the model's own judgement, which is what FR8 exists to remove." Use AskUserQuestion with options: "Continue anyway" or "Stop".
+
+**Why resolved here rather than written as `${CLAUDE_PLUGIN_ROOT}`**: the prompt is fed back to the model as a plain user turn by the stop hook, not executed inside a skill, so a plugin-relative variable is not guaranteed to be set when the completion check runs — and an unset one expands to a bare `/hooks/lib/coverage-rollup.sh`, which exists nowhere. That is spec 43's defect exactly: a path built from a variable that is set for hooks and not for the call that uses it, failing silently. Interpolating the resolved path keeps the prompt self-contained, which is what every other `{...}` in the template already does.
+
 ### Step 2: Prompt Assembly
 
 Assemble the ralph-loop prompt as plain text — no markdown, code fences, backticks, or XML tags (the stop hook feeds the prompt back verbatim on each iteration). Interpolate these variables into the template:
 
-- `{epic_count}`, `{epic_range}`, `{epic_glob}` — from Step 1 pre-flight
+- `{epic_count}`, `{epic_range}`, `{epic_glob}` — from Step 1a, which defines each; `{epic_glob}` is a space-separated path list, not a pattern
+- `{rollup_script}` — the absolute path resolved in Step 1f
 - `{max_iterations}` — from arguments or default (50)
 - `{story_filter_clause}`, `{test_runner_clause}`, `{resume_clause}` — include when applicable, omit otherwise
 - `{task_budget_clause}` — "Task budget: {N} tasks, estimate ~2000 tokens per task." Count `###` task headings in target epic docs.
 
 **Template** (written into `.claude/ralph-loop.local.md` body; use `--` for dashes; `ALL_EPICS_COMPLETE` must match `completion_promise` frontmatter):
 
-**Length: 1875 characters**, measured on the template line below before interpolation — the assembled prompt is longer, since the `{...}` placeholders expand at runtime. This is a *measurement*, not a target: every clause is an override without which the loop stalls or drifts, so the figure is not something to cut toward. It was allowed to read "around 1100" against an actual 1,477 for long enough that the drift is now what the number is for. `test-ralph-autonomous-wiring.sh` asserts this figure against the line's actual length, so any edit to the template fails the suite until the figure is updated here. Keep new clauses to a sentence.
+**Length: 2736 characters**, measured on the template line below before interpolation — the assembled prompt is longer, since the `{...}` placeholders expand at runtime. This is a *measurement*, not a target: every clause is an override without which the loop stalls or drifts, so the figure is not something to cut toward. It was allowed to read "around 1100" against an actual 1,477 for long enough that the drift is now what the number is for. `test-ralph-autonomous-wiring.sh` asserts this figure against the line's actual length, so any edit to the template fails the suite until the figure is updated here — it did exactly that when epic 44-03 added the completion-check clause, which is the point of stating a number. Keep new clauses to a sentence.
 
 ```
-Run /cpm:do on epics {epic_range} sequentially ({epic_glob}). Continue to each next epic automatically. Make all decisions autonomously -- choose the most reasonable option for every AskUserQuestion. Use inline planning for all stories. Task complete means: all tagged criteria ([unit]/[integration]/[feature]) have passing test results, and all [manual] criteria have self-assessment lines in the progress file. A failure (for the 3-strike skip rule) is a test command exit code != 0 after a code change attempt -- tool errors and permission denials are retries, not failures. If acceptance criteria are ambiguous and completion cannot be determined, mark the story Blocked -- criteria ambiguous and continue to the next story. At the do retro consumption gate, do not block -- branch by category: auto-apply safe categories (codebase discoveries, patterns worth reusing), recording Retro applied: {nn} {category} applied (autonomous, safe-category) -- {what it did} and carrying each as context; defer the rest (scope surprises, criteria gaps, complexity underestimates, testing gaps) as Retro applied: {nn} {category} deferred (autonomous run, unreviewed); smooth deliveries informational; never auto-retire. List both applied and deferred observations in the run summary. At the do Change Type Decision gate, do not block and do not pick one of its options -- take do's autonomous branch: inline edit, retro observation, or amend the open epic doc so later stories inherit the fix; never /cpm:pivot. Amend only on a citable contradiction, and record a Pivot deferred breadcrumb for each artefact left behind. Report amendments separately from the deferred observations. Commit after each completed story. Keep all commits local.{story_filter_clause}{test_runner_clause}{task_budget_clause}{resume_clause} When the last specified epic completes, output ALL_EPICS_COMPLETE.
+Run /cpm:do on epics {epic_range} sequentially ({epic_glob}). Continue to each next epic automatically. Make all decisions autonomously -- choose the most reasonable option for every AskUserQuestion. Use inline planning for all stories. Task complete means: all tagged criteria ([unit]/[integration]/[feature]) have passing test results, and all [manual] criteria have self-assessment lines in the progress file. A failure (for the 3-strike skip rule) is a test command exit code != 0 after a code change attempt -- tool errors and permission denials are retries, not failures. If acceptance criteria are ambiguous and completion cannot be determined, mark the story Blocked -- criteria ambiguous and continue to the next story. At the do retro consumption gate, do not block -- branch by category: auto-apply safe categories (codebase discoveries, patterns worth reusing), recording Retro applied: {nn} {category} applied (autonomous, safe-category) -- {what it did} and carrying each as context; defer the rest (scope surprises, criteria gaps, complexity underestimates, testing gaps) as Retro applied: {nn} {category} deferred (autonomous run, unreviewed); smooth deliveries informational; never auto-retire. List both applied and deferred observations in the run summary. At the do Change Type Decision gate, do not block and do not pick one of its options -- take do's autonomous branch: inline edit, retro observation, or amend the open epic doc so later stories inherit the fix; never /cpm:pivot. Amend only on a citable contradiction, and record a Pivot deferred breadcrumb for each artefact left behind. Report amendments separately from the deferred observations. Commit after each completed story. Keep all commits local.{story_filter_clause}{test_runner_clause}{task_budget_clause}{resume_clause} When the last specified epic completes, run bash {rollup_script} --epic {epic_glob} --verdict and let its exit code decide: on 0, print one line reading COVERAGE: N of M rows marked verified across K matrices -- aggregation, not verification, since every mark was placed by cpm:do on its own work, and it counts rows in these epics, not requirements in a spec, so it cannot say a spec is delivered -- then output ALL_EPICS_COMPLETE; on 3, do not output it, name the unverified rows the script emitted and keep working; on any other code, do not output it and say the check could not run. Never work that verdict out yourself from the records, and never output ALL_EPICS_COMPLETE without having run that command in the same turn. Put the counts on their own line beside the promise, never inside the promise tag the stop hook matches -- it compares that text exactly, so anything added inside it stops the loop from ever ending.
 ```
+
+**What the completion line measures, and what it cannot.** The loop runs `coverage-rollup.sh` in **epic scope**, so the number it prints is rows marked verified out of rows present, across the matrices for the epics it was given. Every one of those `✓` marks was placed by `cpm:do` on its own work, which is why the line says **aggregation, not verification**: it reports what this run claimed, counted up, and adds no independent evidence. A wall of green means every row was marked, not that anything works.
+
+The measurement that would discriminate is the **untraced count** — requirements in a spec with no matrix row anywhere claiming them — and epic scope cannot produce it, because it has no requirement list to compare against. That is `--spec` scope's measurement, which `cpm:status` presents; **`cpm:ralph` has no spec-scope promise, and building one is deferred**. So a passing completion line here means "the epics I was pointed at have no unverified rows left", never "the spec is delivered". A spec with a requirement no epic ever covered produces the same clean line.
 
 ### Step 3: State File Write and Launch
 
@@ -245,10 +269,13 @@ This table records how each `cpm:do` gate is handled under an autonomous run. Mo
 | Step 5 — Unmet acceptance criteria | Ask user: continue working or mark complete | Continue working; skip after stuck threshold |
 | Step 5 — Coverage matrix edit failure | Ask user: continue or stop | Continue without recording proof |
 | Step 8 — Next epic check | Ask user: continue to next epic or stop | Continue to next epic automatically |
+| Step 8 — Completion of the last epic | No `cpm:do` gate; this is the loop's own exit | Run `coverage-rollup.sh --epic {epic_glob} --verdict` and emit `ALL_EPICS_COMPLETE` only on exit 0 — the template carries the operative instruction |
 | Graceful Degradation — Test command fails | Ask user: new command, continue, or stop | Continue without tests |
 | Graceful Degradation — No test + TDD | Ask user: provide runner or acknowledge | Fall back to standard workflow |
 
 **Stale-Progress Check is guard-suppressed, not prompt-overridden**: unlike the `AskUserQuestion` gates below it, the Stale-Progress Check safety-net (now part of every `/cpm:*` skill's startup) is silenced *structurally* — its shared guard returns `SUPPRESS` whenever `.claude/ralph-loop.local.md` is present. It therefore needs no autonomous instruction in the generated prompt and can never pause the loop; the table row records it so a maintainer adding a gate here knows guard-level suppression is a valid override mechanism, not only the prompt instruction.
+
+**The completion row is a record, not the mechanism.** Its last cell says so on purpose: the stop hook feeds the *template line* back verbatim on every iteration and the loop never reads this table, so an instruction that lives only here documents a behaviour the loop does not have (retro 21). The row exists because the table is where a reader looks for what the loop does at each decision point, and the loop's own exit is one — but the template is the site that acts.
 
 **Retro generation is not a gate**: retro *generation* at `cpm:do` Step 8 writes the retro file automatically (no `AskUserQuestion`), so it runs unchanged under autonomous execution — only the *consumption* gate above needs an override. Generation still fires at epic completion during a Ralph run.
 

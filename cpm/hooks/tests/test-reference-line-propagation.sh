@@ -34,6 +34,19 @@ CANONICAL='An artifact can be published from this output on request — follow t
 # Every skill required to carry the line: the 3 pivoted (41-02) plus the R4 sites.
 SKILLS="discover brief architect spec epics review audit retro status present"
 
+# How many times each skill carries it. One per *publishable output*, not one per skill:
+# `status` has two — the project-wide full picture (Phase 4) and the spec coverage page
+# (Phase 3b, epic 44-02) — and they are separately requested, separately confirmed, and
+# published to separate URLs. Collapsing them to one site would make the second page's
+# publishing implicitly covered by the first's confirmation, which is the thing the line
+# exists to prevent. Any skill not listed here carries it once.
+sites_expected() {
+  case "$1" in
+    status) echo 2 ;;
+    *) echo 1 ;;
+  esac
+}
+
 # The looser pattern that matches *any* phrasing referencing the procedure. Finding a
 # line that matches this but is not CANONICAL is exactly the variant-phrasing failure.
 REF_PATTERN='follow the shared \*\*Artifact Publishing\*\* procedure'
@@ -73,17 +86,18 @@ echo "============================================="
 # --- Criterion: all ten skills carry the canonical reference line ---
 
 for skill in $SKILLS; do
-  test_start "$skill carries the canonical line exactly once"
+  want=$(sites_expected "$skill")
+  test_start "$skill carries the canonical line at each of its $want publishable output(s)"
   file="$SKILLS_DIR/$skill/SKILL.md"
   if [ ! -f "$file" ]; then
     test_fail "Expected skill at $file"
     continue
   fi
   count=$(grep -cxF "$CANONICAL" "$file")
-  if [ "$count" -eq 1 ]; then
+  if [ "$count" -eq "$want" ]; then
     test_pass
   else
-    test_fail "expected 1 occurrence, found $count"
+    test_fail "expected $want occurrence(s), found $count"
   fi
 done
 
@@ -96,8 +110,13 @@ done
 # this suite that has to be maintained by hand: which skills produce something worth
 # publishing is a judgement with no signal in the repository to read it from, so a skill
 # joining or leaving the set edits this line. Spec 41 set it at 10; `inspect` (spec 42 R8)
-# is the first addition since. The count still earns its place — without it, a site that
+# was the first addition since, and `status`'s second publishable output (the spec coverage
+# page, epic 44-02) the next. The count still earns its place — without it, a site that
 # silently lost the line would leave `sort -u` reporting one unique string and passing.
+#
+# It counts *sites*, not skills, which is why `status` contributes two. It stays a literal
+# rather than a sum over `sites_expected`: deriving it from the roster it is meant to guard
+# would make it agree with itself and catch nothing.
 
 UNIQUE=$(ref_lines "$SKILLS_DIR" | sort -u)
 TOTAL=$(ref_lines "$SKILLS_DIR" | grep -c .)
@@ -109,9 +128,9 @@ else
   test_fail "expected 1 unique string, got:"$'\n'"$UNIQUE"
 fi
 
-EXPECTED_SITES=11
+EXPECTED_SITES=12
 
-test_start "The one unique string is the canonical line, once per publishing skill"
+test_start "The one unique string is the canonical line, once per publishable output"
 # One claim, two halves: the right count of the *wrong* string is not a pass, and the
 # canonical string at one site fewer than the roster is not either.
 if [ "$UNIQUE" = "$CANONICAL" ] && [ "$TOTAL" -eq "$EXPECTED_SITES" ]; then

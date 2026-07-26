@@ -73,7 +73,13 @@ assert_contains "$PHASE4" "Artifact Publishing"
 
 test_start "Phase 4 carries the canonical reference line byte-identically"
 CANON='An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.'
-HITS=$(grep -Fc "$CANON" "$SKILL")
+# Counted within the Phase 4 slice, which is what this assertion has always claimed to
+# check. It counted the whole file until epic 44-02 added a second publishable output —
+# the spec coverage page in Phase 3b — at which point the file-wide count started
+# reporting 2 and the failure pointed at Phase 4, which had not changed. A file-wide
+# count passing for a Phase 4 claim was luck, not coverage: it would equally have passed
+# had the line sat only in Phase 3b.
+HITS=$(printf '%s\n' "$PHASE4" | grep -Fc "$CANON")
 assert_equals "1" "$HITS"
 
 test_start "The superseded reference line is gone"

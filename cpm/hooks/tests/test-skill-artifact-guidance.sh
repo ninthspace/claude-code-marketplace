@@ -73,18 +73,26 @@ for skill in $NINE; do
   file="$SKILLS_DIR/$skill/SKILL.md"
 
   test_start "$skill's guidance sits with the reference line"
-  ref_ln=$(grep -nxF "$CANONICAL" "$file" | head -1 | cut -d: -f1)
-  sent_ln=$(grep -nF "For \`$skill\` the artifact is" "$file" | head -1 | cut -d: -f1)
-  if [ -z "$ref_ln" ] || [ -z "$sent_ln" ]; then
-    test_fail "reference line at '${ref_ln:-none}', sentence at '${sent_ln:-none}'"
+  # Every reference line, not the first. A skill with two publishable outputs carries the
+  # line twice — `status` gained a second site in epic 44-02, for the spec coverage page —
+  # and each site needs its own guidance. Taking `head -1` on both sides would let one
+  # site's sentence stand in for the other's, which is precisely the drift this checks for.
+  ref_lns=$(grep -nxF "$CANONICAL" "$file" | cut -d: -f1)
+  sent_lns=$(grep -nF "For \`$skill\` the artifact is" "$file" | cut -d: -f1)
+  if [ -z "$ref_lns" ] || [ -z "$sent_lns" ]; then
+    test_fail "reference lines '${ref_lns:-none}', sentences '${sent_lns:-none}'"
     continue
   fi
   # One blank line between them. Adjacency is the claim: guidance placed elsewhere in
   # the file is guidance a reader arriving via the reference line never sees.
-  if [ "$sent_ln" -eq $((ref_ln + 2)) ]; then
+  orphaned=""
+  for ref_ln in $ref_lns; do
+    printf '%s\n' "$sent_lns" | grep -qx "$((ref_ln + 2))" || orphaned="$orphaned $ref_ln"
+  done
+  if [ -z "$orphaned" ]; then
     test_pass
   else
-    test_fail "sentence at line $sent_ln, reference line at $ref_ln (expected $((ref_ln + 2)))"
+    test_fail "reference line(s) at$orphaned have no guidance sentence two lines below"
   fi
 done
 

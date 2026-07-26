@@ -16,10 +16,12 @@ This is a read-only reconnaissance skill. It gathers information and reports it.
 If `$ARGUMENTS` is provided, use it as focus context:
 
 - If it's a **file path** (e.g. `docs/epics/02-epic-auth.md`), focus the report on that specific artifact and its related context.
+- If that path is a **spec** (under `docs/specifications/`), the report additionally carries the spec coverage roll-up — see **Phase 3b**. That is the only trigger: the roll-up is spec-scoped, and no other focus produces it.
 - If it's a **description** (e.g. "what's the state of authentication work?"), use it to guide which parts of the report to emphasise.
 - If it **requests the full picture** (e.g. contains `dashboard`, `artifact`, "full picture", "share it", or "open it in a browser"), produce the stdout narrative as usual **and** offer the full-picture artifact (Phase 4). A focus path/description still applies — it shapes both outputs. `html` is no longer a trigger word: `status` produces no HTML file, so a request phrased that way is asking about a capability that no longer exists — say what is produced instead rather than silently treating it as an artifact request.
+- **When both apply** — a spec path *and* a page request — there are two different pages, so ask which is wanted rather than choosing: the spec coverage page (Phase 3b) or the project-wide full picture (Phase 4). Offering one is not offering the other, and publishing one is never confirmation for the other.
 
-If no arguments are given, produce a full project status report covering all CPM artifacts and recent activity. Do **not** offer the artifact unless it is requested.
+If no arguments are given, produce a full project status report covering all CPM artifacts and recent activity. Do **not** offer either artifact unless it is requested.
 
 ## State Management
 
@@ -28,7 +30,8 @@ If no arguments are given, produce a full project status report covering all CPM
 **The optional artifact does not change that.** The page is regenerated from a live scan on each request; it is a view, not stored state.
 
 - **Default status run** (no artifact requested): nothing is written at all — stdout only.
-- **Artifact requested** (Phase 4): publishing composes a body fragment at the shared convention's scratch path, `docs/plans/status-artifact-full-picture.html`. That file is a **build intermediate**, not an output — overwritten on each publish and safe to delete. `status` carries no `{nn}`, having no numbered artifact of its own; the slug is fixed so re-publishing redeploys to the same URL rather than minting a second one.
+- **Artifact requested** (Phase 4): publishing composes a body fragment at the shared convention's scratch path, `docs/plans/status-artifact-full-picture.html`. That file is a **build intermediate**, not an output — overwritten on each publish and safe to delete. The project-wide picture carries no `{nn}`, having no numbered artifact behind it; the slug is fixed so re-publishing redeploys to the same URL rather than minting a second one.
+- **Spec coverage page requested** (Phase 3b): the same mechanics at `docs/plans/status-artifact-{nn}-{slug}.html`, numbered and slugged from the **spec** in focus. This one *does* carry an `{nn}`, because it is scoped to a numbered artifact — which is what keeps two specs' roll-ups on two URLs instead of overwriting each other. It is a separate page from the full-picture artifact, requested and confirmed separately; neither implies the other.
 - **The register row is the exception, and it is deliberate.** Publishing writes a row to `docs/artifacts/index.md` as part of the same step. It is the one durable thing a `status` run leaves behind, and it is what makes a published URL findable later. This does not make `status` stateful in the sense the read-only guarantee protects: it appends to the register, and touches no scanned artifact.
 
 The user must ask for the artifact at all — it never appears on the default path — and publishing is separately confirmed on top of that.
@@ -39,7 +42,7 @@ Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill 
 
 ## Process
 
-Work through Phases 1–3 sequentially: each gathers data, and Phase 3 synthesises everything into the report. Phase 4 is optional and runs only on request.
+Work through Phases 1–3 sequentially: each gathers data, and Phase 3 synthesises everything into the report. Phase 3b runs only when the focus argument is a spec path. Phase 4 is optional and runs only on request.
 
 ### Phase 1: Artifact Inventory Scan
 
@@ -130,6 +133,62 @@ If the project has active work (in-progress epics or sessions), lead with that �
 | Uncommitted changes | "You have uncommitted changes — consider committing before starting new work" |
 
 Multiple recommendations can apply simultaneously. List them in priority order — the most impactful action first.
+
+### Phase 3b: Spec Coverage Roll-Up (only when the focus is a spec)
+
+This phase runs **only when `$ARGUMENTS` resolves to a path under `docs/specifications/`**. On every other run — no arguments, an epic path, a description — skip it entirely. It adds a section to the report; it changes nothing about Phases 1–3, whose project-wide view is produced and printed exactly as before.
+
+It answers a question the project-wide view cannot: **is this spec fully delivered?** Coverage lives per-epic — `cpm:epics` writes one matrix per epic and `cpm:do` fills its `✓` marks — and no artefact spans a spec's epics. Answering it by hand means opening every matrix and diffing them by eye.
+
+**Run the script. Never compute this yourself.**
+
+```
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/coverage-rollup.sh" --spec "${SPEC_PATH}"
+```
+
+where `${SPEC_PATH}` is the spec the focus argument resolved to. Do **not** glob for matrices, read `**Source spec**` fields, match labels, or derive states in this skill. The union, the matching and the state derivation live in one place, and a second implementation here would be free to disagree with the one `cpm:ralph` uses. `cpm:clean` enumerated files itself and reported an empty inventory on every run for months; the fix was a script plus a skill that never enumerates.
+
+The script resolves the project root itself. `CLAUDE_PROJECT_DIR` is set for hooks but **not** for the Bash calls a skill issues, so pass no `$CLAUDE_PROJECT_DIR`-derived path — the invocation above is written to work as it stands.
+
+**On a non-zero exit, report what failed and stop.** The message on stderr names the file that could not be read. A non-zero exit means the computation did not complete, so there is nothing to render and nothing to conclude: say the roll-up could not be produced and why. Never fall back to a partial reading of the matrices by hand — that is the reimplementation this phase exists to avoid.
+
+It emits tab-separated records, one per line, with the record type in field 1:
+
+| Type | Fields |
+|---|---|
+| `MATRIX` | path, source-spec |
+| `REQ` | label, MoSCoW heading, verbatim requirement text |
+| `STATE` | label, MoSCoW heading, `delivered` \| `in-progress` \| `untraced` |
+| `EXCLUDED` | label, MoSCoW heading — a Won't Have requirement, ruled out rather than missing |
+| `SUMMARY` | scope, requirements, untraced, delivered, in-progress |
+| `ROW` | matrix path, base label, label, covered by, `verified` \| `unverified` |
+| `CRITERION` | matrix path, label, covered by, `verified` \| `unverified` — a story-originated row, with no requirement behind it |
+
+**Render it like this:**
+
+1. **Untraced requirements first**, before anything else in the section — including before the summary counts. This is the load-bearing measurement and the reader's real question is "what did I ask for that isn't there". A requirement is untraced when no matrix row mentions it, which means the breakdown missed it: it is a gap in the plan, not slow progress. If there are none, say so in one line.
+2. **Then the remaining requirements, grouped under the spec's own MoSCoW headings** — Must Have, Should Have, Could Have, then Non-Functional — in the order the spec lists them. Take each heading from the `REQ` record's second field; do not invent an ordering or collapse the groups.
+3. **Quote each requirement's verbatim text**, the third field of its `REQ` record, exactly as the spec wrote it. That text is what a stakeholder actually asked for, and paraphrasing it here is how the thing that was asked for stops matching the thing that was built.
+4. **Show each requirement's state** — *delivered*, *in progress*, or *untraced*. Never a proportion: a requirement with four of five rows verified is *in progress*, not 80% delivered.
+5. **List Won't Have requirements separately**, from the `EXCLUDED` records, as ruled out rather than outstanding.
+6. **Close with the `SUMMARY` counts.**
+
+**Say what the `✓` marks mean, wherever this section shows them.** They are **aggregation, not verification**. Every `✓` was placed by `cpm:do` on its own work; unioning them reports what `do` claimed, more conveniently, and adds no independent evidence. A wall of green must not be read as confirmation that anything works. The untraced count is the part of this section that discriminates — the spec's requirement list is written by a human and the matrices are generated later from it, so a gap between them is a real finding rather than a foregone one.
+
+#### The stakeholder page (on request only)
+
+An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.
+
+For `status` the artifact is here the one page that spans a spec's epics: every requirement a stakeholder asked for, with its state and the matrix rows behind it, in a form that can be handed to someone who has no repository and no way to open twenty coverage matrices. The requirement text a stakeholder used survives to a `✓` only inside each matrix's verbatim column, and no single document currently spans them. That justification is also the test for anything else the page might carry — as with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
+
+**Render it from the same records, by the same rules.** The page shows the output of the one invocation above — the same `MATRIX`, `REQ`, `STATE`, `EXCLUDED`, `SUMMARY`, `ROW` and `CRITERION` records the section renders — and follows rendering rules 1–6 above, read from there rather than repeated here. The two the reader will notice first are rules 1 and 2: untraced requirements before anything else, then the spec's own MoSCoW headings in the spec's order. Do not re-run the script for the page and do not restate the rules alongside it — a second run could disagree with the section the reader just read, and a second statement of a rule is the thing that drifts from it. If the section was not produced — the phase skipped, or the script exited non-zero — there is no page to publish either.
+
+**Carry the aggregation statement onto the page.** The `✓` marks mean the same thing there as they do in the section, and a page is the artefact most likely to be read by someone who was not in the session and did not see it said. This is the site FR7 is most concerned with.
+
+**Mechanics** follow the shared procedure. Two points are specific here:
+
+- The scratch path is `docs/plans/status-artifact-{nn}-{slug}.html`, where `{nn}` and `{slug}` come from the **spec** — the page is spec-scoped, so re-publishing the roll-up for one spec redeploys to that spec's URL rather than colliding with another's. This is a different page from Phase 4's full-picture artifact, which is project-wide and carries no `{nn}`.
+- **The register row is written; no `**Artifacts**:` backlink is.** Publishing records the URL in `docs/artifacts/index.md` per the shared convention, naming the spec as the source artifact — so the association is recorded, from the register's end. The convention also asks for a backlink on the source artifact, and this skill does not write one: the spec is a file `status` *scanned*, and writing to a scanned artifact would break the read-only guarantee stated in **Guidelines** and **State Management**. The cost is that the relationship reads from one end only, which is why the register row is not optional.
 
 ### Phase 4: Optional Full-Picture Artifact (on request only)
 
