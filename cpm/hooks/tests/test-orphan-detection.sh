@@ -35,7 +35,10 @@ setup_project_dir() {
 run_hook() {
   local project_dir="$1"
   local stdin_input="$2"
-  echo "$stdin_input" | CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT"
+  # The hook passes the classifier's stderr through, and the classifier now
+  # reports its resolved project root there. These tests assert on hook stdout,
+  # so the diagnostic is dropped to keep the suite output readable.
+  echo "$stdin_input" | CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT" 2>/dev/null
 }
 
 create_progress_file() {
@@ -205,5 +208,28 @@ OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"
 STALE_SECTION=$(echo "$OUTPUT" | sed -n '/STALE PROGRESS FILES/,$p')
 assert_not_contains "$STALE_SECTION" "rm "
 assert_not_contains "$STALE_SECTION" "rm -"
+
+# --- CLAUDE_PROJECT_DIR unset (degradation, not resolution) ---
+#
+# session-start.sh is a hook, so Claude Code always sets CLAUDE_PROJECT_DIR for
+# it — the variable is genuinely absent only for the Bash calls a /cpm:* skill
+# issues, which is why the helpers now resolve their own root (spec 43, NFR3
+# leaves the hooks themselves untouched). What matters for this suite is that
+# the absent-variable case degrades quietly rather than resurrecting another
+# session's file as active state. Nothing here exports the variable.
+
+test_start "With CLAUDE_PROJECT_DIR unset the hook still exits cleanly"
+PROJECT=$(setup_project_dir)
+create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+run_without_env CLAUDE_PROJECT_DIR -- bash "$HOOK_SCRIPT" \
+  <<< '{"session_id":"current-session","source":"startup"}' >/dev/null 2>&1
+assert_equals "0" "$?"
+
+test_start "With CLAUDE_PROJECT_DIR unset no other-session file is injected as active state"
+PROJECT=$(setup_project_dir)
+create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
+OUTPUT=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$HOOK_SCRIPT" \
+  <<< '{"session_id":"current-session","source":"startup"}' 2>/dev/null)
+assert_not_contains "$OUTPUT" ".cpm-progress-old-session.md"
 
 test_summary

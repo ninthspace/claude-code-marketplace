@@ -51,21 +51,24 @@ setup_shared_fixture() {
   echo "$project_dir"
 }
 
+# The hooks pass the classifier's stderr through, and the classifier now reports
+# its resolved project root there. These tests assert on hook stdout, so the
+# diagnostic is dropped to keep the suite output readable.
 run_startup() {
   local project_dir="$1" session_id="$2"
-  echo "{\"session_id\":\"$session_id\",\"source\":\"startup\"}" | CLAUDE_PROJECT_DIR="$project_dir" bash "$STARTUP_HOOK"
+  echo "{\"session_id\":\"$session_id\",\"source\":\"startup\"}" | CLAUDE_PROJECT_DIR="$project_dir" bash "$STARTUP_HOOK" 2>/dev/null
 }
 
 run_compact() {
   local project_dir="$1" session_id="$2" source="$3"
-  echo "{\"session_id\":\"$session_id\",\"source\":\"$source\"}" | CLAUDE_PROJECT_DIR="$project_dir" bash "$COMPACT_HOOK"
+  echo "{\"session_id\":\"$session_id\",\"source\":\"$source\"}" | CLAUDE_PROJECT_DIR="$project_dir" bash "$COMPACT_HOOK" 2>/dev/null
 }
 
 # --- Ground truth: the helper classifies the shared fixture ---
 
 test_start "Helper classifies the shared fixture: CUR=CURRENT, fresh=FRESH, stale=STALE"
 PROJECT=$(setup_shared_fixture)
-RECORDS=$(CPM_SESSION_ID="$CUR_ID" bash "$CLASSIFIER" "$PROJECT/docs/plans")
+RECORDS=$(CPM_SESSION_ID="$CUR_ID" bash "$CLASSIFIER" "$PROJECT/docs/plans" 2>/dev/null)
 CUR_CLASS=$(echo "$RECORDS" | grep -F ".cpm-progress-${CUR_ID}.md" | cut -f1)
 FRESH_CLASS=$(echo "$RECORDS" | grep -F ".cpm-progress-${FRESH_ID}.md" | cut -f1)
 STALE_CLASS=$(echo "$RECORDS" | grep -F ".cpm-progress-${STALE_ID}.md" | cut -f1)
@@ -128,5 +131,53 @@ if echo "$STARTUP_OUT" | grep -qF "BODY-CUR-MARKER" && echo "$COMPACT_OUT" | gre
 else
   test_fail "Both hooks should inject the CURRENT file body"
 fi
+
+# --- The classifier reaches the same fixture from skill context ---
+#
+# Everything above runs the classifier the way the hooks do: explicit state dir,
+# CLAUDE_PROJECT_DIR set. A /cpm:* skill calls it with neither. This case must
+# not export the variable — the unset environment is the requirement.
+
+test_start "Classifier reaches the shared fixture with no argument and CLAUDE_PROJECT_DIR unset"
+PROJECT=$(cd "$(setup_shared_fixture)" && pwd -P)
+RECORDS=$( cd "$PROJECT" && export CPM_SESSION_ID="$CUR_ID" \
+    && run_without_env CLAUDE_PROJECT_DIR -- bash "$CLASSIFIER" 2>/dev/null )
+assert_equals "CURRENT" "$(echo "$RECORDS" | grep -F ".cpm-progress-${CUR_ID}.md" | cut -f1)"
+
+# --- Dual path: one project root, both call shapes, same docs/plans ---
+#
+# The hook arm (variable set, explicit state dir) and the skill arm (variable
+# absent, no argument) must land on the same directory. "Both locate the same
+# docs/plans" is only worth asserting once the two arms are known to be
+# genuinely different and each to have located something — otherwise it passes
+# by comparing one empty result to another, or one arm to itself. The four
+# assertions below establish that before the comparison is made.
+
+DUAL=$(cd "$(setup_shared_fixture)" && pwd -P)
+
+test_start "dual-path: the hook arm really does run with CLAUDE_PROJECT_DIR set"
+PROBE=$(CLAUDE_PROJECT_DIR="$DUAL" bash -c 'printf "%s" "${CLAUDE_PROJECT_DIR+set}"')
+assert_equals "set" "$PROBE"
+
+test_start "dual-path: the skill arm really does run with CLAUDE_PROJECT_DIR unset"
+PROBE=$(run_without_env CLAUDE_PROJECT_DIR -- bash -c 'printf "%s" "${CLAUDE_PROJECT_DIR+set}"')
+assert_equals "" "$PROBE"
+
+test_start "dual-path: the hook-context call locates a progress file"
+HOOK_PATH=$(CPM_SESSION_ID="$CUR_ID" CLAUDE_PROJECT_DIR="$DUAL" bash "$CLASSIFIER" "$DUAL/docs/plans" 2>/dev/null \
+  | grep -F ".cpm-progress-${CUR_ID}.md" | cut -f2)
+if [ -n "$HOOK_PATH" ]; then test_pass; else test_fail "hook-context call located nothing"; fi
+
+test_start "dual-path: the skill-context call locates a progress file"
+SKILL_PATH=$( cd "$DUAL" && export CPM_SESSION_ID="$CUR_ID" \
+    && run_without_env CLAUDE_PROJECT_DIR -- bash "$CLASSIFIER" 2>/dev/null \
+    | grep -F ".cpm-progress-${CUR_ID}.md" | cut -f2 )
+if [ -n "$SKILL_PATH" ]; then test_pass; else test_fail "skill-context call located nothing"; fi
+
+test_start "dual-path: both arms locate the same docs/plans"
+assert_equals "$HOOK_PATH" "$SKILL_PATH"
+
+test_start "dual-path: the shared path is the fixture's own docs/plans"
+assert_equals "$DUAL/docs/plans/.cpm-progress-${CUR_ID}.md" "$HOOK_PATH"
 
 test_summary

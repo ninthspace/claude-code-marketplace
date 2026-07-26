@@ -9,7 +9,9 @@
 #
 # Usage:
 #   CPM_SESSION_ID=<id> bash progress-classify.sh [STATE_DIR] [MODE]
-#   (STATE_DIR defaults to "$CLAUDE_PROJECT_DIR/docs/plans")
+#   (STATE_DIR defaults to "<project root>/docs/plans", where the root comes
+#    from lib/resolve-project-root.sh — the same chain the guard uses, so the
+#    two can never disagree about which docs/plans they are looking at)
 #   (MODE defaults to "progress"; "list-all" also emits records for
 #    .cpm-compact-summary-{id}.md companion files — used by /cpm:clean)
 #
@@ -36,7 +38,18 @@
 # STALE; younger ones are FRESH. Overridable via the environment for testing.
 CPM_STALE_THRESHOLD_DAYS="${CPM_STALE_THRESHOLD_DAYS:-3}"
 
-STATE_DIR="${1:-$CLAUDE_PROJECT_DIR/docs/plans}"
+LIB_DIR="${0%/*}"
+[ "$LIB_DIR" = "$0" ] && LIB_DIR="."
+. "$LIB_DIR/resolve-project-root.sh"
+
+# An unresolvable root leaves nothing to glob. The classifier never blocks, so
+# it reports the failure on stderr and exits cleanly with no records rather than
+# globbing a bogus path and emitting whatever happens to match.
+if ! cpm_resolve_project_root "progress-classify"; then
+  exit 0
+fi
+
+STATE_DIR="${1:-$CPM_PROJECT_ROOT/docs/plans}"
 MODE="${2:-progress}"
 
 # Cross-platform mtime in epoch seconds: BSD/macOS `stat -f %m`, GNU/Linux

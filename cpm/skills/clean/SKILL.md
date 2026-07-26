@@ -25,8 +25,10 @@ Parse `$ARGUMENTS`:
 Call the shared classifier in **list-all mode** — it is the single source of truth for the file inventory and labels, so this skill never globs or `stat`s files itself:
 
 ```
-CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/progress-classify.sh" "$CLAUDE_PROJECT_DIR/docs/plans" list-all
+CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/progress-classify.sh" "" list-all
 ```
+
+The empty first argument is deliberate: it lets the classifier resolve the project root itself (`$CLAUDE_PROJECT_DIR` → `git rev-parse --show-toplevel` → `$PWD`) while still placing `list-all` in the mode slot. **Do not** pass `"$CLAUDE_PROJECT_DIR/docs/plans"` here. That variable is set for hooks, which Claude Code spawns, but not for the Bash calls a skill issues — so the argument expanded to a bare `/docs/plans`, and this step reported an empty inventory on every run.
 
 It emits one tab-delimited record per file — `CLASSIFICATION<TAB>PATH<TAB>SKILL<TAB>PHASE<TAB>AGE_SECONDS<TAB>AGE_LABEL` — for **both** `.cpm-progress-*.md` files and `.cpm-compact-summary-*.md` companions. Apply **no** staleness filter and consult **no** sentinel: `CURRENT`, `FRESH`, and `STALE` files are all listed and all eligible for deletion. The classification is shown only as context, not as a gate.
 

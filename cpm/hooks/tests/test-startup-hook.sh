@@ -28,7 +28,10 @@ setup_project_dir() {
 run_hook() {
   local project_dir="$1"
   local stdin_input="$2"
-  echo "$stdin_input" | CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT"
+  # The hook passes the classifier's stderr through, and the classifier now
+  # reports its resolved project root there. These tests assert on hook stdout,
+  # so the diagnostic is dropped to keep the suite output readable.
+  echo "$stdin_input" | CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT" 2>/dev/null
 }
 
 create_progress_file() {
@@ -148,7 +151,7 @@ run_hook_with_env() {
   local project_dir="$1"
   local stdin_input="$2"
   shift 2
-  echo "$stdin_input" | env "$@" CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT"
+  echo "$stdin_input" | env "$@" CLAUDE_PROJECT_DIR="$project_dir" bash "$HOOK_SCRIPT" 2>/dev/null
 }
 
 test_start "Outputs CPM_USER_NAME from env var when set"

@@ -225,23 +225,6 @@ For a given artifact type with directory `docs/{type}/` and filename pattern `{n
 - **Active contains `99-…` and `100-…`, archive contains `50-…`**: next number is `101`. Integer comparison correctly yields `max(99, 100, 50) + 1 = 101`.
 - **Archive directory does not exist** (fresh project): the archive-side glob returns empty and the lookup continues using only the active directory.
 
-## Change Type Decision
-
-When a change to existing planning artefacts is needed — discovered mid-execution, raised during review, or surfaced as a separate intent — three response patterns exist. Use this decision matrix to pick one.
-
-| Situation | Action | Mechanism |
-|---|---|---|
-| Wording fix, typo, single-criterion clarification — **no scope change** | Inline edit (with breadcrumb) | Edit the criterion in place, record an `**Inline change**:` field |
-| Scope change, integration boundary, missing requirement that affects ≥2 stories or any downstream document | Pivot the upstream artefact | `/cpm:pivot {path}` |
-| Pattern noticed, codebase discovery, complexity insight — **no scope change** | Retro observation only | `**Retro**:` field on the current story (per `cpm:do` Step 6 Part B) |
-| Both scope change **and** lesson | Pivot now, retro at end | `/cpm:pivot` + `**Retro**:` field at story completion |
-
-**When in doubt, choose pivot.** Inline edits are silent — they leave no trail and bypass the cascade. The cost of an unnecessary pivot is small (the user can skip downstream changes); the cost of silent spec→reality drift is high.
-
-**Inline edit breadcrumb**: When applying an inline edit to a story or task, record an `**Inline change**: {one-line summary} ({YYYY-MM-DD})` field on the story (alongside any existing `**Retro**:` field). This preserves a trail that downstream skills (drift detection, retro synthesis) can see.
-
-**Skill responsibility**: Skills that may surface change moments during execution (`cpm:do`, `cpm:quick`) reference this convention when a change-worthy situation appears. The decision is presented as a structured `AskUserQuestion` gate (per the **Gate Presentation** convention) with the four options above as labels, rather than as a freeform "should we change this?" prompt.
-
 ## Tool Operations
 
 Skills use `Glob` and `Grep` (and similar names) as **semantic operations**, not specific tool calls. The names describe *what to do*, not *which tool to invoke*:

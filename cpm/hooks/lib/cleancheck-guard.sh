@@ -19,12 +19,28 @@
 # problem must never cause or block a deletion.
 #
 # Usage:
-#   CPM_SESSION_ID=<id> bash cleancheck-guard.sh [STATE_DIR]
-#   (STATE_DIR defaults to "$CLAUDE_PROJECT_DIR/docs/plans";
-#    the ralph state file is "$CLAUDE_PROJECT_DIR/.claude/ralph-loop.local.md")
+#   CPM_SESSION_ID=<id> bash cleancheck-guard.sh [STATE_DIR] [RALPH_STATE]
+#   (both default to paths under the resolved project root — see
+#    lib/resolve-project-root.sh for the resolution chain; STATE_DIR defaults to
+#    "<root>/docs/plans" and RALPH_STATE to "<root>/.claude/ralph-loop.local.md")
+#
+# Skills invoke this with no arguments and no $CLAUDE_PROJECT_DIR, so the root
+# has to be resolved here rather than assumed. An unresolvable root yields
+# SUPPRESS: the safety-net is advisory (worst case, leftover files linger) while
+# a wrongly-permitted prompt can stall an autonomous run, which is the failure
+# actually worth avoiding.
 
-STATE_DIR="${1:-$CLAUDE_PROJECT_DIR/docs/plans}"
-RALPH_STATE="$CLAUDE_PROJECT_DIR/.claude/ralph-loop.local.md"
+LIB_DIR="${0%/*}"
+[ "$LIB_DIR" = "$0" ] && LIB_DIR="."
+. "$LIB_DIR/resolve-project-root.sh"
+
+if ! cpm_resolve_project_root "cleancheck-guard"; then
+  echo "SUPPRESS"
+  exit 0
+fi
+
+STATE_DIR="${1:-$CPM_PROJECT_ROOT/docs/plans}"
+RALPH_STATE="${2:-$CPM_PROJECT_ROOT/.claude/ralph-loop.local.md}"
 
 # 1. Autonomous run — fully suppressed, regardless of sentinel state.
 if [ -f "$RALPH_STATE" ]; then

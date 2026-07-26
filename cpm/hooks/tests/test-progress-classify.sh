@@ -9,6 +9,8 @@
 # - The 3-day threshold is a single named constant (not STALE_HOURS)
 # - One record per file; no output when no files exist
 # - Robustness: cross-platform stat, malformed/unreadable skip, never runs rm
+# - The skills' calling convention: no state-dir argument, CLAUDE_PROJECT_DIR
+#   genuinely unset, root resolved by the helper itself
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
@@ -46,9 +48,13 @@ set_mtime_hours_ago() {
   touch -t "$(date -v-"${hours}"H +%Y%m%d%H%M.%S 2>/dev/null || date -d "${hours} hours ago" +%Y%m%d%H%M.%S 2>/dev/null)" "$file"
 }
 
+# The helper reports its resolved project root on stderr. These tests assert on
+# the tab-delimited records it writes to stdout, so the diagnostic is dropped
+# here to keep the suite output readable — test-project-root-resolution.sh is
+# where that stderr line is asserted.
 run_classify() {
   local session_id="$1" dir="$2"
-  CPM_SESSION_ID="$session_id" bash "$HELPER" "$dir"
+  CPM_SESSION_ID="$session_id" bash "$HELPER" "$dir" 2>/dev/null
 }
 
 # Classification (field 1) of the record for a given file basename.
@@ -189,7 +195,7 @@ else
 fi
 
 test_start "Missing state dir: no output, exits cleanly (exit 0)"
-OUT=$(CPM_SESSION_ID="cur" bash "$HELPER" "$TEST_TMPDIR/does-not-exist"); RC=$?
+OUT=$(CPM_SESSION_ID="cur" bash "$HELPER" "$TEST_TMPDIR/does-not-exist" 2>/dev/null); RC=$?
 if [ "$RC" -eq 0 ]; then
   assert_empty "$OUT"
 else
@@ -219,7 +225,7 @@ EOF
 
 run_classify_list_all() {
   local session_id="$1" dir="$2"
-  CPM_SESSION_ID="$session_id" bash "$HELPER" "$dir" list-all
+  CPM_SESSION_ID="$session_id" bash "$HELPER" "$dir" list-all 2>/dev/null
 }
 
 test_start "Default mode does NOT emit compact-summary records (hook output unchanged)"
@@ -265,5 +271,50 @@ test_start "list-all with no files: emits no output, exits cleanly (exit 0)"
 DIR=$(setup_state_dir)
 OUT=$(run_classify_list_all "cur" "$DIR"); RC=$?
 if [ "$RC" -eq 0 ]; then assert_empty "$OUT"; else test_fail "expected clean exit (rc=$RC)"; fi
+
+# --- The skills' calling convention: no argument, CLAUDE_PROJECT_DIR unset ---
+#
+# Every case above hands the helper an explicit state dir. That is how the hooks
+# call it, and it is *not* how a /cpm:* skill calls it — the skill passes no path
+# and reaches the helper with CLAUDE_PROJECT_DIR absent from the environment.
+# Nothing below may export that variable; the unset case is the requirement.
+
+# A project fixture with docs/plans, as a physical path (macOS $TMPDIR is under
+# /var, a symlink to /private/var, and git reports physical paths).
+setup_project_root() {
+  local d="$TEST_TMPDIR/proj-$$-$RANDOM"
+  mkdir -p "$d/docs/plans"
+  (cd "$d" && pwd -P)
+}
+
+run_classify_as_skill() {
+  local session_id="$1" project_dir="$2" mode="${3-}"
+  local args=()
+  # The empty first argument is what /cpm:clean passes: it leaves the state dir
+  # to the helper's own resolution while still placing the mode in the mode slot.
+  [ -n "$mode" ] && args=("" "$mode")
+  ( cd "$project_dir" && export CPM_SESSION_ID="$session_id" \
+      && run_without_env CLAUDE_PROJECT_DIR -- \
+         bash "$HELPER" ${args[@]+"${args[@]}"} 2>/dev/null )
+}
+
+test_start "With no argument and CLAUDE_PROJECT_DIR unset, the current session's file is CURRENT"
+PROJ=$(setup_project_root)
+create_progress_file "$PROJ/docs/plans" "sess-skill" "cpm:do" "Task execution"
+OUT=$(run_classify_as_skill "sess-skill" "$PROJ")
+assert_equals "CURRENT" "$(classification_for "$OUT" ".cpm-progress-sess-skill.md")"
+
+test_start "With CLAUDE_PROJECT_DIR unset, the record's path points inside the project"
+PROJ=$(setup_project_root)
+create_progress_file "$PROJ/docs/plans" "sess-skill" "cpm:do" "Task execution"
+OUT=$(run_classify_as_skill "sess-skill" "$PROJ")
+assert_contains "$OUT" "$PROJ/docs/plans/.cpm-progress-sess-skill.md"
+
+test_start "With CLAUDE_PROJECT_DIR unset, list-all mode still emits compact-summary companions"
+PROJ=$(setup_project_root)
+create_progress_file "$PROJ/docs/plans" "p1" "cpm:do" "x"
+create_compact_summary "$PROJ/docs/plans" "p1"
+OUT=$(run_classify_as_skill "p1" "$PROJ" "list-all")
+assert_contains "$OUT" ".cpm-compact-summary-p1.md"
 
 test_summary

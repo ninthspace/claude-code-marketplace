@@ -64,6 +64,27 @@ assert_equals() {
   fi
 }
 
+# Run a command with the named environment variables removed from its
+# environment — removed, not set to empty. The distinction matters: the shared
+# conventions' guard invocation reaches the helpers with CLAUDE_PROJECT_DIR
+# genuinely unset, and `${VAR-default}` resolves differently for unset than for
+# empty. Setting the variable to "" would test a case that never occurs.
+#
+# `env -u` is available on both BSD (macOS) and GNU coreutils.
+# The command runs in a child process, so the caller's own environment is
+# untouched by construction rather than by convention.
+#
+# Usage: run_without_env VAR [VAR...] -- command [args...]
+run_without_env() {
+  local env_args=()
+  while [ $# -gt 0 ] && [ "$1" != "--" ]; do
+    env_args+=(-u "$1")
+    shift
+  done
+  [ "${1-}" = "--" ] && shift
+  env ${env_args[@]+"${env_args[@]}"} "$@"
+}
+
 test_summary() {
   echo ""
   echo "Results: $TESTS_PASSED/$TESTS_RUN passed, $TESTS_FAILED failed"
