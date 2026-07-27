@@ -321,6 +321,16 @@ emit_matrix_rows() {
 # visible is the safe one: it remains untraced. The alternative would let one sentence in a
 # Scope section retire a must-have requirement and report the spec delivered without it.
 #
+# **Nor is an environmental constraint** — spec 46, FR6. An `ENVn` requirement or `ENVXn`
+# restriction names something about the target host, and a Scope bullet deferring it does
+# not change the host; it only stops the roll-up saying so. That is precisely the failure
+# spec 46 exists for: a matrix reading fully verified while the software cannot run where
+# it has to. The `Won't Have` route still excludes one, because that is an explicit
+# ruling-out written where a reader looks for it — AD2 draws the boundary exactly there,
+# between the deliberate route and the quiet one. The class check is `cov_is_environmental`
+# from `coverage-parse.sh`, which is the one definition shared with `cpm:epics`; no prefix
+# is restated in this file.
+#
 # `REQ` is still emitted for every requirement bullet, Won't Have included, so
 # `REQ = STATE ∪ EXCLUDED` is an exact partition a test can assert without trusting either
 # side of it.
@@ -340,7 +350,7 @@ rollup_emit_derived() {
     for m in "$@"; do
       coverage_matrix_rows "$m" | awk -F'\t' '$1 == "requirement" { printf "W\t%s\t%s\n", $2, $6 }'
     done
-  } | awk -F'\t' '
+  } | awk -F'\t' "$_COVERAGE_AWK_LIB"'
     # A MoSCoW heading naming the spec Won'"'"'t Have section. Matched on the words rather
     # than the exact string so a typographic apostrophe reads the same as an ASCII one.
     function is_wont(h) {
@@ -388,12 +398,24 @@ rollup_emit_derived() {
       total = 0
       for (i = 1; i <= n; i++) {
         label = order[i]
-        # Two routes out of the count, and one label that may not take the second. A
-        # Must Have named in the Scope section as deferred is a spec contradicting itself,
+        # Two routes out of the count, and two kinds of label that may not take the second.
+        # A Must Have named in the Scope section as deferred is a spec contradicting itself,
         # and the safe reading of a contradiction is the one that stays visible: it remains
         # untraced, so the roll-up reports a gap rather than reporting the spec delivered
         # on the strength of the sentence that abandoned it.
-        if (is_wont(heading[label]) || ((label in deferred) && !is_must(heading[label]))) {
+        #
+        # An environmental constraint is the second kind, for that reason read one step
+        # further (spec 46, FR6). A deferred ENV1 does not become less true for being
+        # deferred: the host still lacks the thing and the software still will not run
+        # there. The Won'"'"'t Have route may still exclude it -- an explicit ruling-out,
+        # written where a reader looks for one, which is the boundary AD2 draws.
+        #
+        # cov_is_environmental comes from _COVERAGE_AWK_LIB. It is the definition cpm:epics
+        # shares, so neither prefix appears in this file.
+        if (is_wont(heading[label]) ||
+            ((label in deferred) &&
+             !is_must(heading[label]) &&
+             !cov_is_environmental(label))) {
           excluded[label] = 1
           continue
         }

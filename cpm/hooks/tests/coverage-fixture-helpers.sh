@@ -28,6 +28,11 @@
 #                                [--row <label> <spec-text> <criterion> <covered-by> <verified>]...
 #                                             — write a coverage matrix, print its path
 #   coverage_fixture_count                    — print how many fixture directories exist
+#   coverage_rollup_run <arg>...              — run coverage-rollup.sh, print its records
+#   coverage_rollup_rc <arg>...               — the same run, print its exit code instead
+#   coverage_count_type <output> <type>       — count records of one type in a captured run
+#   coverage_states_in <output> <state>       — the sorted labels a run put in one state
+#   coverage_partition_errors <output> [tag]  — how REQ = STATE ∪ EXCLUDED fails, if it does
 #
 # There is deliberately no `coverage_fixture_destroy`. git-fixture-helpers.sh has one
 # because a test there observes removal; nothing in spec 44 does, and an untested `rm -rf`
@@ -513,4 +518,75 @@ coverage_fixture_count() {
     return 0
   fi
   find "$COVERAGE_FIXTURE_ROOT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' '
+}
+
+# --- Exercising the roll-up against those fixtures ------------------------------
+#
+# Everything above builds the documents a roll-up test feeds in. These three run the
+# script over them and read what came back, which is the other half of the same job — a
+# suite that sources this file to build a fixture always then has to run something
+# against it.
+#
+# **Why they are here rather than copied into each suite.** The hazard is not two copies
+# disagreeing; two test runners that differ produce no wrong answers. It is a *third*
+# suite calling `bash coverage-rollup.sh` plainly and never learning that the environment
+# matters — the run would pass while testing a condition no skill is ever in. Promoted at
+# the second call site (test-coverage-rollup.sh and test-environmental-untraced.sh) rather
+# than the third, per retro 25.
+
+COVERAGE_ROLLUP_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/coverage-rollup.sh"
+
+# Run coverage-rollup.sh the way a skill does: with CLAUDE_PROJECT_DIR genuinely unset,
+# which is the environment a /cpm:* Bash call actually has (AD5, spec 43's defect). That
+# unsetting is the contract this function exists to carry. Diagnostics go to stderr and
+# are dropped, so only records reach the caller's assertions.
+coverage_rollup_run() {
+  run_without_env CLAUDE_PROJECT_DIR -- bash "$COVERAGE_ROLLUP_SCRIPT" "$@" 2>/dev/null
+}
+
+# The same run, reporting its exit code instead of its records — for the `--verdict`
+# cases, where the code is the thing under test and the output is not.
+coverage_rollup_rc() {
+  run_without_env CLAUDE_PROJECT_DIR -- bash "$COVERAGE_ROLLUP_SCRIPT" "$@" >/dev/null 2>&1
+  echo $?
+}
+
+# How many records of one type a captured run emitted. Records are tab-separated with the
+# type in field 1 (spec 44, NFR4), so this reads the format rather than the text.
+coverage_count_type() {
+  printf '%s\n' "$1" | awk -F'\t' -v t="$2" '$1 == t { n++ } END { print n + 0 }'
+}
+
+# The labels of every requirement a captured run put in one state -- untraced, delivered
+# or in-progress -- sorted, so a caller can compare against a set rather than probing for
+# memberships one at a time. Set equality is the stronger assertion: it fails on a label
+# that should not be in the state as well as one that should.
+coverage_states_in() {
+  printf '%s\n' "$1" | awk -F'\t' -v want="$2" \
+    '$1 == "STATE" && $4 == want { print $2 }' | LC_ALL=C sort
+}
+
+# Every way `REQ = STATE ∪ EXCLUDED` fails to be an exact partition of a captured run, one
+# per line, empty when it holds (spec 44 NFR2, spec 46 NFR4). The optional second argument
+# labels each line, for callers checking many runs in a loop.
+#
+# Reported as errors rather than as a boolean because the three failures mean different
+# things: a label in neither set was silently dropped, a label in both is double-counted,
+# and a STATE or EXCLUDED with no REQ behind it came from nowhere. A caller asserting the
+# result is empty gets told which of the three it hit.
+coverage_partition_errors() {
+  printf '%s\n' "$1" | awk -F'\t' -v spec="${2:-}" '
+    BEGIN { prefix = (spec == "") ? "" : spec ": " }
+    $1 == "REQ"      { req[$2] = 1 }
+    $1 == "STATE"    { st[$2]++ }
+    $1 == "EXCLUDED" { ex[$2]++ }
+    END {
+      for (l in req) {
+        c = st[l] + ex[l]
+        if (c != 1) printf "%s%s appears in %d of STATE/EXCLUDED\n", prefix, l, c
+      }
+      for (l in st) if (!(l in req)) printf "%s%s has a STATE but no REQ\n", prefix, l
+      for (l in ex) if (!(l in req)) printf "%s%s is EXCLUDED but has no REQ\n", prefix, l
+    }
+  '
 }

@@ -24,16 +24,17 @@ REPO_ROOT="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel 2>/dev/null)"
 
 echo "Testing the coverage roll-up script (Epic 44-01 Story 3)"
 
-# Run the script the way a skill does: with CLAUDE_PROJECT_DIR genuinely unset, which is
-# the environment a /cpm:* Bash call actually has (AD5, spec 43's defect). Diagnostics go
-# to stderr and are dropped here so only records reach the assertions.
+# Both delegate to coverage-fixture-helpers.sh, which holds the one definition of what
+# running the roll-up in a test means — the CLAUDE_PROJECT_DIR unsetting above all (AD5,
+# spec 43's defect). The short local names stay because they are this suite's vocabulary
+# across 28 call sites; only the behaviour moved.
 rollup() {
-  run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" "$@" 2>/dev/null
+  coverage_rollup_run "$@"
 }
 
 # Number of records of one type in a captured run.
 count_type() {
-  printf '%s\n' "$1" | awk -F'\t' -v t="$2" '$1 == t { n++ } END { print n + 0 }'
+  coverage_count_type "$@"
 }
 
 # --- Fixtures -------------------------------------------------------------------

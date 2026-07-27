@@ -20,6 +20,9 @@
 #       data row of the matrix's coverage table.
 #   coverage_base_label <label>
 #       The base requirement a possibly-qualified label refers to.
+#   coverage_environmental_class <label>
+#       `requirement` for an `ENVn` label, `restriction` for an `ENVXn` label, empty for
+#       anything else. The single definition of the environmental class (spec 46, AD2).
 #   coverage_matrix_source_spec <matrix-path>
 #       The `**Source spec**` a matrix names, or empty when the field is absent.
 #   coverage_is_matrix_name <basename>
@@ -110,6 +113,45 @@ function cov_base_label(label,   n, p) {
   }
   return label
 }
+
+# Whether a label names an environmental constraint, and which of the two classes it is.
+# `ENV1` is an environmental requirement — something that must be available. `ENVX1` is a
+# restriction — something that must not be required. Anything else returns the empty
+# string, including labels that merely start with those letters.
+#
+# **The one definition.** Spec 46 AD2 requires that `coverage-rollup.sh` and `cpm:epics`
+# decide "is this environmental" from a single place, because two copies will drift. This
+# is that place: the roll-up prepends this library to its own awk program and calls the
+# function, and epic 46-03 asserts that the prose in `cpm:epics` names the same two
+# prefixes.
+#
+# **Prefix equality, not a prefix match.** The rule stated at the top of this file is that
+# nothing matches on a prefix, which is what keeps `FR10` from being read as `FR1`. So the
+# alpha prefix is extracted by `cov_label_prefix` and compared as an exact string. A regex
+# such as `/^ENV[0-9]+/` would classify correctly today and be the very thing that rule
+# forbids — and `ENVIRONMENT1`, a valid label under the `[A-Z]+[0-9]+` grammar of AD1, is
+# the case that tells the two implementations apart.
+#
+# A bare `ENV` with no digits classifies as a requirement, and that is deliberate rather
+# than overlooked. It is not a label at all under the grammar — `cov_leading_label` will
+# not produce one — so no caller can reach here with it. Re-checking for digits would state
+# the `[A-Z]+[0-9]+` grammar a second time, in a second place, which is the drift this
+# function exists to prevent.
+#
+# Note for anyone editing the comments in this library: it is one single-quoted shell
+# string, so a lone apostrophe closes it and every awk function after that point silently
+# disappears. Write around it rather than escaping it.
+function cov_environmental_class(s,   p) {
+  p = cov_label_prefix(cov_trim(s))
+  if (p == "ENVX") return "restriction"
+  if (p == "ENV")  return "requirement"
+  return ""
+}
+
+# The boolean form, delegating rather than restating, so the two prefixes appear once.
+function cov_is_environmental(s) {
+  return cov_environmental_class(s) != ""
+}
 '
 
 # Reject a path this library cannot read, naming the caller and the file.
@@ -139,6 +181,15 @@ _coverage_require_readable() {
 #        coverage_base_label "(story-originated)" →  (empty)
 coverage_base_label() {
   printf '%s\n' "$1" | awk "$_COVERAGE_AWK_LIB"'{ print cov_base_label($0) }'
+}
+
+# Classify a single label as an environmental constraint.
+#
+# Usage: coverage_environmental_class "ENV1"          →  requirement
+#        coverage_environmental_class "ENVX1"         →  restriction
+#        coverage_environmental_class "ENVIRONMENT1"  →  (empty)
+coverage_environmental_class() {
+  printf '%s\n' "$1" | awk "$_COVERAGE_AWK_LIB"'{ print cov_environmental_class($0) }'
 }
 
 # Emit one record per requirement bullet in a spec's Functional Requirements section.
