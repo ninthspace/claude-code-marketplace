@@ -30,17 +30,29 @@
 
 set -uo pipefail
 
-PROBE_HOOK="${CPM_RALPH_STOP_HOOK:-}"
-
-if [[ -z "$PROBE_HOOK" ]]; then
-  # Newest installed version wins; the cache holds one directory per version.
-  for candidate in "$HOME"/.claude/plugins/cache/*/ralph-wiggum/*/hooks/stop-hook.sh; do
-    [[ -f "$candidate" ]] && PROBE_HOOK="$candidate"
+# Two plugins implement this loop and CPM works with either: `ralph-loop` (Anthropic,
+# the maintained line) and `ralph-wiggum` (the original it forked from). Their hooks are
+# installed at the same relative path under different plugin names, so both are probed
+# rather than one being assumed -- naming only ralph-wiggum would report "not found" on a
+# machine that had switched, turning a silent failure into a spurious one.
+#
+# EVERY candidate is probed, not the first match. Both plugins can be enabled at once,
+# in which case both Stop hooks fire on the same session and the state file only has to
+# be deleted by ONE of them for the loop to die. So a single fails-open hook decides the
+# verdict for the machine, whatever else is installed alongside it.
+PROBE_CANDIDATES=()
+if [[ -n "${CPM_RALPH_STOP_HOOK:-}" ]]; then
+  PROBE_CANDIDATES=("$CPM_RALPH_STOP_HOOK")
+else
+  for plugin in ralph-loop ralph-wiggum; do
+    for candidate in "$HOME"/.claude/plugins/cache/*/"$plugin"/*/hooks/stop-hook.sh; do
+      [[ -f "$candidate" ]] && PROBE_CANDIDATES+=("$candidate")
+    done
   done
 fi
 
-if [[ -z "$PROBE_HOOK" || ! -f "$PROBE_HOOK" ]]; then
-  printf 'PROBE\tnot-found\t%s\n' "${PROBE_HOOK:-<no ralph-wiggum stop hook on disk>}"
+if [[ ${#PROBE_CANDIDATES[@]} -eq 0 ]] || [[ ! -f "${PROBE_CANDIDATES[0]}" ]]; then
+  printf 'PROBE\tnot-found\t%s\n' "${PROBE_CANDIDATES[0]:-<no ralph-loop or ralph-wiggum stop hook on disk>}"
   exit 2
 fi
 
@@ -52,7 +64,26 @@ trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/.claude" || { printf 'PROBE\tcannot-run\t%s\n' "could not write to $WORK"; exit 1; }
 
 STATE="$WORK/.claude/ralph-loop.local.md"
-cat > "$STATE" <<'STATE_EOF'
+
+# Two assistant records. The first carries the turn's text; the last is a bare tool
+# call, which is how a cpm:do story ends -- with a commit. The promise string is
+# absent from both, so a hook that fails closed must leave the state file in place.
+#
+# No session_id is written. ralph-loop skips foreign sessions by comparing that field
+# against the hook input's, and treats an absent one as legacy -- so omitting it is what
+# makes the probe reach the branch being tested rather than the isolation guard.
+TRANSCRIPT="$WORK/transcript.jsonl"
+{
+  printf '%s\n' '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Story 1 complete, committed locally."}]}}'
+  printf '%s\n' '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","id":"probe","input":{"command":"git commit -m x"}}]}}'
+} > "$TRANSCRIPT"
+
+VERDICT=0
+
+for hook in "${PROBE_CANDIDATES[@]}"; do
+  [[ -f "$hook" ]] || continue
+
+  cat > "$STATE" <<'STATE_EOF'
 ---
 active: true
 iteration: 1
@@ -64,21 +95,14 @@ started_at: "2026-01-01T00:00:00Z"
 Probe prompt. This run is a pre-flight check and does no work.
 STATE_EOF
 
-# Two assistant records. The first carries the turn's text; the last is a bare tool
-# call, which is how a cpm:do story ends -- with a commit. The promise string is
-# absent from both, so a hook that fails closed must leave the state file in place.
-TRANSCRIPT="$WORK/transcript.jsonl"
-{
-  printf '%s\n' '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Story 1 complete, committed locally."}]}}'
-  printf '%s\n' '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","id":"probe","input":{"command":"git commit -m x"}}]}}'
-} > "$TRANSCRIPT"
+  ( cd "$WORK" && printf '{"transcript_path":"%s","session_id":""}' "$TRANSCRIPT" | bash "$hook" ) >/dev/null 2>&1
 
-( cd "$WORK" && printf '{"transcript_path":"%s"}' "$TRANSCRIPT" | bash "$PROBE_HOOK" ) >/dev/null 2>&1
+  if [[ -f "$STATE" ]]; then
+    printf 'PROBE\tfails-closed\t%s\n' "$hook"
+  else
+    printf 'PROBE\tfails-open\t%s\n' "$hook"
+    VERDICT=3
+  fi
+done
 
-if [[ -f "$STATE" ]]; then
-  printf 'PROBE\tfails-closed\t%s\n' "$PROBE_HOOK"
-  exit 0
-fi
-
-printf 'PROBE\tfails-open\t%s\n' "$PROBE_HOOK"
-exit 3
+exit "$VERDICT"

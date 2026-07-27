@@ -1,9 +1,9 @@
 #!/bin/bash
-# test-ralph-hook-probe.sh — Tests for the ralph-wiggum stop-hook liveness probe.
+# test-ralph-hook-probe.sh — Tests for the ralph loop stop-hook liveness probe.
 #
 # --- Why this suite exists ---------------------------------------------------------------
 #
-# Pre-flight step 1c used to check that ralph-wiggum's Stop hook was *registered*. A live
+# Pre-flight step 1c used to check that the ralph Stop hook was *registered*. A live
 # spec-mode run passed that check and then died at the first iteration boundary: the hook
 # read a tool_use-only assistant record as "the model said nothing", deleted the loop's
 # state file and exited 0. Presence was true the whole time. The property that matters is
@@ -25,7 +25,7 @@
 #
 # --- What this suite does not test ----------------------------------------------------------
 #
-# The real ralph-wiggum hook. That lives outside the repo, is a third-party file, and differs
+# The real installed hook. That lives outside the repo, is a third-party file, and differs
 # per machine and per plugin version — which is the entire reason the probe runs it at
 # pre-flight rather than the suite asserting anything about it here.
 
@@ -34,8 +34,8 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 PROBE="$SCRIPT_DIR/../lib/ralph-hook-probe.sh"
 
-echo "Testing: ralph-wiggum stop-hook liveness probe"
-echo "=============================================="
+echo "Testing: ralph loop stop-hook liveness probe (ralph-loop / ralph-wiggum)"
+echo "========================================================================"
 
 FIXTURES=$(mktemp -d)
 trap 'rm -rf "$FIXTURES"' EXIT
@@ -104,11 +104,42 @@ assert_not_contains "$(probe_with "$FIXTURES/no-such-hook.sh")" '\t'
 test_start "the probe names the hook it ran, so a wrong path is visible in the log"
 assert_contains "$(probe_with "$FIXTURES/fails-closed.sh")" "$FIXTURES/fails-closed.sh"
 
+# Both ralph-loop and ralph-wiggum can be enabled at once -- they install the same hook
+# at the same relative path under different plugin names, so both Stop hooks fire on the
+# same session. The state file only has to be deleted by ONE of them for the loop to die,
+# so a safe hook alongside a dangerous one is not a safe machine. These use the discovery
+# path rather than CPM_RALPH_STOP_HOOK, since the override deliberately probes one hook.
+FAKE_HOME=$(mktemp -d)
+install_fake() { # <plugin-name> <fixture>
+  local d="$FAKE_HOME/.claude/plugins/cache/some-marketplace/$1/1.0.0/hooks"
+  mkdir -p "$d" && cp "$2" "$d/stop-hook.sh"
+}
+discover_code() { HOME="$FAKE_HOME" bash "$PROBE" >/dev/null 2>&1; echo $?; }
+
+test_start "discovery finds a hook installed under the ralph-loop plugin name"
+install_fake ralph-loop "$FIXTURES/fails-closed.sh"
+assert_equals "0" "$(discover_code)"
+
+test_start "a fails-open ralph-wiggum alongside a safe ralph-loop still condemns the machine"
+install_fake ralph-wiggum "$FIXTURES/fails-open.sh"
+assert_equals "3" "$(discover_code)"
+
+test_start "control: with the dangerous one replaced, the same two installs pass"
+install_fake ralph-wiggum "$FIXTURES/fails-closed.sh"
+assert_equals "0" "$(discover_code)"
+
+test_start "both hooks are named in the output, not just the one that decided the code"
+install_fake ralph-wiggum "$FIXTURES/fails-open.sh"
+assert_contains "$(HOME="$FAKE_HOME" bash "$PROBE" 2>/dev/null)" "ralph-loop"
+
+test_start "control: and the wiggum install is named in that same output"
+assert_contains "$(HOME="$FAKE_HOME" bash "$PROBE" 2>/dev/null)" "ralph-wiggum"
+
+present_after() { [[ -f "$1" ]] && echo "present" || echo "gone"; }
+
 # The probe runs a third-party script. If it ran that script against the real project
 # directory rather than a scratch copy, a fails-open hook would delete the user's live loop
 # as a side effect of checking whether it would.
-present_after() { [[ -f "$1" ]] && echo "present" || echo "gone"; }
-
 test_start "the probe leaves any state file in the working directory untouched"
 GUARD=$(mktemp -d)
 mkdir -p "$GUARD/.claude"

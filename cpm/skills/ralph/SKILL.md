@@ -79,13 +79,17 @@ Formal plan mode (`EnterPlanMode`) creates an interactive approval gate that sta
 3. Track which stories were modified. Log a line per stripped tag for inclusion in the execution log: "Stripped `[plan]` from Story {N}: {heading text}".
 4. If no `[plan]` tags are found, skip silently.
 
-#### 1c. Ralph Wiggum Stop Hook Detection
+#### 1c. Ralph Stop Hook Detection
 
-The ralph-wiggum plugin's stop hook is the only external dependency — it intercepts session exit and feeds the prompt back to continue the loop. `cpm:ralph` writes the state file directly (no dependency on the setup script).
+A ralph loop plugin's stop hook is the only external dependency — it intercepts session exit and feeds the prompt back to continue the loop. `cpm:ralph` writes the state file directly (no dependency on the setup script).
 
-1. Check if the ralph-wiggum stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-wiggum` or `stop-hook.sh`.
-2. If not detected, warn the user: "Ralph Wiggum stop hook not detected. The loop mechanism requires the ralph-wiggum plugin to be installed — without the stop hook, writing the state file will have no effect. Install the plugin from the Claude Code marketplace." Use AskUserQuestion with options: "Continue anyway" or "Stop".
-3. **Probe which direction the hook fails in**: resolve the plugin's `hooks/lib/ralph-hook-probe.sh` to an absolute path, run `bash <that path>`, and branch on its exit code. Unlike `{rollup_script}` (Step 1f) this path is never interpolated into the prompt — the probe answers a question about launching, so it runs once here and the loop never sees it. `0` — the hook fails closed; continue pre-flight without comment. `2` — no hook on disk; fold into the warning above rather than reporting twice. `1` — the probe could not run; say so and let the user decide, since an unrun probe is not a pass. `3` — **the hook fails open**: report "The installed ralph-wiggum stop hook deletes the loop's state file on a normal turn shape and exits 0. An unattended run would end silently and look like a clean finish." Use AskUserQuestion with "Patch the hook first (recommended)" and "Arm the loop anyway".
+**Two plugins provide that hook and CPM works with either.** `ralph-loop` (Anthropic) is the maintained line; `ralph-wiggum` is the original it forked from. They install the same hook at the same relative path under different plugin names, so neither name may be treated as *the* dependency — a check written against one reports "not installed" on a machine running the other.
+
+1. Check if a ralph stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-loop`, `ralph-wiggum`, or `stop-hook.sh`.
+2. If not detected, warn the user: "No ralph stop hook detected. The loop mechanism requires either the `ralph-loop` or `ralph-wiggum` plugin — without the stop hook, writing the state file will have no effect. Install one from the Claude Code marketplace; `ralph-loop` is the maintained one." Use AskUserQuestion with options: "Continue anyway" or "Stop".
+3. **Probe which direction the hook fails in**: resolve the plugin's `hooks/lib/ralph-hook-probe.sh` to an absolute path, run `bash <that path>`, and branch on its exit code. Unlike `{rollup_script}` (Step 1f) this path is never interpolated into the prompt — the probe answers a question about launching, so it runs once here and the loop never sees it. `0` — the hook fails closed; continue pre-flight without comment. `2` — no hook on disk; fold into the warning above rather than reporting twice. `1` — the probe could not run; say so and let the user decide, since an unrun probe is not a pass. `3` — **a hook fails open**: report "The installed stop hook deletes the loop's state file on a normal turn shape and exits 0. An unattended run would end silently and look like a clean finish." Name the hook the probe reported, since with both plugins enabled the safe one is not the one that matters. Use AskUserQuestion with "Patch or switch plugin first (recommended)" and "Arm the loop anyway".
+
+**Both plugins enabled is a real configuration, and the dangerous hook wins.** Two registered Stop hooks both fire on the same session, and the state file only has to be deleted by one of them for the loop to die. The probe therefore runs *every* hook it finds and lets a single fails-open verdict decide, rather than stopping at the first one that passes.
 
 **Registration is not the property that matters.** Step 2 above has been in this skill since the beginning and it passed throughout a live run in which the hook deleted the state file at the first iteration boundary. The hook was installed and registered the whole time; what it did on a turn ending in a tool call is a different question, and the only way to ask it is to run the hook. That is what step 3 does — it builds a state file and a two-record transcript whose last assistant record is a bare tool call, runs the real hook against them in a scratch directory, and checks whether the state file survived.
 
@@ -223,6 +227,7 @@ iteration: 1
 max_iterations: {max_iterations}
 completion_promise: "{completion_promise}" (or null)
 started_at: "{utc_timestamp}"
+session_id: {session_id}
 ---
 
 {assembled_prompt}
@@ -244,7 +249,12 @@ If "Launch it":
    - `max_iterations: {value from arguments or default}`
    - `completion_promise: "{text}"` (quoted) or `null` (unquoted)
    - `started_at: "{utc_timestamp}"` (the value captured via Bash in Step 3b)
+   - `session_id: {session_id}` — the current session's id, unquoted, the same value the progress-file convention uses
    - Followed by `---` and then the assembled prompt text
+
+**Why `session_id` is written.** The state file is project-scoped but the Stop hook fires in *every* session open on that project. `ralph-loop` compares this field against the session its hook was invoked for and exits without touching the file when they differ, so a second window on the same repo neither steals the loop nor deletes its state. `ralph-wiggum` has no such field and ignores it, which is why writing it is safe on either plugin.
+
+**Write the real id or omit the field — never a placeholder.** A field that is absent, or present but empty, reads as legacy and the hook behaves as it always did. A field holding a *wrong* id matches no session, so every Stop hook exits early, the prompt is never fed back, and the loop silently does not run. That failure looks exactly like the loop having finished, which is the class of failure step 1c exists to remove — so if the session id is not available, leave the line out rather than guessing at it.
 2. Output an activation message:
 
 ```
