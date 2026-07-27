@@ -105,7 +105,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v3.4.0)
+### Claude Planning Method (v3.5.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
@@ -125,7 +125,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 | `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
 | `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{parent}-{seq}-epic-{slug}.md` + coverage matrix |
 | `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
-| `/cpm:ralph` | Autonomous multi-epic execution (Ralph Wiggum loop) | Ralph loop command + execution log |
+| `/cpm:ralph` | Autonomous execution — a set of epics, or a whole spec end to end | Ralph loop command + execution log |
 | `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
 | `/cpm:audit` | Independent codebase health audit across nine dimensions | `docs/audits/{nn}-audit-{slug}.md` |
 | `/cpm:inspect` | What a change set did, and where it sits in the repo | Ephemeral (+ optional published artifact) |
@@ -175,6 +175,9 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 # Clean up completed artefacts
 /cpm:archive
 
+# Hand a whole spec to the autonomous loop — epics first, then the work
+/cpm:ralph docs/specifications/01-spec-customer-portal.md
+
 # Small change? Skip the full pipeline
 /cpm:quick add a --verbose flag to the deploy script
 
@@ -209,6 +212,8 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 - Task execution loop with acceptance criteria verification and ADR awareness
 - Test runner discovery — convention-based detection from project config files, cached per session
 - Epic-level verification — completed epics are checked against their source spec
+- Spec coverage roll-up — one command joins every epic's coverage matrix back to the spec's requirements and answers "is this spec fully delivered?", naming untraced requirements first
+- Autonomous spec delivery — point `/cpm:ralph` at a spec and it generates the epics, then works them; the loop stops on the roll-up script's verdict, not on its own judgement
 - Spec, ADR, and test coverage compliance review dimensions
 - Lightweight retros with testing gap analysis that feed forward into the next planning cycle
 - Adversarial review — agent personas challenge assumptions, spot gaps, and flag risks with optional autofix

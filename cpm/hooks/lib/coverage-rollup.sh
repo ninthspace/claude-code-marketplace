@@ -30,13 +30,20 @@
 # reading it into the exit code would make a read failure indistinguishable from an honest
 # report of incomplete work.
 #
-# With `--verdict` (epic 44-03, for `cpm:ralph`'s completion promise), a third code
-# separates those two things:
+# With `--verdict` (epic 44-03, for `cpm:ralph`'s completion promise), further codes
+# separate those things:
 #
 #   0  the computation completed **and** nothing is outstanding
 #   3  the computation completed cleanly, but work is outstanding
+#   4  the spec was readable and no matrix names it — spec scope only
 #   1  an input could not be read
 #   2  usage error
+#
+# Code 4 exists because a loop working from a spec starts with no matrices at all, and that
+# is iteration 1 rather than a failure (spec 45, FR7 / AD2). Before it, that state and a
+# genuine read failure were both exit 1, so a loop could not tell "keep working" from "stop".
+# It is confined to `--verdict`: the default path still reports it as 1, unchanged since
+# epic 44-01, which is what `cpm:status` reads.
 #
 # The flag is opt-in precisely so that `cpm:status`, which wants "did this compute?", and
 # `cpm:ralph`, which wants "is this done?", can ask different questions of one script
@@ -85,6 +92,7 @@ LIB_DIR="${0%/*}"
 
 EXIT_USAGE=2
 EXIT_OUTSTANDING=3
+EXIT_NO_MATRIX=4
 
 usage() {
   cat >&2 <<'EOF'
@@ -96,8 +104,8 @@ Emits tab-separated coverage records. Spec scope discovers matrices by their
 **Source spec** field; epic scope reports row states for the named epics only.
 
 --verdict changes only the exit code, never the output: 0 when nothing is
-outstanding, 3 when the computation completed but work remains, 1 on a read
-failure, 2 on a usage error.
+outstanding, 3 when the computation completed but work remains, 4 when the spec
+is readable and no matrix names it, 1 on a read failure, 2 on a usage error.
 EOF
 }
 
@@ -432,9 +440,16 @@ rollup_spec_scope() {
 
   # No matrices is *not* full coverage — it is a spec nothing has been broken down for,
   # or a discovery that failed. Reporting it as a clean run would be complete by default.
+  #
+  # It is also not a *read failure*, and spec 45's FR7 needs those two apart: for a loop
+  # working from a spec, "no matrix names this yet" is iteration 1 and means keep going,
+  # while "an input could not be read" means stop. The distinction leaves this function as a
+  # return code rather than a variable because the caller runs it inside `$( )` — a global
+  # set here could not reach the parent. The non-`--verdict` path maps it straight back to 1,
+  # so epic 44-01's contract is unchanged (AD2).
   if [ ${#matrices[@]} -eq 0 ]; then
     echo "coverage-rollup: no matrix in $MATRIX_DIR names $spec_base as its source spec" >&2
-    return 1
+    return "$EXIT_NO_MATRIX"
   fi
 
   for m in "${matrices[@]}"; do
@@ -555,7 +570,12 @@ rollup_outstanding() {
 # nothing below changes it.
 if [ "$VERDICT" = "no" ]; then
   rollup_run_scope
-  exit $?
+  DEFAULT_RC=$?
+  # The no-matrix case is a read failure on this path, exactly as it was before spec 45.
+  # Confining the new code to `--verdict` is AD2's containment, and this line is where it is
+  # enforced rather than assumed.
+  [ "$DEFAULT_RC" = "$EXIT_NO_MATRIX" ] && DEFAULT_RC=1
+  exit "$DEFAULT_RC"
 fi
 
 # With `--verdict`, the same records are emitted and the exit code additionally distinguishes

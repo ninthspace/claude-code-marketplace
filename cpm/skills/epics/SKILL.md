@@ -30,6 +30,38 @@ Check for input in this order:
 
 **Facilitation depth**: Each presentation-and-refine gate (Step 2 epics, Step 3 stories, Step 3b tasks) converges in 1-2 rounds of AskUserQuestion. When the user approves, move on. Step 3d coverage matrix and Step 4 confirmation are single-pass gates — present once, refine once if needed, then proceed.
 
+### Autonomous Mode
+
+When the run is autonomous — this skill was invoked by a wrapper such as `cpm:ralph` and no human is present to answer — the gates listed below **do not block**. This section is the single source of that behaviour: `cpm:ralph`'s prompt references it rather than restating the dispositions, so a gate added or changed here needs no second edit there.
+
+**Five of this skill's gates present a proposal the skill has just rendered.** For those, the autonomous disposition is **approve the rendered proposal and proceed** — the proposal is already the skill's own best judgement, and a second pass over it in the same run adds no information that the first pass did not have. Render the proposal exactly as the interactive path would, then continue without the gate:
+
+| Gate | What it asks interactively | Autonomous disposition |
+|---|---|---|
+| Step 2 — Identify Epics | "Approve this grouping?" | Approve the rendered grouping and proceed to Step 3. No refine round |
+| Step 3 — Break into Stories | "Approve these stories?" | Approve the rendered stories. Still render the tag distribution summary, and still flag a story with zero automated tags — that flag is a record, not a question |
+| Step 3b — Identify Tasks within Stories | "Approve these tasks?" | Approve the rendered task list for each story |
+| Step 3c — Integration Testing Story | Confirm the cross-story acceptance criteria | Accept the criteria as rendered. The *when warranted* test still decides whether the story exists at all; only the confirmation is skipped |
+| Step 4 — Confirm | Final confirmation of the epic / story / task tree | Accept the tree and save. This is the **Termination — Success** condition, so an autonomous run reaches it by this disposition rather than by user confirmation |
+
+**Rendering stays mandatory.** Each of the five still writes its proposal into the message body. Under an autonomous run nobody reads it at the moment it is produced — which is exactly why it has to be there to read afterwards.
+
+**The sixth gate is absent from that table because it takes the opposite disposition.** Step 3's must-NOT clause proposal (*Must-NOT clause suggestion*) is the one gate where approving the skill's own proposal is a self-marking problem: the clause and its approval would come from the same pass, with nobody to check the judgement. Its autonomous disposition is **propagate, never invent**:
+
+1. **Propagate every must-NOT line the source spec already carries.** *Must-NOT clause propagation* above is unchanged and needs no disposition of its own — copying a line the spec's own Section 6b probed for is transcription, and a reader can verify it afterwards against the spec.
+2. **Attach nothing that cannot be quoted from the source spec.** A clause is citable when it appears as a `must NOT` line in the spec's Acceptance Criteria Coverage table, or in the requirement text that line is paired with. A clause whose subject the spec never raises is not citable, however reasonable it looks — that is judgement made in the moment, which is exactly what 43-02's citable-contradiction rule exists to refuse.
+3. **Record what it would have proposed, rather than dropping it.** On the story the clause would have been attached to, write `**Must-NOT proposed (unreviewed)**: {clause} — {domain that triggered it} ({YYYY-MM-DD})`. Recorded is not attached: it sits on the story where a human reviewing the epic will see it, and it constrains no acceptance criterion until one accepts it. Nothing parses this field today — it is written for a reader, and saying so is the point, because a breadcrumb credited to a consumer that does not read it has now been shipped twice in this repo.
+
+**Why not simply accept every proposal.** Auto-accepting reads as the maximally defensive choice and is not. A clause invented in the moment can be *unsatisfiable as written* — retro 21 recorded one that forbade a token its own explanatory prose had to use — and `cpm:do` would then be unable to close the story with nobody watching. A loop that cannot finish is a worse outcome than a missing boundary a human can still add on review.
+
+**Write surface — three kinds of file, and no others.** An autonomous run writes epic documents under `docs/epics/`, their companion coverage matrices beside them, and its own progress file under `docs/plans/`. It writes nothing under `docs/specifications/`. The source document is the only artefact a human authored and the only fixed point the run is measured against, so a run able to edit it can move its own goalposts — and the coverage matrices it writes in the same pass would then agree with a target it had changed. A gap or contradiction found in the source mid-run is **recorded, not repaired**: state it in the epic's Notes and leave it for `/cpm:pivot`. That is **Termination — Blocker**'s record-and-flag half and only that half: the condition as written is triggered by a user who is not present here, and offers "or a spec update" as an alternative remedy — which is the one remedy an autonomous run may not take.
+
+**Audit trail — every gate decision leaves a breadcrumb.** A run nobody watched is reviewable only from what it wrote down, so each disposition taken above records one line in the epic document's top-level metadata block, below `**Blocked by**`:
+
+`**Autonomous gate**: {gate} · {what was chosen}`
+
+for example `**Autonomous gate**: Step 2 — Identify Epics · approved the rendered grouping of 4 epics`. Gates that fire before any epic document exists — Step 2's grouping is the one that always does — are recorded on every epic that run produced, because the progress file is deleted when the run finishes and the epic documents are what outlive it. The `**Must-NOT proposed (unreviewed)**` lines from the sixth gate sit on their stories rather than here; both are breadcrumbs, but that one belongs beside the criterion it was almost attached to.
+
 ### Stale-Progress Check (Startup)
 
 Follow the shared **Stale-Progress Check** procedure (from the CPM Shared Skill Conventions loaded at session start).
@@ -153,6 +185,8 @@ When a story touches any of these domains, propose `must NOT` clauses for the us
 - **External systems**: API calls, webhook handling, third-party integrations
 
 Propose 1-2 must-NOT clauses per relevant criterion. Present them via AskUserQuestion alongside the story's acceptance criteria for the user to accept, modify, or reject. If the user rejects all proposed must-NOTs, proceed without them — must-NOT clauses are advisory, not mandatory.
+
+**Under an autonomous run this gate does not take the approve-your-own-proposal disposition** that the other five do. See **Autonomous Mode** above: propagate what the spec carries, attach nothing that cannot be quoted from it, and record the rest as `**Must-NOT proposed (unreviewed)**`.
 
 **Graceful degradation**: If the spec has no must-NOT lines and the story does not touch security, data integrity, or external systems, skip must-NOT suggestion entirely.
 

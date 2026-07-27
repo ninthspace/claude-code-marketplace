@@ -8,13 +8,13 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|---|---|---|---|---|---|
-| 1 | FR1 | A spec path is a **fourth input shape** on `cpm:ralph`. Mode detection comes from the path itself; no flag, no new skill. | A path under `docs/specifications/` resolves spec mode; epic paths or a range resolve epic mode; nothing resolves auto-discovery | Story 1 | `[integration]` | |
-| 2 | FR1 (must NOT) | must NOT require a flag to select the mode | must NOT require a flag to select the mode | Story 1 | `[integration]` | |
-| 3 | FR2 | **Empty arguments keep today's meaning**: auto-discover all incomplete epics. Silently promoting that to spec-hunting breaks a working invocation. | Empty arguments still auto-discover all incomplete epics | Story 2 | `[integration]` | |
-| 4 | FR2 (must NOT) | must NOT change the behaviour of any existing documented invocation | must NOT change the behaviour of any existing documented invocation | Story 2 | `[integration]` | |
-| 5 | FR3 | Pre-flight **tolerates zero epics** when a spec path was given. Today Step 1a stops with "No incomplete epics found. Nothing to run." — in spec mode that is the starting state, not a failure. | With a spec path and zero epics on disk, pre-flight proceeds to phase 1 | Story 3 | `[integration]` | |
-| 6 | FR3 (must NOT) | must NOT emit "No incomplete epics found. Nothing to run." when a spec path was given | must NOT emit "No incomplete epics found. Nothing to run." when a spec path was given | Story 3 | `[integration]` | |
-| 7 | FR1, FR2, FR3 (story-originated) | — | Each of the four input shapes reaches its documented pre-flight outcome, with zero epics on disk and with epics present | Story 4 | — | |
+| 1 | FR1 | A spec path is a **fourth input shape** on `cpm:ralph`. Mode detection comes from the path itself; no flag, no new skill. | A path under `docs/specifications/` resolves spec mode; epic paths or a range resolve epic mode; nothing resolves auto-discovery | Story 1 | `[integration]` | ✓ |
+| 2 | FR1 (must NOT) | must NOT require a flag to select the mode | must NOT require a flag to select the mode | Story 1 | `[integration]` | ✓ |
+| 3 | FR2 | **Empty arguments keep today's meaning**: auto-discover all incomplete epics. Silently promoting that to spec-hunting breaks a working invocation. | Empty arguments still auto-discover all incomplete epics | Story 2 | `[integration]` | ✓ |
+| 4 | FR2 (must NOT) | must NOT change the behaviour of any existing documented invocation | must NOT change the behaviour of any existing documented invocation | Story 2 | `[integration]` | ✓ |
+| 5 | FR3 | Pre-flight **tolerates zero epics** when a spec path was given. Today Step 1a stops with "No incomplete epics found. Nothing to run." — in spec mode that is the starting state, not a failure. | With a spec path and zero epics on disk, pre-flight proceeds to phase 1 | Story 3 | `[integration]` | ✓ |
+| 6 | FR3 (must NOT) | must NOT emit "No incomplete epics found. Nothing to run." when a spec path was given | must NOT emit "No incomplete epics found. Nothing to run." when a spec path was given | Story 3 | `[integration]` | ✓ |
+| 7 | FR1, FR2, FR3 (story-originated) | — | Each of the four input shapes reaches its documented pre-flight outcome, with zero epics on disk and with epics present | Story 4 | — | ✓ |
 
 ## Notes
 

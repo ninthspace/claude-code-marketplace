@@ -234,7 +234,13 @@ fi
 test_start "the site names the discriminating measurement it does not carry"
 assert_contains "$RALPH_PROSE" "untraced count"
 
-test_start "and says that measurement belongs to spec scope, which is deferred"
-assert_contains "$RALPH_PROSE" "has no spec-scope promise, and building one is deferred"
+# This asserted "`cpm:ralph` has no spec-scope promise, and building one is deferred" until
+# spec 45 built one. The durable half of the claim is the boundary, not the deferral: the
+# line ralph prints after an *epic*-scope run still cannot be read as a delivery verdict, and
+# that stays true whatever spec mode gains. Retargeted to the boundary rather than widened —
+# a net that also passes on "spec scope is deferred" would defend a sentence that is now
+# false (retro 26).
+test_start "and says that measurement belongs to spec scope, which epic mode does not carry"
+assert_contains "$RALPH_PROSE" "epic mode has no spec-scope promise"
 
 test_summary

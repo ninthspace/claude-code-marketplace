@@ -64,6 +64,25 @@ assert_equals() {
   fi
 }
 
+# assert_slice_bounded <file> <start-regex> <end-regex> <min> <max>
+#
+# A `sed` range is asymmetric, and only one direction fails loudly: a range matching
+# nothing makes every assert_contains over it fail, while a range matching a *wider*
+# region than intended passes on text belonging to another section. Bounding both ends
+# is the only form that catches the second, and the failure message names the count so
+# a renamed heading reads as a widened slice rather than as a content regression.
+#
+# Retro 24 recommendation 4 — this belongs anywhere a sed/awk range feeds assert_contains.
+assert_slice_bounded() {
+  local file="$1" start="$2" end="$3" min="$4" max="$5" lines
+  lines=$(sed -n "/$start/,/$end/p" "$file" | grep -c .)
+  if [ "$lines" -ge "$min" ] && [ "$lines" -le "$max" ]; then
+    test_pass
+  else
+    test_fail "slice /$start/,/$end/ is $lines non-blank lines (expected $min-$max)"
+  fi
+}
+
 # Run a command with the named environment variables removed from its
 # environment — removed, not set to empty. The distinction matters: the shared
 # conventions' guard invocation reaches the helpers with CLAUDE_PROJECT_DIR

@@ -255,18 +255,37 @@ assert_empty "$(grep -n 'coverage-\*\|\*-coverage' "$RALPH_SKILL")"
 test_start "regression net: ralph reads no Verified column"
 assert_empty "$(grep -n 'Verified column' "$RALPH_SKILL")"
 
-# This one was a file-wide ban on the word `untraced` until Story 3, which had to *name*
-# the measurement in order to say `cpm:ralph` cannot produce it. Retro 21's shape for the
-# fourth time in this spec: the rule and its violation share their tokens, and a ban on the
-# token also bans the caution. What the net is actually for is that `ralph` never *derives*
-# requirement state, so it is narrowed to that — the operative site carries none of the
-# vocabulary, and every mention elsewhere is a statement of what epic scope cannot do.
+# This one was a file-wide ban on the word `untraced` until epic 44-03's Story 3, which had
+# to *name* the measurement in order to say `cpm:ralph` cannot produce it; it was then a ban
+# with two allowed phrasings until spec 45 made the word load-bearing a third way — spec
+# mode's phase predicate reads `untraced` out of the script's own SUMMARY record, so a ban on
+# the token bans the contract along with the caution. Retro 21's shape for the fifth time in
+# two specs, and retro 26's finding that the net pins the defect: what it is *for* is that
+# `ralph` never derives requirement state itself, and that is a question about which inputs
+# it reads, not which words it writes. Rewritten against the inputs.
+#
+# Deriving an untraced count means comparing a spec's requirement list to matrix rows, so it
+# needs all three of: the matrices (netted above), the Verified column (netted above), and
+# the requirement bullets. This is the third. Evidence, not proof — a skill could describe
+# the comparison without naming any of them — which is what the operative-site assertion
+# below is for.
 test_start "regression net: the operative template names no requirement-state vocabulary"
-assert_empty "$(printf '%s\n' "$PROMPT" | grep -oE 'untraced|in-progress requirement')"
+assert_empty "$(printf '%s\n' "$PROMPT" | grep -oE 'in-progress requirement')"
 
-test_start "regression net: and every mention elsewhere says ralph cannot produce it"
-assert_empty "$(grep -nE 'untraced|in-progress requirement' "$RALPH_SKILL" |
-  grep -vE 'cannot produce it|no requirement list')"
+test_start "regression net: ralph reads no requirement list of its own"
+assert_empty "$(grep -nE 'MoSCoW|Must Have|Should Have|requirement bullets' "$RALPH_SKILL")"
+
+# There was a fourth net here: every line mentioning `untraced` had to match one of a short
+# list of allowed phrasings. It is **deleted rather than extended**, and that is the finding
+# worth recording. Spec 45 gives spec mode a phase predicate whose whole subject is the
+# untraced count, so legitimate sentences about it now appear throughout the skill and each
+# one needed a new phrasing added to the list. A net that grows a clause per sentence has
+# stopped being a rule and become a transcript of the file — it would pass on anything already
+# written and fail only on wording, which is the failure retro 26 named. What it was for is
+# covered without vocabulary by the three structural nets above, and sharply by
+# `test-ralph-phase-predicate.sh`, which reads the contract section sentence by sentence with
+# its denials. Scanning the whole file that way was tried and abandoned: "an untraced count"
+# and "count the rows" differ by part of speech, not by tokens.
 
 # --- The resolved script path (AD5 applied to the loop's own environment) -----------------
 #
@@ -280,24 +299,13 @@ assert_empty "$(grep -nE 'untraced|in-progress requirement' "$RALPH_SKILL" |
 # range from its neighbour.
 section() { sed -n "/$1/,/$2/p" "$RALPH_SKILL"; }
 
-# A slice that matches nothing makes every `assert_contains` over it fail loudly, but one
-# that matches a *wider* range than intended passes for text belonging to another section.
-# Guarded once, where the range is defined.
-slice_is_bounded() {
-  local body lines
-  body=$(section "$1" "$2")
-  lines=$(printf '%s\n' "$body" | grep -c .)
-  [ "$lines" -ge "$3" ] && [ "$lines" -le "$4" ]
-}
-
+# The two-sided bound this suite introduced now lives in test-helpers.sh as
+# `assert_slice_bounded`, so the pattern is available to every suite rather than to this
+# one — retro 24 recommendation 4. Each range is still guarded once, where it is defined.
 PREFLIGHT_1F=$(section '^#### 1f\.' '^### Step 2')
 
 test_start "slice: the roll-up pre-flight step spans its own section and no more"
-if slice_is_bounded '^#### 1f\.' '^### Step 2' 4 12; then
-  test_pass
-else
-  test_fail "1f slice is $(printf '%s\n' "$PREFLIGHT_1F" | grep -c .) non-blank lines"
-fi
+assert_slice_bounded "$RALPH_SKILL" '^#### 1f\.' '^### Step 2' 4 12
 
 test_start "the template passes a resolved placeholder, not a runtime variable"
 assert_not_contains "$PROMPT" "CLAUDE_PLUGIN_ROOT"
@@ -344,21 +352,19 @@ INPUT_SECTION=$(section '^## Input' '^## Process')
 DISCOVERY=$(section '^#### 1a\. Epic Discovery' '^#### 1b\.')
 
 test_start "slice: the Input section spans its own section and no more"
-if slice_is_bounded '^## Input' '^## Process' 6 14; then
-  test_pass
-else
-  test_fail "Input slice is $(printf '%s\n' "$INPUT_SECTION" | grep -c .) non-blank lines"
-fi
+assert_slice_bounded "$RALPH_SKILL" '^## Input' '^## Process' 6 16
 
+# Widened from 8-20 when epic 45-02 Story 1 added mode resolution to this step. The bound is
+# two-sided so a slice that swallows its neighbour is caught; it is not a size budget, and
+# raising it to fit a section that genuinely grew is the maintenance it was built for.
 test_start "slice: the epic-discovery step spans its own section and no more"
-if slice_is_bounded '^#### 1a\. Epic Discovery' '^#### 1b\.' 8 20; then
-  test_pass
-else
-  test_fail "discovery slice is $(printf '%s\n' "$DISCOVERY" | grep -c .) non-blank lines"
-fi
+assert_slice_bounded "$RALPH_SKILL" '^#### 1a\. Epic Discovery' '^#### 1b\.' 8 32
 
-test_start "empty arguments still fall through to auto-discovery"
-assert_contains "$INPUT_SECTION" "If no epic paths are provided, auto-discover all incomplete epics"
+# Story 1 (epic 45-02) rewrote this sentence: a spec path is not an epic path, so the old
+# wording sent spec mode down the auto-discovery branch — FR2's failure mode stated as FR1's
+# bug. The assertion tracks the sentence because FR2's claim is about *this* fallback.
+test_start "no path at all still falls through to auto-discovery"
+assert_contains "$INPUT_SECTION" "If no path of any kind is provided, auto-discover all incomplete epics"
 
 test_start "auto-discovery still globs every epic shape"
 assert_contains "$DISCOVERY" 'docs/epics/*-epic-*.md'
@@ -419,7 +425,7 @@ assert_equals "0" "$RUN_RC"
 test_start "the skill defines {epic_glob} as a resolved path list, not a pattern"
 assert_contains "$DISCOVERY" "a path list, not a pattern"
 
-test_start "and says every input shape converges on that one list"
-assert_contains "$DISCOVERY" "All three input shapes converge on one resolved list"
+test_start "and says every input shape resolves to that one list"
+assert_contains "$DISCOVERY" "Every input shape resolves to one epic list"
 
 test_summary

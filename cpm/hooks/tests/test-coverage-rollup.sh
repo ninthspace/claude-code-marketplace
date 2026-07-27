@@ -903,4 +903,159 @@ test_start "without --verdict, an untraced requirement still exits 0"
 run_verdict --spec "$V_SPEC" --matrix-dir "$V_DIR"
 assert_equals "0" "$V_RC"
 
+# --- The fourth `--verdict` code (Epic 45-03 Story 1, spec 45 FR7 / AD2) -------------------
+#
+# In spec mode `cpm:ralph` starts with no epics at all, and that is iteration 1 rather than a
+# failure. Today it is exit 1 — the same code as a genuine read failure — so the loop cannot
+# tell "phase one hasn't run yet" from "stop, the check is broken". AD2 gives the first case
+# its own code, on the `--verdict` path only.
+#
+# The wrong edits this section is written against, named before the assertions were chosen
+# (retro 26): the new code leaking onto the default path, where `cpm:status` reads it; and the
+# new code absorbing the read failure, which would trade one conflation for another.
+
+# A readable spec that no matrix names, in a directory that is *not* empty — the other matrix
+# names a different spec. An empty directory would leave "zero matrices name it" and "nothing
+# to read" indistinguishable, which is the distinction under test.
+N_DIR=$(coverage_fixture_dir verdict-no-matrix)
+
+N_SPEC=$(coverage_fixture_spec 71-spec-no-matrix --dir "$N_DIR" \
+  --must FR1 "a requirement in a spec no matrix names")
+
+coverage_fixture_matrix 71-01-coverage-other "docs/specifications/70-spec-verdict.md" \
+  --dir "$N_DIR" \
+  --epic "$N_DIR/71-01-epic-other.md" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+: > "$N_DIR/71-01-epic-other.md"
+
+test_start "control: the fixture spec is readable"
+if [ -r "$N_SPEC" ]; then
+  test_pass
+else
+  test_fail "$N_SPEC is not readable — every assertion below would be testing a read failure"
+fi
+
+test_start "control: the matrix directory is not empty, and its matrix names another spec"
+assert_contains "$(cat "$N_DIR/71-01-coverage-other.md")" "70-spec-verdict.md"
+
+# The four codes this script can already return, measured rather than assumed, so "distinct"
+# below is a comparison against what the program does and not against literals in this file.
+run_verdict --spec "$W_SPEC" --matrix-dir "$W_DIR" --verdict
+RC_DELIVERED_RUN="$V_RC"
+run_verdict --spec "$V_SPEC" --matrix-dir "$V_DIR" --verdict
+RC_OUTSTANDING_RUN="$V_RC"
+run_verdict --spec "$N_DIR/71-99-spec-absent.md" --matrix-dir "$N_DIR" --verdict
+RC_UNREADABLE="$V_RC"
+run_verdict --verdict
+RC_USAGE="$V_RC"
+
+run_verdict --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict
+RC_NO_MATRIX="$V_RC"
+
+test_start "--verdict returns a code of its own when the spec is readable and no matrix names it"
+if [ "$RC_NO_MATRIX" != "$RC_UNREADABLE" ] &&
+   [ "$RC_NO_MATRIX" != "$RC_USAGE" ] &&
+   [ "$RC_NO_MATRIX" != "$RC_DELIVERED_RUN" ] &&
+   [ "$RC_NO_MATRIX" != "$RC_OUTSTANDING_RUN" ]; then
+  test_pass
+else
+  test_fail "no-matrix returned $RC_NO_MATRIX; delivered=$RC_DELIVERED_RUN outstanding=$RC_OUTSTANDING_RUN unreadable=$RC_UNREADABLE usage=$RC_USAGE"
+fi
+
+test_start "control: the four codes it is compared against are themselves four distinct values"
+if [ "$(printf '%s\n%s\n%s\n%s\n' "$RC_DELIVERED_RUN" "$RC_OUTSTANDING_RUN" "$RC_UNREADABLE" "$RC_USAGE" | sort -u | grep -c .)" = "4" ]; then
+  test_pass
+else
+  test_fail "delivered=$RC_DELIVERED_RUN outstanding=$RC_OUTSTANDING_RUN unreadable=$RC_UNREADABLE usage=$RC_USAGE — the distinctness check compares against fewer values than it names"
+fi
+
+# The read failure keeps its own code. Without this the new code could simply have absorbed
+# the old one, which reads as a fix and is the same conflation pointing the other way.
+test_start "an unreadable spec still returns the read-failure code under --verdict"
+assert_equals "1" "$RC_UNREADABLE"
+
+# Containment: the default path is what `cpm:status` reads, and AD2 confines the change to
+# `--verdict`. The same fixture, one flag apart.
+test_start "without --verdict, the no-matrix case still exits 1 as it did before"
+run_verdict --spec "$N_SPEC" --matrix-dir "$N_DIR"
+assert_equals "1" "$V_RC"
+
+test_start "so the new code appears on the --verdict path and nowhere else"
+if [ "$RC_NO_MATRIX" != "$V_RC" ]; then
+  test_pass
+else
+  test_fail "both paths returned $V_RC — the change is not confined to --verdict"
+fi
+
+# Output is unchanged either way: AD2 changes an exit code, and NFR4's one-output-format rule
+# holds across this flag as it does across the others.
+test_start "the diagnostic still names the directory and the spec it looked for"
+N_ERR=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict 2>&1 >/dev/null || true)
+assert_contains "$N_ERR" "no matrix in $N_DIR names 71-spec-no-matrix.md as its source spec"
+
+test_start "and the no-matrix run emits no records on stdout"
+run_verdict --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict
+assert_empty "$V_OUT"
+
+# The script's usage text describes its own exit codes, which makes it a document describing
+# a program — and retro 24's finding is that asserting the two halves separately never
+# asserts that they agree. A code added without being documented, or documented without ever
+# being returned, is invisible to every assertion above. Both sets are gathered from runs:
+# the documented one by running the script with no arguments, the measured one from the five
+# runs above.
+USAGE_TEXT=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" 2>&1 >/dev/null || true)
+DOCUMENTED_CODES=$(printf '%s\n' "$USAGE_TEXT" |
+  sed -n '/^--verdict changes only the exit code/,/usage error\./p' |
+  grep -oE '(^|[^0-9])[0-9]([^0-9]|$)' | grep -oE '[0-9]' | sort -u | tr '\n' ' ')
+MEASURED_CODES=$(printf '%s\n%s\n%s\n%s\n%s\n' \
+  "$RC_DELIVERED_RUN" "$RC_OUTSTANDING_RUN" "$RC_NO_MATRIX" "$RC_UNREADABLE" "$RC_USAGE" |
+  sort -u | tr '\n' ' ')
+
+test_start "control: the usage text names a code set at all"
+if [ "$(printf '%s' "$DOCUMENTED_CODES" | wc -w | tr -d ' ')" = "5" ]; then
+  test_pass
+else
+  test_fail "extracted '$DOCUMENTED_CODES' from the usage text — expected five codes"
+fi
+
+test_start "the exit codes the usage text documents are the codes the script returns"
+assert_equals "$DOCUMENTED_CODES" "$MEASURED_CODES"
+
+test_start "control: a documented code the script never returns is detected"
+FAKE_DOCUMENTED=$(printf '%s\n5\n' "$DOCUMENTED_CODES" | tr ' ' '\n' | grep -E '.' | sort -u | tr '\n' ' ')
+if [ "$FAKE_DOCUMENTED" = "$MEASURED_CODES" ]; then
+  test_fail "adding a sixth documented code left the two sets equal"
+else
+  test_pass
+fi
+
+# The script states its exit codes twice — in the header comment a maintainer reads and in
+# the usage text a caller sees — and the assertion above defends only the second. Two copies
+# that are each individually correct is the shape retro 26 flagged: nothing here would notice
+# the header keeping three codes after the usage text grew a fourth.
+header_codes() {
+  sed -n '/^# With `--verdict`/,/^#   2  usage error$/p' "$1" |
+    sed -n 's/^#   \([0-9]\)  .*/\1/p' | sort -u | tr '\n' ' '
+}
+HEADER_CODES=$(header_codes "$ROLLUP")
+
+test_start "control: the header comment names a code set at all"
+if [ "$(printf '%s' "$HEADER_CODES" | wc -w | tr -d ' ')" = "5" ]; then
+  test_pass
+else
+  test_fail "extracted '$HEADER_CODES' from the header comment — expected five codes"
+fi
+
+test_start "the header comment documents the same codes the script returns"
+assert_equals "$HEADER_CODES" "$MEASURED_CODES"
+
+test_start "control: a code dropped from the header alone is detected"
+STALE_HEADER="$TEST_TMPDIR/stale-header-rollup.sh"
+grep -v '^#   4  the spec was readable' "$ROLLUP" > "$STALE_HEADER"
+if [ "$(header_codes "$STALE_HEADER")" = "$MEASURED_CODES" ]; then
+  test_fail "removing code 4 from the header left it agreeing with the measured set"
+else
+  test_pass
+fi
+
 test_summary

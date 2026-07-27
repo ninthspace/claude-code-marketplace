@@ -12,11 +12,14 @@ Generate and launch a Ralph Wiggum loop that wraps `/cpm:do` for autonomous, uns
 Parse `$ARGUMENTS` for:
 
 1. **Epic paths** — one or more explicit paths (e.g. `docs/epics/23-epic-*.md docs/epics/24-epic-*.md`) or a range (e.g. `23 through 26`).
-2. **`--max-iterations N`** — maximum Ralph loop iterations (default: 50).
-3. **`--story-filter`** — include/exclude specific stories (e.g. `--story-filter "1-3"` or `--story-filter "!4"`).
-4. **`--dry-run`** — generate and display the prompt without launching.
+2. **A spec path** — a single path under `docs/specifications/` (e.g. `docs/specifications/45-spec-delivery-autonomy.md`), which selects **spec mode**: the loop generates the epics for that spec itself before working them.
+3. **`--max-iterations N`** — maximum Ralph loop iterations (default: 50).
+4. **`--story-filter`** — include/exclude specific stories (e.g. `--story-filter "1-3"` or `--story-filter "!4"`).
+5. **`--dry-run`** — generate and display the prompt without launching.
 
-If no epic paths are provided, auto-discover all incomplete epics (see Process Step 1).
+**The mode comes from the path, not from a flag.** A path under `docs/specifications/` is spec mode; epic paths or a range are epic mode; no path at all is auto-discovery. There is no `--spec` flag and no second skill — the argument the caller already types carries the mode, so an invocation that worked before spec mode existed keeps working without being rewritten to declare which mode it meant. Step 1a resolves this.
+
+If no path of any kind is provided, auto-discover all incomplete epics (see Process Step 1). The test is *"is there a path, and which directory does it point into"* rather than *"are there epic paths"* — a spec path **is** a path, so it selects its mode rather than falling through to auto-discovery.
 
 ## Process
 
@@ -30,24 +33,40 @@ Before generating the prompt, validate all prerequisites.
 
 #### 1a. Epic Discovery
 
-If explicit epic paths were provided in arguments, resolve them (expand globs). Otherwise, auto-discover:
+**Resolve the mode first — it decides what discovery is looking for.** Classify the paths in the arguments by the directory they sit in, never by a flag and never by reading the file:
+
+| Argument shape | `{mode}` | What discovery resolves |
+|---|---|---|
+| One or more paths under `docs/epics/`, or a range | `epic` | the named epic files |
+| A single path under `docs/specifications/` | `spec` | the incomplete epics naming that spec as their source — possibly none |
+| No path at all | `epic` | every incomplete epic |
+
+Store the result as `{mode}` and, in spec mode, the spec path as `{spec_path}`. Both are fixed here and read by later steps rather than re-derived from the arguments, so the mode is decided exactly once. A second path under `docs/specifications/`, or a spec path mixed with epic paths, is an error: report the arguments and stop, rather than guessing which one was meant.
+
+If explicit epic paths were provided in arguments, resolve them (expand globs). If a spec path was provided, run the same discovery below and then keep only the epics whose `**Source spec**` field names `{spec_path}`, comparing basenames as `coverage-rollup.sh` does. Otherwise, auto-discover:
 
 1. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
 2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` (`Done` reads as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn` — terminal, user-set statuses for work no longer needed; a retired epic has nothing to run). Use Grep and Read tools directly (Bash loops with shell variables lose context).
-3. If no runnable epics found (all `Complete` or retired), report to the user and stop: "No incomplete epics found. Nothing to run."
-4. Present the discovered epics and confirm with AskUserQuestion.
+3. If no runnable epics found (all `Complete` or retired), **branch on `{mode}`**:
+   - **Epic mode** — report to the user and stop: "No incomplete epics found. Nothing to run." Unchanged; this is what the three shapes that predate spec mode still reach.
+   - **Spec mode** — do **not** stop, and do not emit that message. Zero epics is spec mode's starting state rather than a failure: the run's first phase is what writes them. Report "No epics for `{spec_path}` yet — phase 1 generates them." and continue pre-flight with an empty resolved list.
+4. Present the discovered epics and confirm with AskUserQuestion. In spec mode present `{spec_path}` alongside them, since the epics found are the run's starting position and the spec is what it is measured against — with none found there is still something to confirm.
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.
 
-**All three input shapes converge on one resolved list**, and the prompt's variables are derived from that list rather than from the arguments that produced it:
+**Every input shape resolves to one epic list**, and the prompt's variables are derived from that list rather than from the arguments that produced it:
 
 | Variable | Value |
 |---|---|
+| `{mode}` | `epic` or `spec`, from the mode resolution above |
+| `{spec_path}` | the resolved spec path in spec mode; unset in epic mode |
 | `{epic_count}` | the number of resolved epic files |
 | `{epic_range}` | a human-readable label for the set (e.g. `23 through 26`, or the epic names when there is no range) |
 | `{epic_glob}` | the resolved epic **paths**, space separated, exactly as they will be passed to a command |
 
-`{epic_glob}` is a path list, not a pattern — every shape resolves to files before the prompt is assembled, so the loop never re-expands a glob against a directory that may have changed since launch. It is passed verbatim to `coverage-rollup.sh --epic` in the completion check (Step 2), which is why its form is fixed here rather than left to the assembly step. CPM epic filenames are numbered kebab-case and contain no spaces, so a space-separated list is unambiguous; a path containing a space would need quoting and does not occur.
+**The three epic-mode shapes resolve to the epics the run will work; spec mode resolves to the epics that exist so far**, which at iteration 1 is normally none. That list is a starting position rather than the run's scope, so nothing downstream may read a resolved list as "every epic this run will touch" — in spec mode the run writes the rest of it.
+
+`{epic_glob}` is a path list, not a pattern — every shape resolves to files before the prompt is assembled, so the loop never re-expands a glob against a directory that may have changed since launch. It is passed verbatim to `coverage-rollup.sh --epic` in the completion check (Step 2), which is why its form is fixed here rather than left to the assembly step — in epic mode. **In spec mode that list can be empty at launch, so `--epic {epic_glob}` would have nothing to pass**; spec mode's completion check asks a different question (*are the spec's requirements traced*), and the prompt that asks it is not built yet, so Step 2 still assembles epic mode's template today. Recorded here rather than left for a reader to hit. CPM epic filenames are numbered kebab-case and contain no spaces, so a space-separated list is unambiguous; a path containing a space would need quoting and does not occur.
 
 #### 1b. Strip `[plan]` Tags
 
@@ -104,18 +123,64 @@ Assemble the ralph-loop prompt as plain text — no markdown, code fences, backt
 - `{max_iterations}` — from arguments or default (50)
 - `{story_filter_clause}`, `{test_runner_clause}`, `{resume_clause}` — include when applicable, omit otherwise
 - `{task_budget_clause}` — "Task budget: {N} tasks, estimate ~2000 tokens per task." Count `###` task headings in target epic docs.
+- `{completion_promise}` — `ALL_EPICS_COMPLETE` in epic mode, `SPEC_DELIVERED` in spec mode. Taken from `{mode}` (Step 1a) and fixed for the run; it is written into the state file's frontmatter in Step 3 and is the same literal string the prompt's completion clause tells the model to emit.
+
+#### One promise per mode, fixed at launch
+
+**The tag differs by mode and nobody is asked which one to use** (FR10). `completion_promise` is per-run frontmatter, so the two modes can name different achievements without a choice existing at any point: `{mode}` is resolved once in Step 1a, and the promise follows from it. That is what preserves the argument for a single promise — the objection to two tags was that an *available choice* lets the weaker path survive, not that two strings are one too many. `ALL_EPICS_COMPLETE` at the end of a spec-mode run names the wrong achievement in a log read by someone who was not there.
+
+**Evidence goes beside the tag, never inside it.** The stop hook compares the `<promise>` tag's contents to `completion_promise` with literal string equality after whitespace normalisation, so a tag carrying counts, a summary or a file list never matches, and the loop runs to its iteration cap on finished work. Both completion clauses put their coverage line on its own line next to the promise for exactly this reason. Spec 44's AD4 assumed the tag could carry its evidence; it cannot, and this is the second spec to say so.
+
+#### The phase predicate
+
+**In spec mode the phase judgement is a reading of `coverage-rollup.sh`'s records, and of nothing else** (AD1). The loop runs `bash {rollup_script} --spec {spec_path} --verdict` and takes two things from that one run: its exit code, and the `SUMMARY` record's `untraced` field. Phase 1 — generating the epics — is over when that field reads `0`; phase 2 — working them — is over when the run exits `0`, which is the script's own statement that no row is unverified. There is no marker file and no phase written down anywhere: the records **are** the state, so a run that resumes mid-flight re-reads its position instead of remembering it.
+
+**The loop relays; it does not compute.** It names the fields it read and repeats their values verbatim — it never counts rows, sums a column, or decides for itself that a requirement is traced or a row verified. Those judgements exist in exactly one place (NFR2), and it is the same rule the epic-mode completion clause already states as *never work that verdict out yourself from the records*.
+
+**Phase is never inferred from the epic files.** That `docs/epics/` holds four matching files, or none, says nothing about which phase the run is in: a partially-generated set looks exactly like a complete one on disk, and at iteration 1 spec mode's epic list is legitimately empty (Step 1a). The count of files is not consulted, and `{epic_count}` is a label for the user rather than an input to this decision.
 
 **Template** (written into `.claude/ralph-loop.local.md` body; use `--` for dashes; `ALL_EPICS_COMPLETE` must match `completion_promise` frontmatter):
 
-**Length: 2736 characters**, measured on the template line below before interpolation — the assembled prompt is longer, since the `{...}` placeholders expand at runtime. This is a *measurement*, not a target: every clause is an override without which the loop stalls or drifts, so the figure is not something to cut toward. It was allowed to read "around 1100" against an actual 1,477 for long enough that the drift is now what the number is for. `test-ralph-autonomous-wiring.sh` asserts this figure against the line's actual length, so any edit to the template fails the suite until the figure is updated here — it did exactly that when epic 44-03 added the completion-check clause, which is the point of stating a number. Keep new clauses to a sentence.
+**Length: 2858 characters**, measured on the template line below before interpolation — the assembled prompt is longer, since the `{...}` placeholders expand at runtime. This is a *measurement*, not a target: every clause is an override without which the loop stalls or drifts, so the figure is not something to cut toward. It was allowed to read "around 1100" against an actual 1,477 for long enough that the drift is now what the number is for. `test-ralph-autonomous-wiring.sh` asserts this figure against the line's actual length, so any edit to the template fails the suite until the figure is updated here — it did exactly that when epic 44-03 added the completion-check clause, which is the point of stating a number. Keep new clauses to a sentence.
 
 ```
-Run /cpm:do on epics {epic_range} sequentially ({epic_glob}). Continue to each next epic automatically. Make all decisions autonomously -- choose the most reasonable option for every AskUserQuestion. Use inline planning for all stories. Task complete means: all tagged criteria ([unit]/[integration]/[feature]) have passing test results, and all [manual] criteria have self-assessment lines in the progress file. A failure (for the 3-strike skip rule) is a test command exit code != 0 after a code change attempt -- tool errors and permission denials are retries, not failures. If acceptance criteria are ambiguous and completion cannot be determined, mark the story Blocked -- criteria ambiguous and continue to the next story. At the do retro consumption gate, do not block -- branch by category: auto-apply safe categories (codebase discoveries, patterns worth reusing), recording Retro applied: {nn} {category} applied (autonomous, safe-category) -- {what it did} and carrying each as context; defer the rest (scope surprises, criteria gaps, complexity underestimates, testing gaps) as Retro applied: {nn} {category} deferred (autonomous run, unreviewed); smooth deliveries informational; never auto-retire. List both applied and deferred observations in the run summary. At the do Change Type Decision gate, do not block and do not pick one of its options -- take do's autonomous branch: inline edit, retro observation, or amend the open epic doc so later stories inherit the fix; never /cpm:pivot. Amend only on a citable contradiction, and record a Pivot deferred breadcrumb for each artefact left behind. Report amendments separately from the deferred observations. Commit after each completed story. Keep all commits local.{story_filter_clause}{test_runner_clause}{task_budget_clause}{resume_clause} When the last specified epic completes, run bash {rollup_script} --epic {epic_glob} --verdict and let its exit code decide: on 0, print one line reading COVERAGE: N of M rows marked verified across K matrices -- aggregation, not verification, since every mark was placed by cpm:do on its own work, and it counts rows in these epics, not requirements in a spec, so it cannot say a spec is delivered -- then output ALL_EPICS_COMPLETE; on 3, do not output it, name the unverified rows the script emitted and keep working; on any other code, do not output it and say the check could not run. Never work that verdict out yourself from the records, and never output ALL_EPICS_COMPLETE without having run that command in the same turn. Put the counts on their own line beside the promise, never inside the promise tag the stop hook matches -- it compares that text exactly, so anything added inside it stops the loop from ever ending.
+Run /cpm:do on epics {epic_range} sequentially ({epic_glob}). Continue to each next epic automatically. Make all decisions autonomously -- choose the most reasonable option for every AskUserQuestion. Use inline planning for all stories. Task complete means: all tagged criteria ([unit]/[integration]/[feature]) have passing test results, and all [manual] criteria have self-assessment lines in the progress file. A failure (for the 3-strike skip rule) is a test command exit code != 0 after a code change attempt -- tool errors and permission denials are retries, not failures. If acceptance criteria are ambiguous and completion cannot be determined, mark the story Blocked -- criteria ambiguous and continue to the next story. At the do retro consumption gate, do not block -- branch by category: auto-apply safe categories (codebase discoveries, patterns worth reusing), recording Retro applied: {nn} {category} applied (autonomous, safe-category) -- {what it did} and carrying each as context; defer the rest (scope surprises, criteria gaps, complexity underestimates, testing gaps) as Retro applied: {nn} {category} deferred (autonomous run, unreviewed); smooth deliveries informational; never auto-retire. List both applied and deferred observations in the run summary. At the do Change Type Decision gate, do not block and do not pick one of its options -- take do's autonomous branch: inline edit, retro observation, or amend the open epic doc so later stories inherit the fix; never /cpm:pivot. Amend only on a citable contradiction, and record a Pivot deferred breadcrumb for each artefact left behind. Report amendments separately from the deferred observations. If a cpm:epics gate is reached, do not block -- take cpm:epics' Autonomous Mode branch, and never restate its rules here. Commit after each completed story. Keep all commits local.{story_filter_clause}{test_runner_clause}{task_budget_clause}{resume_clause} When the last specified epic completes, run bash {rollup_script} --epic {epic_glob} --verdict and let its exit code decide: on 0, print one line reading COVERAGE: N of M rows marked verified across K matrices -- aggregation, not verification, since every mark was placed by cpm:do on its own work, and it counts rows in these epics, not requirements in a spec, so it cannot say a spec is delivered -- then output ALL_EPICS_COMPLETE; on 3, do not output it, name the unverified rows the script emitted and keep working; on any other code, do not output it and say the check could not run. Never work that verdict out yourself from the records, and never output ALL_EPICS_COMPLETE without having run that command in the same turn. Put the counts on their own line beside the promise, never inside the promise tag the stop hook matches -- it compares that text exactly, so anything added inside it stops the loop from ever ending.
 ```
+
+#### Spec mode's two phases
+
+**Spec mode assembles the same template with two sentences swapped, not a second template.** Every autonomy rule in the line above applies unchanged in spec mode — they are about how `cpm:do` behaves without a human, which the mode does not alter — so they exist in one copy and are substituted into rather than restated. Assemble spec mode's prompt from the template above with exactly two replacements:
+
+1. Replace the **opening sentence** — the first sentence of the template, the one naming `{epic_range}` and `{epic_glob}`, together with the "continue automatically" sentence after it — with the **phase clause** below.
+2. Replace the **completion clause** — the final sentence group, the one gating the promise on the roll-up's exit code — with the spec-mode completion clause (Task 3.2).
+
+Both boundaries are described rather than quoted. Quoting them here would put a second copy of the template's own opening in the file, and four suites locate the template by grepping for that sentence — a second copy is not a documentation flaw but a broken extractor, which is how this paragraph came to be worded this way.
+
+**Phase clause** (spec mode; **984 characters**, measured on the block below before interpolation and asserted by `test-ralph-two-phase-prompt.sh`):
+
+```
+Work spec {spec_path} to completion. This run has two phases and you re-check which one you are in at the start of every iteration: run bash {rollup_script} --spec {spec_path} --verdict, then read the SUMMARY record's untraced field and the exit code. Exit 4 means phase 1, and so does any untraced count that is not 0. Exit 1 or 2 means the check could not run: say so and stop, and never read either as phase 1 not started. An untraced count of 0 means phase 2. In phase 1, run /cpm:epics on {spec_path}, taking cpm:epics' Autonomous Mode branch, and end the iteration there. Before the first /cpm:do of phase 2, strip [plan] tags from the epic docs this run generated, by the rule ralph pre-flight step 1b applies: remove the tag from any story heading carrying it and log one line per strip, touching no epic doc this run did not write. In phase 2, run /cpm:do on every epic doc naming {spec_path} as its source spec, in filename order, continuing to each next epic automatically.
+```
+
+**Completion clause** (spec mode; **844 characters**, measured on the block below before interpolation and asserted by the same suite):
+
+```
+When phase 2 has no epic left to work, run bash {rollup_script} --spec {spec_path} --verdict and let its exit code decide: on 0, print one line reading COVERAGE: N of M rows marked verified across K matrices, R of R requirements traced -- aggregation of the marks cpm:do placed on its own work, not independent verification -- then output SPEC_DELIVERED; on 3, do not output it, name the untraced requirements and the unverified rows the script emitted, and keep working; on 4, do not output it and go back to phase 1, since no matrix names this spec yet; on any other code, do not output it and say the check could not run. Never work that verdict out yourself from the records, and never output SPEC_DELIVERED without having run that command in the same turn. Put the counts on their own line beside the promise, never inside the promise tag.
+```
+
+**Four codes, and the two that must not collapse.** `3` and `4` both mean *keep working*, and answering them the same way would be the easy edit — but they resume at different phases, so the clause names them separately. `1` and `2` mean *stop*, and reading either as `4` would send a loop that cannot read its own inputs into generating epics against a spec it never parsed. Spec 44's failure is the reason this is written as four branches rather than "0 means done, anything else means continue": a branch on a code the script never returns reads perfectly and never fires, so Story 5 runs the command the clause names and compares.
+
+**Fail closed** (NFR1). Every branch above except `0` leaves the promise unemitted, and the `any other code` catch-all makes that the default for codes that do not exist yet rather than a list to be kept current. An unreadable spec, a missing script, a permission error and a code added next year all reach the same place: no promise, and a line saying the check could not run.
+
+**What spec mode costs.** Substituting both clauses gives an assembled spec-mode prompt of **3,656 characters** — the template's 2,858 less the 103-character opening and the 927-character completion clause it replaces, plus the two blocks above. AD3 estimated "roughly 3,400" for carrying both phases, so the estimate held; it is recorded here because the epic-mode figure a suite asserts is a *different* number, and a reader who checks only that one would conclude the two-phase prompt was free.
+
+**Why the phase is re-read every iteration rather than carried.** The loop has no memory between iterations beyond the state file, which the stop hook rewrites only to advance `iteration:` (AD3). Reading the phase from the records each time is therefore not a cost but the only honest option — and it is what makes a resumed run correct, since the records describe the epics that exist now rather than the ones that existed at launch.
+
+**Phase 1 is never "done" on its own** (FR6). It ends when the *next* check reports 0 untraced, which is a fact about the epics `cpm:epics` just wrote — so the clause ends the iteration rather than declaring anything, and the completion tag is unreachable from inside it. A spec with no epics reports 0 untraced only when there are no requirements to be untraced; that case exits 4, which is why 4 is grouped with "not 0" rather than with the failures.
 
 **What the completion line measures, and what it cannot.** The loop runs `coverage-rollup.sh` in **epic scope**, so the number it prints is rows marked verified out of rows present, across the matrices for the epics it was given. Every one of those `✓` marks was placed by `cpm:do` on its own work, which is why the line says **aggregation, not verification**: it reports what this run claimed, counted up, and adds no independent evidence. A wall of green means every row was marked, not that anything works.
 
-The measurement that would discriminate is the **untraced count** — requirements in a spec with no matrix row anywhere claiming them — and epic scope cannot produce it, because it has no requirement list to compare against. That is `--spec` scope's measurement, which `cpm:status` presents; **`cpm:ralph` has no spec-scope promise, and building one is deferred**. So a passing completion line here means "the epics I was pointed at have no unverified rows left", never "the spec is delivered". A spec with a requirement no epic ever covered produces the same clean line.
+The measurement that would discriminate is the **untraced count** — requirements in a spec with no matrix row anywhere claiming them — and epic scope cannot produce it, because it has no requirement list to compare against. That is `--spec` scope's measurement, which `cpm:status` presents and which spec mode's phase predicate reads directly (see *The phase predicate* above); **epic mode has no spec-scope promise**, and gains none by counting its rows more carefully. So a passing completion line here means "the epics I was pointed at have no unverified rows left", never "the spec is delivered". A spec with a requirement no epic ever covered produces the same clean line.
 
 ### Step 3: State File Write and Launch
 
@@ -278,6 +343,8 @@ This table records how each `cpm:do` gate is handled under an autonomous run. Mo
 **The completion row is a record, not the mechanism.** Its last cell says so on purpose: the stop hook feeds the *template line* back verbatim on every iteration and the loop never reads this table, so an instruction that lives only here documents a behaviour the loop does not have (retro 21). The row exists because the table is where a reader looks for what the loop does at each decision point, and the loop's own exit is one — but the template is the site that acts.
 
 **Retro generation is not a gate**: retro *generation* at `cpm:do` Step 8 writes the retro file automatically (no `AskUserQuestion`), so it runs unchanged under autonomous execution — only the *consumption* gate above needs an override. Generation still fires at epic completion during a Ralph run.
+
+**`cpm:epics` gates are not rows in this table, and that is deliberate.** The table is scoped to the gates of the skill this loop wraps. `cpm:epics` holds its own dispositions in its **Autonomous Mode** section — the single source — and the template carries a one-sentence reference to it rather than a copy. Two copies of a gate table is how a disposition changes in one place and not the other; a reference cannot go stale. As with the completion row above, this paragraph is a record for a maintainer looking here first, and the template is the site that acts.
 
 **When to update**: If `cpm:do` adds, removes, or changes an `AskUserQuestion` gate, review the prompt template's Autonomous Behaviour section and this table. A new gate that isn't overridden will cause the Ralph loop to pause and wait for user input — defeating the purpose of autonomous execution.
 

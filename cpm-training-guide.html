@@ -373,7 +373,7 @@
 
 <header>
   <h1><span>/cpm</span> Training Guide</h1>
-  <span class="version-badge">v3.4.0 &middot; tuned for Claude Opus 5</span>
+  <span class="version-badge">v3.5.0 &middot; tuned for Claude Opus 5</span>
   <div class="preset-bar">
     <button class="preset-btn active" data-preset="full" onclick="applyPreset('full')">Full Pipeline</button>
     <button class="preset-btn" data-preset="quick" onclick="applyPreset('quick')">Quick Start</button>
@@ -553,13 +553,13 @@ const SKILLS = [
     icon: '🔄',
     color: '#f0883e',
     category: 'execution',
-    short: 'Autonomous multi-epic execution via Ralph Wiggum',
-    description: 'Wraps /cpm:do in a Ralph Wiggum loop for autonomous, unsupervised multi-epic execution. Discovers epics, validates prerequisites (Ralph plugin installed, test runner available), generates a self-contained prompt with autonomous behaviour overrides (no AskUserQuestion gates), and launches the loop. Includes stuck detection (skip after N failures), append-only execution log, resume capability, and two-phase launch (dry-run then execute). Ideal for overnight runs or large batches of epics.',
-    input: 'Epic doc paths (explicit, range, or auto-discover). Optional --max-iterations, --story-filter, --dry-run.',
+    short: 'Autonomous execution — epics, or a whole spec',
+    description: 'Wraps /cpm:do in a Ralph Wiggum loop for autonomous, unsupervised execution. Discovers epics, validates prerequisites (Ralph plugin installed, test runner available), generates a self-contained prompt with autonomous behaviour overrides (no AskUserQuestion gates), and launches the loop. Includes stuck detection (skip after N failures), append-only execution log, resume capability, and two-phase launch (dry-run then execute). Hand it a spec path instead of epics and it runs in spec mode: phase 1 generates the spec\'s epics with /cpm:epics, phase 2 works them with /cpm:do — the loop re-checks which phase it is in on every iteration by running the coverage roll-up script. Ideal for overnight runs, large batches of epics, or delivering a spec end to end.',
+    input: 'Epic doc paths (explicit, range, or auto-discover), or a spec path under docs/specifications/. Optional --max-iterations, --story-filter, --dry-run.',
     output: 'Ralph loop command + execution log',
     outputFile: 'docs/plans/ralph-log-{timestamp}.md',
-    phases: ['Pre-flight: discover epics, detect Ralph plugin, find test runner', 'Resume detection: check for previous run logs and epic statuses', 'Prompt assembly: interpolate template with epic list, iterations, overrides', 'Present generated /ralph-loop:ralph-loop command for review', 'Launch on confirmation (or save for later)'],
-    tip: 'The generated prompt overrides all 10 AskUserQuestion gates in /cpm:do with autonomous fallback behaviour. A maintenance coupling table in the SKILL.md documents which gates are overridden — update it when /cpm:do changes.',
+    phases: ['Pre-flight: resolve the input (epics or spec), detect Ralph plugin, find test runner', 'Strip [plan] tags so no story stalls the loop at EnterPlanMode', 'Resume detection: check for previous run logs and epic statuses', 'Prompt assembly: interpolate template with epic list or spec path, iterations, overrides', 'Present generated /ralph-loop:ralph-loop command for review', 'Launch on confirmation (or save for later)', 'Spec mode phase 1: /cpm:epics until every requirement is traced', 'Spec mode phase 2: /cpm:do over the generated epics until the roll-up exits 0'],
+    tip: 'The generated prompt overrides the AskUserQuestion gates in /cpm:do with autonomous fallback behaviour — a maintenance coupling table in the SKILL.md documents which, so update it when /cpm:do changes. The completion promise is fixed at launch and differs by mode: epic mode emits ALL_EPICS_COMPLETE, spec mode SPEC_DELIVERED. Neither is emitted on the loop\'s own judgement — the prompt has to run coverage-rollup.sh --verdict in the same turn and let its exit code decide, and the counts it prints are an aggregation of the marks /cpm:do placed on its own work, not independent verification.',
     next: ['retro']
   },
   {
@@ -734,8 +734,8 @@ const SKILLS = [
     input: 'Optional focus context (file path or description), optionally asking for the full picture',
     output: 'Narrative status report with recommended next steps — plus, on request, a shareable page carrying the full picture',
     outputFile: '(ephemeral — stdout only; a confirmed publish appends one row to docs/artifacts/index.md)',
-    phases: ['Phase 1: Artifact inventory scan (Glob + Read)', 'Phase 2: Git activity scan (adaptive time window)', 'Phase 3: Narrative synthesis and recommendations', 'Phase 4 (on request): offer to publish the full picture as an artifact'],
-    tip: 'The scan never creates, modifies, or deletes anything it reads. The adaptive git time window widens automatically when there\'s been a gap since the last commit. Ask for the full picture and you get the completion grid, blocked panel and RAG view published as a shareable page — offered, never automatic, and confirmed on its own terms; the register row is the only file it touches, and for a skill with no saved document of its own that row is the artifact\'s one durable trace. For the same picture across every project at once, the companion cpm board terminal UI reads the same artifacts read-only and launches the right /cpm:* session for whichever project you pick.',
+    phases: ['Phase 1: Artifact inventory scan (Glob + Read)', 'Phase 2: Git activity scan (adaptive time window)', 'Phase 3: Narrative synthesis and recommendations', 'Phase 3b (spec focus only): coverage roll-up — untraced requirements first, then per-requirement state', 'Phase 4 (on request): offer to publish the full picture as an artifact'],
+    tip: 'Focus the scan on a spec and it answers the question the project-wide view cannot — is this spec fully delivered? — by rolling every epic\'s coverage matrix back up to the spec\'s requirements, untraced ones reported first. The ✓ marks it shows are aggregation, not verification: each was placed by /cpm:do on its own work. The scan never creates, modifies, or deletes anything it reads. The adaptive git time window widens automatically when there\'s been a gap since the last commit. Ask for the full picture and you get the completion grid, blocked panel and RAG view published as a shareable page — offered, never automatic, and confirmed on its own terms; the register row is the only file it touches, and for a skill with no saved document of its own that row is the artifact\'s one durable trace. For the same picture across every project at once, the companion cpm board terminal UI reads the same artifacts read-only and launches the right /cpm:* session for whichever project you pick.',
     next: ['do', 'retro', 'archive', 'discover']
   },
   {

@@ -23,6 +23,7 @@ You write a spec; the loop should produce the epics and implement them without f
 - **FR10** — **One promise per mode, fixed at launch** — not a choice offered to the loop. Epic mode asks "are these matrices fully verified"; spec mode asks that *plus* "are all the spec's requirements traced".
 - **FR11** — **Non-convergence is visible.** Each iteration reports traced and verified counts, and a run whose counts are unchanged across N consecutive iterations stops and reports rather than continuing. `cpm:ralph` defaults to 50 iterations and no number currently exists that would reveal a loop that is neither stalled nor finished.
 - **FR12** — **Cross-session relaunch detects a leftover `cpm:epics` progress file** for the same spec, even when the Stale-Progress guard returns `SUPPRESS`, and passes it back as resume state.
+- **FR13** — **`[plan]` tags are stripped from every epic doc before `/cpm:do` runs over it**, not only from the docs that existed at pre-flight. Step 1b strips them after epic discovery and before launch, which covers all three of today's input shapes because their epics are on disk when pre-flight runs. In spec mode the epics do not exist yet: `cpm:epics` writes them during phase 1 and its `[plan]` tag suggestion rule attaches tags to exactly the stories that touch data models, API contracts, or cross-system integration. Those tags reach `cpm:do` unstripped, `EnterPlanMode` fires, and the loop stalls waiting for an approval nobody is present to give — the precise failure Step 1b exists to prevent.
 
 ### Won't Have (this iteration)
 
@@ -37,7 +38,7 @@ You write a spec; the loop should produce the epics and implement them without f
 - **NFR2 — Single source of the phase judgement.** `cpm:ralph` relays the script's records; it never derives traced / untraced / verified state itself. Reading a named field out of a `SUMMARY` record is relaying; counting rows is deriving. Extends spec 44's NFR5.
 - **NFR3 — Bounded write surface for the autonomous `epics` phase.** It writes epic docs, coverage matrices, and its progress file. **It never edits the source spec.** The spec is the only artefact a human authored and the only fixed point the loop is measured against, so a loop that can rewrite it can move its own goalposts. `cpm:do`'s autonomous branch already carries this rule (`do/SKILL.md:64`); an autonomous `epics` needs it more, because `epics` reads the spec as its primary input and is one edit away from it.
 - **NFR4 — Auditable without re-running.** Every autonomous gate decision leaves a breadcrumb naming *which* gate and *what* was chosen. Without this, "the loop cut the spec into five epics" is unreviewable.
-- **NFR5 — Prompt budget.** The template is **2,736 characters** today and is fed back verbatim on every iteration. New clauses stay to a sentence, and the stated figure is asserted against the actual length.
+- **NFR5 — Prompt budget.** The template is **2,858 characters** today and is fed back verbatim on every iteration. New clauses stay to a sentence, and the stated figure is asserted against the actual length.
 - **NFR6 — Idempotent resume.** Re-entering phase 1 over a partially-generated set neither duplicates an epic nor renumbers one. `cpm:epics` already treats sub-numbers as identifiers rather than ordinals, so the constraint is that resume must not violate a property the numbering procedure already guarantees.
 
 ## Architecture Decisions
@@ -86,6 +87,18 @@ You write a spec; the loop should produce the epics and implement them without f
 
 **Alternatives considered**: auto-accepting every proposal — maximally defensive, but self-marking, and retro 21 showed an invented must-NOT can be *unsatisfiable as written*, which would then block `cpm:do` autonomously with nobody watching. Skipping the gate entirely — fastest, but it drops the defensive-boundary probe for security and data-integrity criteria and leaves no trace that it was skipped.
 
+### AD6 — Strip `[plan]` at the point of use, not at generation
+
+**Choice**: `cpm:epics` keeps writing `[plan]` tags under an autonomous run exactly as it does interactively; the phase-1-to-phase-2 transition strips them from the epics just generated, before any `/cpm:do` runs. Step 1b's rule generalises from "strip after epic discovery" to "strip before `/cpm:do` runs over the doc" — one rule with two trigger points, pre-flight in epic mode and the phase transition in spec mode.
+
+**Rationale**: `[plan]` is not noise to be suppressed — it marks the stories touching data models, API contracts, and cross-system integration, and that is the first thing a human reviewing an unattended run's output wants to know. Suppressing it at generation would make an autonomously-produced epic doc quietly different from a human-facilitated one for the same work, and the difference would be invisible in the artefact. Stripping at the point of use keeps the signal in the document a reviewer reads and removes it only where it would stall the loop, which is what Step 1b already does — a moment later, for the same reason.
+
+**Cost**: NFR5. A clause in the prompt template, kept to a sentence by referencing Step 1b rather than restating the procedure.
+
+**Consequence**: an epic doc that has been through a spec-mode loop has had its `[plan]` tags removed, so the tags are visible in the generated artefact only between phase 1 and phase 2. The execution log records what was stripped, per Step 1b step 3, which is where the durable record lives.
+
+**Alternatives considered**: `cpm:epics` declining to emit the tag autonomously — cheapest, no prompt cost, and it sits naturally beside the Autonomous Mode branch since `[plan]` is itself an approval gate; rejected because it discards reviewer signal and would reopen epic 45-01, complete at 9/9 verified rows. Doing both — defensive against a future path that generates epics some other way, but two rules where one suffices, and the redundancy reads as uncertainty about which one works.
+
 ## Scope
 
 ### In Scope
@@ -96,6 +109,7 @@ You write a spec; the loop should produce the epics and implement them without f
 - A fourth `--verdict` exit code on `coverage-rollup.sh` (FR7, AD2).
 - A distinct spec-mode promise tag (FR10, AD4).
 - Phase-1 resumability within and across sessions, and non-convergence detection (FR8, FR9, FR11, FR12).
+- Stripping `[plan]` from epics generated during phase 1, at the phase transition (FR13, AD6).
 
 ### Out of Scope
 
@@ -150,6 +164,9 @@ No criterion in this spec is `[manual]`. Everything here is prose a model follow
 | FR11 (must NOT) | must NOT continue past the non-convergence threshold without reporting | `[integration]` |
 | FR12 | Spec-mode pre-flight detects a leftover `cpm:epics` progress file for the same spec even when the guard returns `SUPPRESS` | `[integration]` |
 | FR12 (must NOT) | must NOT delete or overwrite that progress file without surfacing it | `[integration]` |
+| FR13 | Epics generated during phase 1 are stripped before phase 2 begins, by the same rule Step 1b applies at pre-flight | `[integration]` |
+| FR13 (must NOT) | must NOT begin phase 2 while an epic the run generated still carries the tag | `[integration]` |
+| FR13 (must NOT) | must NOT strip tags from epic docs the run did not generate | `[integration]` |
 | NFR1 | Every phase decision defaults to *not complete* when the roll-up cannot compute | `[integration]` |
 | NFR2 | The loop relays named record fields; it counts no rows itself | `[integration]` |
 | NFR2 (must NOT) | must NOT derive traced or verified state from the records | `[integration]` |
@@ -159,7 +176,7 @@ No criterion in this spec is `[manual]`. Everything here is prose a model follow
 | NFR5 | The template's stated `**Length: N characters**` figure matches its actual length | `[integration]` |
 | NFR6 | Resume duplicates no epic doc and renumbers none | `[integration]` |
 
-Two criteria are phrased deliberately, against findings rather than instinct. **NFR3's must-NOT names the path**, not the word "spec" — retro 21 found that a must-NOT phrased against a token constrains the prose as well as the behaviour, and "spec" will appear in explanatory clauses throughout this work. **FR4's must-NOT is arithmetic rather than judgement** — enumerate the six gate sites, assert each carries a disposition — which is retro 22's *"a rule inventory taken before the first edit turns a must-NOT into arithmetic."*
+Three criteria are phrased deliberately, against findings rather than instinct. **FR13's first must-NOT says "the tag" rather than naming it**, for the same reason NFR3's names a path: the rule's own explanation has to write the tag repeatedly, so a must-NOT phrased against that token would be unsatisfiable on arrival — retro 21's remedy applied when the criterion is written rather than when its assertion fails. **NFR3's must-NOT names the path**, not the word "spec" — retro 21 found that a must-NOT phrased against a token constrains the prose as well as the behaviour, and "spec" will appear in explanatory clauses throughout this work. **FR4's must-NOT is arithmetic rather than judgement** — enumerate the six gate sites, assert each carries a disposition — which is retro 22's *"a rule inventory taken before the first edit turns a must-NOT into arithmetic."*
 
 ### Integration Boundaries
 

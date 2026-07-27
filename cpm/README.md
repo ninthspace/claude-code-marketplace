@@ -169,6 +169,8 @@ At the **Architecture Decisions** and **Scope Boundary** sections, agent persona
 
 Converts a spec into epic documents — one per major work area — each containing stories with acceptance criteria and tasks. Stories include traceability to spec requirements, showing which functional requirements each story satisfies. When the spec has a testing strategy, test approach tags are propagated to story acceptance criteria, testing tasks are auto-generated for stories with automated test tags, and integration testing stories are created for epics with significant cross-story interactions. When ADRs exist in `docs/architecture/`, they're referenced when breaking down architectural work.
 
+Run autonomously — from `/cpm:ralph`'s spec mode, where no human is present to answer a gate — it takes its **Autonomous Mode** branch instead. Five of its six gates approve the proposal the skill has just rendered, and still render it, since nobody reads it until afterwards. The sixth takes the opposite disposition: `must NOT` clauses are propagated from the spec but never invented, and a clause the skill would have proposed is *recorded* on the story for a human to review rather than attached to a criterion. Every disposition leaves an `**Autonomous gate**:` breadcrumb in the epic doc, and the run writes nothing under `docs/specifications/` — a gap found in the source is recorded, not repaired.
+
 Asked for a **dependency view** instead, it runs the inverse: a read-only projection over the epic docs that already exist, answering "what can I start now?" — an answer that lives across the epics rather than in any one of them. That view can be published as a shareable page on request, confirmed separately; the epic docs are never modified either way.
 
 **Input**: A spec from `/cpm:spec`, a brief, or a description.
@@ -198,24 +200,31 @@ The epic doc is updated as work progresses — statuses move from Pending -> In 
 
 During execution, `/cpm:do` captures per-task observations when something noteworthy happens (scope surprises, criteria gaps, complexity underestimates, codebase discoveries, testing gaps). These feed into `/cpm:retro`.
 
-### `/cpm:ralph` — Autonomous Multi-Epic Execution
+### `/cpm:ralph` — Autonomous Execution
 
-Wraps `/cpm:do` in a [Ralph Wiggum](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) loop for autonomous, unsupervised multi-epic execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction.
+Wraps `/cpm:do` in a [Ralph Wiggum](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) loop for autonomous, unsupervised execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction. Given a spec instead of epics, it generates the epics first and then works them (see **Spec mode** below).
 
 The generated prompt replaces all `/cpm:do` interaction gates (AskUserQuestion) with autonomous fallback behaviour: fix test failures, retry unmet criteria, skip stuck tasks, and auto-continue between epics. Includes stuck detection (skip after N consecutive failures), an append-only execution log, and a completion promise that signals when all epics are done.
 
 **Requires**: The [Ralph Wiggum plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) installed in Claude Code.
 
-**Input**: Epic doc paths (explicit, range, or auto-discover). Optional `--max-iterations`, `--story-filter`, `--dry-run`.
+**Input**: Epic doc paths (explicit, range, or auto-discover), **or a spec path**. Optional `--max-iterations`, `--story-filter`, `--dry-run`.
 
 ```
 /cpm:ralph                                    # auto-discover all incomplete epics
 /cpm:ralph docs/epics/23-epic-*.md docs/epics/24-epic-*.md   # specific epics
 /cpm:ralph 23 through 26 --max-iterations 100 # range with iteration limit
+/cpm:ralph docs/specifications/45-spec-delivery-autonomy.md   # spec mode: generate the epics, then work them
 /cpm:ralph --dry-run                          # generate prompt without launching
 ```
 
+**Spec mode.** A path under `docs/specifications/` selects it — the mode comes from the directory the path sits in, never from a flag, so every invocation that worked before it existed still works. The run then has two phases: phase 1 generates the spec's epics with `/cpm:epics` (taking its Autonomous Mode branch), phase 2 works them with `/cpm:do`. Which phase you are in is re-read from `coverage-rollup.sh --spec <path> --verdict` at the start of every iteration rather than remembered: **0 untraced requirements ends phase 1, and exit 0 — every row verified — ends phase 2**. A spec with no epics yet is phase one, and phase one is never "done". `[plan]` tags on the epics phase 1 writes are stripped before phase 2 runs over them, by the same rule pre-flight applies to epics that were already on disk.
+
+The completion promise differs by mode and is fixed at launch: epic mode emits `ALL_EPICS_COMPLETE`, spec mode `SPEC_DELIVERED`. Neither is a judgement the loop makes — it runs the script and relays the exit code, and any evidence goes *beside* the tag, never inside it.
+
 The skill always presents the generated `/ralph-loop:ralph-loop` command for review before executing (two-phase launch). Resume capability detects previous runs via execution logs and epic doc statuses.
+
+**What the completion line means, and what it does not.** In epic mode the number reported is rows marked verified out of rows present, across the matrices for the epics it was given — aggregation, not verification, since every `✓` was placed by `/cpm:do` on its own work. It cannot say a spec is delivered. Spec mode asks the wider question (are all the spec's requirements traced *and* every row verified), which is what makes its promise a different string.
 
 ### `/cpm:review` — Adversarial Review
 
@@ -405,6 +414,8 @@ Scan the current project's CPM artifacts and git history to produce a narrative 
 
 The report orients someone picking up the project for the first time: what it is, what's been built, what happened recently, and what needs attention now. Recommended next steps include copy-pasteable CPM commands based on the current project state.
 
+**Focus it on a spec** and the report gains a coverage roll-up: the question the project-wide view cannot answer — *is this spec fully delivered?* Coverage lives per-epic, so the roll-up joins every matrix that names the spec back to the spec's own requirements and reports the **untraced requirements first**, then each requirement's state (*delivered*, *in progress*, or *untraced* — never a proportion). The `✓` marks it counts are aggregation, not verification: each was placed by `/cpm:do` on its own work, and the report says so wherever it shows them.
+
 Ask for the *full picture* and the same scan can additionally be published as a shareable page — the completion grid, blocked panel and RAG view at a size stdout cannot carry. That is offered, never automatic, and confirmed on its own terms; a declined offer still leaves a complete status run behind it. When you accept, the only file touched is the register row appended to `docs/artifacts/index.md`, which for a skill with no saved document of its own is the artifact's one durable trace.
 
 **Input**: Optional focus context — a file path to emphasise a specific artifact, or a description to guide the report.
@@ -413,6 +424,7 @@ Ask for the *full picture* and the same scan can additionally be published as a 
 ```
 /cpm:status                                    # full project status
 /cpm:status docs/epics/02-epic-auth.md         # focus on a specific epic
+/cpm:status docs/specifications/02-spec-auth.md # …and add the spec's coverage roll-up
 /cpm:status what's the state of auth work?     # guided emphasis
 /cpm:status give me the full picture           # …and offer to publish it as a page
 ```
@@ -559,9 +571,15 @@ cpm/
 │   ├── hooks.json           # Hook configuration (SessionStart)
 │   ├── session-start-compact.sh  # Re-injects state after compaction
 │   ├── session-start.sh     # Re-injects state on session startup/resume/clear
+│   ├── post-compact.sh      # Writes the compaction companion summary
 │   └── lib/
 │       ├── progress-classify.sh  # Shared classifier (CURRENT/FRESH/STALE + list-all)
-│       └── cleancheck-guard.sh   # Once-per-session safety-net gate (+ ralph carve-out)
+│       ├── cleancheck-guard.sh   # Once-per-session safety-net gate (+ ralph carve-out)
+│       ├── resolve-project-root.sh # Project root resolution, CLAUDE_PROJECT_DIR-independent
+│       ├── coverage-parse.sh     # Extracts spec requirements and matrix rows; decides nothing
+│       ├── coverage-rollup.sh    # Spec/epic coverage roll-up and --verdict exit codes
+│       ├── changeset.sh          # The change-set structure (records, accessors, validator)
+│       └── changeset-resolve.sh  # Resolves a git-anchored selector to that structure
 ├── skills/
 │   ├── party/
 │   │   └── SKILL.md         # Multi-perspective discussion skill
@@ -580,7 +598,7 @@ cpm/
 │   ├── do/
 │   │   └── SKILL.md         # Task execution skill
 │   ├── ralph/
-│   │   └── SKILL.md         # Autonomous multi-epic execution skill
+│   │   └── SKILL.md         # Autonomous execution skill (epics, or a whole spec)
 │   ├── review/
 │   │   └── SKILL.md         # Adversarial review skill
 │   ├── audit/
