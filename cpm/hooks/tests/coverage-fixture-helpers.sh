@@ -147,9 +147,12 @@ coverage_fixture_dir() {
 #            --must   FR1 "A script under cpm/hooks/lib/ accepts either a spec path…" \
 #            --must   FR2 "Untraced-requirement detection…" \
 #            --should FR10 "Counts stable enough to compare between runs…" \
+#            --could  FR11 "Dark mode…" \
 #            --wont   "Autonomous cpm:epics" \
 #            --wont-labelled FR12 "A requirement ruled out for this iteration" \
-#            --nfr    NFR1 "Read-only.")
+#            --nfr    NFR1 "Read-only." \
+#            --deferred "FR10, FR11 — not needed to prove the engine." \
+#            --out-of-scope "Anything requiring a payment provider.")
 #
 # The slug is the filename stem, so callers control the shape the roll-up script will
 # see (`44-spec-fixture.md`). Requirement bullets are written in the form the script
@@ -174,9 +177,11 @@ coverage_fixture_spec() {
 
   local must_labels=() must_texts=()
   local should_labels=() should_texts=()
+  local could_labels=() could_texts=()
   local wont_texts=()
   local wont_labels=() wont_labelled_texts=()
   local nfr_labels=() nfr_texts=()
+  local deferred_bullets=() out_of_scope_bullets=()
   local dir=""
 
   while [ $# -gt 0 ]; do
@@ -224,6 +229,15 @@ coverage_fixture_spec() {
         wont_labelled_texts+=("$3")
         shift 3
         ;;
+      --could)
+        if [ $# -lt 3 ]; then
+          echo "coverage_fixture_spec: --could needs <label> <text>" >&2
+          return 1
+        fi
+        could_labels+=("$2")
+        could_texts+=("$3")
+        shift 3
+        ;;
       --nfr)
         if [ $# -lt 3 ]; then
           echo "coverage_fixture_spec: --nfr needs <label> <text>" >&2
@@ -232,6 +246,22 @@ coverage_fixture_spec() {
         nfr_labels+=("$2")
         nfr_texts+=("$3")
         shift 3
+        ;;
+      --deferred)
+        if [ $# -lt 2 ]; then
+          echo "coverage_fixture_spec: --deferred needs <bullet text>" >&2
+          return 1
+        fi
+        deferred_bullets+=("$2")
+        shift 2
+        ;;
+      --out-of-scope)
+        if [ $# -lt 2 ]; then
+          echo "coverage_fixture_spec: --out-of-scope needs <bullet text>" >&2
+          return 1
+        fi
+        out_of_scope_bullets+=("$2")
+        shift 2
         ;;
       *)
         echo "coverage_fixture_spec: unknown argument: $1" >&2
@@ -271,6 +301,16 @@ coverage_fixture_spec() {
       printf '\n'
     fi
 
+    if [ "${#could_labels[@]}" -gt 0 ]; then
+      printf '### Could Have\n\n'
+      i=0
+      while [ "$i" -lt "${#could_labels[@]}" ]; do
+        printf -- '- **%s** — %s\n' "${could_labels[$i]}" "${could_texts[$i]}"
+        i=$((i + 1))
+      done
+      printf '\n'
+    fi
+
     if [ "${#wont_texts[@]}" -gt 0 ] || [ "${#wont_labels[@]}" -gt 0 ]; then
       printf '### Won'"'"'t Have (this iteration)\n\n'
       i=0
@@ -298,6 +338,35 @@ coverage_fixture_spec() {
         i=$((i + 1))
       done
       printf '\n'
+    fi
+
+    # The Scope section is written verbatim from whatever the caller passed, because the
+    # rule under test is about the *shape of the sentence* — a bullet that leads with its
+    # labels defers them, one that merely mentions them does not. A builder that assembled
+    # the bullet from labels could only ever produce the first shape, and the second is
+    # where the interesting failure lives.
+    if [ "${#deferred_bullets[@]}" -gt 0 ] || [ "${#out_of_scope_bullets[@]}" -gt 0 ]; then
+      printf '## Scope\n\n'
+
+      if [ "${#out_of_scope_bullets[@]}" -gt 0 ]; then
+        printf '### Out of Scope\n\n'
+        i=0
+        while [ "$i" -lt "${#out_of_scope_bullets[@]}" ]; do
+          printf -- '- %s\n' "${out_of_scope_bullets[$i]}"
+          i=$((i + 1))
+        done
+        printf '\n'
+      fi
+
+      if [ "${#deferred_bullets[@]}" -gt 0 ]; then
+        printf '### Deferred\n\n'
+        i=0
+        while [ "$i" -lt "${#deferred_bullets[@]}" ]; do
+          printf -- '- %s\n' "${deferred_bullets[$i]}"
+          i=$((i + 1))
+        done
+        printf '\n'
+      fi
     fi
   } > "$path" || return 1
 

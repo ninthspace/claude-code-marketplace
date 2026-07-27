@@ -301,12 +301,25 @@ emit_matrix_rows() {
 # **Untraced first.** FR2 makes untraced the headline output, so the untraced records are
 # emitted before the others rather than left for a consumer to sort into place.
 #
-# **Won't Have entries are excluded, visibly.** A requirement the spec has explicitly
-# ruled out will never have a matrix row, and calling it untraced would report the spec
-# working as intended as though it were a gap. `coverage_spec_requirements` deliberately
-# carries the MoSCoW heading rather than dropping those bullets, so that the policy
-# question is answered exactly once — here. They still appear, as `EXCLUDED`; a silent
-# omission would be the same false-clean result by a quieter route.
+# **Requirements the spec has ruled out are excluded, visibly.** Such a requirement will
+# never have a matrix row, and calling it untraced would report the spec working as intended
+# as though it were a gap. `coverage_spec_requirements` deliberately carries the MoSCoW
+# heading rather than dropping those bullets, so that the policy question is answered exactly
+# once — here. They still appear, as `EXCLUDED`; a silent omission would be the same
+# false-clean result by a quieter route.
+#
+# There are **two routes out of the count**, because `cpm:spec` writes "not this iteration"
+# in two places: the `Won't Have` MoSCoW heading, and a `### Deferred` / `### Out of Scope`
+# bullet under `## Scope`. Only the first was read until a live `cpm:ralph` spec-mode run hung
+# on the second — a spec that deferred its Should Haves in the Scope section left them
+# untraced forever, and spec mode reads a non-zero untraced count as "phase 1 unfinished".
+# `coverage_spec_scope_deferrals` supplies the second route; both land in `EXCLUDED`, and the
+# record keeps its two fields so a consumer written against the first route still reads.
+#
+# **A Must Have is never excluded by the Scope route.** A spec that lists a requirement as
+# Must Have and then defers it in Scope contradicts itself, and the reading that stays
+# visible is the safe one: it remains untraced. The alternative would let one sentence in a
+# Scope section retire a must-have requirement and report the spec delivered without it.
 #
 # `REQ` is still emitted for every requirement bullet, Won't Have included, so
 # `REQ = STATE ∪ EXCLUDED` is an exact partition a test can assert without trusting either
@@ -323,6 +336,7 @@ rollup_emit_derived() {
   local m
   {
     coverage_spec_requirements "$spec_abs" | awk -F'\t' '{ printf "R\t%s\t%s\n", $1, $2 }'
+    coverage_spec_scope_deferrals "$spec_abs" | awk '{ printf "X\t%s\n", $1 }'
     for m in "$@"; do
       coverage_matrix_rows "$m" | awk -F'\t' '$1 == "requirement" { printf "W\t%s\t%s\n", $2, $6 }'
     done
@@ -331,6 +345,11 @@ rollup_emit_derived() {
     # than the exact string so a typographic apostrophe reads the same as an ASCII one.
     function is_wont(h) {
       return (index(h, "Won") == 1 && index(h, "Have") > 0)
+    }
+
+    # The same shape, for the heading a scope deferral may never override.
+    function is_must(h) {
+      return (index(h, "Must") == 1 && index(h, "Have") > 0)
     }
 
     function emit_states(want,   i, label) {
@@ -353,6 +372,11 @@ rollup_emit_derived() {
       next
     }
 
+    $1 == "X" {
+      if ($2 != "") deferred[$2] = 1
+      next
+    }
+
     $1 == "W" {
       if ($2 == "") next
       rows[$2]++
@@ -364,7 +388,12 @@ rollup_emit_derived() {
       total = 0
       for (i = 1; i <= n; i++) {
         label = order[i]
-        if (is_wont(heading[label])) {
+        # Two routes out of the count, and one label that may not take the second. A
+        # Must Have named in the Scope section as deferred is a spec contradicting itself,
+        # and the safe reading of a contradiction is the one that stays visible: it remains
+        # untraced, so the roll-up reports a gap rather than reporting the spec delivered
+        # on the strength of the sentence that abandoned it.
+        if (is_wont(heading[label]) || ((label in deferred) && !is_must(heading[label]))) {
           excluded[label] = 1
           continue
         }

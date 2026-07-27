@@ -244,4 +244,102 @@ else
   test_fail "the mutated figure still compared equal to ${#PHASE}"
 fi
 
+# --- Liveness: a phase that cannot progress stops rather than repeating ----------------------
+#
+# Added after the first live spec-mode run, which never left phase 1. The clause read "Exit 4
+# means phase 1, and so does any untraced count that is not 0", so a spec whose epics did not
+# cover every requirement sent the loop back to `/cpm:epics` every iteration — and because
+# sub-numbers are `max + 1`, each pass wrote a *fresh* set of epic docs rather than completing
+# the previous one. Fifty iterations, fifty generations of epics, no story worked.
+#
+# The whole branch table was already asserted when that shipped, and every assertion passed:
+# the codes were extracted, the sets were disjoint, the tag was reachable from one branch
+# only. What none of them asked was whether a branch could be *reached twice with the same
+# input*. That is the shape this section adds, and it is a different question from routing.
+
+# The generation step, isolated by the instruction that performs it rather than by the token
+# `/cpm:epics` — which the guard sentence must also write in order to forbid the second run.
+generation_instruction() {
+  printf '%s\n' "$1" | grep -oF 'run /cpm:epics on {spec_path}'
+}
+
+test_start "the phase clause instructs a /cpm:epics run exactly once"
+assert_equals "1" "$(generation_instruction "$PHASE" | grep -c .)"
+
+# The sentence carrying that instruction is the exit-4 sentence, and no other. Sentences are
+# split on the full stops that separate them; the clause has no abbreviations to confuse it.
+sentence_with() {
+  printf '%s\n' "$1" | tr '.' '\n' | grep -F "$2" | head -1
+}
+
+test_start "generation is instructed in the exit-4 branch, where no matrix names the spec"
+GEN_SENTENCE=$(sentence_with "$PHASE" 'run /cpm:epics on {spec_path}')
+assert_contains "$GEN_SENTENCE" "Exit 4"
+
+# The situation the live run was in: epics exist, and they do not cover the spec. The code is
+# taken from the script rather than assumed, so a future change to what that situation returns
+# fails here instead of leaving the clause branching on a code nothing produces (retro 27).
+source "$SCRIPT_DIR/coverage-fixture-helpers.sh"
+
+L_DIR=$(coverage_fixture_dir liveness)
+L_SPEC=$(coverage_fixture_spec 78-spec-partly-covered --dir "$L_DIR" \
+  --must FR1 "a requirement an epic covers" \
+  --must FR2 "a requirement no epic covers")
+coverage_fixture_matrix 78-01-coverage-partly-covered \
+  "docs/specifications/78-spec-partly-covered.md" --dir "$L_DIR" \
+  --row FR1 "a requirement an epic covers" "the FR1 criterion" "Story 1" '✓' >/dev/null
+
+L_RC=0
+run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" \
+  --spec "$L_SPEC" --matrix-dir "$L_DIR" --verdict >/dev/null 2>&1 || L_RC=$?
+
+test_start "control: a spec whose epics leave a requirement untraced is not the exit-4 case"
+if [ "$L_RC" != "4" ] && [ "$L_RC" != "0" ]; then
+  test_pass
+else
+  test_fail "the fixture returned $L_RC, so it does not exercise the branch under test"
+fi
+
+test_start "that situation is routed to a stop, not to another generation"
+STUCK=$(sentence_with "$PHASE" 'on any other code')
+if [ -n "$STUCK" ] && printf '%s\n' "$STUCK" | grep -qF 'stop' &&
+   [ -z "$(generation_instruction "$STUCK")" ]; then
+  test_pass
+else
+  test_fail "the non-converging branch reads: $STUCK"
+fi
+
+test_start "and the clause forbids a second generation run outright"
+assert_contains "$PHASE" "never run /cpm:epics twice in one run"
+
+test_start "control: the pre-fix wording routes the same situation back to generation"
+OLD=$(printf '%s\n' "$PHASE" |
+  sed 's/Exit 4 means phase 1 and no epics exist for this spec yet: run/Exit 4 means phase 1, and so does any untraced count that is not 0: run/')
+OLD_STUCK=$(sentence_with "$OLD" 'not 0')
+if [ -n "$(generation_instruction "$OLD_STUCK")" ]; then
+  test_pass
+else
+  test_fail "the reverted clause did not send the non-converging case back to /cpm:epics"
+fi
+
+# Phase 2's mirror hole: "keep working" with nothing left to work on is the same loop by
+# another door. Its exit-3 branch has to bound the continuation.
+test_start "the completion clause's exit-3 branch bounds how long it keeps working"
+KEEP=$(printf '%s\n' "$COMPLETION" | grep -oE 'on 3,[^;]*;')
+if printf '%s\n' "$KEEP" | grep -qF 'only while an epic still has unfinished work' &&
+   printf '%s\n' "$KEEP" | grep -qF 'stopping otherwise'; then
+  test_pass
+else
+  test_fail "the exit-3 branch reads: $KEEP"
+fi
+
+test_start "control: an unbounded 'keep working' is detected"
+UNBOUNDED=$(printf '%s\n' "$KEEP" |
+  sed 's/ only while an epic still has unfinished work, stopping otherwise since another pass over epics that are already complete cannot change the verdict//')
+if printf '%s\n' "$UNBOUNDED" | grep -qF 'only while an epic'; then
+  test_fail "the mutation left the bound in place: $UNBOUNDED"
+else
+  test_pass
+fi
+
 test_summary

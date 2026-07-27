@@ -159,7 +159,7 @@ It emits tab-separated records, one per line, with the record type in field 1:
 | `MATRIX` | path, source-spec |
 | `REQ` | label, MoSCoW heading, verbatim requirement text |
 | `STATE` | label, MoSCoW heading, `delivered` \| `in-progress` \| `untraced` |
-| `EXCLUDED` | label, MoSCoW heading — a Won't Have requirement, ruled out rather than missing |
+| `EXCLUDED` | label, MoSCoW heading — a requirement the spec ruled out, rather than one that is missing |
 | `SUMMARY` | scope, requirements, untraced, delivered, in-progress |
 | `ROW` | matrix path, base label, label, covered by, `verified` \| `unverified` |
 | `CRITERION` | matrix path, label, covered by, `verified` \| `unverified` — a story-originated row, with no requirement behind it |
@@ -170,7 +170,7 @@ It emits tab-separated records, one per line, with the record type in field 1:
 2. **Then the remaining requirements, grouped under the spec's own MoSCoW headings** — Must Have, Should Have, Could Have, then Non-Functional — in the order the spec lists them. Take each heading from the `REQ` record's second field; do not invent an ordering or collapse the groups.
 3. **Quote each requirement's verbatim text**, the third field of its `REQ` record, exactly as the spec wrote it. That text is what a stakeholder actually asked for, and paraphrasing it here is how the thing that was asked for stops matching the thing that was built.
 4. **Show each requirement's state** — *delivered*, *in progress*, or *untraced*. Never a proportion: a requirement with four of five rows verified is *in progress*, not 80% delivered.
-5. **List Won't Have requirements separately**, from the `EXCLUDED` records, as ruled out rather than outstanding.
+5. **List ruled-out requirements separately**, from the `EXCLUDED` records, as ruled out rather than outstanding. A requirement reaches that record by either of the two ways a spec says "not this iteration" — a `Won't Have` heading, or a `### Deferred` / `### Out of Scope` bullet naming it under `## Scope`. The record does not say which route it took; when that matters, the spec is the place to look.
 6. **Close with the `SUMMARY` counts.**
 
 **Say what the `✓` marks mean, wherever this section shows them.** They are **aggregation, not verification**. Every `✓` was placed by `cpm:do` on its own work; unioning them reports what `do` claimed, more conveniently, and adds no independent evidence. A wall of green must not be read as confirmation that anything works. The untraced count is the part of this section that discriminates — the spec's requirement list is written by a human and the matrices are generated later from it, so a gap between them is a real finding rather than a foregone one.

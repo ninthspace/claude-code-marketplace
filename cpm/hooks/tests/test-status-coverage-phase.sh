@@ -335,14 +335,14 @@ assert_not_contains "$(stakeholder_page)" "Quote each requirement's verbatim tex
 test_start "the page section does not restate the never-a-proportion rule"
 assert_not_contains "$(stakeholder_page)" "Never a proportion"
 
-test_start "the page section does not restate the Won't Have rule"
-assert_not_contains "$(stakeholder_page)" "List Won't Have requirements separately"
+test_start "the page section does not restate the ruled-out rule"
+assert_not_contains "$(stakeholder_page)" "List ruled-out requirements separately"
 
 test_start "the page section does not restate the summary-last rule"
 assert_not_contains "$(stakeholder_page)" "Close with the \`SUMMARY\` counts"
 
 test_start "control: those rules are stated in the phase the page section defers to"
-assert_contains "$(phase_3b)" "List Won't Have requirements separately"
+assert_contains "$(phase_3b)" "List ruled-out requirements separately"
 
 # Regression nets for criterion 3. The canonical line already carries "separately confirmed,
 # and never the default" and is asserted byte-for-byte above; these guard the two local

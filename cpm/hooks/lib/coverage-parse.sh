@@ -12,6 +12,9 @@
 #   coverage_spec_requirements <spec-path>
 #       LABEL<TAB>MOSCOW<TAB>TEXT, one record per `- **FRn** — text` bullet under a
 #       MoSCoW heading in the spec's Functional Requirements section.
+#   coverage_spec_scope_deferrals <spec-path>
+#       LABEL, one per line, for every requirement label named in a bullet under the
+#       spec's `## Scope` → `### Deferred` or `### Out of Scope` heading.
 #   coverage_matrix_rows <matrix-path>
 #       KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED, one record per
 #       data row of the matrix's coverage table.
@@ -80,6 +83,20 @@ function cov_leading_label(s) {
   s = cov_trim(s)
   if (match(s, /^[A-Z]+[0-9]+/)) return substr(s, 1, RLENGTH)
   return ""
+}
+
+# The two halves of a label, for the one place that has to compare labels arithmetically:
+# deciding whether `C1–C5` names a range. Everywhere else compares labels as exact strings,
+# and these exist so that the range rule cannot be written by pulling a label apart a second
+# way somewhere else.
+function cov_label_prefix(s) {
+  if (match(s, /^[A-Z]+/)) return substr(s, 1, RLENGTH)
+  return ""
+}
+
+function cov_label_number(s) {
+  if (match(s, /[0-9]+$/)) return substr(s, RSTART) + 0
+  return -1
 }
 
 function cov_base_label(label,   n, p) {
@@ -210,6 +227,190 @@ coverage_spec_requirements() {
       text = cov_trim(text)
 
       printf "%s\t%s\t%s\n", label, heading, text
+    }
+  ' "$spec"
+}
+
+# Emit one label per requirement the spec's Scope section defers or rules out.
+#
+# Usage: coverage_spec_scope_deferrals docs/specifications/45-spec-delivery-autonomy.md
+# Emits: LABEL, one per line, in first-appearance order, deduplicated.
+#
+# Returns 1 without emitting anything when the spec cannot be read. A spec with no `## Scope`
+# section, or with one that names no labels, emits nothing and succeeds — that is the common
+# case, not an error.
+#
+# --- Why this function exists at all --------------------------------------------
+#
+# `cpm:spec`'s output template says "not this iteration" in two places: the MoSCoW
+# `### Won't Have (this iteration)` heading in its requirements section, and `### Deferred` /
+# `### Out of Scope` under `## Scope`. Only the first was ever read, so a spec that deferred a
+# Should Have the second way left it counted as untraced forever — and `cpm:ralph`'s spec mode
+# reads a non-zero untraced count as "phase 1 unfinished", so the loop never advanced.
+#
+# --- What counts as naming a requirement ----------------------------------------
+#
+# A **bullet that leads with its labels**: `- S1, S2 and S5 — useful, but not needed yet`.
+# Reading stops at the first text that is not a separator, so labels appearing later in the
+# sentence are not read.
+#
+# That rule is not fussiness, it is the difference between deferring and mentioning. Spec 45's
+# own Deferred section reads *"Nothing. FR12 was the one candidate for deferral … NFR6 forbids
+# duplication"* — a bullet that names two requirements while saying neither was deferred. A
+# scanner that read every label in the bullet excluded NFR6 and quietly shrank that spec's
+# requirement count from 19 to 18. A bullet that opens with prose is prose.
+#
+# Separators between labels are a comma, `and`, `&`, `/`, or a dash; a leading fragment ending
+# in `:` is allowed, so `- Deferred: S1, S2` reads the same as `- S1, S2`.
+#
+# Adjacent labels separated by nothing but a dash are a **range**: `C1–C5` names C1, C2, C3,
+# C4 and C5. Hyphen, en dash and em dash all count, because all three occur in written specs
+# and a reader means the same thing by each. A range whose ends disagree on prefix, or that
+# runs backwards, is not a range — both ends are still emitted individually.
+#
+# The *decision* is not made here. This reports what the section names; the roll-up excludes
+# only labels that are also real requirements in the spec's own list, and never excludes a
+# Must Have on the strength of a Scope bullet.
+coverage_spec_scope_deferrals() {
+  local spec="$1"
+
+  _coverage_require_readable coverage_spec_scope_deferrals spec "$spec" || return 1
+
+  CPM_MD_SCOPE_HEADING='## Scope' \
+  CPM_MD_DEFERRED='Deferred' \
+  CPM_MD_OUT_OF_SCOPE='Out of Scope' \
+  CPM_MD_EN_DASH='–' \
+  CPM_MD_EM_DASH='—' \
+  awk "$_COVERAGE_AWK_LIB"'
+    BEGIN {
+      SCOPE_HEADING = ENVIRON["CPM_MD_SCOPE_HEADING"]
+      DEFERRED = ENVIRON["CPM_MD_DEFERRED"]
+      OUT_OF_SCOPE = ENVIRON["CPM_MD_OUT_OF_SCOPE"]
+      EN_DASH = ENVIRON["CPM_MD_EN_DASH"]
+      EM_DASH = ENVIRON["CPM_MD_EM_DASH"]
+      UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      LOWER = "abcdefghijklmnopqrstuvwxyz"
+      DIGITS = "0123456789"
+      in_scope = 0
+      in_defer = 0
+      in_fence = 0
+    }
+
+    # The three dashes reach awk through ENVIRON for the same reason every other pattern in
+    # this file does: the multibyte ones are compared as whole strings, so no assumption is
+    # made about what this awk counts as a character.
+    function is_dash(s) {
+      s = cov_trim(s)
+      return (s == "-" || s == EN_DASH || s == EM_DASH)
+    }
+
+    # Character tests by `index` into a set, never by a regex class. The character either
+    # side of a label token can be a single *byte* of a multibyte dash, and handing that to
+    # a regex is what makes this awk abort with a multibyte conversion failure — the same
+    # hazard the file header describes, met from the other direction. `index` compares
+    # strings, so a stray continuation byte simply is not in the set.
+    function is_wordch(c) {
+      if (c == "") return 0
+      return index(UPPER LOWER DIGITS, c) > 0
+    }
+
+    function is_alpha(c) {
+      if (c == "") return 0
+      return index(UPPER LOWER, c) > 0
+    }
+
+    # Text between two labels that keeps the list going rather than ending it. Spaces and
+    # commas are dropped first, so ", " and " and " and " , and " all reduce to the same
+    # three answers.
+    function is_separator(s,   g, i, c) {
+      g = ""
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (c == " " || c == ",") continue
+        g = g c
+      }
+      if (g == "") return 1
+      if (g == "and" || g == "&" || g == "/" || g == "or") return 1
+      return is_dash(g)
+    }
+
+    # Whether a bullet opens with its labels. Empty leading text does; so does a short
+    # lead-in ending in a colon (`Deferred: S1, S2`). Anything else is a sentence that
+    # happens to contain a label, which is not the same as a deferral.
+    function leads(s) {
+      s = cov_trim(s)
+      if (s == "") return 1
+      return (substr(s, length(s), 1) == ":")
+    }
+
+    function emit(label) {
+      if (label in seen) return
+      seen[label] = 1
+      print label
+    }
+
+    /^```/ { in_fence = !in_fence; next }
+    in_fence { next }
+
+    /^## / {
+      in_scope = (index($0, SCOPE_HEADING) == 1)
+      in_defer = 0
+      next
+    }
+
+    /^### / {
+      if (!in_scope) { in_defer = 0; next }
+      h = cov_trim(substr($0, 5))
+      in_defer = (index(h, DEFERRED) == 1 || index(h, OUT_OF_SCOPE) == 1)
+      next
+    }
+
+    {
+      if (!in_scope || !in_defer) next
+
+      line = cov_trim($0)
+      if (substr(line, 1, 2) != "- ") next
+      rest = substr(line, 3)
+
+      # Collect the label tokens in this bullet along with the text that preceded each one,
+      # so the range rule can ask what sits *between* two labels rather than re-scan the line.
+      ntok = 0
+      for (z in tok) delete tok[z]
+      for (z in gap) delete gap[z]
+      while (match(rest, /[A-Z]+[0-9]+/)) {
+        lab = substr(rest, RSTART, RLENGTH)
+        before = (RSTART > 1) ? substr(rest, RSTART - 1, 1) : ""
+        after = substr(rest, RSTART + RLENGTH, 1)
+        # A token welded to a word on either side is part of that word, not a label.
+        if (!is_wordch(before) && !is_alpha(after)) {
+          ntok++
+          tok[ntok] = lab
+          gap[ntok] = substr(rest, 1, RSTART - 1)
+        }
+        rest = substr(rest, RSTART + RLENGTH)
+      }
+
+      # Walk from the front while the list holds together, and stop at the first prose.
+      for (i = 1; i <= ntok; i++) {
+        if (i == 1) {
+          if (!leads(gap[1])) break
+        } else if (!is_separator(gap[i])) {
+          break
+        }
+
+        emit(tok[i])
+        if (i == ntok) continue
+        if (!is_dash(gap[i + 1])) continue
+
+        p = cov_label_prefix(tok[i])
+        if (p == "" || p != cov_label_prefix(tok[i + 1])) continue
+
+        from = cov_label_number(tok[i])
+        to = cov_label_number(tok[i + 1])
+        if (from < 0 || to <= from) continue
+
+        for (k = from + 1; k < to; k++) emit(p k)
+      }
     }
   ' "$spec"
 }

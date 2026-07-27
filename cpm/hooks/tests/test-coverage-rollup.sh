@@ -1058,4 +1058,148 @@ else
   test_pass
 fi
 
+# --- The second route out of the count: Scope-section deferrals ------------------------
+#
+# Found by the first live `cpm:ralph` spec-mode run. `cpm:spec` writes "not this iteration"
+# in two places — the `Won't Have` MoSCoW heading and a `### Deferred` / `### Out of Scope`
+# bullet under `## Scope` — and only the first was read. A spec that deferred its Should
+# Haves the second way kept them untraced forever, and spec mode reads a non-zero untraced
+# count as "phase 1 unfinished", so `/cpm:epics` re-ran every iteration.
+#
+# The reproduction is a *pair*: the same requirements with and without the Scope bullets.
+# Asserting only that the deferred spec now passes would leave "the fixture was never
+# outstanding in the first place" as an untested explanation for the pass.
+
+D_DIR=$(coverage_fixture_dir scope-deferred)
+
+# Deferred via Scope only — the shape of the spec that hung. Note the Could Haves are
+# deferred as a *range*, which is how the real one was written.
+D_SPEC=$(coverage_fixture_spec 72-spec-scope-deferred --dir "$D_DIR" \
+  --must   FR1 "a requirement with a verified row" \
+  --should S1 "export to CSV" \
+  --should S2 "per-participant summary" \
+  --could  C1 "dark mode" \
+  --could  C3 "multi-currency" \
+  --deferred "S1, S2 — useful, but not needed to prove the settlement engine." \
+  --deferred "C1–C3 — every Could Have, deferred to a later iteration.")
+coverage_fixture_matrix 72-01-coverage-scope-deferred \
+  "docs/specifications/72-spec-scope-deferred.md" --dir "$D_DIR" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+
+# The same spec with no Scope section at all: the control that shows the pair differs by
+# the deferral and nothing else.
+N_DIR=$(coverage_fixture_dir scope-absent)
+N_SPEC=$(coverage_fixture_spec 73-spec-no-scope --dir "$N_DIR" \
+  --must   FR1 "a requirement with a verified row" \
+  --should S1 "export to CSV" \
+  --should S2 "per-participant summary" \
+  --could  C1 "dark mode" \
+  --could  C3 "multi-currency")
+coverage_fixture_matrix 73-01-coverage-no-scope \
+  "docs/specifications/73-spec-no-scope.md" --dir "$N_DIR" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+
+test_start "control: without the Scope section those requirements are outstanding"
+run_verdict --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict
+assert_equals "3" "$V_RC"
+
+test_start "requirements deferred in the Scope section do not make the verdict outstanding"
+run_verdict --spec "$D_SPEC" --matrix-dir "$D_DIR" --verdict
+assert_equals "0" "$V_RC"
+
+run_verdict --spec "$D_SPEC" --matrix-dir "$D_DIR"
+D_OUT="$V_OUT"
+
+test_start "and the untraced count reaches 0"
+assert_equals "0" "$(printf '%s\n' "$D_OUT" | awk -F'\t' '$1 == "SUMMARY" { print $4 }')"
+
+# The range is the half most easily got wrong: emitting only its ends leaves C2 counted,
+# and one untraced requirement hangs the loop exactly as five would.
+test_start "a range defers every requirement between its ends, not just the ends"
+assert_contains "$D_OUT" "$(printf 'EXCLUDED\tC3\t')"
+
+test_start "control: the range's interior really was in the requirement list"
+D_MID=$(coverage_fixture_spec 74-spec-range-interior --dir "$D_DIR" \
+  --must  FR1 "a requirement with a verified row" \
+  --could C1 "dark mode" \
+  --could C2 "an interior requirement the range must reach" \
+  --could C3 "multi-currency" \
+  --deferred "C1–C3 — every Could Have.")
+coverage_fixture_matrix 74-01-coverage-range-interior \
+  "docs/specifications/74-spec-range-interior.md" --dir "$D_DIR" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+run_verdict --spec "$D_MID" --matrix-dir "$D_DIR"
+if printf '%s\n' "$V_OUT" | grep -q "$(printf 'REQ\tC2\t')" &&
+   printf '%s\n' "$V_OUT" | grep -q "$(printf 'EXCLUDED\tC2\t')"; then
+  test_pass
+else
+  test_fail "C2 was not both a requirement and excluded: $(printf '%s\n' "$V_OUT" | grep C2)"
+fi
+
+# The partition the Won't Have route already guarantees has to survive a second route into
+# the same set. If a scope-deferred label were dropped instead of excluded, the roll-up
+# would still exit 0 and this is the assertion that would notice.
+test_start "REQ = STATE ∪ EXCLUDED still partitions exactly, with both routes in play"
+D_REQ=$(printf '%s\n' "$D_OUT" | awk -F'\t' '$1 == "REQ" { print $2 }' | sort)
+D_SPLIT=$(printf '%s\n' "$D_OUT" | awk -F'\t' '$1 == "STATE" || $1 == "EXCLUDED" { print $2 }' | sort)
+assert_equals "$D_REQ" "$D_SPLIT"
+
+# --- What a Scope bullet may not do ----------------------------------------------------
+#
+# A Must Have deferred in Scope is a spec contradicting itself. The safe reading keeps it
+# visible: excluding it would let one sentence retire a must-have requirement and report
+# the spec delivered without it — a false clean the loop would act on.
+M_DIR=$(coverage_fixture_dir scope-must)
+M_SPEC=$(coverage_fixture_spec 75-spec-must-deferred --dir "$M_DIR" \
+  --must FR1 "a requirement with a verified row" \
+  --must FR2 "a must-have the Scope section then defers" \
+  --deferred "FR2 — deferred, despite being a Must Have.")
+coverage_fixture_matrix 75-01-coverage-must-deferred \
+  "docs/specifications/75-spec-must-deferred.md" --dir "$M_DIR" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+
+test_start "a Must Have named in Deferred stays untraced rather than being excluded"
+run_verdict --spec "$M_SPEC" --matrix-dir "$M_DIR"
+assert_contains "$V_OUT" "$(printf 'STATE\tFR2\tMust Have\tuntraced')"
+
+test_start "and the contradiction keeps the verdict outstanding"
+run_verdict --spec "$M_SPEC" --matrix-dir "$M_DIR" --verdict
+assert_equals "3" "$V_RC"
+
+# Mentioning a requirement is not deferring it. This bullet is spec 45's own — its Deferred
+# section says "Nothing." and then explains which requirements were *considered*. A scanner
+# that read every label in the bullet excluded NFR6 and shrank that spec's requirement count
+# from 19 to 18 without anyone asking it to.
+P_DIR=$(coverage_fixture_dir scope-prose)
+P_SPEC=$(coverage_fixture_spec 76-spec-scope-prose --dir "$P_DIR" \
+  --must   FR1 "a requirement with a verified row" \
+  --should S1 "a should-have merely mentioned in the Scope section" \
+  --deferred "Nothing. S1 was the one candidate for deferral, and was brought in scope instead." \
+  --out-of-scope "Deferring to an S1-shaped storage bucket, which is a different S1 entirely.")
+coverage_fixture_matrix 76-01-coverage-scope-prose \
+  "docs/specifications/76-spec-scope-prose.md" --dir "$P_DIR" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+
+test_start "a bullet that opens with prose defers nothing it mentions"
+run_verdict --spec "$P_SPEC" --matrix-dir "$P_DIR"
+assert_contains "$V_OUT" "$(printf 'STATE\tS1\tShould Have\tuntraced')"
+
+test_start "control: the same label in a leading position is excluded"
+L_SPEC=$(coverage_fixture_spec 77-spec-scope-leading --dir "$P_DIR" \
+  --must   FR1 "a requirement with a verified row" \
+  --should S1 "a should-have the Scope section defers outright" \
+  --deferred "S1 — the same requirement, named at the front of the bullet.")
+coverage_fixture_matrix 77-01-coverage-scope-leading \
+  "docs/specifications/77-spec-scope-leading.md" --dir "$P_DIR" \
+  --row FR1 "a requirement with a verified row" "the FR1 criterion" "Story 1" '✓' >/dev/null
+run_verdict --spec "$L_SPEC" --matrix-dir "$P_DIR"
+assert_contains "$V_OUT" "$(printf 'EXCLUDED\tS1\tShould Have')"
+
+# The record type is what `cpm:status` reads, and it was already documented with a fixed
+# arity. A second route into the same set must not widen it, or the consumer written
+# against the first route starts reading a field that was not there before.
+test_start "EXCLUDED keeps its two fields whichever route produced it"
+D_ARITY=$(printf '%s\n' "$D_OUT" | awk -F'\t' '$1 == "EXCLUDED" { print NF }' | sort -u | tr '\n' ' ')
+assert_equals "3 " "$D_ARITY"
+
 test_summary
