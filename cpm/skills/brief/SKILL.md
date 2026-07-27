@@ -65,6 +65,12 @@ Questions to explore:
 - Has anything changed since discovery?
 - Any new constraints or context?
 
+**Constraints are collected here and land in the output's `## Constraints` section.** If the input
+is a problem brief, read its `## Constraints` section and restate those entries for confirmation
+rather than re-asking for them; add whatever the third question surfaces. This phase is the only
+place the skill asks about constraints from scratch, so anything not recorded here is lost — which
+is what the product brief did with them before it had a section to hold them.
+
 ### Phase 2: Solution Approaches
 
 Explore different approaches to solving the problem. Keep the field open at this stage — present 2-4 distinct approaches and discuss their trade-offs. Each approach should be a plausible path, not a strawman.
@@ -73,6 +79,10 @@ For each approach, consider:
 - What would this look like in practice?
 - What are the strengths and risks?
 - How does it align with the constraints from discovery?
+
+An approach ruled out by a constraint identifies a constraint worth recording. When this question
+decides between approaches, add the deciding constraint to the set Phase 1 collected — it belongs
+in the output's `## Constraints` section whether or not the problem brief already named it.
 
 Use AskUserQuestion to present the approaches and let the user discuss, combine, or refine them. The goal is to converge on a direction, not lock in every detail.
 
@@ -183,6 +193,12 @@ Use this format:
 {Features that strengthen the product but aren't required for first iteration}
 
 - **{Feature name}** — {What it does and which value proposition it serves}
+
+## Constraints
+
+{Technical, business, and timeline constraints — those carried forward from the problem brief's `## Constraints` section, plus any that surfaced during ideation. Environmental constraints belong here: what the product must be able to run on, and what it must not require.}
+
+- **{Constraint}** — {What it bounds, and where it came from — the problem brief, an ADR, or this conversation}
 
 ## Differentiation
 

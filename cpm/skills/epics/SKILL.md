@@ -163,7 +163,7 @@ Examples:
 **Test approach tag propagation** (when the input spec has a Testing Strategy section with tagged criteria):
 
 1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
-2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tags from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, `[manual]`, and `[tdd]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments. The `[tdd]` tag is a workflow mode tag (orthogonal to level tags) — propagate it alongside any level tag when present (e.g. `[tdd] [unit]`).
+2. When writing story acceptance criteria, apply matching tags inline. For each acceptance criterion, append the appropriate tags from the spec's testing strategy: `[unit]`, `[integration]`, `[feature]`, `[manual]`, `[target]`, and `[tdd]`. Match by tracing the story's `**Satisfies**` field back to the spec requirement, then looking up that requirement's tag assignments. The `[tdd]` tag is a workflow mode tag (orthogonal to level tags) — propagate it alongside any level tag when present (e.g. `[tdd] [unit]`).
 3. If a story's criteria go beyond a spec requirement's tagged criteria (e.g. the story introduces new criteria beyond the spec), default to an automated tag — `[unit]`, `[integration]`, or `[feature]`. Propose `[manual]` only when automation is genuinely infeasible, and when you do, include a one-line justification stating what blocks automation (e.g. "requires human visual judgement", "third-party OAuth flow we don't control"). See the **Default to automation** guideline below.
 4. Tags appear at the end of the acceptance criteria line, e.g.: `- User can log in via OAuth [integration]` or `- Payment processor validates card [tdd] [integration]`
 
@@ -305,7 +305,14 @@ If the user identifies a fidelity problem (story criterion is weaker than or con
 
 ### Step 4: Confirm
 
-**Cross-epic gap check** (when input is a spec): Before presenting the task tree, read all per-epic coverage matrices produced in Step 3d. Compare the union of covered requirements against the spec's full "Must Have" list. Any must-have requirement that doesn't appear in any coverage matrix is a **GAP** — flag it to the user. Gaps must be resolved (add to an existing epic, create a new story, or defer with justification) before proceeding. Should-have requirements not covered are warnings, not blockers.
+**Cross-epic gap check** (when input is a spec): Before presenting the task tree, read all per-epic coverage matrices produced in Step 3d and take the union of the requirements they cover. A requirement in either of these classes that appears in no coverage matrix is a **GAP** — flag it to the user:
+
+- **Must Have** — a requirement under the spec's Must Have heading. The system fails without it.
+- **Environmental** — a requirement labelled `ENVn` (something the target must provide) or `ENVXn` (something the work must not require), whatever MoSCoW heading it sits under.
+
+Gaps must be resolved (add to an existing epic, create a new story, or defer with justification) before proceeding. Should-have requirements not covered are warnings, not blockers.
+
+An uncovered environmental constraint blocks for the same reason `coverage-rollup.sh` refuses to let a Scope deferral exclude one: it names something about the target host, and leaving it uncovered does not change the host — it only stops anyone saying so until the work is built and will not run. A design that cannot deploy is not a partial delivery (AD3). These two classes are deliberately the same set the roll-up refuses to exclude; if one side gains a class, the other is wrong until it does too.
 
 Present the full task tree to the user showing:
 - All epics with their stories and tasks (using story numbers and task dot-notation)
@@ -502,6 +509,8 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
   - **Behaviour that is genuinely infeasible to exercise from code** in the current test infrastructure
 
   Every `[manual]` tag carries a one-line justification stating which of the above (or a comparable reason) applies. If you can't write the justification, the criterion probably belongs in an automated tag.
+
+  Reach for `[target]` — never `[manual]` — when the check is mechanical and it is the *environment* that is missing: an environmental requirement or restriction, a host's language or extension version, the presence of a service the work must not depend on. The two are easy to confuse and must not be merged. `[manual]` says no automation is possible in principle, so a human verdict is the best available evidence. `[target]` says the automation is obvious and cannot run here, so a verdict from this machine is worth nothing — it would confirm "runs on PHP 8.2 or later" from a sandbox that already does. Tagging one of these `[manual]` hands it to self-assessment, which is the false pass AD6 exists to stop; the justification line above is not a substitute, because it explains the choice rather than changing what happens downstream.
 - **Testing tasks are auto-generated, not manually created.** When story criteria carry `[unit]`, `[integration]`, or `[feature]` tags, Step 3b auto-generates a "Write tests" task. Let the automation handle testing tasks — it ensures consistency. Stories with only `[manual]` criteria get no testing task.
 - **`[tdd]` reverses testing task order.** When a story's criteria include `[tdd]`, the auto-generated testing task is placed *before* implementation tasks — enabling the red-green-refactor workflow where tests are written first. Stories without `[tdd]` retain the default order (testing task after implementation). Both modes can coexist in the same epic.
 - **`[plan]` opts into formal plan mode.** When a story heading carries `[plan]`, `cpm:do` enters formal plan mode (EnterPlanMode/ExitPlanMode) for that story's tasks — enforcing read-only exploration and user approval before implementation. Without `[plan]`, `cpm:do` uses inline planning (brief text plan, then straight to implementation) which keeps the task loop uninterrupted. Suggest `[plan]` for stories involving architectural decisions, security-sensitive areas, or multi-system integration. Most stories work well with inline planning.

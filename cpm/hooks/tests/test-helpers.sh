@@ -64,6 +64,40 @@ assert_equals() {
   fi
 }
 
+# assert_agrees <what> <a-name> <a-value> <b-name> <b-value>
+#
+# A correspondence assertion: two values derived independently from the documents that own
+# them, compared to each other rather than to a literal. Emits three assertions in the order
+# that makes them mean anything — each side non-empty, then the two compared.
+#
+# The ordering is the contract, and it is the reason this is a function. Retro 30 records what
+# happens without it: an extraction stops matching, both sides come back empty, empty equals
+# empty, and the suite reports green while checking nothing. Worse, the comparison there had
+# been written as a count of distinct values (`sort -u | grep -c .`, expect 1), which skips the
+# empty line, so even a *one-sided* empty still counted 1 and passed. Both failure modes are
+# invisible in a green run and neither is obvious when writing the next one.
+#
+# The non-empty guard is deliberately non-empty and nothing more. Reaching for the stronger
+# `assert_contains "$a_value" "<some known member>"` pins a value on each side and fails on a
+# consistent rename of both — exactly the change a correspondence assertion exists to permit.
+# What the values should contain is a separate question, asked separately by an inventory
+# assertion where the criterion asks it.
+#
+# Usage: assert_agrees "the blocking classes" \
+#          "epics/SKILL.md" "$EPICS_BLOCKING" "coverage-rollup.sh" "$ROLLUP_BLOCKING"
+assert_agrees() {
+  local what="$1" a_name="$2" a_value="$3" b_name="$4" b_value="$5"
+
+  test_start "control: $what could be read from $a_name"
+  assert_equals "non-empty" "$( [ -n "$a_value" ] && echo non-empty || echo empty )"
+
+  test_start "control: $what could be read from $b_name"
+  assert_equals "non-empty" "$( [ -n "$b_value" ] && echo non-empty || echo empty )"
+
+  test_start "$what agree between $a_name and $b_name"
+  assert_equals "$a_value" "$b_value"
+}
+
 # assert_slice_bounded <file> <start-regex> <end-regex> <min> <max>
 #
 # A `sed` range is asymmetric, and only one direction fails loudly: a range matching
@@ -81,6 +115,30 @@ assert_slice_bounded() {
   else
     test_fail "slice /$start/,/$end/ is $lines non-blank lines (expected $min-$max)"
   fi
+}
+
+# skill_template <skill-file> <first-line-regex>
+#
+# The fenced output template a SKILL.md documents, sliced from the template's own first line
+# rather than from its ```markdown fence.
+#
+# The fence is the obvious anchor and the wrong one. A SKILL.md typically holds two fenced
+# markdown blocks — the output template, and the progress-file format under State Management
+# — and a sed range *restarts*, so `/^```markdown$/,/^```$/` yields both concatenated rather
+# than the first. Measured on `spec/SKILL.md` and `brief/SKILL.md`: 8 `## ` headings against
+# the 6 the template actually has, the extras being `## Completed Sections` and
+# `## Next Action` from the progress format. Nothing announces the difference — an inventory
+# assertion written against the wider slice simply lists eight sections and passes, and
+# assert_slice_bounded confirms a slice of a plausible size either way.
+#
+# That is the contract held here, and the reason this is a function rather than a sed range
+# open-coded at each site — the third caller is the one that would lose it without noticing.
+#
+# Usage: skill_template "$SKILLS_DIR/spec/SKILL.md"  '^# Spec: {Title}$'
+#        skill_template "$SKILLS_DIR/brief/SKILL.md" '^# Product Brief: {Title}$'
+skill_template() {
+  local fence='^```$'
+  sed -n "/$2/,/$fence/p" "$1"
 }
 
 # Run a command with the named environment variables removed from its

@@ -14,7 +14,7 @@ Check for input in this order:
 1. If `$ARGUMENTS` references a file path, read that file as the starting context.
 2. If `$ARGUMENTS` contains a description, use that as the starting context.
 3. If neither, look for product briefs first, then problem briefs:
-   a. **Glob** `docs/briefs/[0-9]*-brief-*.md` to find product briefs. If found, present them with AskUserQuestion — show each brief's title and date. Product briefs are the preferred input since they already contain vision, value propositions, and key features.
+   a. **Glob** `docs/briefs/[0-9]*-brief-*.md` to find product briefs. If found, present them with AskUserQuestion — show each brief's title and date. Product briefs are the preferred input since they already contain vision, value propositions, key features, and constraints.
    b. If no product briefs, look for the most recent `docs/plans/[0-9]*-plan-*.md` file and ask the user if they want to use it.
 4. If no briefs exist, ask the user to describe what they want to build.
 
@@ -28,6 +28,22 @@ After resolving the input source and before starting Section 1, discover existin
 
 **Graceful degradation**: If ADRs are absent, Section 4 works as before — facilitating architecture decisions from scratch. The spec skill works with or without `cpm:architect` having been run.
 
+### Constraint Inheritance (Startup)
+
+After ADR Discovery and before starting Section 1, gather the environmental constraints upstream documents already record, so Step 3a facilitates only the gaps rather than re-asking:
+
+1. **Resolve the problem brief.** This is the one document that holds constraints as first captured, and how it is located matters:
+   - If the resolved input is itself a problem brief (`docs/plans/…`), that is the source.
+   - If the resolved input is a product brief, read its `**Source**` field and follow it — but **only when the value names a path that exists on disk**. `cpm:brief` writes that field as a path *or* the literal `"direct input"`, so an unresolvable value means there is no problem brief, not an error. This is the same back-reference `cpm:pivot` walks to build its cascade chains (`pivot/SKILL.md:47`), under the same rule.
+   - Do not pick the most recent file in `docs/plans/[0-9]*-plan-*.md` instead. Recency answers "which brief is newest", not "which brief is this spec's", and the two diverge the moment a project has more than one line of work.
+2. **Glob** `docs/plans/[0-9]*-plan-*.md` to confirm the resolved path is a problem brief this project actually holds, and `docs/architecture/[0-9]*-adr-*.md` for ADRs. If neither yields anything, skip silently.
+3. **Read `## Constraints`** from the resolved problem brief, and the Context and Consequences of any ADRs that bear on the environment. Carry both into Step 3a as entries already known.
+4. In Step 3a, **present what was inherited for confirmation and facilitate only what is missing.** An inherited entry still has to be falsifiable and still gets a label; inheritance decides what is asked, never what is recorded.
+
+**The product brief is a waypoint, not the source.** It carries a `## Constraints` section of its own, and reading that instead is the mistake this ordering exists to prevent: the product brief's copy is derived, written during ideation, and lossy by the time features have been argued over. The problem brief is where constraints were captured as facts about the world. Reach past it.
+
+**Graceful degradation**: No problem brief, no ADRs, or a brief with no `## Constraints` — this check finds nothing and Step 3a facilitates from scratch, exactly as it would in a project that never ran `cpm:discover`. Absence is never an error and never a prompt.
+
 ## Process
 
 Work through these sections **one at a time**. Use AskUserQuestion for every gate.
@@ -38,7 +54,7 @@ Work through these sections **one at a time**. Use AskUserQuestion for every gat
 
 - **Success**: The user approves the section's output via AskUserQuestion — move to the next section. For the overall process: Section 7 review is approved and the spec is saved.
 - **Blocker**: The user needs external information not available in the session (stakeholder input, technical investigation, cost data). Note the gap in the section summary, proceed to the next section, and flag the gap for resolution during Section 7 review.
-- **Ambiguity**: The user is uncertain or cannot decide on a section's content after one clarification round. Present a recommended default based on the best available information. If the user still cannot decide, note both options in the spec with a "TBD" marker and proceed — the spec is a living document that can be revised before `cpm:epics`.
+- **Ambiguity**: The user is uncertain or cannot decide on a section's content after one clarification round. Present a recommended default based on the best available information. If the user still cannot decide, note both options in the spec with a "TBD" marker and proceed — the spec is a living document that can be revised before `cpm:epics`. **Except Step 3a**: an environmental constraint that cannot be made falsifiable blocks rather than proceeding. A "TBD" sits in prose `coverage-parse.sh` never reads, so proceeding there is the silent drop that produces a fully verified matrix over software that cannot run on its target — the failure the whole step exists to catch.
 
 **Facilitation depth**: Each section's refinement loop converges in 1-2 rounds of AskUserQuestion. When the user approves a section's content, move on — one final "anything else?" check per section, not an open-ended refinement cycle.
 
@@ -106,6 +122,51 @@ Areas to consider:
 - Reliability (uptime, error handling, data integrity)
 - Usability (accessibility, device support)
 
+#### Step 3a: Environmental Constraints
+
+Environmental constraints *are* non-functional requirements, which is why they are captured here
+rather than in a section of their own. Unlike the areas above, this step is **not skippable**: it
+runs on every spec and ends in either labelled entries or an explicit "none apply". A spec that was
+never asked is indistinguishable from a spec whose target has no constraints, and it is the first
+that ships a fully verified matrix over software that cannot run where it has to.
+
+Cover both environments and both classes:
+
+| | **Requirement** — must be available | **Restriction** — must not be required |
+|---|---|---|
+| **Development** | test runner, browser automation, language version | tooling a contributor cannot install |
+| **Production** | runtime version, hosting model, services the host provides | anything the host cannot supply |
+
+Ask about **development tooling explicitly** — which test runner, whether browser automation is
+needed — not only about the production environment. On a greenfield project there is no dependency
+manifest to infer it from, so `cpm:do`'s Test Runner Discovery finds nothing and proceeds with
+`Test command: none`; what is captured here is what drives the installation instead.
+
+The two classes are not two phrasings of one thing. "Pest is available" is satisfied by installing
+something. "Must not require a queue worker" invalidates a design and cannot be retrofitted — it is
+the class that yields a passing acceptance matrix and an undeployable result, so it is elicited
+directly rather than inferred from the absence of a requirement.
+
+**Every entry states a condition something can check.** `PHP 8.2 or later on the host` is
+checkable; "the environment should be modern" is not. An unfalsifiable entry is worse than a
+missing one — it takes a label, enters the coverage matrix, and gets marked delivered by whoever
+decides it feels satisfied. Refuse it, and **name which entry**: say what about it cannot be
+checked and offer the checkable form. A refusal is a refinement round, not a rejection of the
+concern behind it.
+
+**Fail closed.** An entry that cannot be parsed, cannot be made falsifiable, or belongs to neither
+class is **reported and blocks this step**. It is never dropped, never silently reclassified, and
+never carried into the document unlabelled. This is the spec's own subject applied to itself: the
+failure being designed against is one that looks like success, so a constraint that could not be
+handled has to leave the step visibly unfinished rather than quietly absent.
+
+Record each entry under `## Non-Functional Requirements`, labelled `ENVn` for a requirement and
+`ENVXn` for a restriction. Labelled there, they are traced by the coverage roll-up exactly as `NFRn`
+entries are, and an unsatisfied one holds the untraced count above zero instead of sitting in prose
+nothing reads.
+
+Converge in 1-2 `AskUserQuestion` rounds, as every other section does.
+
 ### Section 4: Architecture Decisions
 
 If ADRs were discovered during the ADR Discovery startup check, this section references them rather than doing architecture from scratch.
@@ -149,6 +210,7 @@ Present the test approach tag vocabulary to the user:
 - `[integration]` — Verified by integration tests that exercise boundaries between components (API contracts, event flows, data layer interactions)
 - `[feature]` — Verified by feature/end-to-end tests that exercise complete user-facing workflows
 - `[manual]` — Verified by manual inspection, observation, or user confirmation (no automated test)
+- `[target]` — Verified by a mechanical check that can only run against the real deployment target. Not a weaker `[manual]` but a different thing: `[manual]` means a human judges it and no automation is possible in principle, whereas here the check *is* mechanical and only the environment is missing. Environmental requirements and restrictions are the usual case. Self-assessing one from a development sandbox — confirming "runs on PHP 8.2 or later" on a machine where it does — is the false pass this tag exists to stop.
 - `[tdd]` — Workflow mode: task follows a red-green-refactor loop. Composable with any level tag above (e.g. `[tdd] [unit]`, `[tdd] [integration]`). Orthogonal — describes *how* to work, not *what kind* of test. When present, `cpm:do` writes a failing test first, then implements to pass it, then refactors. `[tdd]` without a level tag defaults to `[tdd] [unit]`.
 
 **Tag propagation**: When present, these tags flow downstream — `cpm:epics` propagates them onto story acceptance criteria and `cpm:do` uses them to select verification approach (run tests vs. self-assess) and workflow mode (standard vs. TDD). When a story introduces criteria beyond the spec, `cpm:epics` proposes tags based on the criterion's nature. If the spec has no Testing Strategy (user opts out below), downstream skills treat all criteria as untagged and verify by self-assessment. Use AskUserQuestion to confirm the vocabulary or let the user adjust it.
@@ -245,6 +307,15 @@ Use this format:
 ## Non-Functional Requirements
 {Only sections that are relevant}
 
+- **NFR1 — {Title}.** {requirement}
+- **ENV1 — {Title}.** {environmental requirement — what the target must provide, e.g. PHP 8.2 or later on the production host, or a test runner available in development}
+- **ENVX1 — {Title}.** {environmental restriction — what the work must not require, e.g. must not require a queue worker}
+
+{Environmental constraints are labelled `ENVn` when something must be available and `ENVXn` when
+something must not be required, and they live under this heading rather than in a section of their
+own — that is what makes the coverage roll-up trace them exactly as it traces `NFRn`, so an
+unsatisfied one holds the untraced count above zero. Elicited in Step 3a.}
+
 ## Architecture Decisions
 
 ### {Decision Title}
@@ -271,6 +342,7 @@ Test approach tags used in this spec:
 - `[integration]` — Integration tests exercising boundaries between components
 - `[feature]` — Feature/end-to-end tests exercising complete user-facing workflows
 - `[manual]` — Manual inspection, observation, or user confirmation
+- `[target]` — Mechanical check runnable only against the real deployment target; not a human judgement
 - `[tdd]` — Workflow mode: task follows red-green-refactor loop. Composable with any level tag (e.g. `[tdd] [unit]`). Orthogonal — describes how to work, not what kind of test.
 
 ### Acceptance Criteria Coverage
