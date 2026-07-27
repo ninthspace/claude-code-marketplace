@@ -19,9 +19,9 @@ You write a spec; the loop should produce the epics and implement them without f
 - **FR6** — **Two completion conditions, never conflated.** Phase 1 is *every requirement traced to a matrix row*; phase 2 is *every row verified*. A spec with no epics is phase one, and phase one is never "done".
 - **FR7** — The loop **distinguishes "no epics yet" from "the check could not run"**. Both are `exit 1` today; one means keep working, the other means stop.
 - **FR8** — **Phase-1 completion is a recorded fact**, not inferred from the presence of epic files. A partially-generated set must be distinguishable from a complete one.
-- **FR9** — A run interrupted mid-phase-1 **resumes without restarting or double-writing** epics already on disk.
+- **FR9** — A run interrupted mid-phase-1 **reports the partial set rather than restarting or double-writing it**. The loop stops with the covered and uncovered requirements named; the partial epics stay on disk untouched, and completing them is a deliberate act. Resuming generation automatically is out: `cpm:epics` writes each epic doc and its matrix before starting the next, so a partial phase 1 always leaves a matrix, and exit 4 — the only route into `/cpm:epics` — cannot fire. Re-opening a second route would reinstate the spin the liveness rule removed.
 - **FR10** — **One promise per mode, fixed at launch** — not a choice offered to the loop. Epic mode asks "are these matrices fully verified"; spec mode asks that *plus* "are all the spec's requirements traced".
-- **FR11** — **Non-convergence is visible.** Each iteration reports traced and verified counts, and a run whose counts are unchanged across N consecutive iterations stops and reports rather than continuing. `cpm:ralph` defaults to 50 iterations and no number currently exists that would reveal a loop that is neither stalled nor finished.
+- **FR11** — **Non-convergence is visible.** Each iteration reports the traced and verified counts it read from the roll-up, so a run that is neither stalled nor finished can be seen to be so while it is happening. `cpm:ralph` defaults to 50 iterations and no number is shown along the way today. The N-iteration threshold this requirement originally asked for was delivered structurally instead (`69320ef`): exit 4 is the only route into `/cpm:epics`, and a phase that cannot make progress stops rather than repeats — so a threshold on top of that would guard a case the loop can no longer reach.
 - **FR12** — **Cross-session relaunch detects a leftover `cpm:epics` progress file** for the same spec, even when the Stale-Progress guard returns `SUPPRESS`, and passes it back as resume state.
 - **FR13** — **`[plan]` tags are stripped from every epic doc before `/cpm:do` runs over it**, not only from the docs that existed at pre-flight. Step 1b strips them after epic discovery and before launch, which covers all three of today's input shapes because their epics are on disk when pre-flight runs. In spec mode the epics do not exist yet: `cpm:epics` writes them during phase 1 and its `[plan]` tag suggestion rule attaches tags to exactly the stories that touch data models, API contracts, or cross-system integration. Those tags reach `cpm:do` unstripped, `EnterPlanMode` fires, and the loop stalls waiting for an approval nobody is present to give — the precise failure Step 1b exists to prevent.
 
@@ -38,7 +38,7 @@ You write a spec; the loop should produce the epics and implement them without f
 - **NFR2 — Single source of the phase judgement.** `cpm:ralph` relays the script's records; it never derives traced / untraced / verified state itself. Reading a named field out of a `SUMMARY` record is relaying; counting rows is deriving. Extends spec 44's NFR5.
 - **NFR3 — Bounded write surface for the autonomous `epics` phase.** It writes epic docs, coverage matrices, and its progress file. **It never edits the source spec.** The spec is the only artefact a human authored and the only fixed point the loop is measured against, so a loop that can rewrite it can move its own goalposts. `cpm:do`'s autonomous branch already carries this rule (`do/SKILL.md:64`); an autonomous `epics` needs it more, because `epics` reads the spec as its primary input and is one edit away from it.
 - **NFR4 — Auditable without re-running.** Every autonomous gate decision leaves a breadcrumb naming *which* gate and *what* was chosen. Without this, "the loop cut the spec into five epics" is unreviewable.
-- **NFR5 — Prompt budget.** The template is **2,858 characters** today and is fed back verbatim on every iteration. New clauses stay to a sentence, and the stated figure is asserted against the actual length.
+- **NFR5 — Prompt budget.** The template is **3,188 characters** today — 2,858 when this spec was written, moved by epic 46-03's `[target]` clause — and is fed back verbatim on every iteration. New clauses stay to a sentence, and the stated figure is asserted against the actual length.
 - **NFR6 — Idempotent resume.** Re-entering phase 1 over a partially-generated set neither duplicates an epic nor renumbers one. `cpm:epics` already treats sub-numbers as identifiers rather than ordinals, so the constraint is that resume must not violate a property the numbering procedure already guarantees.
 
 ## Architecture Decisions
@@ -52,6 +52,8 @@ You write a spec; the loop should produce the epics and implement them without f
 **Alternatives considered**: a `phase:` marker in the state-file frontmatter — it would survive, since the stop hook's `sed` only rewrites `^iteration:`, but a marker the loop writes about its own progress is exactly the self-report FR8 exists to prevent. Inferring from epic-file presence — forbidden by FR8 for the same reason.
 
 **Consequence, recorded rather than hidden**: if `cpm:epics` legitimately leaves a Must Have uncovered, phase 1 never completes and the loop spins. That is the *correct* finding — the "requirement fell through the breakdown" case the discussion called the product — but it needs FR11 to turn it into stop-and-report rather than fifty wasted iterations.
+
+**Amended 2026-07-27**: the first live spec-mode run hit exactly this, and the stop-and-report was delivered structurally by `69320ef` rather than by FR11's threshold — exit 4 became the only route into `/cpm:epics`, so a phase that cannot make progress stops instead of repeating. FR11 was narrowed to its reporting half accordingly. The sequencing lesson stands and is recorded in retro 29: a consequence a spec declines to fix is a prediction with a date on it.
 
 ### AD2 — A fourth exit code, on the `--verdict` path only
 
@@ -108,7 +110,7 @@ You write a spec; the loop should produce the epics and implement them without f
 - The two-phase conditional prompt, one static template (FR6, AD3).
 - A fourth `--verdict` exit code on `coverage-rollup.sh` (FR7, AD2).
 - A distinct spec-mode promise tag (FR10, AD4).
-- Phase-1 resumability within and across sessions, and non-convergence detection (FR8, FR9, FR11, FR12).
+- Phase-1 partial-set reporting, cross-session detection of a leftover `cpm:epics` progress file, and per-iteration count reporting (FR8, FR9, FR11, FR12).
 - Stripping `[plan]` from epics generated during phase 1, at the phase transition (FR13, AD6).
 
 ### Out of Scope
@@ -157,11 +159,12 @@ No criterion in this spec is `[manual]`. Everything here is prose a model follow
 | FR7 (must NOT) | must NOT treat a read failure as phase 1 not started | `[integration]` |
 | FR8 | The phase judgement comes from the roll-up's records | `[integration]` |
 | FR8 (must NOT) | must NOT infer phase from the presence or count of epic files | `[integration]` |
-| FR9 | Re-entering phase 1 with epics already on disk continues rather than restarting, and writes no duplicate epic doc | `[integration]` |
+| FR9 | A phase 1 interrupted with epics already on disk reports the partial set — naming covered and uncovered requirements — and writes no duplicate epic doc | `[integration]` |
+| FR9 (must NOT) | must NOT re-enter `/cpm:epics` over a partial set | `[integration]` |
 | FR10 | Spec mode's `completion_promise` differs from epic mode's, is fixed at launch, and the emitted tag matches it exactly | `[integration]` |
 | FR10 (must NOT) | must NOT put evidence inside the promise tag | `[integration]` |
-| FR11 | Each iteration reports traced and verified counts; a run whose counts are unchanged across N consecutive iterations stops and reports | `[integration]` |
-| FR11 (must NOT) | must NOT continue past the non-convergence threshold without reporting | `[integration]` |
+| FR11 | Each iteration reports the traced and verified counts it read from the roll-up | `[integration]` |
+| FR11 (must NOT) | must NOT branch on those counts without having reported them in the same iteration | `[integration]` |
 | FR12 | Spec-mode pre-flight detects a leftover `cpm:epics` progress file for the same spec even when the guard returns `SUPPRESS` | `[integration]` |
 | FR12 (must NOT) | must NOT delete or overwrite that progress file without surfacing it | `[integration]` |
 | FR13 | Epics generated during phase 1 are stripped before phase 2 begins, by the same rule Step 1b applies at pre-flight | `[integration]` |

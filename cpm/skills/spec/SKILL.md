@@ -111,6 +111,8 @@ Facilitate conversation about what the system must do. Use MoSCoW prioritisation
 
 Present a draft list and refine with the user. Iterate — refine progressively rather than trying to capture everything at once.
 
+**Give each requirement an `FRn` label as it is agreed**, numbered once across Must, Should and Could rather than restarting under each heading, and carry the label into the draft the user sees. A label assigned during facilitation is one the user can refer to for the rest of the session and one that survives into Section 6b's coverage table and every downstream matrix. Assigning them at write-up instead means the conversation and the document disagree about what `FR4` is. Won't Have entries are ruled out rather than requirements to satisfy and stay unlabelled — see the output template's note.
+
 ### Section 3: Non-Functional Requirements
 
 Only cover what's relevant to this project. Skip anything that doesn't apply.
@@ -293,16 +295,27 @@ Use this format:
 ## Functional Requirements
 
 ### Must Have
-- {requirement}
+- **FR1 — {Title}.** {requirement}
 
 ### Should Have
-- {requirement}
+- **FR2 — {Title}.** {requirement}
 
 ### Could Have
-- {requirement}
+- **FR3 — {Title}.** {requirement}
 
 ### Won't Have (this iteration)
 - {item}
+
+{Every requirement under Must, Should and Could opens with a label — `FRn` — and the numbering runs
+once across all three headings rather than restarting under each. The label is what the coverage
+roll-up traces: it reads requirements from this section and `## Non-Functional Requirements` only,
+and it identifies one by the label the bullet opens with. An unlabelled bullet is read as prose and
+produces no record at all — not an untraced requirement but no requirement, which is the one failure
+that cannot be seen downstream, because a requirement nothing knows about cannot be reported missing.
+
+Won't Have entries stay unlabelled: they are items ruled out rather than requirements to satisfy, and
+prose is what the roll-up should skip. Label one only when it is a real requirement being explicitly
+deferred — labelled there, it is recognised and excluded rather than counted as an outstanding gap.}
 
 ## Non-Functional Requirements
 {Only sections that are relevant}

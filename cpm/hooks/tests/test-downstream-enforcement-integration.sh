@@ -30,16 +30,29 @@
 # --- Criterion 2: the byte budget, and why this assertion will age ------------------
 #
 # NFR6 asks that "the bytes added to each skill file are stated and asserted". The statement is
-# the delta table in the epic doc; the assertion is below. Two independent things are checked,
-# and only the second is durable:
+# the delta table in the epic doc; the assertion is below. This suite originally checked two
+# independent things, and **the point-in-time half was retired on 2026-07-27** — this is the
+# record of that decision, since a removed assertion leaves nothing else behind.
 #
-#   * the table's `After` column against the files as they are now — a **point-in-time** check.
-#     Any later change to any of the five skills fails it, correctly, because the stated figure
-#     stops being the measured one. The remedy is a fresh baseline row, not a looser assertion.
+# What was removed: the table's `After` column compared against the five skill files as they
+# are now. Any later change to any of those skills failed it. The stated remedy at the time was
+# "a fresh baseline row, not a looser assertion" — and when it first fired, on spec 45 epic
+# 45-04 Story 1, that remedy turned out to be unavailable. `budget_rows()` collects every row in
+# the doc beginning `| \``, so a *second* table cannot be added; the only shape available was an
+# in-place rewrite restating epic 46-03's `ralph` delta as +1,285 when 46-03 added 991. A check
+# whose only repair is to falsify the figure it checks is not a check.
+#
+# Coverage row 12's criterion is unaffected and keeps its ✓: it reads "each skill's stated byte
+# **delta** matches its actual … against the 206,208-byte baseline recorded at breakdown", which
+# is a claim about what epic 46-03 added. That is historically fixed and still true. Re-measuring
+# live files forever was more than the criterion asked for.
+#
+# What remains — the durable half, and the half that catches the realistic failure:
+#
 #   * the table's internal arithmetic, and its agreement with the prose baseline sentence written
-#     separately above it — durable, and the half that catches the realistic failure. Retro 24's
-#     lesson was a stated figure nothing derived from the real thing; hand arithmetic across a
-#     five-row table and a prose sentence is exactly where that recurs.
+#     separately above it. Retro 24's lesson was a stated figure nothing derived from the real
+#     thing; hand arithmetic across a five-row table and a prose sentence is exactly where that
+#     recurs, and neither of those two statements moves when an unrelated skill file grows.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
@@ -144,16 +157,17 @@ budget_total() {
 test_start "control: the delta table has a row for each of the five skill files"
 assert_equals "5" "$(budget_rows | grep -c .)"
 
-# Each row against the file it names. The point-in-time half — see the header.
-MEASURED_MISMATCHES=""
+# Each row's own arithmetic. The `wc -c` comparison that used to sit here was retired — see the
+# header. The row's `skill` field is still read, and still has to name a real skill file, because
+# a row for a skill that does not exist is a typo the arithmetic alone would not catch.
 STATED_ARITHMETIC=""
+MISSING_SKILL=""
 SUM_BASE=0; SUM_DELTA=0; SUM_AFTER=0
 
 while read -r skill base delta after; do
   [ -n "$skill" ] || continue
-  actual=$(wc -c < "$SCRIPT_DIR/../../skills/$skill/SKILL.md" | tr -d ' ')
-  [ "$actual" = "$after" ] || \
-    MEASURED_MISMATCHES="$MEASURED_MISMATCHES$skill: stated $after, measured $actual"$'\n'
+  [ -f "$SCRIPT_DIR/../../skills/$skill/SKILL.md" ] || \
+    MISSING_SKILL="$MISSING_SKILL$skill: no such skill file"$'\n'
   [ "$((base + delta))" = "$after" ] || \
     STATED_ARITHMETIC="$STATED_ARITHMETIC$skill: $base + $delta != $after"$'\n'
   SUM_BASE=$((SUM_BASE + base))
@@ -171,8 +185,8 @@ assert_empty "$STATED_ARITHMETIC"
 test_start "and the rows sum to the stated totals"
 assert_equals "$(budget_total)" "$SUM_BASE $SUM_DELTA $SUM_AFTER"
 
-test_start "each skill's stated after-size matches the file as it is now"
-assert_empty "$MEASURED_MISMATCHES"
+test_start "every row names a skill file that exists"
+assert_empty "$MISSING_SKILL"
 
 # The prose sentence recording the breakdown baseline and the table's Baseline column were
 # written separately, months of edits apart in the file's history — so they are a correspondence,

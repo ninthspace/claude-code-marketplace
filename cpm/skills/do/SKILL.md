@@ -314,8 +314,6 @@ When a story's verification gate task runs — the story-completion point — pe
 - If tests **pass**: proceed to Step 6.
 - If tests **fail**: revert the refactoring changes that caused failures and proceed to Step 6 without them. The work loop continues past a failed refactoring pass.
 
-> **Retained deliberately** (spec 40, R2): this retest was assessed under the artefact-production test and exempted. Its result drives a revert of the working tree and is recorded as the `reverted` outcome in `**Simplifier outcomes**:`, so its consumer is a control-flow decision and a written record rather than the model's own confidence.
-
 **Scope constraint**: Start with the files touched by the current story, but look outward for consolidation opportunities — duplicate code, similar patterns, extraction candidates, and abstractions that span touched and non-touched code. If the story introduced logic that already exists elsewhere, merge it. If a pattern appears in both new and existing code, extract it. The refactoring may touch files beyond the story's direct scope when there's a clear consolidation or deduplication benefit. Every change connects back to the code the story produced — unrelated refactoring is out of scope.
 
 ### 6. Complete and Update State
@@ -376,8 +374,6 @@ Once the progress file is written, go straight to Step 7. Finishing a task — o
 ### 8. Batch Summary (Loop Completion)
 
 When the work loop finishes (no more pending unblocked tasks):
-
-> Epic-level re-verification against the source spec was removed from this step (spec 40, R2): its only consumer was the model's own confidence, since the coverage matrix and the epic doc already record what each story gate found. Proof recording below is retained and anchored to those gates, and the retro flag set (items 2–3) no longer takes an epic-level spec gap, there being no such check left to raise one.
 
 1. **Epic-level proof recording**: Update the coverage matrix to mark any remaining unverified rows with `✓`. These are rows that passed story-level verification but were not marked during Step 5 (e.g. requirements spanning multiple stories). Mark a row when the story named in its "Covered by" column passed its verification gate — where a row names several stories, mark it only once every one of them has passed. Leave a row unverified when its covering story's gate did not fully pass (criteria unmet-but-continued), since it represents an unproven requirement. If no coverage matrix exists, skip this step.
 

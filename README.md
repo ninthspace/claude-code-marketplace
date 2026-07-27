@@ -22,6 +22,37 @@ This marketplace contains plugins for facilitated planning (CPM), note searching
 /plugin install filament-mockup@claude-code-marketplace
 ```
 
+### Also needed for `/cpm:ralph` — the ralph-loop fork
+
+CPM's autonomous loop (`/cpm:ralph`) does not implement the loop itself. It writes a state
+file and relies on a **Stop hook** supplied by a separate plugin. Install ours:
+
+```bash
+/plugin marketplace add ninthspace/ralph-loop
+/plugin install ralph-loop@ninthspace-ralph
+```
+
+This is a fork of Anthropic's [`ralph-loop`](https://github.com/anthropics/claude-plugins-public/tree/main/plugins/ralph-loop)
+(Apache-2.0), which is itself the maintained line descended from Daisy Hollman's
+`ralph-wiggum`. The fork's first commit is the upstream plugin unmodified, so every change
+is visible as a diff against it.
+
+**One behavioural change, and it is the reason to prefer the fork**: the Stop hook no longer
+deletes the loop's state file when it cannot read the transcript. Upstream treats a missing
+transcript, a failed `grep` for assistant records, and a `jq` parse error as reasons to end
+the run — and the state file *is* the loop, so ending it that way exits 0 with no promise
+and no state file, which is indistinguishable from a completed run. The fork continues on
+all three: failing to read a turn's output means *no promise this iteration*, not *the work
+is finished*. An unattended overnight run is precisely where that difference is invisible
+and expensive.
+
+CPM works with any of the three — `cpm/hooks/lib/ralph-hook-probe.sh` detects the hook
+whichever plugin provides it, and warns when none is present. The upstream plugins remain
+usable; the fork is what `/cpm:ralph` is developed and tested against.
+
+**Do not enable more than one at a time.** All three register a Stop hook, both fire on the
+same session, and the state file only has to be deleted by one of them for the loop to end.
+
 ## Available Plugins
 
 ### NotePlan Search (v1.0.0)
@@ -105,7 +136,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v3.5.3)
+### Claude Planning Method (v3.6.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 

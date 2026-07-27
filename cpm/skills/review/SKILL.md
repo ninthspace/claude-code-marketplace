@@ -162,9 +162,7 @@ Format each finding as:
 
 Consolidate every agent's findings, then curate. The finding stage above stays comprehensive; selection happens here — the same find/rank separation `audit` keeps between its complete findings table and its Executive Summary.
 
-Weigh severity against how well each finding is evidenced, then select down to the review's depth: 3-8 findings for a single-story review, 5-15 for a full epic review. Findings that do not make the cut stay in this session and are not carried into the review document, whose schema records the curated set (Step 3).
-
-*(Spec 32 listed a find/filter split for `review` as a Won't-Have, on the reasoning that the skill was small enough not to need one. Opus 5 follows a conservative finding cap literally and surfaces less as a result, which is what makes the split worth its cost now.)*
+Weigh severity against how well each finding is evidenced, then select down to the review's depth: 3-8 findings for a single-story review, 5-15 for a full epic review. Findings that do not make the cut stay in this session and are not carried into the review document, whose schema records the curated set (Step 3). The cap belongs here and not in the finding stage: a cap the finders can see is a cap they stop short of, and what goes unfound cannot be curated back.
 
 ### Step 2c: Present
 

@@ -47,11 +47,25 @@ requirement singles out as already the longest in the plugin — grew 32.0%, and
 together 5.9%. Most of `cpm:spec`'s share is the constraint-inheritance startup check and the
 environmental elicitation sub-step from epic 46-02, not the `[target]` vocabulary this epic added.
 
-**The `After` column pins live file sizes and will go stale.** Any later change to one of these five
-skills fails the assertion in `test-downstream-enforcement-integration.sh`, correctly — the stated
-figure would no longer be the measured one. The remedy is to record a fresh baseline row for that
-change, not to loosen the assertion. Story 4's criterion was written this way deliberately; the cost
-is real and is raised as a retro observation rather than absorbed silently.
+**The `After` column pinned live file sizes and went stale — the check over it was retired on
+2026-07-27.** The prediction was written here at breakdown: any later change to one of these five
+skills would fail the assertion in `test-downstream-enforcement-integration.sh`, and the remedy
+would be "a fresh baseline row, not a looser assertion". It fired on the very next change — spec 45
+epic 45-04 Story 1 grew `ralph/SKILL.md` by 294 bytes — and the remedy turned out not to exist. The
+suite's `budget_rows()` collects every row in this doc beginning `` | ` ``, so there is no way to
+add a second table; the only available repair was to rewrite the `ralph` row in place as `+1,285`,
+restating what *this* epic added as a figure that includes another spec's work. A check whose only
+repair is to falsify the figure it checks is not a check, so the `After`-versus-`wc -c` comparison
+was removed and the durable half kept: the table's internal arithmetic, its row/total sums, and its
+agreement with the separately-written prose baseline sentence above.
+
+The numbers in the table are **not** amended and remain correct as a record of what epic 46-03
+added. Coverage row 12 keeps its ✓ — its criterion is that each skill's stated byte *delta* matches
+its actual against the recorded 206,208-byte baseline, which is a claim about this epic's change and
+is still true. Re-measuring live files on every future run was more than the criterion asked for.
+
+**Inline change**: the `After`-column measurement assertion retired; table figures unchanged
+(2026-07-27)
 
 ## `cpm:epics` gap-checks environmental constraints
 **Story**: 1

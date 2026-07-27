@@ -12,7 +12,7 @@ After installation, use any skill independently or as a pipeline:
                                                                           /cpm:review    /cpm:pivot
                                                                                                      ↓
                                                                                               /cpm:archive
-/cpm:ralph (autonomous multi-epic execution via Ralph Wiggum plugin)
+/cpm:ralph (autonomous multi-epic execution via the ralph-loop plugin)
 /cpm:quick (lightweight execution for small, well-defined changes)
 /cpm:status (project status reconnaissance and next-step recommendations)
 /cpm:library (import reference docs used by all skills)
@@ -35,7 +35,7 @@ Each step is optional. Use what fits your situation:
 - Ready for requirements? Jump to `/cpm:spec`
 - Have a plan, need epics? Go straight to `/cpm:epics`
 - Ready to implement? `/cpm:do` works through tasks one by one
-- Want autonomous overnight execution? `/cpm:ralph` wraps `/cpm:do` in a Ralph Wiggum loop
+- Want autonomous overnight execution? `/cpm:ralph` wraps `/cpm:do` in a ralph-loop (needs the [ralph-loop plugin](#cpmralph--autonomous-execution))
 - Want a critical review before starting? `/cpm:review` runs adversarial review of epics/stories
 - Want an independent codebase health check? `/cpm:audit` sweeps nine dimensions and feeds findings into spec/library/quick
 - Need to understand what a branch or commit range actually did? `/cpm:inspect` characterises the change and situates it in the repo
@@ -202,11 +202,22 @@ During execution, `/cpm:do` captures per-task observations when something notewo
 
 ### `/cpm:ralph` — Autonomous Execution
 
-Wraps `/cpm:do` in a [Ralph Wiggum](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) loop for autonomous, unsupervised execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction. Given a spec instead of epics, it generates the epics first and then works them (see **Spec mode** below).
+Wraps `/cpm:do` in a Ralph loop for autonomous, unsupervised execution. Discovers epics, validates prerequisites, generates a self-contained prompt with autonomous behaviour overrides, and launches the loop — letting Claude work through multiple epics overnight without user interaction. Given a spec instead of epics, it generates the epics first and then works them (see **Spec mode** below).
 
 The generated prompt replaces all `/cpm:do` interaction gates (AskUserQuestion) with autonomous fallback behaviour: fix test failures, retry unmet criteria, skip stuck tasks, and auto-continue between epics. Includes stuck detection (skip after N consecutive failures), an append-only execution log, and a completion promise that signals when all epics are done.
 
-**Requires**: The [Ralph Wiggum plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-wiggum) installed in Claude Code.
+**Requires a Stop-hook plugin — CPM supplies none.** This skill writes `.claude/ralph-loop.local.md` and depends on a Stop hook to feed the prompt back each iteration. Install ours:
+
+```bash
+/plugin marketplace add ninthspace/ralph-loop
+/plugin install ralph-loop@ninthspace-ralph
+```
+
+[`ninthspace/ralph-loop`](https://github.com/ninthspace/ralph-loop) is a fork of Anthropic's [`ralph-loop`](https://github.com/anthropics/claude-plugins-public/tree/main/plugins/ralph-loop) (Apache-2.0), which is itself the maintained line descended from Daisy Hollman's `ralph-wiggum`. Its first commit is the upstream plugin unmodified, so every change reads as a diff against it.
+
+**The fork's one behavioural change is fail-closed extraction.** Upstream deletes the loop's state file when it cannot read the transcript — a missing file, a `grep` for assistant records that matches nothing, a `jq` parse error. The state file *is* the loop, so that ends the run with exit 0, no promise and no state file: indistinguishable, afterwards, from a run that finished. The fork continues on all three, on upstream's own reasoning about the no-text-block case — the extracted output feeds exactly one decision, whether the promise was emitted, so failing to read it means *no promise this iteration*. The costs are asymmetric: continuing wrongly wastes one iteration, stopping wrongly ends an overnight run silently.
+
+All three plugins work. `cpm/hooks/lib/ralph-hook-probe.sh` finds the hook whichever one provides it, and pre-flight warns when none is present — but **enable only one**. They register the same hook at the same path, both fire on the same session, and one of them deleting the state file is enough to end the loop.
 
 **Input**: Epic doc paths (explicit, range, or auto-discover), **or a spec path**. Optional `--max-iterations`, `--story-filter`, `--dry-run`.
 
@@ -545,7 +556,7 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
    - Loops until all stories are complete
 
    **Or** `/cpm:ralph` — Autonomous multi-epic execution
-   - Wraps `/cpm:do` in a Ralph Wiggum loop for unsupervised execution
+   - Wraps `/cpm:do` in a ralph-loop for unsupervised execution
    - Auto-discovers epics, generates autonomous prompt, launches the loop
    - Includes stuck detection, execution logging, and resume capability
 

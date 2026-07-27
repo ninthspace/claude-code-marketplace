@@ -256,12 +256,11 @@ from the first.
 
 ## Notes
 
-- Selector resolution is the only deterministic machinery here, and deliberately so. An
-  earlier version of this skill resolved provenance mechanically, through adapters and a
-  join, and its headline answer on a real change set was both reproducible and wrong: every
-  file linked to every record, reported as "no orphan changes". Reading the planning
-  documents directly gives a better answer, and one that can say *this signal does not
-  discriminate here* — which no adapter can.
+- Selector resolution is the only deterministic machinery here, and deliberately so.
+  Provenance is not resolved mechanically: a join that links every file to some record is
+  reproducible and says nothing, and it reports that emptiness as "no orphan changes".
+  Reading the planning documents directly gives an answer that can say *this signal does not
+  discriminate here* — which no join can.
 - Everything above resolution is a reading, and it should sound like one. Counts are counts;
   inferences are inferences; the page and the conversation both keep them apart.
 
