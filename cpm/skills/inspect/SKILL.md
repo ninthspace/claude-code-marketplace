@@ -226,7 +226,7 @@ The report in conversation, and — on request — a published artifact plus its
 
 ## State Management
 
-Follow the shared **Progress File Management** procedure.
+Follow the shared **Progress File Management** procedure, writing to `docs/plans/.cpm-progress-{session_id}.md` — or `docs/plans/.cpm-progress.md` when `CPM_SESSION_ID` is not in context. `/cpm:clean`, the Stale-Progress Check and compaction recovery all locate the file by globbing that exact stem, so one named anything else is invisible to every reader it exists for.
 
 **Lifecycle**: Create the file once the selector has resolved — before that there is nothing
 worth recovering, and the selector is the one thing a resumed run cannot re-derive. Update it

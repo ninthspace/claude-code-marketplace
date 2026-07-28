@@ -72,13 +72,6 @@ function cov_rindex(s, t,   i, p, last) {
   return last
 }
 
-# The base requirement a label refers to. `FR1 (must NOT)` and `FR6 (cross-site)` resolve
-# to `FR1` and `FR6`; a label that is nothing but a qualifier — `(story-originated)` —
-# resolves to the empty string, because there is no requirement behind it.
-#
-# The result is an exact string, and every comparison against it downstream is string
-# equality. Nothing here or later matches on a prefix, which is what keeps `FR10` from
-# being read as `FR1`.
 # The requirement label a bullet opens with: uppercase letters then digits — `FR1`,
 # `NFR10`. Empty when the bullet does not open with one, which is how a bold prose bullet
 # is told apart from a requirement without a list of known prefixes to keep in step.
@@ -102,16 +95,73 @@ function cov_label_number(s) {
   return -1
 }
 
-function cov_base_label(label,   n, p) {
+# Whether the text following a leading label contains a second label token. This is what
+# tells a descriptive suffix apart from a label naming more than one requirement:
+# `FR7 — Pence-exact remainder rule` carries prose, `ENV1–ENV5` and `ENV9, ENV10, ENV11`
+# carry further labels.
+#
+# Tokens are accumulated by `index` into a character set rather than matched by a regex over
+# the whole string, for the reason the scope scanner gives at length: the character either
+# side of a label can be one byte of a multibyte dash, and handing that to a regex is what
+# makes this awk abort with a conversion failure. Every byte outside the set simply ends the
+# current token, so a dash of any width is a separator without being recognised as one.
+#
+# The completed token is offered to cov_leading_label and kept only when it matches in full,
+# so the `[A-Z]+[0-9]+` grammar stays stated in one place. By then the token holds nothing but
+# ASCII uppercase and digits, so no multibyte byte can reach that regex.
+function cov_has_further_label(s,   i, c, tok) {
+  tok = ""
+  s = s " "
+  for (i = 1; i <= length(s); i++) {
+    c = substr(s, i, 1)
+    if (index("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", c) > 0) {
+      tok = tok c
+      continue
+    }
+    if (tok != "" && cov_leading_label(tok) == tok) return 1
+    tok = ""
+  }
+  return 0
+}
+
+# The base requirement a label refers to, or the empty string when there is not exactly one.
+#
+# Three shapes resolve. A bare `FR7` is itself. A qualified `FR1 (must NOT)` drops the
+# qualifier. A label carrying a descriptive tail — `FR7 — Pence-exact remainder rule`, the
+# form a coverage matrix is most likely to be written with — resolves to the code, because
+# the tail describes the requirement rather than naming another one.
+#
+# A label naming **more than one** requirement resolves to nothing. `ENV1–ENV5` is the case
+# that forces this: reducing it to `ENV1` would trace one requirement and silently drop four
+# while a row on disk claims to cover all five, which is worse than not resolving at all
+# because it fails invisibly. Comma and `and` lists refuse for the same reason. A matrix
+# carries one row per requirement, so a label that names several is malformed and the roll-up
+# reports it as unresolved rather than guessing which one was meant.
+#
+# A label with no leading code is returned unchanged. Story-originated rows are named in
+# prose and have no requirement behind them, and the caller decides what that means.
+#
+# The result is an exact string, and every comparison against it downstream is string
+# equality. Nothing here or later matches on a prefix, which is what keeps `FR10` from
+# being read as `FR1`.
+function cov_base_label(label,   n, p, lead) {
   label = cov_trim(label)
   n = length(label)
   if (n == 0) return ""
   if (substr(label, 1, 1) == "(") return ""
   if (substr(label, n, 1) == ")") {
     p = cov_rindex(label, " (")
-    if (p > 1) return cov_trim(substr(label, 1, p - 1))
+    if (p > 1) {
+      label = cov_trim(substr(label, 1, p - 1))
+      n = length(label)
+    }
   }
-  return label
+
+  lead = cov_leading_label(label)
+  if (lead == "") return label
+  if (lead == label) return label
+  if (cov_has_further_label(substr(label, length(lead) + 1))) return ""
+  return lead
 }
 
 # Whether a label names an environmental constraint, and which of the two classes it is.

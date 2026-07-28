@@ -298,6 +298,10 @@ Present the coverage matrix to the user:
 
 The "Verified" column is empty for all rows at creation time — it is populated later by `/cpm:do` during verification gates.
 
+**The Spec Requirement cell holds one bare label** — `FR7`, `ENV3`, `NFR10` — optionally followed by a parenthesised qualifier the spec itself uses, such as `FR1 (must NOT)`. Nothing else. A descriptive tail (`FR7 — Pence-exact remainder rule`) reads as more informative and is not: the roll-up joins this cell to the spec by exact match, so a decorated label traces to no requirement and the requirement reports as uncovered while a row on disk claims it.
+
+**One requirement per row, never a range or a list.** `ENV1–ENV5` and `FR8, FR5` name several requirements against a single criterion and a single Verified cell, so one tick would mark all of them verified on one piece of evidence. Where one criterion genuinely covers several requirements, repeat the criterion on a row per requirement. The roll-up refuses a label it cannot resolve to exactly one requirement and reports the row as `UNRESOLVED` rather than guessing which was meant.
+
 Where a single spec requirement maps to multiple story criteria, include one row per criterion so each mapping is independently visible.
 
 If the user identifies a fidelity problem (story criterion is weaker than or contradicts spec text), update the affected story's acceptance criteria in the epic doc before proceeding.
@@ -440,7 +444,7 @@ The flagged gaps are visible by design — the view shows what it could read and
 
 ## State Management
 
-Follow the shared **Progress File Management** procedure.
+Follow the shared **Progress File Management** procedure, writing to `docs/plans/.cpm-progress-{session_id}.md` — or `docs/plans/.cpm-progress.md` when `CPM_SESSION_ID` is not in context. `/cpm:clean`, the Stale-Progress Check and compaction recovery all locate the file by globbing that exact stem, so one named anything else is invisible to every reader it exists for.
 
 **Lifecycle**:
 - **Create**: before starting Step 1 (ensure `docs/plans/` exists).

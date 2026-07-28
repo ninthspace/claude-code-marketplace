@@ -25,7 +25,8 @@
 | 15 | NFR2 | Graceful degradation when upstream documents are absent. No problem brief, no ADRs, or a brief with no `## Constraints` — the new step still runs and facilitates from scratch, silently, exactly as ADR Discovery does today (`spec/SKILL.md:29`). Absence is never an error and never a prompt. | With no problem brief, no ADRs, or a brief with no `## Constraints`, the step still runs and facilitates from scratch, silently — absence is never an error and never a prompt | Story 4 | *(no row in the spec's table)* | ✓ |
 | 16 | NFR2 | *(as row 15)* | The documented chain resolves: `cpm:spec`'s inheritance glob targets the directory `cpm:discover` writes problem briefs to, and the field it follows is the field `cpm:brief` writes | Story 5 | *(no row in the spec's table)* | ✓ |
 | 17 | NFR2 | *(as row 15)* | Both extractions in the assertion above are non-empty before they are compared | Story 5 | *(no row in the spec's table)* | ✓ |
-| 18 | FR8, FR5 | *(rows 1 and 11 combined — the end-to-end path)* | A problem brief carrying `## Constraints` reaches a spec's `## Non-Functional Requirements` as `ENV`/`ENVX` labels, verified hop by hop | Story 5 | `[manual]` | ✓ |
+| 18 | FR8 | *(as row 1 — the end-to-end path)* | A problem brief carrying `## Constraints` reaches a spec's `## Non-Functional Requirements` as `ENV`/`ENVX` labels, verified hop by hop | Story 5 | `[manual]` | ✓ |
+| 19 | FR5 | *(as row 11 — the end-to-end path)* | A problem brief carrying `## Constraints` reaches a spec's `## Non-Functional Requirements` as `ENV`/`ENVX` labels, verified hop by hop | Story 5 | `[manual]` | ✓ |
 
 ## Notes
 

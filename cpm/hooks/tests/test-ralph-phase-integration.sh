@@ -123,6 +123,58 @@ assert_contains "$(branch_for "$RC_NO_MATRIX")" "go back to phase 1"
 test_start "and the phase clause routes that same code to phase 1"
 assert_contains " $(codes_routed_to "$PHASE" 'phase 1') " " $RC_NO_MATRIX "
 
+# --- The fifth situation: a repository phase 1 has never run in ------------------------------
+#
+# Every fixture above hands the command a `--matrix-dir` that exists. The real invocation
+# passes none, and on iteration 1 of a spec-mode run the default `docs/epics/` does not exist
+# yet — that is what greenfield means, and it is the situation spec mode was built for.
+#
+# It went unnoticed because `--matrix-dir` is the testing override: appending it to every
+# fixture made the directory exist in every case the suite could construct, so the one state a
+# real first iteration is guaranteed to be in was the one state never exercised. The command
+# returned the read-failure code, the prompt read that as "the check could not run, stop", and
+# a spec-mode run stopped on the first thing it did.
+#
+# So this section runs the command as the prompt actually writes it — no override — from inside
+# a project directory that has no `docs/epics/`.
+
+GREENFIELD=$(coverage_fixture_dir phase-integration-greenfield)
+mkdir -p "$GREENFIELD/docs/specifications"
+coverage_fixture_spec 81-spec-greenfield --dir "$GREENFIELD/docs/specifications" \
+  --must FR1 "the only requirement" >/dev/null
+
+# The same interpolation as `run_named_command`, minus the override, run with the project
+# directory as $PWD so the script resolves its own default matrix directory.
+run_named_command_default() {
+  local project="$1" spec="$2" cmd
+  cmd=$(printf '%s' "$COMMAND_TEMPLATE" | sed "s|{rollup_script}|$ROLLUP|; s|{spec_path}|$spec|")
+  ( cd "$project" && run_without_env CLAUDE_PROJECT_DIR -- $cmd >/dev/null 2>&1 )
+  printf '%s\n' "$?"
+}
+
+test_start "control: the greenfield fixture genuinely has no matrix directory"
+assert_equals "absent" "$( [ -d "$GREENFIELD/docs/epics" ] && echo present || echo absent )"
+
+RC_GREENFIELD=$(run_named_command_default "$GREENFIELD" "docs/specifications/81-spec-greenfield.md")
+
+test_start "a repository with no matrix directory returns the same code as one with no matching matrix"
+assert_equals "$RC_NO_MATRIX" "$RC_GREENFIELD"
+
+test_start "so the phase clause routes a first iteration to phase 1"
+assert_contains " $(codes_routed_to "$PHASE" 'phase 1') " " $RC_GREENFIELD "
+
+# **The control that scopes the collapse.** Reading every missing directory as "no matrix names
+# this spec yet" would answer a mistyped `--matrix-dir` by sending the loop off to generate
+# epics into a path nothing will look at again. A directory the caller named is evidence about
+# the argument, not about the repository, so it keeps the read-failure code.
+RC_NAMED_ABSENT=$(run_named_command "$SPEC" "$FX/81-98-absent-dir")
+
+test_start "control: a --matrix-dir the caller named and got wrong is still a read failure"
+assert_equals "$RC_UNREADABLE" "$RC_NAMED_ABSENT"
+
+test_start "and is not reported as a first iteration"
+assert_equals "no" "$( [ "$RC_NAMED_ABSENT" = "$RC_GREENFIELD" ] && echo yes || echo no )"
+
 # The must-NOT, measured end to end rather than read: the code an unreadable spec actually
 # returns must not be the code the clauses route to phase 1.
 test_start "must NOT treat a read failure as phase 1 not started"

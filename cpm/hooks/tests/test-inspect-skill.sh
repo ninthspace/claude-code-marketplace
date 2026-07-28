@@ -98,22 +98,33 @@ assert_equals "after|before" \
 
 # --- Criterion (must NOT): /cpm:audit is not modified -------------------------------------------
 #
-# A before-and-after content comparison, not a grep that happens to find nothing. The
-# baseline is the commit before `cpm/skills/inspect/SKILL.md` first appeared — the point at
-# which this story began — so the check stays meaningful after the work is committed
-# instead of comparing HEAD against itself. While the skill is still uncommitted there is no
-# such commit, and HEAD is the baseline.
+# A before-and-after content comparison, not a grep that happens to find nothing.
+#
+# **What is compared is the story, not the file.** The criterion is that introducing
+# `/cpm:inspect` left `/cpm:audit` alone, which is a fact about one change. Comparing the
+# working tree against the commit before inspect appeared asserts something stronger and
+# untrue: that `cpm/skills/audit/` never changes again. Every later edit to audit — a shared
+# convention restated, a path spelled out, anything at all — would fail a criterion it has
+# nothing to do with, and the failure would name this story, which did not cause it.
+#
+# So once inspect is committed the comparison is the commit that added it against its parent:
+# exactly the change that could have violated the must-NOT, and a fact that stays true no
+# matter what happens to audit afterwards. While inspect is still uncommitted there is no such
+# commit, and the live comparison is the working tree against HEAD.
 
 git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1
 IN_GIT=$?
 
+STORY_DIFF=()
 BASELINE=""
 if [ "$IN_GIT" -eq 0 ]; then
   FIRST_ADD=$(git -C "$REPO_ROOT" log --diff-filter=A --format=%H -- cpm/skills/inspect/SKILL.md | tail -1)
   if [ -n "$FIRST_ADD" ] && git -C "$REPO_ROOT" rev-parse --verify -q "${FIRST_ADD}^" >/dev/null; then
-    BASELINE="${FIRST_ADD}^"
+    BASELINE="${FIRST_ADD}"
+    STORY_DIFF=("${FIRST_ADD}^" "$FIRST_ADD")
   else
     BASELINE="HEAD"
+    STORY_DIFF=("HEAD")
   fi
 fi
 
@@ -124,25 +135,25 @@ else
   test_fail "Not a git repository — this criterion is a content comparison and cannot run"
 fi
 
-test_start "cpm/skills/audit/ is byte-identical to its state before this story began"
+test_start "the change that introduced /cpm:inspect left cpm/skills/audit/ untouched"
 if [ -z "$BASELINE" ]; then
   test_fail "No baseline"
 else
-  assert_empty "$(git -C "$REPO_ROOT" diff --name-only "$BASELINE" -- cpm/skills/audit/)"
+  assert_empty "$(git -C "$REPO_ROOT" diff --name-only "${STORY_DIFF[@]}" -- cpm/skills/audit/)"
 fi
 
-# The control for the assertion above. Once the story is committed both sides of a naive
-# comparison go empty and it passes for the wrong reason; this is what turns that into a
-# visible failure. The two skills this story *did* change must show as changed against the
-# same baseline, by the same command.
+# The control for the assertion above. A comparison whose two sides are the same tree reports
+# every path as unchanged, so "audit is unchanged" would pass while proving nothing; this is
+# what turns that into a visible failure. The two skills the story *did* change must show as
+# changed across the same range, by the same command.
 test_start "the comparison is live — the skills this story changed do show as changed"
 if [ -z "$BASELINE" ]; then
   test_fail "No baseline"
 else
-  CHANGED=$(git -C "$REPO_ROOT" diff --name-only "$BASELINE" \
+  CHANGED=$(git -C "$REPO_ROOT" diff --name-only "${STORY_DIFF[@]}" \
     -- cpm/skills/review/SKILL.md cpm/skills/inspect/SKILL.md)
   if [ -z "$CHANGED" ]; then
-    test_fail "Baseline $BASELINE shows no change to review or inspect, so 'audit is unchanged' proves nothing"
+    test_fail "The range ${STORY_DIFF[*]} shows no change to review or inspect, so 'audit is unchanged' proves nothing"
   else
     test_pass
   fi

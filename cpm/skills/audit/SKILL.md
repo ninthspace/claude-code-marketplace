@@ -446,7 +446,7 @@ Disambiguation runs at most once per audit run. After the user picks, the resolv
 
 ## State Management
 
-Follow the shared **Progress File Management** procedure.
+Follow the shared **Progress File Management** procedure, writing to `docs/plans/.cpm-progress-{session_id}.md` — or `docs/plans/.cpm-progress.md` when `CPM_SESSION_ID` is not in context. `/cpm:clean`, the Stale-Progress Check and compaction recovery all locate the file by globbing that exact stem, so one named anything else is invisible to every reader it exists for.
 
 **Lifecycle**:
 - **Create**: before Step 1 (Orient).

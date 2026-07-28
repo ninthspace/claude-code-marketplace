@@ -75,10 +75,17 @@
 #   SUMMARY    scope, requirements, untraced, delivered, in-progress    (spec scope)
 #   ROW        matrix-path, base, label, covered-by, verified|unverified (both scopes)
 #   CRITERION  matrix-path, label, covered-by, verified|unverified       (both scopes)
+#   UNRESOLVED matrix-path, label, covered-by                            (both scopes)
 #
 # `CRITERION` carries the story-originated rows — rows with no requirement behind them.
 # They are reported separately rather than as a `ROW` with an empty base, so nothing
 # downstream can count one toward a requirement.
+#
+# `UNRESOLVED` carries a row that names a requirement the label cannot be resolved to —
+# in practice a label naming several, such as `ENV1–ENV5`. It is a record rather than a
+# silence because the alternative failure is invisible: the row sits on disk claiming
+# coverage while every requirement it names reads untraced, and nothing says why. It counts
+# as outstanding, so a matrix containing one cannot reach a clean verdict.
 #
 # One format, for both readers: a model parses it into a promise decision and a human
 # reads it in a terminal. There is no second rendering mode and no flag that adds one.
@@ -198,6 +205,13 @@ if ! cpm_resolve_project_root "coverage-rollup"; then
   exit 1
 fi
 
+# Whether the caller named the directory, captured before the default fills it in. The two
+# cases mean different things when the directory turns out not to exist: a caller who named
+# one and got it wrong has made a mistake worth reporting, while the default being absent is
+# an ordinary state of a repository nobody has run `cpm:epics` in yet.
+MATRIX_DIR_EXPLICIT=0
+[ -n "$MATRIX_DIR" ] && MATRIX_DIR_EXPLICIT=1
+
 MATRIX_DIR="${MATRIX_DIR:-$CPM_PROJECT_ROOT/docs/epics}"
 
 # Absolute form of a caller-supplied path. A relative path is taken against the resolved
@@ -247,6 +261,12 @@ emit_criterion() {
   printf 'CRITERION\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4"
 }
 
+# No verified field: whether an unresolvable row carries a tick is not a fact worth
+# reporting. The row does not resolve to a requirement, so a tick on it verifies nothing.
+emit_unresolved() {
+  printf 'UNRESOLVED\t%s\t%s\t%s\n' "$1" "$2" "$3"
+}
+
 # Emit every row of one matrix, splitting requirement rows from story-originated ones.
 #
 # `coverage_matrix_rows` reports both kinds and leaves the base empty for the second. The
@@ -273,6 +293,11 @@ emit_matrix_rows() {
 
     if [ "$kind" = "story-originated" ]; then
       emit_criterion "$matrix_rel" "$label" "$covered" "$verified"
+    elif [ -z "$base" ]; then
+      # A requirement row whose label resolved to nothing. Kept out of `ROW` because a ROW
+      # with an empty base would join against no requirement while still counting as a row,
+      # which is the silent version of this failure.
+      emit_unresolved "$matrix_rel" "$label" "$covered"
     else
       emit_row "$matrix_rel" "$base" "$label" "$covered" "$verified"
     fi
@@ -471,9 +496,23 @@ rollup_spec_scope() {
   fi
   spec_base="${spec_abs##*/}"
 
+  # A missing default directory and a directory holding no matching matrix are the same
+  # statement — *no matrix names this spec* — so they share an exit code. Splitting them
+  # stopped spec mode dead on its first iteration: a repository that has never run
+  # `cpm:epics` has no `docs/epics/`, the loop read the resulting 1 as "the check could not
+  # run, stop", and phase 1 could never begin in the one situation phase 1 exists for.
+  #
+  # A directory the caller *named* keeps the read-failure code. There the absence is
+  # evidence about the argument rather than about the repository, and answering a typo with
+  # "no matrix names this spec yet" would send a loop off to generate epics into a path that
+  # will never be looked at again.
   if [ ! -d "$MATRIX_DIR" ]; then
-    echo "coverage-rollup: matrix directory does not exist: $MATRIX_DIR" >&2
-    return 1
+    if [ "$MATRIX_DIR_EXPLICIT" = "1" ]; then
+      echo "coverage-rollup: matrix directory does not exist: $MATRIX_DIR" >&2
+      return 1
+    fi
+    echo "coverage-rollup: no matrix directory at $MATRIX_DIR — nothing names $spec_base as its source spec" >&2
+    return "$EXIT_NO_MATRIX"
   fi
 
   for m in "$MATRIX_DIR"/*-coverage-*.md; do
@@ -601,15 +640,21 @@ rollup_run_scope() {
 # `CRITERION` counts alongside `ROW`. A story-originated criterion is not a requirement, so
 # it never reaches a `STATE` record, and leaving it out would let a promise fire with
 # unverified work sitting in the matrix it just read.
+#
+# `UNRESOLVED` counts unconditionally — it has no verified field to test. In spec scope the
+# requirements behind it are already untraced, so the verdict would be outstanding either
+# way; in epic scope there is no spec to compare against and nothing else would notice, and
+# a matrix nobody can join against is not a clean run in either scope.
 rollup_outstanding() {
   # Field numbers count the record type as field 1, so a `ROW`'s five documented fields sit
   # at $2..$6 and its verified cell is $6, not $5. Reading the record format's own numbering
   # straight into awk puts every test one field to the left, where a verified row compares
   # unequal to "verified" and every verdict comes back outstanding.
   printf '%s\n' "$1" | awk -F'\t' '
-    $1 == "ROW"       && $6 != "verified" { outstanding = 1 }
-    $1 == "CRITERION" && $5 != "verified" { outstanding = 1 }
-    $1 == "STATE"     && $4 == "untraced" { outstanding = 1 }
+    $1 == "ROW"        && $6 != "verified" { outstanding = 1 }
+    $1 == "CRITERION"  && $5 != "verified" { outstanding = 1 }
+    $1 == "STATE"      && $4 == "untraced" { outstanding = 1 }
+    $1 == "UNRESOLVED"                     { outstanding = 1 }
     END { exit outstanding ? 0 : 1 }
   '
 }
