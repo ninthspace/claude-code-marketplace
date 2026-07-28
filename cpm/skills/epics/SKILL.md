@@ -160,6 +160,13 @@ Examples:
 - **Fails**: "Error handling works correctly" — subjective and unverifiable
 - **Passes**: "Invalid OAuth token returns 401 with error body `{\"error\": \"invalid_token\"}` and no session is created"
 
+**Reachability standard**: A criterion about what the system *returns* is a different claim from one about what a person can *do*, and a requirement covered only by the first is satisfiable by an endpoint with nothing wired to it. Where a requirement names an action a user takes — create, edit, delete, share, export, revoke — at least one criterion must name the affordance that reaches it, alongside any criterion about the response.
+
+- **Incomplete**: "Submitting valid credentials returns 200 with a session token" — true of a route no page posts to
+- **Complete**: that criterion, plus "The sign-in page presents an email and password form that posts to the session route and renders validation errors in place"
+
+Both halves are needed and neither substitutes for the other: the response criterion does not say the capability is reachable, and the affordance criterion does not say the response is correct. The tests that follow inherit this — a suite whose every journey begins at an endpoint or a seeded session never exercises the path a person takes to get there, and reports full coverage of an application no one can enter.
+
 **Test approach tag propagation** (when the input spec has a Testing Strategy section with tagged criteria):
 
 1. Read the spec's Testing Strategy section — specifically the Acceptance Criteria Coverage table which maps requirements to criteria with `[tag]` annotations.
@@ -305,12 +312,18 @@ If the user identifies a fidelity problem (story criterion is weaker than or con
 
 ### Step 4: Confirm
 
-**Cross-epic gap check** (when input is a spec): Before presenting the task tree, read all per-epic coverage matrices produced in Step 3d and take the union of the requirements they cover. A requirement in either of these classes that appears in no coverage matrix is a **GAP** — flag it to the user:
+**Cross-epic gap check** (when input is a spec): Before presenting the task tree, read all per-epic coverage matrices produced in Step 3d and take the union of the requirements they cover. A requirement in either of these classes that appears in **no** coverage matrix is a **GAP** — flag it to the user:
 
 - **Must Have** — a requirement under the spec's Must Have heading. The system fails without it.
 - **Environmental** — a requirement labelled `ENVn` (something the target must provide) or `ENVXn` (something the work must not require), whatever MoSCoW heading it sits under.
 
+A third class is a gap **despite** being covered, so finding it means reading the criteria rather than counting the rows:
+
+- **Unreachable** — a Must Have requirement naming an action a user takes, whose covering rows are all system-response criteria with none describing the affordance that reaches it (the **Reachability standard** in Step 3). The requirement is ticked, the stories are honest, and no story owns the way in.
+
 Gaps must be resolved (add to an existing epic, create a new story, or defer with justification) before proceeding. Should-have requirements not covered are warnings, not blockers.
+
+An unreachable Must Have blocks on the same terms as an uncovered one, and for the same reason: the coverage matrix answers "is every requirement claimed by some story", which is a different question from "can the delivered system be used". Nothing downstream asks the second question — `cpm:do` verifies criteria as written, and the roll-up counts ticks — so this is the only gate that catches it.
 
 An uncovered environmental constraint blocks for the same reason `coverage-rollup.sh` refuses to let a Scope deferral exclude one: it names something about the target host, and leaving it uncovered does not change the host — it only stops anyone saying so until the work is built and will not run. A design that cannot deploy is not a partial delivery.
 
@@ -318,7 +331,7 @@ Present the full task tree to the user showing:
 - All epics with their stories and tasks (using story numbers and task dot-notation)
 - Dependencies between epics (cross-epic) and between stories (cross-story)
 - Suggested implementation order
-- Cross-epic gap check result (all must-haves covered, or list unresolved gaps)
+- Cross-epic gap check result (all must-haves covered and reachable, or list unresolved gaps)
 
 Use AskUserQuestion for final confirmation.
 

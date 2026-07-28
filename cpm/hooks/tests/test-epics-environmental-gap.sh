@@ -54,6 +54,24 @@ gap_check() {
   sed -n '/^\*\*Cross-epic gap check\*\*/,/^Present the full task tree/p' "$EPICS_SKILL"
 }
 
+# The section declares two kinds of gap and the correspondence oracle below is about only the
+# first kind. **Uncovered** classes — a requirement no coverage matrix claims — are the ones
+# `coverage-rollup.sh` also reasons about, so the two components must agree on that set.
+# **Unreachable** is a gap in a requirement that *is* covered, found by reading the criteria;
+# the roll-up counts ticks and structurally cannot see it, so demanding agreement there would
+# force a class into the roll-up that the roll-up has no way to evaluate.
+#
+# So the harvest stops at the sentence that introduces the second kind. That narrowing is the
+# dangerous edit in this file — it is also how someone could quietly drop a real uncovered class
+# out of the oracle by moving its bullet below the boundary — so the boundary is not trusted:
+# it is asserted to exist, to sit in the right place, and to have exactly the unreachable class
+# beneath it.
+UNCOVERED_BOUNDARY='^A third class is a gap'
+
+uncovered_classes() {
+  sed -n "/^\*\*Cross-epic gap check\*\*/,/$UNCOVERED_BOUNDARY/p" "$EPICS_SKILL"
+}
+
 # The roll-up's condition for letting a Scope deferral remove a requirement from the count.
 # Sliced from the deferral test to the condition's own closing `)) {` rather than to a line
 # number, so the slice tracks the code if it moves.
@@ -63,6 +81,15 @@ deferral_guards() {
 
 test_start "control: the gap-check slice is bounded"
 assert_slice_bounded "$EPICS_SKILL" '^\*\*Cross-epic gap check\*\*' '^Present the full task tree' 5 20
+
+test_start "control: the uncovered-class slice is bounded"
+assert_slice_bounded "$EPICS_SKILL" '^\*\*Cross-epic gap check\*\*' "$UNCOVERED_BOUNDARY" 3 10
+
+# If the boundary sentence ever stops matching, `sed` runs the range to end-of-file and the
+# harvest silently becomes "every bold-lead bullet in a 51k skill" — which fails as a baffling
+# inventory mismatch rather than as "the boundary moved". Assert it resolves, on its own.
+test_start "control: the uncovered/unreachable boundary sentence resolves"
+assert_equals "1" "$(gap_check | grep -c "$UNCOVERED_BOUNDARY")"
 
 # Bounded for the same reason, and it is the less obvious of the two. If the deferral condition
 # is reshaped so the closing `)) {` no longer terminates the range, the slice runs on and
@@ -82,7 +109,7 @@ assert_slice_bounded "$ROLLUP" '(label in deferred) &&' ')) {' 2 8
 # the other's spelling, which is what makes the comparison an oracle rather than two literals
 # that happen to match.
 
-EPICS_BLOCKING=$(gap_check | grep -o '^- \*\*[A-Za-z ]*\*\*' | sed 's/^- \*\*//; s/\*\*$//' \
+EPICS_BLOCKING=$(uncovered_classes | grep -o '^- \*\*[A-Za-z ]*\*\*' | sed 's/^- \*\*//; s/\*\*$//' \
   | awk '{ print tolower($1) }' | LC_ALL=C sort -u)
 
 ROLLUP_BLOCKING=$(deferral_guards | grep -o '![a-z_]*(' \
@@ -126,6 +153,41 @@ assert_equals "3" "$(printf '%s\n%s\n%s\n' "$GAP_LINE" "$ENV_LINE" "$WARN_LINE" 
 
 test_start "the environmental bullet sits under the GAP declaration, not under the warning"
 assert_equals "yes" "$( [ "$GAP_LINE" -lt "$ENV_LINE" ] && [ "$ENV_LINE" -lt "$WARN_LINE" ] && echo yes || echo no )"
+
+# --- The boundary is load-bearing, so assert what sits on each side of it ----------------
+#
+# Narrowing the harvest is only sound while exactly one class lives below the boundary and it is
+# the one the roll-up cannot evaluate. These three assertions are what stop the narrowing from
+# becoming a place to hide an uncovered class from the correspondence oracle.
+
+test_start "the unreachable class is declared in the gap check"
+assert_contains "$(gap_check)" '- **Unreachable**'
+
+test_start "and is deliberately outside the set the roll-up is held to"
+assert_not_contains "$(uncovered_classes)" '- **Unreachable**'
+
+# Exactly one — so a future class added below the boundary has to be considered rather than
+# inheriting the unreachable exemption by sitting in the same paragraph.
+test_start "and it is the only class below the boundary"
+assert_equals "1" "$(gap_check | sed -n "/$UNCOVERED_BOUNDARY/,\$p" | grep -c '^- \*\*[A-Za-z ]*\*\*')"
+
+# Position, exactly as for the environmental bullet: below the boundary but still above the
+# should-have warning, because an unreachable must-have blocks rather than warns.
+THIRD_LINE=$(gap_check | grep -n "$UNCOVERED_BOUNDARY" | head -1 | cut -d: -f1)
+UNREACH_LINE=$(gap_check | grep -n '^- \*\*Unreachable\*\*' | head -1 | cut -d: -f1)
+
+# Both are compared arithmetically below, and an empty one makes `[` abort with a shell error
+# rather than a test failure — the assertion still fails, but behind noise that reads like a
+# broken suite instead of a moved bullet. Resolve them first, and substitute a sentinel so the
+# comparison stays arithmetic either way.
+test_start "control: the boundary and the unreachable bullet both resolve"
+assert_equals "2" "$(printf '%s\n%s\n' "$THIRD_LINE" "$UNREACH_LINE" | grep -c '^[0-9][0-9]*$')"
+
+: "${THIRD_LINE:=0}" "${UNREACH_LINE:=0}"
+
+test_start "the unreachable bullet sits below the boundary and above the warning"
+assert_equals "yes" "$( [ "$ENV_LINE" -lt "$THIRD_LINE" ] && [ "$THIRD_LINE" -lt "$UNREACH_LINE" ] \
+  && [ "$UNREACH_LINE" -lt "$WARN_LINE" ] && echo yes || echo no )"
 
 # The control retro 28 asks for. "Environmental is a GAP" is also satisfied by a check that
 # blocks on everything, and the inventory above is what refuses that — but only while the
