@@ -188,8 +188,6 @@ Every `/cpm:*` skill runs this once-per-session safety-net as an early startup s
 
 4. **Deletion is strictly user-confirmed.** Delete only files the user explicitly names, and only after they have seen exactly what will be removed. No path — here or in the helpers — auto-executes a delete. When the user confirms deleting a progress file, also remove its `.cpm-compact-summary-{id}.md` companion if present.
 
-**Trigger reviewed and unchanged** (spec 40 R11, 2026-07-25). The guard already makes this once-per-session — the first `/cpm:*` skill of a session gets `RUN`, every later one gets `SKIP` from a single call — so "early startup step in every skill" describes where the hook sits, not how often the work happens. Its subject is *other* sessions' leftover files, which a larger context window and rarer compaction do not make less likely.
-
 Skills reference this procedure with: "Follow the shared **Stale-Progress Check** procedure."
 
 ## Numbering
@@ -241,8 +239,6 @@ Use whichever tool the current harness actually provides for each operation. Rea
 - `Bash` with `find`, `grep`, `rg`, or equivalents.
 
 **Precedence**: Project `CLAUDE.md` tool preferences win over anything implied by these operation names. If a project says "prefer fff" or "use ripgrep," follow that — the skill's vocabulary is general; the project's stack is specific.
-
-**Compatibility note**: Skill text written before this convention may read as if `Glob` and `Grep` are literal tool names. Treat all such references as semantic operations. No skill file rewrites are needed.
 
 ## Gate Presentation
 
@@ -300,71 +296,6 @@ What to leave out:
 - **Boilerplate sections** — a heading kept because the template offers it, then filled with "N/A" or a sentence of throat-clearing. A section with nothing to say reads better omitted.
 
 This is calibration rather than a budget. No artefact carries a fixed word or section count, and none should gain one — a long document that earns its length is correct, and a short one that leaves out something the reader needs is not.
-
-## Effort Recommendations
-
-Reference for choosing a session's reasoning effort level. Effort is a session setting, fixed before any skill's instructions load — nothing here applies itself, and no skill raises the level or asks for it to be raised. The table is for whoever sets the level.
-
-In practice a session runs at one level throughout. The per-skill rows are most useful when picking that level for a run dominated by a single skill, or when reconsidering a level that has stopped fitting the work.
-
-| Skill | Level | Rationale |
-|-------|-------|-----------|
-| do | xhigh | Multi-step execution loop with verification, TDD, and state management |
-| epics | xhigh | Spec analysis, story decomposition, coverage matrix construction |
-| ralph | xhigh | Autonomous multi-epic execution with failure handling and task budgets |
-| spec | high | Facilitated requirements gathering across 7 sections; the architecture decisions it fixes are expensive to revisit later |
-| architect | high | Multi-phase architecture exploration with trade-off analysis; these decisions constrain everything downstream |
-| review | high | Adversarial analysis across several reviewer perspectives; finding what the author missed rewards depth |
-| pivot | high | Surgical amendment with cascade analysis and downstream propagation |
-| quick | high | Scoped implementation with verification, but bypasses full pipeline ceremony |
-| audit | high | Nine-dimension sweep of an unfamiliar codebase, where the finding quality depends on how much of the code is genuinely understood |
-| consult | medium | Deep one-to-one consultation with dynamic expert transfer — conversational work Opus 5 handles well below `xhigh` |
-| party | medium | Multi-perspective discussion with roster-driven agent simulation; the difficulty is voice and coverage, not depth of reasoning |
-| brief | medium | Facilitated product ideation with vision and value proposition synthesis |
-| discover | medium | Facilitated problem discovery across 6 phases with perspectives |
-| library | medium | Bounded document intake and front-matter generation |
-| retro | medium | Synthesis over already-structured epic doc fields; categorisation is bounded |
-| present | medium | Artifact transformation with audience selection |
-| archive | low | Mechanical file relocation with user confirmation; the judgement is the user's |
-| artifact | low | Read the register, write a row and its backlinks; the facts come from the user |
-| status | low | Scan-and-report with no implementation |
-| templates | low | List-and-scaffold with no analysis |
-| clean | low | Enumerate session-state files and delete the ones named; every step is confirmed |
-
-> **Effort note**: Thinking is on by default on Opus 5, and can be turned off only at effort `high` or below — at `xhigh` and above it stays on. Pair the reasoning-heavy skills at `xhigh`/`max` with a large output budget (~64k tokens) so there is room for the reasoning the level implies. Opus 5 also gets more out of `low` and `medium` than earlier models did at the same settings, so a level that once looked too low for a skill may now be the right fit — the levels above are a starting point to revise against real sessions, not a fixed allocation.
-
-## Subagent Delegation
-
-When to use subagents (the Agent tool) vs. working inline. Subagents are valuable for parallelising large, genuinely independent work and protecting the main context window from excessive results — but they add overhead and lose conversational context.
-
-Opus 5 delegates readily, so the guidance below is about restraint rather than encouragement. Delegation earns its overhead only when the work is large, genuinely independent, and parallelisable; anything smaller is faster and clearer done inline. This reverses spec 32's R1, which told the model to actively reach for fan-out because prior models under-delegated — that correction now pushes the wrong way. Both the "Delegate (fan-out) when" and "Work inline when" lists below stay in force.
-
-### Delegate (fan-out) when
-
-Each case below assumes the work is large enough to repay the overhead. Where it is not, work inline.
-
-- **Reading many independent files**: e.g. reading 5+ library documents, scanning multiple epic docs, or auditing files across directories. Each read is independent, and fanning out keeps the results out of the main context.
-- **Per-item work across a long list**: e.g. processing each epic independently in a production loop, or reviewing each story in isolation. The items share no state, so they parallelise cleanly.
-- **Broad exploratory research**: e.g. sweeping the codebase for a pattern across many directories, or surveying an unfamiliar project structure. The search results inform a decision but are not themselves the deliverable.
-
-Two cases fall outside this even when they look like the ones above:
-
-- **Work completable in a handful of tool calls stays inline.** A search you could run yourself in two or three calls costs more to delegate than to do — the spawn overhead and the round trip outweigh the saving.
-- **Verification of your own work stays inline.** Do not use subagents to verify, double-check, or second-guess something you just did. A subagent starting from no context is a poor auditor of work it did not see, and the pattern compounds with the self-checking the model already performs.
-
-### Work inline when
-
-- **The result drives the next step**: e.g. reading a file to decide what to edit next, or checking a test result before proceeding. Sequential dependencies require inline execution.
-- **The code is already in context**: e.g. you just read the file, or the user pasted it. Delegating would re-read what you already have.
-- **User interaction is needed**: e.g. AskUserQuestion gates, facilitation loops, or confirmation steps. Subagents cannot interact with the user.
-- **The work is a single focused operation**: e.g. one edit, one test run, one file creation. The overhead of spawning outweighs the benefit.
-
-### Rules
-
-- Subagents start with no context from the current conversation — the prompt must be self-contained.
-- If one subagent can complete the task, use one rather than several, and keep spawn counts low.
-- Assign subagents to research and exploration, not to implementation decisions that require conversational context.
-- When delegating, specify whether the subagent should write code or just research. The subagent cannot infer intent from the conversation.
 
 ## Implementation Guidelines
 
@@ -496,9 +427,9 @@ Canonical minimal shape (consume this rather than hand-rolling divergent handler
 </script>
 ```
 
-**Clipboard access inside the artifact frame is verified working** (2026-07-25, tested on a live published page). The page reported `window !== top`, a secure context, and `navigator.clipboard.writeText` present; both a copy-as-prompt and a copy-as-JSON control wrote successfully, confirmed by pasting. Notably `permissions.query("clipboard-write")` came back **unsupported** on that engine and the write still succeeded — so treat that query as a diagnostic, never as a gate to branch on.
+**Guard on `navigator.clipboard`, never on `permissions.query`.** A `permissions.query("clipboard-write")` that reports **unsupported** does not mean the write will fail — engines exist where the query is unavailable and `writeText` succeeds. Treat that query as a diagnostic and never branch on it; the `navigator.clipboard` check costs one condition and covers the engines this was not tested on.
 
-Two things follow. **Keep the `navigator.clipboard` guard**: it costs one condition and covers the engines this was not tested on. **Keep rendering the payload as selectable `<pre>` text alongside the control** — not as a fallback for a dead button any more, but because a reader who wants to read the command rather than paste it should not have to click to see it. A purely static page (no export controls) remains a valid deliverable — interactivity is an enhancement, not the point.
+**Render the payload as selectable `<pre>` text alongside the control**, so a reader who wants to read the command rather than paste it does not have to click to see it. A purely static page (no export controls) remains a valid deliverable — interactivity is an enhancement, not the point.
 
 ### Recording is part of publishing
 

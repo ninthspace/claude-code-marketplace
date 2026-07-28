@@ -42,7 +42,7 @@ Ask which files (or session groups) to delete — by number, session ID, or "non
 
 ### Step 3: Confirm the exact paths, then delete only those
 
-Expand the user's selection into the concrete list of file paths to remove — each chosen progress file **plus its compact-summary companion** (FR8: companions are cleaned together), and any orphan companions named directly. **Show the user this exact list of paths** and get explicit confirmation before removing anything (FR6). On confirmation, delete **only** those paths:
+Expand the user's selection into the concrete list of file paths to remove — each chosen progress file **plus its compact-summary companion** — companions are always cleaned together — and any orphan companions named directly. **Show the user this exact list of paths** and get explicit confirmation before removing anything. On confirmation, delete **only** those paths:
 
 ```
 rm -f -- "<path>"   # for each confirmed path

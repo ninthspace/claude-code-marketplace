@@ -183,7 +183,7 @@ For `status` the artifact is here the one page that spans a spec's epics: every 
 
 **Render it from the same records, by the same rules.** The page shows the output of the one invocation above — the same `MATRIX`, `REQ`, `STATE`, `EXCLUDED`, `SUMMARY`, `ROW` and `CRITERION` records the section renders — and follows rendering rules 1–6 above, read from there rather than repeated here. The two the reader will notice first are rules 1 and 2: untraced requirements before anything else, then the spec's own MoSCoW headings in the spec's order. Do not re-run the script for the page and do not restate the rules alongside it — a second run could disagree with the section the reader just read, and a second statement of a rule is the thing that drifts from it. If the section was not produced — the phase skipped, or the script exited non-zero — there is no page to publish either.
 
-**Carry the aggregation statement onto the page.** The `✓` marks mean the same thing there as they do in the section, and a page is the artefact most likely to be read by someone who was not in the session and did not see it said. This is the site FR7 is most concerned with.
+**Carry the aggregation statement onto the page.** The `✓` marks mean the same thing there as they do in the section, and a page is the artefact most likely to be read by someone who was not in the session and did not see it said.
 
 **Mechanics** follow the shared procedure. Two points are specific here:
 

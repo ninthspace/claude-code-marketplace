@@ -82,6 +82,39 @@ Each agent's review contribution uses the format:
 
 This matches the party mode format for consistency across CPM skills.
 
+## Subagent Delegation
+
+When to use subagents (the Agent tool) vs. working inline. Subagents are valuable for parallelising large, genuinely independent work and protecting the main context window from excessive results — but they add overhead and lose conversational context.
+
+Opus 5 delegates readily, so the guidance below is about restraint rather than encouragement. Delegation earns its overhead only when the work is large, genuinely independent, and parallelisable; anything smaller is faster and clearer done inline.
+
+### Delegate (fan-out) when
+
+Each case below assumes the work is large enough to repay the overhead. Where it is not, work inline.
+
+- **Reading many independent files**: e.g. reading 5+ library documents, scanning multiple epic docs, or auditing files across directories. Each read is independent, and fanning out keeps the results out of the main context.
+- **Per-item work across a long list**: e.g. reviewing each story in isolation, or examining one artifact through several reviewer lenses at once. The items share no state, so they parallelise cleanly.
+- **Broad exploratory research**: e.g. sweeping the codebase for a pattern across many directories, or surveying an unfamiliar project structure. The search results inform a decision but are not themselves the deliverable.
+
+Two cases fall outside this even when they look like the ones above:
+
+- **Work completable in a handful of tool calls stays inline.** A search you could run yourself in two or three calls costs more to delegate than to do — the spawn overhead and the round trip outweigh the saving.
+- **Verification of your own work stays inline.** Do not use subagents to verify, double-check, or second-guess something you just did. A subagent starting from no context is a poor auditor of work it did not see, and the pattern compounds with the self-checking the model already performs.
+
+### Work inline when
+
+- **The result drives the next step**: e.g. reading a file to decide what to edit next, or checking a test result before proceeding. Sequential dependencies require inline execution.
+- **The code is already in context**: e.g. you just read the file, or the user pasted it. Delegating would re-read what you already have.
+- **User interaction is needed**: e.g. AskUserQuestion gates, facilitation loops, or confirmation steps. Subagents cannot interact with the user.
+- **The work is a single focused operation**: e.g. one edit, one test run, one file creation. The overhead of spawning outweighs the benefit.
+
+### Rules
+
+- Subagents start with no context from the current conversation — the prompt must be self-contained.
+- If one subagent can complete the task, use one rather than several, and keep spawn counts low.
+- Assign subagents to research and exploration, not to implementation decisions that require conversational context.
+- When delegating, specify whether the subagent should write code or just research. The subagent cannot infer intent from the conversation.
+
 ## Process
 
 **State tracking**: Create the progress file before Step 1 and update it after each step completes. See State Management below for the format and rationale. Delete the progress file once the final review file has been saved.
@@ -139,7 +172,7 @@ Each finding must be tagged with exactly one severity level:
 
 #### Review Execution
 
-**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state, which is the case the shared **Subagent Delegation** convention treats as genuinely parallelisable. Spawn at most one subagent per selected reviewer agent: the selected agent count is the cap, and the spawn count never exceeds it. (This tightens spec 32's R1, which framed fan-out here as the expected path — Opus 5 delegates readily enough that the encouragement now over-applies.) Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, the finding format, and the coverage-first instruction from step 2 below. A subagent not told to report everything will curate on its own, which is the suppression Step 2b exists to prevent. Consolidate findings from all subagents after they complete.
+**Subagent fan-out** (when 3+ agents are selected): Each agent's review is independent — they examine the same artifact from different perspectives with no shared state, which is the case the **Subagent Delegation** section above treats as genuinely parallelisable. Spawn at most one subagent per selected reviewer agent: the selected agent count is the cap, and the spawn count never exceeds it. Fan-out here is a permitted path, not the expected one — with two agents, or where the artifact is small enough to review in a handful of passes, inline is the cheaper and clearer route. Each subagent's prompt should include: the artifact content, the agent's persona (icon, displayName, role, personality), the review dimensions relevant to their role, the severity classification scheme, the finding format, and the coverage-first instruction from step 2 below. A subagent not told to report everything will curate on its own, which is the suppression Step 2b exists to prevent. Consolidate findings from all subagents after they complete.
 
 **Inline execution** (when 2 agents are selected or fan-out is unavailable): Review with each agent in turn within the main context.
 

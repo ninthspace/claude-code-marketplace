@@ -1,8 +1,8 @@
 #!/bin/bash
-# test-ralph-autonomous-wiring.sh — Tests for the two sites in cpm/skills/ralph/
-# SKILL.md that carry the autonomous change-resolution behaviour (spec 43, epic
-# 43-02, Story 4): the Change Type Decision row in the cpm:do Interaction Gates
-# table, and the matching clause in the generated prompt template.
+# test-ralph-autonomous-wiring.sh — Tests for the two sites that carry the autonomous
+# change-resolution behaviour (spec 43, epic 43-02, Story 4): the Change Type Decision row
+# in the cpm:do Interaction Gates table, now recorded in docs/maintenance/README.md, and the
+# matching clause in the generated prompt template in cpm/skills/ralph/SKILL.md.
 #
 # Only the second is operative. The stop hook feeds the prompt back verbatim on
 # each iteration, so the loop reads the template line and never reads the table;
@@ -32,6 +32,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
 
 RALPH_SKILL="$SCRIPT_DIR/../../skills/ralph/SKILL.md"
+# The override table moved to docs/maintenance/ on 2026-07-28 — it is a maintenance record
+# and was being loaded on every invocation of the skill. The pair this suite checks is
+# unchanged in substance: a documented override and the clause the loop actually receives.
+# They now live in different files, so the predicate below takes both paths.
+RALPH_COUPLING="$SCRIPT_DIR/../../../docs/maintenance/README.md"
 
 echo "Testing: ralph autonomous change-resolution wiring"
 echo "=================================================="
@@ -45,10 +50,11 @@ PROMPT_MARKER='take do'\''s autonomous branch'
 # (spec 43, epic 43-01).
 prompt_line() { grep -F 'Run /cpm:do on epics' "$1"; }
 
-# has_both <file> — the paired condition, as one predicate over one file, so
-# both the real file and the fixtures below are judged by identical logic.
+# has_both <row-file> <prompt-file> — the paired condition, as one predicate over the two
+# files that hold the halves, so both the real files and the fixtures below are judged by
+# identical logic.
 has_both() {
-  grep -qF -- "$TABLE_MARKER" "$1" && grep -qF -- "$PROMPT_MARKER" "$1"
+  grep -qF -- "$TABLE_MARKER" "$1" && grep -qF -- "$PROMPT_MARKER" "$2"
 }
 
 PROMPT=$(prompt_line "$RALPH_SKILL")
@@ -64,10 +70,17 @@ assert_equals "1" "$(prompt_line "$RALPH_SKILL" | wc -l | tr -d ' ')"
 
 # --- Criterion 1: the two sites, asserted together ---
 
-test_start "The override table row and the prompt clause are both present"
-if has_both "$RALPH_SKILL"; then
+test_start "control: the coupling record the table row moved to exists"
+if [ -f "$RALPH_COUPLING" ]; then
   test_pass
-elif grep -qF -- "$TABLE_MARKER" "$RALPH_SKILL"; then
+else
+  test_fail "no coupling record at $RALPH_COUPLING — the row half has nowhere to live"
+fi
+
+test_start "The override table row and the prompt clause are both present"
+if has_both "$RALPH_COUPLING" "$RALPH_SKILL"; then
+  test_pass
+elif grep -qF -- "$TABLE_MARKER" "$RALPH_COUPLING"; then
   test_fail "table row present but the prompt clause is missing — the documented behaviour is not the one the loop receives"
 elif grep -qF -- "$PROMPT_MARKER" "$RALPH_SKILL"; then
   test_fail "prompt clause present but the override table row is missing"
@@ -77,19 +90,39 @@ fi
 
 test_start "Negative control: the pair check fails when only the table row is present"
 sed "s/${PROMPT_MARKER}/REMOVED/" "$RALPH_SKILL" > "$TEST_TMPDIR/no-prompt.md"
-if has_both "$TEST_TMPDIR/no-prompt.md"; then
+if has_both "$RALPH_COUPLING" "$TEST_TMPDIR/no-prompt.md"; then
   test_fail "the pair check passed a file whose prompt clause was removed — it is not discriminating"
 else
   test_pass
 fi
 
 test_start "Negative control: the pair check fails when only the prompt clause is present"
-sed "s/${TABLE_MARKER}/| REMOVED/" "$RALPH_SKILL" > "$TEST_TMPDIR/no-row.md"
-if has_both "$TEST_TMPDIR/no-row.md"; then
+sed "s/${TABLE_MARKER}/| REMOVED/" "$RALPH_COUPLING" > "$TEST_TMPDIR/no-row.md"
+if has_both "$TEST_TMPDIR/no-row.md" "$RALPH_SKILL"; then
   test_fail "the pair check passed a file whose table row was removed — it is not discriminating"
 else
   test_pass
 fi
+
+# The split's own rule, asserted separately from the pair above so a broken rule does not read
+# as a missing override. A pointer costs every invocation the same tokens as a short paragraph
+# and buys the run nothing, so the maintenance doc is reachable from CLAUDE.md alone — no skill
+# names it. Checked across `cpm/skills/` rather than ralph alone: the rule is plugin-wide, and
+# the next skill to acquire a maintenance record is the one at risk.
+test_start "no skill names the maintenance doc — not even as a pointer"
+assert_empty "$(grep -rl 'docs/maintenance' "$SCRIPT_DIR/../../skills/" 2>/dev/null)"
+
+test_start "control: the grep can see that path when it is present"
+# Without this, the assertion above passes equally on a typo'd path or a missing directory.
+mkdir -p "$TEST_TMPDIR/pointer-probe"
+printf 'see docs/maintenance/README.md\n' > "$TEST_TMPDIR/pointer-probe/probe.md"
+assert_contains "$(grep -rl 'docs/maintenance' "$TEST_TMPDIR/pointer-probe/")" "probe.md"
+
+test_start "and the skill no longer carries the table itself"
+assert_not_contains "$(cat "$RALPH_SKILL")" "$TABLE_MARKER"
+
+test_start "CLAUDE.md is the one file that does point at it"
+assert_contains "$(cat "$SCRIPT_DIR/../../../CLAUDE.md")" 'docs/maintenance/README.md'
 
 # --- Criterion 3: the stated budget matches the measured length ---
 

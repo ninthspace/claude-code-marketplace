@@ -53,8 +53,13 @@ md_block() {
   ' "$1"
 }
 
-autonomous_block() { md_block "$DO_SKILL" '^  \*\*Autonomous mode\*\*' '^- \*\*One task at a time\.\*\*'; }
-interactive_block() { md_block "$DO_SKILL" '^  \*\*Interactive runs\*\*' '^  \*\*Autonomous mode\*\*'; }
+# Both paths moved out of the Guidelines bullet list and into the `## Change Type Decision`
+# section they belong to, so the leading two-space bullet indent is gone and the autonomous
+# path now ends at the next `##` heading rather than at the bullet that followed it. The
+# claims below are unchanged: what is asserted is which path carries which rule, and that is
+# a property of the text, not of where the section sits.
+autonomous_block() { md_block "$DO_SKILL" '^\*\*Autonomous mode\*\*' '^## Graceful Degradation'; }
+interactive_block() { md_block "$DO_SKILL" '^\*\*Interactive runs\*\*' '^\*\*Autonomous mode\*\*'; }
 
 BLOCK=$(autonomous_block)
 
@@ -149,7 +154,11 @@ assert_contains "$(interactive_block)" "AskUserQuestion"
 # net — the old contradictory phrasing is gone — but the agreement itself was
 # verified by reading both sites together.
 
-FORMAT_LINE='  `**Pivot deferred**: {change} → {target artefact} (Story {N}, {YYYY-MM-DD}) — cited: {citation}`'
+# Matched with `grep -xF`, so the literal has to carry the line's leading whitespace as well
+# as its content. It sat inside a Guidelines bullet and carried a two-space indent; the block
+# now sits at the top level of `## Change Type Decision` and carries none. The five fields
+# asserted below are the claim — the indent was never part of it.
+FORMAT_LINE='`**Pivot deferred**: {change} → {target artefact} (Story {N}, {YYYY-MM-DD}) — cited: {citation}`'
 APPLY_LINE=$(grep -F 'What "apply" means autonomously' "$DO_SKILL")
 CANONICAL_INLINE_CHANGE='**Inline change**: {one-line summary} ({YYYY-MM-DD})'
 CANONICAL_RETRO_APPLIED='**Retro applied**: {nn} · {category} · {disposition} — {note}'
@@ -281,12 +290,18 @@ assert_not_contains "$REPORT" "continue to parse them unchanged"
 # every structural assertion was already green.
 
 RALPH_SKILL="$SCRIPT_DIR/../../skills/ralph/SKILL.md"
+# The override table moved out of the skill on 2026-07-28: it is a maintenance record and
+# was being loaded on every invocation. The row and the prompt clause now sit in different
+# files, which is what this suite has always been checking — that both halves land — and
+# the split makes the claim sharper rather than weaker.
+RALPH_COUPLING="$SCRIPT_DIR/../../../docs/maintenance/README.md"
 
 # Each site: a label, the file it lives in, and a literal that is present only
 # when that site has landed.
 site_file() {
   case "$1" in
     autonomous-branch|step-8-amendments) echo "$DO_SKILL" ;;
+    ralph-override-row) echo "$RALPH_COUPLING" ;;
     *) echo "$RALPH_SKILL" ;;
   esac
 }

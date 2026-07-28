@@ -149,9 +149,13 @@ Works through four phases:
 
 ### `/cpm:spec` — Requirements & Architecture
 
-Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, scope boundaries, testing strategy (with test approach tags per acceptance criterion: `[unit]`, `[integration]`, `[feature]`, `[manual]`), and a final review.
+Builds a structured specification through facilitated conversation. Covers functional requirements (MoSCoW prioritisation), non-functional requirements, architecture decisions, scope boundaries, testing strategy (with test approach tags per acceptance criterion: `[unit]`, `[integration]`, `[feature]`, `[manual]`, `[target]`), and a final review.
 
-When product briefs exist in `docs/briefs/`, they're used as input context. When ADRs exist in `docs/architecture/`, the architecture section references them rather than starting from scratch — only facilitating new decisions for gaps.
+**Environmental constraints are requirements, not prose.** A non-skippable step asks what the target must provide and what the work must not require — across development *and* production — and records each as a labelled `ENVn` or `ENVXn` under Non-Functional Requirements. Labelled there, they are traced by the coverage roll-up exactly as `NFRn` entries are, so an unsatisfied one holds the untraced count above zero. This is also where test tooling is captured: the runner, browser automation, fixtures, and CI a project needs are things the environment must provide, and there is no separate section for them. The testing strategy later reconciles its tags against what was recorded and sends anything missing back rather than noting it locally.
+
+The reason for the strictness is a specific failure: a spec whose environment was never recorded is indistinguishable from one whose target has no constraints, and it is the first that ships a fully verified coverage matrix over software that cannot run where it has to.
+
+When product briefs exist in `docs/briefs/`, they're used as input context — including the `## Constraints` a problem brief recorded, so the environmental step facilitates only the gaps rather than re-asking. When ADRs exist in `docs/architecture/`, the architecture section references them rather than starting from scratch — only facilitating new decisions for gaps.
 
 At the **Architecture Decisions** and **Scope Boundary** sections, agent personas present competing trade-offs to help you make informed choices.
 
@@ -533,6 +537,7 @@ Each skill is a facilitated conversation, not a form. Claude asks questions one 
 
 4. `/cpm:spec` — Reads the brief and ADRs, builds requirements
    - Facilitates MoSCoW prioritisation, references existing ADRs
+   - Records environmental constraints as labelled `ENVn` / `ENVXn` requirements
    - Defines testing strategy with test approach tags per criterion
    - Produces `docs/specifications/01-spec-multi-tenancy.md`
 
@@ -647,6 +652,46 @@ cpm/
 ## Requirements
 
 - Claude Code with skill/plugin support
+
+## Choosing a Reasoning Effort Level
+
+Effort is a session setting, fixed before any skill's instructions load. No skill raises the
+level or asks for it to be raised — this table is for you, when you set it.
+
+In practice a session runs at one level throughout. The per-skill rows are most useful when
+picking that level for a run dominated by a single skill, or when reconsidering a level that
+has stopped fitting the work.
+
+| Skill | Level | Rationale |
+|-------|-------|-----------|
+| do | xhigh | Multi-step execution loop with verification, TDD, and state management |
+| epics | xhigh | Spec analysis, story decomposition, coverage matrix construction |
+| ralph | xhigh | Autonomous multi-epic execution with failure handling and task budgets |
+| spec | high | Facilitated requirements gathering across 7 sections; the architecture decisions it fixes are expensive to revisit later |
+| architect | high | Multi-phase architecture exploration with trade-off analysis; these decisions constrain everything downstream |
+| review | high | Adversarial analysis across several reviewer perspectives; finding what the author missed rewards depth |
+| pivot | high | Surgical amendment with cascade analysis and downstream propagation |
+| quick | high | Scoped implementation with verification, but bypasses full pipeline ceremony |
+| audit | high | Nine-dimension sweep of an unfamiliar codebase, where the finding quality depends on how much of the code is genuinely understood |
+| consult | medium | Deep one-to-one consultation with dynamic expert transfer — conversational work Opus 5 handles well below `xhigh` |
+| party | medium | Multi-perspective discussion with roster-driven agent simulation; the difficulty is voice and coverage, not depth of reasoning |
+| brief | medium | Facilitated product ideation with vision and value proposition synthesis |
+| discover | medium | Facilitated problem discovery across 6 phases with perspectives |
+| library | medium | Bounded document intake and front-matter generation |
+| retro | medium | Synthesis over already-structured epic doc fields; categorisation is bounded |
+| present | medium | Artifact transformation with audience selection |
+| archive | low | Mechanical file relocation with user confirmation; the judgement is the user's |
+| artifact | low | Read the register, write a row and its backlinks; the facts come from the user |
+| status | low | Scan-and-report with no implementation |
+| templates | low | List-and-scaffold with no analysis |
+| clean | low | Enumerate session-state files and delete the ones named; every step is confirmed |
+
+Thinking is on by default on Opus 5, and can be turned off only at effort `high` or below — at
+`xhigh` and above it stays on. Pair the reasoning-heavy skills at `xhigh`/`max` with a large
+output budget (~64k tokens) so there is room for the reasoning the level implies. Opus 5 also
+gets more out of `low` and `medium` than earlier models did at the same settings, so a level
+that once looked too low for a skill may now be the right fit — the table is a starting point
+to revise against real sessions, not a fixed allocation.
 
 ## Key Principles
 

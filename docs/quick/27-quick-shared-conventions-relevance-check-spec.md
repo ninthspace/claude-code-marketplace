@@ -53,9 +53,28 @@ Following renames through the cpm2 → cpm promotion:
 
 About 17,700 bytes (~4,400 tokens, ~36% of the file) sits in sections referenced by three skills or fewer. `Effort Recommendations` is referenced by none — it is guidance for a human choosing a session setting, and says so itself ("nothing here applies itself"), yet is injected into every model context.
 
+## What happened next (appended 2026-07-28)
+
+**The 49,704-byte baseline above was stale within the day it was recorded.** It was measured
+at `6088274`; `41bc7a5` then added 3,923 bytes and `ef2505c` a further 1,459, reaching 55,082
+before anyone re-read the figure. Recording a baseline does not slow the add path — worth
+knowing before trusting any number in this document.
+
+**Baseline at 2026-07-26**: 53,238 bytes. About 30% still sits in sections referenced by
+three skills or fewer — `Subagent Delegation` (1), `Retro Synthesis` (2), `Retro Retirement`
+(2), `Implementation Guidelines` (3) — and `Effort Recommendations` is still referenced by
+none.
+
+**`Change Type Decision` was the first of that set to move.** Spec 43 relocated it into
+`cpm/skills/do/SKILL.md`, its single consumer, for −1,844 bytes. One test failed on the move
+even though the rule came across verbatim: the assertion reached into
+`cpm/shared/skill-conventions.md` by path while claiming to test the rule's *content*, and a
+relocation and a mutation look identical to a location-pinned test. **Grep the suites for
+that shape before relocating the next one.** See `docs/retros/22-retro-convention-relocation.md`.
+
 ## Changes Made
 
-- `CLAUDE.md` — added "What belongs in `cpm/shared/skill-conventions.md`": the relevance check, its one-line grep, the three dispositions (several / one-or-two / none), why a relevance check rather than a byte budget, and the 2026-07-25 baseline.
+- `CLAUDE.md` — added "What belongs in `cpm/shared/skill-conventions.md`": the relevance check, its one-line grep, and the three dispositions (several / one-or-two / none).
 
 No plugin source changed. The relocation this analysis argues for is **deferred, not rejected** — see below.
 

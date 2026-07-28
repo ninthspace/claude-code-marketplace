@@ -373,7 +373,7 @@
 
 <header>
   <h1><span>/cpm</span> Training Guide</h1>
-  <span class="version-badge">v3.6.0 &middot; tuned for Claude Opus 5</span>
+  <span class="version-badge">v3.7.0 &middot; tuned for Claude Opus 5</span>
   <div class="preset-bar">
     <button class="preset-btn active" data-preset="full" onclick="applyPreset('full')">Full Pipeline</button>
     <button class="preset-btn" data-preset="quick" onclick="applyPreset('quick')">Quick Start</button>
@@ -506,12 +506,12 @@ const SKILLS = [
     color: '#bc8cff',
     category: 'planning',
     short: 'Requirements, architecture & testing strategy',
-    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements, architecture decisions (references existing ADRs), scope boundaries, testing strategy with test approach tags ([unit], [integration], [feature], [manual]) per acceptance criterion, and review. Agent personas surface trade-offs at key decisions.',
+    description: 'Build a structured specification through facilitated conversation. Covers functional requirements (MoSCoW), non-functional requirements including environmental constraints, architecture decisions (references existing ADRs), scope boundaries, testing strategy with test approach tags ([unit], [integration], [feature], [manual], [target]) per acceptance criterion, and review. Agent personas surface trade-offs at key decisions.',
     input: 'Product brief, problem brief, or description (auto-detected)',
-    output: 'Specification with MoSCoW requirements, architecture decisions, testing strategy with approach tags',
+    output: 'Specification with MoSCoW requirements, labelled environmental constraints, architecture decisions, testing strategy with approach tags',
     outputFile: 'docs/specifications/{nn}-spec-{slug}.md',
-    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority', 'Non-Functional Requirements — performance, security', 'Architecture Decisions — references ADRs, fills gaps', 'Scope Boundary — in/out/deferred', 'Testing Strategy — test approach tags per criterion, integration boundaries', 'Review — user confirmation'],
-    tip: 'The testing strategy section defines test approach tags ([unit], [integration], [feature], [manual]) per acceptance criterion. These tags propagate to epics and drive test execution in /cpm:do.',
+    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — MoSCoW priority, FRn labels', 'Non-Functional Requirements — performance, security, then environmental constraints (ENVn / ENVXn)', 'Architecture Decisions — references ADRs, fills gaps', 'Scope Boundary — in/out/deferred', 'Testing Strategy — approach tags per criterion, integration boundaries, reconcile tags against the constraints', 'Review — user confirmation'],
+    tip: 'Test tooling is an environmental requirement, not a section of its own. Whatever the tags imply — a browser runner for [feature], a test database for [integration] — is captured as a labelled ENVn so the coverage roll-up traces it. A spec that never records the runner it needs can otherwise roll up fully verified with nothing installed.',
     next: ['epics']
   },
   {
@@ -527,7 +527,7 @@ const SKILLS = [
     output: 'Multiple epic docs with stories, tasks, test tags, and testing tasks — each with a companion coverage matrix tracing every spec requirement to the story criterion that covers it',
     outputFile: 'docs/epics/{parent}-{seq}-epic-{slug}.md + docs/epics/{parent}-{seq}-coverage-{slug}.md (one pair per epic; {parent} is the source spec\'s number)',
     phases: ['Read source specification + ADRs', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria + test tags', 'Auto-generate testing tasks for automated criteria', 'Add integration testing stories where needed', 'Add spec requirement traceability per story', 'Identify tasks per story (dot notation)', 'Map dependencies between stories/epics', 'Confirm full task tree'],
-    tip: 'Test approach tags ([unit], [integration], [feature], [manual]) flow from specs to story acceptance criteria. Testing tasks are auto-generated for stories with automated tags. Integration testing stories are created for epics with significant cross-story interactions. Asked for a dependency view instead, epics runs the inverse — a read-only projection over the epic docs that already exist, answering "what can I start now?", which is an answer that lives across the epics rather than in any one of them. That view can be published as a shareable page on request; the epic docs are never modified either way.',
+    tip: 'Test approach tags ([unit], [integration], [feature], [manual], [target]) flow from specs to story acceptance criteria. Testing tasks are auto-generated for stories with automated tags. Step 4 gap-checks the spec: a must-have or environmental requirement covered by no story blocks rather than warns, because a design that cannot deploy is not a partial delivery. Integration testing stories are created for epics with significant cross-story interactions. Asked for a dependency view instead, epics runs the inverse — a read-only projection over the epic docs that already exist, answering "what can I start now?", which is an answer that lives across the epics rather than in any one of them. That view can be published as a shareable page on request; the epic docs are never modified either way.',
     next: ['do', 'review']
   },
   {

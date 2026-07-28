@@ -136,13 +136,17 @@ Cover both environments and both classes:
 
 | | **Requirement** — must be available | **Restriction** — must not be required |
 |---|---|---|
-| **Development** | test runner, browser automation, language version | tooling a contributor cannot install |
+| **Development** | test runner, browser automation, language version, test database or fixtures, CI that runs the suite, mock/stub libraries for external services | tooling a contributor cannot install |
 | **Production** | runtime version, hosting model, services the host provides | anything the host cannot supply |
 
 Ask about **development tooling explicitly** — which test runner, whether browser automation is
 needed — not only about the production environment. On a greenfield project there is no dependency
 manifest to infer it from, so `cpm:do`'s Test Runner Discovery finds nothing and proceeds with
 `Test command: none`; what is captured here is what drives the installation instead.
+
+**This is the only place test tooling is captured.** Section 6 assigns test approach tags later and
+reconciles them against what was recorded here, but it records nothing of its own: a spec's testing
+tooling is an environmental requirement, and the label is what carries it into the coverage matrix.
 
 The two classes are not two phrasings of one thing. "Pest is available" is satisfied by installing
 something. "Must not require a queue worker" invalidates a design and cannot be retrofitted — it is
@@ -233,20 +237,19 @@ If ADRs were discovered, identify the key integration boundaries between archite
 
 Present the integration boundaries to the user and refine.
 
-#### Step 6d: Test Infrastructure
+#### Step 6d: Reconcile Tags Against the Environmental Constraints
 
-Assess whether the project needs any testing infrastructure that doesn't already exist:
+The tags just assigned imply tooling. A `[feature]` criterion implies something that drives a browser or an end-to-end runner; `[integration]` implies a test database or a way to stand up a boundary; `[tdd]` implies a runner fast enough to sit in a red-green loop.
 
-- Test frameworks (e.g. PHPUnit, Pest, Jest, pytest)
-- Test databases or fixtures
-- CI configuration for running tests
-- Mock/stub libraries for external services
+For each kind of tooling the assigned tags imply, check that Step 3a recorded an `ENVn` for it. Where one is missing, **go back to Step 3a and add it there** — labelled, falsifiable, and verified `[target]`.
 
-If infrastructure is needed, capture it — these become stories in `cpm:epics`. If the project already has adequate test infrastructure, note that and move on. Use AskUserQuestion to confirm.
+**Record nothing here.** This step has no output of its own and no section in the spec. An entry made here would sit in prose `coverage-parse.sh` never reads, so it would neither reach the coverage matrix nor hold the untraced count above zero — a tooling need captured that way is indistinguishable from one never raised. Step 3a is the single capture site; the tags are later evidence about what the target has to provide, not a second place to put the answer.
+
+This is why the step is a check rather than an elicitation: Section 3 runs before Section 6, so the tags did not exist when Step 3a asked its questions.
 
 #### Step 6e: Present and Refine
 
-Present the complete testing strategy to the user: tagged criteria, integration boundaries, and infrastructure needs. Refine with AskUserQuestion before proceeding.
+Present the complete testing strategy to the user: tagged criteria, integration boundaries, and any `ENVn` entries Step 6d sent back to Step 3a. Refine with AskUserQuestion before proceeding.
 
 *Progress note: capture tag assignments per requirement and infrastructure needs in the Section 6 summary.*
 
@@ -369,9 +372,6 @@ Test approach tags used in this spec:
 
 ### Integration Boundaries
 {Key integration points between architectural components, derived from ADRs if available}
-
-### Test Infrastructure
-{Testing infrastructure the project needs — frameworks, test databases, fixtures, CI configuration, mock libraries. "None required" if the project already has adequate infrastructure. Items listed here become stories in `cpm:epics`.}
 
 ### Unit Testing
 Unit testing of individual components is handled at the `cpm:do` task level — each story's acceptance criteria drive test coverage during implementation.

@@ -116,7 +116,7 @@ Check for evidence of a previous Ralph run:
 3. Use Grep to check the target epic docs' `**Status**:` fields to confirm the current state. Use Grep and Read tools directly.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
 
-**Spec mode also looks for a leftover `cpm:epics` progress file** (FR12). A spec-mode run that dies during phase 1 leaves two things behind — the loop's own state file, and the progress file `cpm:epics` was keeping — and the second one records how far generation got. In spec mode only, after step 4:
+**Spec mode also looks for a leftover `cpm:epics` progress file.** A spec-mode run that dies during phase 1 leaves two things behind — the loop's own state file, and the progress file `cpm:epics` was keeping — and the second one records how far generation got. In spec mode only, after step 4:
 
 5. Run the classifier directly:
    `CPM_SESSION_ID="$CPM_SESSION_ID" bash "${CLAUDE_PLUGIN_ROOT}/hooks/lib/progress-classify.sh"`
@@ -124,14 +124,14 @@ Check for evidence of a previous Ralph run:
 7. On a match, add it to step 4's presentation — path, phase, age label, and the file's `## Epic Files` table showing which epics were Written and which were still Pending, which is the resume state itself — and let the same Resume / Start fresh gate decide. With no previous execution log, present it on its own using the same gate.
 8. **Read it; never delete or overwrite it.** The shared **Stale-Progress Check**'s rule governs here unchanged — no path auto-executes a delete — and "Start fresh" means this run ignores the file, not that anything removes it.
 
-**Why this does not consult the guard, and why the guard is left alone.** `cleancheck-guard.sh` returns `SUPPRESS` whenever `.claude/ralph-loop.local.md` is present, which is exactly the state a relaunch after a dead loop is in — so the shared safety-net is silent at the one moment this file most needs surfacing. That silence is the FR11 autonomous carve-out and it is correct: its subject is *prompting the user mid-loop*, which is what would stall an autonomous run. This step asks a different question at a different time, before the loop is armed, so it calls the classifier — which is read-only and prompts nobody — and does not consult the guard at all. Adding a ralph exemption inside the guard would answer this one caller by un-silencing the safety-net for every other skill during every run.
+**Why this does not consult the guard, and why the guard is left alone.** `cleancheck-guard.sh` returns `SUPPRESS` whenever `.claude/ralph-loop.local.md` is present, which is exactly the state a relaunch after a dead loop is in — so the shared safety-net is silent at the one moment this file most needs surfacing. That silence is the autonomous carve-out and it is correct: its subject is *prompting the user mid-loop*, which is what would stall an autonomous run. This step asks a different question at a different time, before the loop is armed, so it calls the classifier — which is read-only and prompts nobody — and does not consult the guard at all. Adding a ralph exemption inside the guard would answer this one caller by un-silencing the safety-net for every other skill during every run.
 
 #### 1f. Roll-Up Script Resolution
 
 The generated prompt gates its completion promise on `coverage-rollup.sh`'s exit code, so the path to that script has to be in the prompt as an **absolute path resolved here**, not as a variable the loop expands later.
 
 1. Resolve the plugin's `hooks/lib/coverage-rollup.sh` to an absolute path and store it as `{rollup_script}`.
-2. Confirm the file is readable. If it is not, warn the user: "The coverage roll-up script was not found at {path}. The loop will run, but its completion promise will not be script-backed — it would fall back to the model's own judgement, which is what FR8 exists to remove." Use AskUserQuestion with options: "Continue anyway" or "Stop".
+2. Confirm the file is readable. If it is not, warn the user: "The coverage roll-up script was not found at {path}. The loop will run, but its completion promise will not be script-backed — it would fall back to the model's own judgement, which is what the script-backed check exists to remove." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
 **Why resolved here rather than written as `${CLAUDE_PLUGIN_ROOT}`**: the prompt is fed back to the model as a plain user turn by the stop hook, not executed inside a skill, so a plugin-relative variable is not guaranteed to be set when the completion check runs — and an unset one expands to a bare `/hooks/lib/coverage-rollup.sh`, which exists nowhere — a path built from a variable that is set for hooks and not for the call that uses it, failing silently. Interpolating the resolved path keeps the prompt self-contained, which is what every other `{...}` in the template already does.
 
@@ -148,19 +148,19 @@ Assemble the ralph-loop prompt as plain text — no markdown, code fences, backt
 
 #### One promise per mode, fixed at launch
 
-**The tag differs by mode and nobody is asked which one to use** (FR10). `completion_promise` is per-run frontmatter, so the two modes can name different achievements without a choice existing at any point: `{mode}` is resolved once in Step 1a, and the promise follows from it. No choice exists at any point, which is the property that matters: an *available choice* is what lets the weaker path survive. `ALL_EPICS_COMPLETE` at the end of a spec-mode run names the wrong achievement in a log read by someone who was not there.
+**The tag differs by mode and nobody is asked which one to use.** `completion_promise` is per-run frontmatter, so the two modes can name different achievements without a choice existing at any point: `{mode}` is resolved once in Step 1a, and the promise follows from it. No choice exists at any point, which is the property that matters: an *available choice* is what lets the weaker path survive. `ALL_EPICS_COMPLETE` at the end of a spec-mode run names the wrong achievement in a log read by someone who was not there.
 
 **Evidence goes beside the tag, never inside it.** The stop hook compares the `<promise>` tag's contents to `completion_promise` with literal string equality after whitespace normalisation, so a tag carrying counts, a summary or a file list never matches, and the loop runs to its iteration cap on finished work. Both completion clauses put their coverage line on its own line next to the promise for exactly this reason.
 
 #### The phase predicate
 
-**In spec mode the phase judgement is a reading of `coverage-rollup.sh`'s records, and of nothing else** (AD1). The loop runs `bash {rollup_script} --spec {spec_path} --verdict` and takes two things from that one run: its exit code, and the `SUMMARY` record's `untraced` field. Phase 1 — generating the epics — is over when that field reads `0`; phase 2 — working them — is over when the run exits `0`, which is the script's own statement that no row is unverified. There is no marker file and no phase written down anywhere: the records **are** the state, so a run that resumes mid-flight re-reads its position instead of remembering it.
+**In spec mode the phase judgement is a reading of `coverage-rollup.sh`'s records, and of nothing else.** The loop runs `bash {rollup_script} --spec {spec_path} --verdict` and takes two things from that one run: its exit code, and the `SUMMARY` record's `untraced` field. Phase 1 — generating the epics — is over when that field reads `0`; phase 2 — working them — is over when the run exits `0`, which is the script's own statement that no row is unverified. There is no marker file and no phase written down anywhere: the records **are** the state, so a run that resumes mid-flight re-reads its position instead of remembering it.
 
 **A phase that cannot make progress stops; it does not repeat.** Exit `4` is the only code that sends the loop into `/cpm:epics`, because it is the only one meaning *no matrix names this spec yet*. An untraced count above zero on any other code means `cpm:epics` has already run and what it wrote does not cover the spec — a second run cannot fix that, and would actively make it worse: sub-numbers are assigned `max + 1`, so each run writes a **fresh** set of epic docs rather than completing the set already there. Phase 2 carries the mirror rule: its exit-`3` branch keeps working only while an epic still has unfinished work, since another pass over completed epics cannot change the verdict.
 
 This is a liveness rule, not a phase-semantics change: `untraced == 0` still ends phase 1. What changed is what happens when it does not — the loop reports what is missing and stops, rather than repeating a step whose output it has already seen.
 
-**The loop relays; it does not compute.** It names the fields it read and repeats their values verbatim — it never counts rows, sums a column, or decides for itself that a requirement is traced or a row verified. Those judgements exist in exactly one place (NFR2), and it is the same rule the epic-mode completion clause already states as *never work that verdict out yourself from the records*.
+**The loop relays; it does not compute.** It names the fields it read and repeats their values verbatim — it never counts rows, sums a column, or decides for itself that a requirement is traced or a row verified. Those judgements exist in exactly one place -- the roll-up -- and it is the same rule the epic-mode completion clause already states as *never work that verdict out yourself from the records*.
 
 **Phase is never inferred from the epic files.** That `docs/epics/` holds four matching files, or none, says nothing about which phase the run is in: a partially-generated set looks exactly like a complete one on disk, and at iteration 1 spec mode's epic list is legitimately empty (Step 1a). The count of files is not consulted, and `{epic_count}` is a label for the user rather than an input to this decision.
 
@@ -197,17 +197,17 @@ When phase 2 has no epic left to work, run bash {rollup_script} --spec {spec_pat
 
 **The same code means different things in the two clauses, deliberately.** In the phase clause, exit `3` with untraced work means *`cpm:epics` has had its turn and fell short* — stop. In the completion clause it means *rows remain unverified* — keep working, while there is work left to do. Both readings are about what the next action could achieve, which is the only question a loop with no memory can usefully ask.
 
-**Why the per-iteration COUNTS line names four fields rather than two** (FR11). The requirement asks for "the traced and verified counts it read from the roll-up", and the roll-up emits neither of those words: its spec-scope SUMMARY record carries `requirements`, `untraced`, `delivered` and `in-progress`. A loop that printed a *traced* figure would have to subtract, and one that printed a *verified* figure would have to decide which of `delivered` and `in-progress` counts — both forbidden by *The loop relays; it does not compute* above. Printing all four verbatim shows a reader everything the requirement asks to see and leaves the arithmetic outside the loop. The clause is emphatic about the source — *from that same SUMMARY record* — for the reason the completion clause is: a second run of the script could return different numbers, and a line assembled from two runs is a reading of neither.
+**The COUNTS line names all four SUMMARY fields, and takes them from one run.** The record carries `requirements`, `untraced`, `delivered` and `in-progress`; printing any *traced* or *verified* figure would mean subtracting or deciding which fields count, both forbidden by *The loop relays; it does not compute* above. The clause is emphatic about reading them *from that same SUMMARY record* for the reason the completion clause is: a second run of the script could return different numbers, and a line assembled from two runs is a reading of neither.
 
-**Fail closed** (NFR1). Every branch above except `0` leaves the promise unemitted, and the `any other code` catch-all makes that the default for codes that do not exist yet rather than a list to be kept current. An unreadable spec, a missing script, a permission error and a code added next year all reach the same place: no promise, and a line saying the check could not run.
+**Fail closed.** Every branch above except `0` leaves the promise unemitted, and the `any other code` catch-all makes that the default for codes that do not exist yet rather than a list to be kept current. An unreadable spec, a missing script, a permission error and a code added next year all reach the same place: no promise, and a line saying the check could not run.
 
 **What spec mode costs.** Substituting both clauses gives an assembled spec-mode prompt of **4,830 characters** — the template's 3,188 less the 103-character opening and the 927-character completion clause it replaces, plus the two blocks above.
 
 **None of those four figures has a test.** The `**Length:**` figure above is extracted and compared against the template line by two suites; these are prose, so an edit to the template or to either clause silently falsifies them. Re-measure them by hand when you change any of the three blocks — a stated figure whose only guard is the diligence of the next editor is the failure this file has already had once. They are stated at all because the epic-mode figure a suite asserts is a *different* number, and a reader who checks only that one would conclude the two-phase prompt was free.
 
-**Why the phase is re-read every iteration rather than carried.** The loop has no memory between iterations beyond the state file, which the stop hook rewrites only to advance `iteration:` (AD3). Reading the phase from the records each time is therefore not a cost but the only honest option — and it is what makes a resumed run correct, since the records describe the epics that exist now rather than the ones that existed at launch.
+**Why the phase is re-read every iteration rather than carried.** The loop has no memory between iterations beyond the state file, which the stop hook rewrites only to advance `iteration:`. Reading the phase from the records each time is therefore not a cost but the only honest option — and it is what makes a resumed run correct, since the records describe the epics that exist now rather than the ones that existed at launch.
 
-**Phase 1 is never "done" on its own** (FR6). It ends when the *next* check reports 0 untraced, which is a fact about the epics `cpm:epics` just wrote — so the clause ends the iteration rather than declaring anything, and the completion tag is unreachable from inside it. A spec with no epics reports 0 untraced only when there are no requirements to be untraced; that case exits 4, which is why 4 routes to the generation step rather than to phase 2 or to the failure branch.
+**Phase 1 is never "done" on its own.** It ends when the *next* check reports 0 untraced, which is a fact about the epics `cpm:epics` just wrote — so the clause ends the iteration rather than declaring anything, and the completion tag is unreachable from inside it. A spec with no epics reports 0 untraced only when there are no requirements to be untraced; that case exits 4, which is why 4 routes to the generation step rather than to phase 2 or to the failure branch.
 
 **What a non-zero untraced count is evidence of depends on whether epics exist.** Before `cpm:epics` runs there are no matrices, the script exits 4, and untraced is unmeasurable — nothing to compare rows against. After it runs, an untraced requirement is evidence about the *epics*, not about the phase: `cpm:epics` is not obliged to cover everything the spec lists — its own cross-epic gap check blocks on some requirements and merely warns on others — so a count that never reaches 0 is a possible and legitimate outcome of a phase 1 that finished properly. Treating it as "phase 1 unfinished" sends the loop back to generation forever, which is why exit 4 — not the count — is what routes into `/cpm:epics`.
 
@@ -318,74 +318,6 @@ Follow the shared **Progress File Management** procedure.
 {What to do next}
 ```
 
-
-## Maintenance Coupling
-
-> **This section documents dependencies between `cpm:ralph` and external components.** Changes to `cpm:do`'s interaction gates or the ralph-wiggum plugin's state file format may require updates to this skill.
-
-### Ralph Wiggum State File Schema
-
-`cpm:ralph` writes `.claude/ralph-loop.local.md` directly instead of invoking the ralph-wiggum plugin's `setup-ralph-loop.sh` script. The stop hook (`stop-hook.sh`) parses this file to drive the loop. The file format is the implicit contract between `cpm:ralph` and the stop hook.
-
-**State file path**: `.claude/ralph-loop.local.md`
-
-**Expected format** (YAML frontmatter + markdown body):
-
-```markdown
----
-active: true
-iteration: 1
-max_iterations: {integer, 0 = unlimited}
-completion_promise: "{text}" or null
-started_at: "{utc_timestamp from Bash: date -u +\"%Y-%m-%dT%H:%M:%SZ\"}"
----
-
-{prompt text}
-```
-
-| Field | Type | Stop Hook Usage |
-|---|---|---|
-| `active` | boolean | Not currently checked by stop hook (presence of file implies active) |
-| `iteration` | integer | Compared against `max_iterations`; incremented each loop |
-| `max_iterations` | integer | Loop stops when `iteration >= max_iterations` (0 = unlimited) |
-| `completion_promise` | string or null | Matched against `<promise>` tags in assistant output |
-| `started_at` | ISO 8601 string | Informational; not parsed by stop hook |
-
-**When to update**: If the ralph-wiggum plugin changes the state file path, frontmatter field names, or parsing logic in `stop-hook.sh`, this skill's Step 3c must be updated to match. The stop hook uses `sed`, `grep`, and `awk` to parse the frontmatter — any format change that breaks these parsers will break the loop.
-
-### cpm:do Interaction Gates
-
-This table records how each `cpm:do` gate is handled under an autonomous run. Most are overridden by the prompt's blanket instruction ("choose the most reasonable option for every AskUserQuestion"); three are not, and each says so in its own row — the Stale-Progress Check is suppressed structurally by its guard, while the Retro Check and Change Type Decision gates take an explicit branch in `cpm:do` because for them the blanket instruction picks a wrong answer rather than no answer.
-
-| `cpm:do` Location | Gate Purpose | Prompt Override |
-|---|---|---|
-| Stale-Progress Check (shared convention, runs at every `/cpm:*` skill startup — including the `/cpm:do` this loop wraps) | Offer cleanup of stale/leftover progress files from other sessions, at most once per session | **Fully suppressed — no prompt, no output, no action.** Suppression is *guard-level*, not prompt-driven: the shared guard (`hooks/lib/cleancheck-guard.sh`) detects the active ralph loop via `.claude/ralph-loop.local.md` and returns `SUPPRESS`, so the check self-silences before any prompt regardless of the prompt's autonomous instruction. No prompt clause is required (and none is added) — the gate cannot stall the loop |
-| Input — Epic Doc (multiple epics) | Ask user which epic to work on | Auto-select from the epic list in order |
-| Test Runner Discovery | Ask user for test command | Proceed with self-assessment |
-| Retro Check — consumption disposition gate | Force a per-run disposition (Applied/Deferred/Not relevant here) on each prior-epic retro observation; durable retirement (the gated in-cycle Obsolete) is a separate deliberately-confirmed action, never auto-taken | **Do not block, do not "choose the most reasonable option".** Branch by category using `cpm:do`'s single-source safe/defer split (its Retro Check → Autonomous mode), not a blanket defer: **auto-apply** safe categories (Codebase discoveries, Patterns worth reusing), recording `**Retro applied**: {nn} · {category} · applied (autonomous, safe-category) — {what it did}` and carrying each into the run as context; **defer** judgement-heavy categories (Scope surprises, Criteria gaps, Complexity underestimates, Testing gaps), recording `**Retro applied**: {nn} · {category} · deferred (autonomous run, unreviewed)`; Smooth deliveries is informational. Surface **both** the auto-applied and deferred lists in the run summary for post-loop human review. **Never auto-retire** — apply or defer only, never the Obsolete retire |
-| Termination — Blocker | Confirm external blocker with user | Skip the task and continue to next |
-| Termination — Ambiguity | Ask user to clarify unclear criteria | Mark story "Blocked -- criteria ambiguous" and continue |
-| Guidelines — Change Type Decision (*Surface change moments explicitly*) | Present a four-option `AskUserQuestion` when a change-worthy situation appears mid-task — a criterion that contradicts reality, a story whose scope is wrong | **Do not block, do not "choose the most reasonable option".** Take `cpm:do`'s autonomous branch (its Guidelines → *Surface change moments explicitly*), which resolves the change moment instead of presenting it: inline edit, retro observation, or amend the epic under execution — never `/cpm:pivot`. Amendment is guarded by a citable contradiction, and leaves a `**Pivot deferred**` breadcrumb for each artefact it could not reach — sometimes none; `cpm:do` holds the rule. Unlike the rows below, the blanket instruction is not merely insufficient here but harmful: one of the four options is Pivot, whose own gates would stall the loop, and the shared matrix's *when in doubt, choose pivot* default makes it the one a blanket "most reasonable option" tends to land on |
-| Step 4 — Verification gate test failure | Ask user: fix, continue, or stop | Fix automatically; skip after stuck threshold |
-| Step 4 — Verification round limit | 2 fix attempts exhausted; ask user | Mark unmet criteria as known issues and proceed |
-| Step 4 — TDD Red phase unexpected pass | Ask user: investigate, skip TDD, or stop | Investigate and fix the test |
-| Step 4 — TDD Green phase still failing | Ask user: continue, skip TDD, or stop | Continue working on implementation |
-| Step 5 — Unmet acceptance criteria | Ask user: continue working or mark complete | Continue working; skip after stuck threshold |
-| Step 5 — Coverage matrix edit failure | Ask user: continue or stop | Continue without recording proof |
-| Step 8 — Next epic check | Ask user: continue to next epic or stop | Continue to next epic automatically |
-| Step 8 — Completion of the last epic | No `cpm:do` gate; this is the loop's own exit | Run `coverage-rollup.sh --epic {epic_glob} --verdict` and emit `ALL_EPICS_COMPLETE` only on exit 0 — the template carries the operative instruction |
-| Graceful Degradation — Test command fails | Ask user: new command, continue, or stop | Continue without tests |
-| Graceful Degradation — No test + TDD | Ask user: provide runner or acknowledge | Fall back to standard workflow |
-
-**Stale-Progress Check is guard-suppressed, not prompt-overridden**: unlike the `AskUserQuestion` gates below it, the Stale-Progress Check safety-net (now part of every `/cpm:*` skill's startup) is silenced *structurally* — its shared guard returns `SUPPRESS` whenever `.claude/ralph-loop.local.md` is present. It therefore needs no autonomous instruction in the generated prompt and can never pause the loop; the table row records it so a maintainer adding a gate here knows guard-level suppression is a valid override mechanism, not only the prompt instruction.
-
-**The table records; the template acts.** The stop hook feeds the *template line* back verbatim on every iteration and the loop never reads this table, so an instruction that exists only here documents a behaviour the loop does not have. The completion row's last cell says so on purpose — the row is here because the table is where a reader looks for what the loop does at each decision point, and the loop's own exit is one.
-
-**Retro generation is not a gate**: retro *generation* at `cpm:do` Step 8 writes the retro file automatically (no `AskUserQuestion`), so it runs unchanged under autonomous execution — only the *consumption* gate above needs an override. Generation still fires at epic completion during a Ralph run.
-
-**`cpm:epics` gates are not rows in this table, and that is deliberate.** The table is scoped to the gates of the skill this loop wraps. `cpm:epics` holds its own dispositions in its **Autonomous Mode** section — the single source — and the template carries a one-sentence reference to it rather than a copy. Two copies of a gate table is how a disposition changes in one place and not the other; a reference cannot go stale.
-
-**When to update**: If `cpm:do` adds, removes, or changes an `AskUserQuestion` gate, review the prompt template's Autonomous Behaviour section and this table. A new gate that isn't overridden will cause the Ralph loop to pause and wait for user input — defeating the purpose of autonomous execution.
 
 ## Guidelines
 

@@ -410,11 +410,52 @@ When a change to existing planning artefacts is needed — discovered mid-execut
 | Pattern noticed, codebase discovery, complexity insight — **no scope change** | Retro observation only | `**Retro**:` field on the current story (per Step 6 Part B) |
 | Both scope change **and** lesson | Pivot now, retro at end | `/cpm:pivot` + `**Retro**:` field at story completion |
 
-**When in doubt, choose pivot.** Inline edits are silent — they leave no trail and bypass the cascade. The cost of an unnecessary pivot is small (the user can skip downstream changes); the cost of silent spec→reality drift is high. This default is disapplied in autonomous mode, where `/cpm:pivot` is never invoked — see **Surface change moments explicitly** in Guidelines.
+**When in doubt, choose pivot.** Inline edits are silent — they leave no trail and bypass the cascade. The cost of an unnecessary pivot is small (the user can skip downstream changes); the cost of silent spec→reality drift is high. This default is disapplied in autonomous mode, where `/cpm:pivot` is never invoked — see **Autonomous mode** below.
 
 **Inline edit breadcrumb**: When applying an inline edit to a story or task, record an `**Inline change**: {one-line summary} ({YYYY-MM-DD})` field on the story (alongside any existing `**Retro**:` field). This preserves a trail that `cpm:retro` reads when deciding whether an epic is waivably clean, and that a later human reader can follow back to the change moment.
 
-**Skill responsibility**: This procedure belongs to `cpm:do`, the skill that surfaces change moments during execution. It is invoked from **Surface change moments explicitly** in Guidelines, which holds the two paths — the interactive gate and the autonomous branch. In an interactive run the decision is presented as a structured `AskUserQuestion` gate (per the shared **Gate Presentation** convention) with the four options above as labels, rather than as a freeform "should we change this?" prompt.
+**Skill responsibility**: This procedure belongs to `cpm:do`, the skill that surfaces change moments during execution. It is entered from **Surface change moments explicitly** in Guidelines. Which of the two paths below applies is decided by the run, not by the situation: both handle the same set of change moments.
+
+**Interactive runs** present the decision as a gate: an `AskUserQuestion` with the four labelled options (Inline edit / Pivot the upstream artefact / Retro observation only / Pivot + retro), per the shared **Gate Presentation** convention rather than as a freeform "should we change this?" prompt.
+
+- **If the user chooses Inline edit**: apply the Edit immediately to the affected story or task in the epic doc, then record `**Inline change**: {one-line summary of what changed} ({YYYY-MM-DD})` on the story (alongside any existing `**Retro**:` field) using a second Edit. The breadcrumb is mandatory — silent inline edits violate the convention.
+- **If the user chooses Pivot**: stop the work loop, save the progress file, and tell the user to run `/cpm:pivot {path-to-affected-artefact}`. Resume the work loop after the pivot completes (a fresh `/cpm:do` invocation will pick up where this one left off via the progress file).
+- **If the user chooses Retro observation only**: capture the observation in the story's `**Retro**:` field at task completion (Step 6 Part B), no other action.
+- **If the user chooses Pivot + retro**: do both — stop for pivot, then capture the retro observation when the work loop resumes.
+
+**Autonomous mode** (no human is present to answer — e.g. a `cpm:ralph` run). The gate above cannot be used: a question posed mid-run is not a session stop, so no stop hook can recover from it and the loop simply waits until the iteration times out. The change moment is therefore **resolved rather than presented**, using the same three response patterns the matrix already defines:
+
+- **Inline edit** — a wording fix, typo, or single-criterion clarification with **no scope change**. Apply it exactly as the interactive path does, `**Inline change**` breadcrumb and all.
+- **Retro observation only** — a pattern noticed, codebase discovery, or complexity insight with **no scope change**. Record it in the story's `**Retro**:` field at task completion, exactly as the interactive path does.
+- **Amend the epic under execution** — everything the interactive path would have sent to `/cpm:pivot`. Amend the open epic doc so the stories still to run inherit the corrected criterion, and defer every upstream artefact behind a `**Pivot deferred**` breadcrumb.
+
+These three are exhaustive over the matrix: the first two are the matrix's own no-scope-change rows, and the third absorbs both of its pivot rows (a pivot-and-retro situation takes the amendment *and* the `**Retro**:` field, since the retro row is not an alternative to it). Every change-worthy situation lands in exactly one.
+
+**Blast radius — two files, and no others.** An autonomous amendment may write to the **open epic doc** and its **companion coverage matrix**, and nothing else. Every other artefact is deferred, without exception: the source spec, other epic docs and their matrices, briefs, discussions, ADRs, and the shared conventions. The two writable files are the ones the loop is executing out of, so correcting them is what lets the stories still to run inherit the fix; every artefact beyond them is read by people and by later skills, and changing those without review is the silent spec-to-reality drift the matrix's pivot rows exist to prevent. Amending a criterion also resets its coverage-matrix row to unverified, per that file's own verification rule — the amendment and the reset are one action, never two.
+
+**Amendment requires a citable contradiction.** Without a human to sanity-check it, the amendment path is the one way an autonomous loop can rewrite its own acceptance criteria, so what licenses it has to be evidence a reader can check afterwards — not a judgement made in the moment. Amend only when you can name one of these, and record which one in the breadcrumb:
+
+- a **`file:line`** whose content contradicts the criterion;
+- a **named requirement in the source spec** (`FR3`, `NFR2`, `AD1`) that the criterion contradicts;
+- a **conflicting criterion in the same epic** — two criteria that cannot both be satisfied.
+
+**A criterion that is merely unmet is not a criterion that is wrong.** Evidence of the form *the tests fail*, *I could not implement it*, *this is harder than expected*, or *the approach did not work* never licenses an amendment, however many times it recurs — every one of those is a report about the run, not about the criterion, and treating them as contradictions is how a loop quietly edits away the work it found difficult. When the evidence is of that kind and no citation is available, do not amend: leave the criterion standing, mark the story blocked, and record a `**Retro**:` observation naming what could not be done.
+
+*Worked example — a criterion that reads as both.* A story carries *"the search endpoint returns results in under 200ms at the 95th percentile"*, and the finished implementation sits at 340ms. Both readings are genuinely available: the criterion may be **wrong** (200ms was never reachable through the ORM the project is committed to) or merely **unmet** (this implementation is slow and a better one would make it). The pull toward amending is strongest here, because relaxing the number to 400ms would turn a blocked story into a passing one in a single edit — which is exactly the reason to decline. **Correct disposition: do not amend.** Leave the criterion at 200ms, mark the story blocked, and record a `**Retro**:` observation naming the measured figure and what was tried. What *would* license the amendment is a citation and nothing less — an ADR fixing the data layer whose documented floor is above 200ms, or a spec requirement elsewhere that contradicts the number. Absent that, "I measured 340ms" is a report about this implementation, not evidence about the criterion.
+
+**The pivot-deferred breadcrumb.** Every artefact the amendment could not reach gets a `**Pivot deferred**:` field on the story in the open epic doc, beside any `**Retro**:` and `**Inline change**:` fields already there. It carries five fields and no others:
+
+`**Pivot deferred**: {change} → {target artefact} (Story {N}, {YYYY-MM-DD}) — cited: {citation}`
+
+- **{change}** — what would have been pivoted, in one line.
+- **{target artefact}** — the path of the artefact that still needs the change.
+- **Story {N}** — the story that was running when the change moment appeared.
+- **{YYYY-MM-DD}** — the date, so a later reader can tell a deferral from this run from one carried for months.
+- **{citation}** — the contradiction that licensed the amendment, in one of the three admissible forms above.
+
+One breadcrumb per deferred artefact, not one per amendment: an amendment that leaves three upstream documents out of step produces three fields, so no artefact is silently covered by another's entry. This is the whole of the deferral record — an autonomous run writes nothing into the artefacts themselves.
+
+**`/cpm:pivot` is never invoked from an autonomous run.** It is an interactive skill with five gates of its own; calling it produces precisely the stall this branch exists to prevent — and the matrix's *when in doubt, choose pivot* default routes straight into it, which is why the default does not apply here. Deferring the upstream cascade is the trade this branch makes deliberately. The breadcrumb is what keeps the deferral visible instead of lost.
 
 ## Graceful Degradation
 
@@ -490,45 +531,7 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 
   A change-worthy situation is not a routine judgment call: a criterion that contradicts reality or a story whose scope is wrong still goes through the procedure below — its interactive gate, or its autonomous branch — breadcrumb and all.
 
-- **Surface change moments explicitly.** When a change-worthy situation appears mid-task — a criterion that contradicts reality, a story whose scope is wrong, a missing requirement that affects multiple stories, a wording bug — invoke the **Change Type Decision** procedure above. Do not silently edit a criterion mid-task; do not silently defer the question to verification. Resolve it now, by whichever of the two paths below applies to the current run.
-
-  **Interactive runs** present the decision as a gate: an `AskUserQuestion` with the four labelled options (Inline edit / Pivot the upstream artefact / Retro observation only / Pivot + retro).
-  - **If the user chooses Inline edit**: apply the Edit immediately to the affected story or task in the epic doc, then record `**Inline change**: {one-line summary of what changed} ({YYYY-MM-DD})` on the story (alongside any existing `**Retro**:` field) using a second Edit. The breadcrumb is mandatory — silent inline edits violate the convention.
-  - **If the user chooses Pivot**: stop the work loop, save the progress file, and tell the user to run `/cpm:pivot {path-to-affected-artefact}`. Resume the work loop after the pivot completes (a fresh `/cpm:do` invocation will pick up where this one left off via the progress file).
-  - **If the user chooses Retro observation only**: capture the observation in the story's `**Retro**:` field at task completion (Step 6 Part B), no other action.
-  - **If the user chooses Pivot + retro**: do both — stop for pivot, then capture the retro observation when the work loop resumes.
-
-  **Autonomous mode** (no human is present to answer — e.g. a `cpm:ralph` run). The gate above cannot be used: a question posed mid-run is not a session stop, so no stop hook can recover from it and the loop simply waits until the iteration times out. The change moment is therefore **resolved rather than presented**, using the same three response patterns the matrix already defines:
-  - **Inline edit** — a wording fix, typo, or single-criterion clarification with **no scope change**. Apply it exactly as the interactive path does, `**Inline change**` breadcrumb and all.
-  - **Retro observation only** — a pattern noticed, codebase discovery, or complexity insight with **no scope change**. Record it in the story's `**Retro**:` field at task completion, exactly as the interactive path does.
-  - **Amend the epic under execution** — everything the interactive path would have sent to `/cpm:pivot`. Amend the open epic doc so the stories still to run inherit the corrected criterion, and defer every upstream artefact behind a `**Pivot deferred**` breadcrumb.
-
-  These three are exhaustive over the matrix: the first two are the matrix's own no-scope-change rows, and the third absorbs both of its pivot rows (a pivot-and-retro situation takes the amendment *and* the `**Retro**:` field, since the retro row is not an alternative to it). Every change-worthy situation lands in exactly one.
-
-  **Blast radius — two files, and no others.** An autonomous amendment may write to the **open epic doc** and its **companion coverage matrix**, and nothing else. Every other artefact is deferred, without exception: the source spec, other epic docs and their matrices, briefs, discussions, ADRs, and the shared conventions. The two writable files are the ones the loop is executing out of, so correcting them is what lets the stories still to run inherit the fix; every artefact beyond them is read by people and by later skills, and changing those without review is the silent spec-to-reality drift the matrix's pivot rows exist to prevent. Amending a criterion also resets its coverage-matrix row to unverified, per that file's own verification rule — the amendment and the reset are one action, never two.
-
-  **Amendment requires a citable contradiction.** Without a human to sanity-check it, the amendment path is the one way an autonomous loop can rewrite its own acceptance criteria, so what licenses it has to be evidence a reader can check afterwards — not a judgement made in the moment. Amend only when you can name one of these, and record which one in the breadcrumb:
-  - a **`file:line`** whose content contradicts the criterion;
-  - a **named requirement in the source spec** (`FR3`, `NFR2`, `AD1`) that the criterion contradicts;
-  - a **conflicting criterion in the same epic** — two criteria that cannot both be satisfied.
-
-  **A criterion that is merely unmet is not a criterion that is wrong.** Evidence of the form *the tests fail*, *I could not implement it*, *this is harder than expected*, or *the approach did not work* never licenses an amendment, however many times it recurs — every one of those is a report about the run, not about the criterion, and treating them as contradictions is how a loop quietly edits away the work it found difficult. When the evidence is of that kind and no citation is available, do not amend: leave the criterion standing, mark the story blocked, and record a `**Retro**:` observation naming what could not be done.
-
-  *Worked example — a criterion that reads as both.* A story carries *"the search endpoint returns results in under 200ms at the 95th percentile"*, and the finished implementation sits at 340ms. Both readings are genuinely available: the criterion may be **wrong** (200ms was never reachable through the ORM the project is committed to) or merely **unmet** (this implementation is slow and a better one would make it). The pull toward amending is strongest here, because relaxing the number to 400ms would turn a blocked story into a passing one in a single edit — which is exactly the reason to decline. **Correct disposition: do not amend.** Leave the criterion at 200ms, mark the story blocked, and record a `**Retro**:` observation naming the measured figure and what was tried. What *would* license the amendment is a citation and nothing less — an ADR fixing the data layer whose documented floor is above 200ms, or a spec requirement elsewhere that contradicts the number. Absent that, "I measured 340ms" is a report about this implementation, not evidence about the criterion.
-
-  **The pivot-deferred breadcrumb.** Every artefact the amendment could not reach gets a `**Pivot deferred**:` field on the story in the open epic doc, beside any `**Retro**:` and `**Inline change**:` fields already there. It carries five fields and no others:
-
-  `**Pivot deferred**: {change} → {target artefact} (Story {N}, {YYYY-MM-DD}) — cited: {citation}`
-
-  - **{change}** — what would have been pivoted, in one line.
-  - **{target artefact}** — the path of the artefact that still needs the change.
-  - **Story {N}** — the story that was running when the change moment appeared.
-  - **{YYYY-MM-DD}** — the date, so a later reader can tell a deferral from this run from one carried for months.
-  - **{citation}** — the contradiction that licensed the amendment, in one of the three admissible forms above.
-
-  One breadcrumb per deferred artefact, not one per amendment: an amendment that leaves three upstream documents out of step produces three fields, so no artefact is silently covered by another's entry. This is the whole of the deferral record — an autonomous run writes nothing into the artefacts themselves.
-
-  **`/cpm:pivot` is never invoked from an autonomous run.** It is an interactive skill with five gates of its own; calling it produces precisely the stall this branch exists to prevent — and the matrix's *when in doubt, choose pivot* default routes straight into it, which is why the default does not apply here. Deferring the upstream cascade is the trade this branch makes deliberately. The breadcrumb is what keeps the deferral visible instead of lost.
+- **Surface change moments explicitly.** When a change-worthy situation appears mid-task — a criterion that contradicts reality, a story whose scope is wrong, a missing requirement that affects multiple stories, a wording bug — invoke the **Change Type Decision** procedure above, which holds both paths: the interactive gate and the autonomous branch. Do not silently edit a criterion mid-task; do not silently defer the question to verification. Resolve it now.
 - **One task at a time.** Complete each task fully before starting the next.
 - **`[tdd]` activates the red-green-refactor sub-loop.** When a story's acceptance criteria carry the `[tdd]` tag, Step 4 switches from standard implementation to a three-phase TDD loop: write a failing test (Red), write minimum code to pass (Green), clean up within task scope (Refactor). Each phase runs a targeted test — the specific test file, not the full suite. The full suite runs at the story verification gate. Stories without `[tdd]` use the standard post-implementation workflow unchanged. Both modes can coexist in the same epic.
 - **Story refactoring pass polishes before moving on.** When a verification gate passes, Step 5b performs a refactoring pass starting from the files touched by the story — then retests. For Laravel projects, this uses the `laravel-simplifier` agent if available; for all other projects, it's a self-directed review. The pass starts with the story's code but looks outward for consolidation opportunities — deduplication, extraction, and abstraction across touched and existing code. If refactoring breaks tests, the changes are reverted.

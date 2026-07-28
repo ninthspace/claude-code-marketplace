@@ -118,14 +118,19 @@ fi
 #
 # The stop hook feeds the template line back verbatim on each iteration and the loop never
 # reads the table (retro 21). A table-only change documents a behaviour the loop lacks.
+#
+# The table moved to docs/maintenance/README.md on 2026-07-28 — it is a maintenance
+# record, and it was being loaded on every invocation. The claim here is untouched by that:
+# the record and the template must agree. Only the file the row half is read from changed.
 
+RALPH_COUPLING="$SCRIPT_DIR/../../../docs/maintenance/README.md"
 TABLE_ROW='| Step 8 — Completion of the last epic'
 
 test_start "the override table records the completion behaviour"
-assert_contains "$(grep -F -- "$TABLE_ROW" "$RALPH_SKILL")" "coverage-rollup.sh"
+assert_contains "$(grep -F -- "$TABLE_ROW" "$RALPH_COUPLING")" "coverage-rollup.sh"
 
-# The discriminating control: a copy carrying the table row with the template clause stripped
-# is exactly the shape a table-only change takes, and it must not pass.
+# The discriminating control: the record carrying the row while the template clause is
+# stripped is exactly the shape a table-only change takes, and it must not pass.
 sed 's/run bash {rollup_script} --epic {epic_glob} --verdict and let its exit code decide: //' \
   "$RALPH_SKILL" > "$TEST_TMPDIR/table-only.md"
 
@@ -136,8 +141,13 @@ else
   test_pass
 fi
 
-test_start "control: that mutated copy still carries the table row"
-assert_contains "$(grep -F -- "$TABLE_ROW" "$TEST_TMPDIR/table-only.md")" "coverage-rollup.sh"
+# Confirms the fixture above is the *table-only* shape rather than the nothing shape: the
+# mutation strips the skill's clause and must leave the record's row standing.
+test_start "control: the record still carries the row the mutation did not touch"
+assert_contains "$(grep -F -- "$TABLE_ROW" "$RALPH_COUPLING")" "coverage-rollup.sh"
+
+test_start "and the skill no longer carries that row itself"
+assert_empty "$(grep -F -- "$TABLE_ROW" "$RALPH_SKILL")"
 
 # --- The command the template names actually behaves as the template says ----------------
 #
