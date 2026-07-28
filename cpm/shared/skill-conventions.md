@@ -152,6 +152,8 @@ Adoption requires `CPM_SESSION_ID` in context. When absent, the fallback path (u
 
 **Companion compact summary**: When deleting the progress file, also delete `docs/plans/.cpm-compact-summary-{session_id}.md` if it exists — this companion file is written by the PostCompact hook and should be cleaned up alongside the progress file.
 
+**Not part of the project's history**: both files are session-scoped and transient, but they are written into `docs/plans/` — a directory users commit. The ignore entry is `/docs/plans/.cpm-*`. A human staging changes will not type these paths, so in an interactive session this costs nothing; a run that stages with `git add -A` sweeps them in every time, and untracking later does not remove them from the commits already made. A skill that commits on the user's behalf ensures the entry exists **before** its first commit, not after noticing the leak.
+
 **Write semantics**: Use the Write tool to write the full file each time (not Edit — the file is replaced wholesale on every update).
 
 **Late deletion**: Delete the progress file only once output artifacts are confirmed written. If compaction fires between an early deletion and a pending output, all session state is lost.

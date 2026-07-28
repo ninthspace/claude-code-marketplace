@@ -148,6 +148,19 @@ manifest to infer it from, so `cpm:do`'s Test Runner Discovery finds nothing and
 reconciles them against what was recorded here, but it records nothing of its own: a spec's testing
 tooling is an environmental requirement, and the label is what carries it into the coverage matrix.
 
+**Which environment an entry names decides its test approach tag.** The table's two rows are not a
+presentation device. A **Development** entry is a claim about the machine the work happens on, so
+whatever runs there is in a position to check it and it takes an ordinary automated tag — "Pest 3
+or later installed and runnable in development" is discharged by the suite running. A
+**Production** entry is a claim about a host nobody here has, so it takes `[target]`. The class —
+requirement or restriction — does not enter into it; `ENVXn` splits the same way its row does.
+
+Tagging a development entry `[target]` makes it unverifiable by the only thing in a position to
+verify it. `cpm:ralph`'s prompt instructs a loop never to self-assess a `[target]` criterion and
+never to count it as met, so a spec that tags its own tooling that way cannot reach a clean
+verdict however much is built — and the failure names the deployment target, which had nothing to
+do with it.
+
 The two classes are not two phrasings of one thing. "Pest is available" is satisfied by installing
 something. "Must not require a queue worker" invalidates a design and cannot be retrofitted — it is
 the class that yields a passing acceptance matrix and an undeployable result, so it is elicited
@@ -216,7 +229,7 @@ Present the test approach tag vocabulary to the user:
 - `[integration]` — Verified by integration tests that exercise boundaries between components (API contracts, event flows, data layer interactions)
 - `[feature]` — Verified by feature/end-to-end tests that exercise complete user-facing workflows
 - `[manual]` — Verified by manual inspection, observation, or user confirmation (no automated test)
-- `[target]` — Verified by a mechanical check that can only run against the real deployment target. Not a weaker `[manual]` but a different thing: `[manual]` means a human judges it and no automation is possible in principle, whereas here the check *is* mechanical and only the environment is missing. Environmental requirements and restrictions are the usual case. Self-assessing one from a development sandbox — confirming "runs on PHP 8.2 or later" on a machine where it does — is the false pass this tag exists to stop.
+- `[target]` — Verified by a mechanical check that can only run against the real deployment target. Not a weaker `[manual]` but a different thing: `[manual]` means a human judges it and no automation is possible in principle, whereas here the check *is* mechanical and only the environment is missing. **Production** environmental entries are the usual case — a runtime version on the host, a service the host provides, something the host cannot supply. A **development** environmental entry is not one, however environmental it looks: the machine running the work *is* the environment it claims, so it takes an automated tag (Step 3a). Self-assessing a genuine `[target]` from a development sandbox — confirming "runs on PHP 8.2 or later" on a machine where it does — is the false pass this tag exists to stop.
 - `[tdd]` — Workflow mode: task follows a red-green-refactor loop. Composable with any level tag above (e.g. `[tdd] [unit]`, `[tdd] [integration]`). Orthogonal — describes *how* to work, not *what kind* of test. When present, `cpm:do` writes a failing test first, then implements to pass it, then refactors. `[tdd]` without a level tag defaults to `[tdd] [unit]`.
 
 **Tag propagation**: When present, these tags flow downstream — `cpm:epics` propagates them onto story acceptance criteria and `cpm:do` uses them to select verification approach (run tests vs. self-assess) and workflow mode (standard vs. TDD). When a story introduces criteria beyond the spec, `cpm:epics` proposes tags based on the criterion's nature. If the spec has no Testing Strategy (user opts out below), downstream skills treat all criteria as untagged and verify by self-assessment. Use AskUserQuestion to confirm the vocabulary or let the user adjust it.
@@ -241,9 +254,11 @@ Present the integration boundaries to the user and refine.
 
 The tags just assigned imply tooling. A `[feature]` criterion implies something that drives a browser or an end-to-end runner; `[integration]` implies a test database or a way to stand up a boundary; `[tdd]` implies a runner fast enough to sit in a red-green loop.
 
-For each kind of tooling the assigned tags imply, check that Step 3a recorded an `ENVn` for it. Where one is missing, **go back to Step 3a and add it there** — labelled, falsifiable, and verified `[target]`.
+For each kind of tooling the assigned tags imply, check that Step 3a recorded an `ENVn` for it. Where one is missing, **go back to Step 3a and add it there** — labelled, falsifiable, and tagged by the environment it names.
 
-**Record nothing here.** This step has no output of its own and no section in the spec. An entry made here would sit in prose `coverage-parse.sh` never reads, so it would neither reach the coverage matrix nor hold the untraced count above zero — a tooling need captured that way is indistinguishable from one never raised. Step 3a is the single capture site; the tags are later evidence about what the target has to provide, not a second place to put the answer.
+**Everything this step adds is development tooling, so none of it is `[target]`.** A test runner, a browser driver, a test database and a CI job are claims about the machine the work happens on; Step 3a's rule applies to them unchanged and they take an automated tag. Sending them to `[target]` because they were reached from a *reconciliation against environmental constraints* is the routing error that makes a spec's own tooling permanently unverifiable — the entry is environmental, but the environment is this one.
+
+**Record nothing here.** This step has no output of its own and no section in the spec. An entry made here would sit in prose `coverage-parse.sh` never reads, so it would neither reach the coverage matrix nor hold the untraced count above zero — a tooling need captured that way is indistinguishable from one never raised. Step 3a is the single capture site; the tags are later evidence about what an environment has to provide, not a second place to put the answer.
 
 This is why the step is a check rather than an elicitation: Section 3 runs before Section 6, so the tags did not exist when Step 3a asked its questions.
 
@@ -358,7 +373,7 @@ Test approach tags used in this spec:
 - `[integration]` — Integration tests exercising boundaries between components
 - `[feature]` — Feature/end-to-end tests exercising complete user-facing workflows
 - `[manual]` — Manual inspection, observation, or user confirmation
-- `[target]` — Mechanical check runnable only against the real deployment target; not a human judgement
+- `[target]` — Mechanical check runnable only against the real deployment target; not a human judgement, and not a development-environment claim
 - `[tdd]` — Workflow mode: task follows red-green-refactor loop. Composable with any level tag (e.g. `[tdd] [unit]`). Orthogonal — describes how to work, not what kind of test.
 
 ### Acceptance Criteria Coverage

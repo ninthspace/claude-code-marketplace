@@ -7,12 +7,22 @@
 # truth, then both hooks are run against that SAME fixture and their active-state
 # decisions are asserted to agree with the helper's classification:
 #
-#   - CURRENT -> injected as active state by both hooks
-#   - FRESH   -> never active state (informational in startup; not injected on clear)
-#   - STALE   -> never active state (cleanup candidate in startup; not injected on clear)
+#   - CURRENT -> presented as active state by both hooks
+#   - FRESH   -> never active state (informational in startup; absent on clear)
+#   - STALE   -> never active state (cleanup candidate in startup; absent on clear)
 #
 # The "startup" source is driven through session-start.sh; the "clear" source
 # through session-start-compact.sh.
+#
+# **What distinguishes active state from a mention.** Neither hook emits a progress file
+# body — both name it, because a payload whose length is set by a document is a payload
+# that gets truncated. So presence of a filename proves nothing on its own: the startup
+# hook prints `File: {path}` for every stale and parallel file too. The discriminator is
+# *placement* — a filename inside the `--- CPM SESSION STATE ... --- END ---` block is
+# active state, and the same filename anywhere else is a mention. Every assertion below
+# slices that block first and asks what is inside it, which is a stricter question than
+# the body markers used to answer: a hook that named all three files in the state block
+# would have passed the old check for CURRENT and fails this one.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test-helpers.sh"
@@ -24,11 +34,20 @@ CLASSIFIER="$SCRIPT_DIR/../lib/progress-classify.sh"
 echo "Testing: cross-hook integration (helper -> session-start.sh / session-start-compact.sh)"
 echo "======================================================================================="
 
-# Distinct body markers so we can tell active-state injection (file body is cat'd)
-# from mere metadata mention (skill/phase/path only).
+# Distinct session ids, so each fixture file has a distinguishable filename. The filename
+# is what the hooks emit, and which block it lands in is what the assertions read.
 CUR_ID="cur-session"
 FRESH_ID="fresh-other"
 STALE_ID="stale-other"
+
+# The active-state block, whichever hook produced it. Both open `--- CPM SESSION STATE`
+# and close `--- END ---`; the startup form carries the skill and phase in its heading and
+# the compact form says "recovered after compaction", so the opener is matched by prefix.
+session_state_block() {
+  awk '/^--- CPM SESSION STATE/ { inside = 1 }
+       inside { print }
+       inside && /^--- END ---$/ { inside = 0 }'
+}
 
 set_mtime_hours_ago() {
   local file="$1" hours="$2"
@@ -80,11 +99,28 @@ fi
 
 # --- startup source (session-start.sh) matches the helper ---
 
-test_start "startup: CURRENT file body is injected as active state"
+test_start "startup: the CURRENT file is named inside the active-state block"
 PROJECT=$(setup_shared_fixture)
 OUTPUT=$(run_startup "$PROJECT" "$CUR_ID")
-assert_contains "$OUTPUT" "BODY-CUR-MARKER"
 assert_contains "$OUTPUT" "--- CPM SESSION STATE"
+assert_contains "$(echo "$OUTPUT" | session_state_block)" ".cpm-progress-${CUR_ID}.md"
+
+# The other side of the discriminator. Both other-session files are named elsewhere in this
+# same output, so without this pair the assertion above would also pass a hook that put
+# every file in the state block.
+test_start "startup: the FRESH and STALE files are named, but NOT inside the active-state block"
+BLOCK=$(echo "$OUTPUT" | session_state_block)
+assert_contains "$OUTPUT" ".cpm-progress-${FRESH_ID}.md"
+assert_contains "$OUTPUT" ".cpm-progress-${STALE_ID}.md"
+assert_not_contains "$BLOCK" ".cpm-progress-${FRESH_ID}.md"
+assert_not_contains "$BLOCK" ".cpm-progress-${STALE_ID}.md"
+
+# Payload bounding, asserted where it can regress: no progress file body, of any
+# classification, reaches the output. A `cat` restored anywhere in the hook fires this.
+test_start "startup: no progress file body is emitted, for any classification"
+assert_not_contains "$OUTPUT" "BODY-CUR-MARKER"
+assert_not_contains "$OUTPUT" "BODY-FRESH-MARKER"
+assert_not_contains "$OUTPUT" "BODY-STALE-MARKER"
 
 test_start "startup: FRESH other-session file is informational, not active state"
 PROJECT=$(setup_shared_fixture)
@@ -106,31 +142,39 @@ assert_not_contains "$OUTPUT" "MUST stop"
 
 # --- clear source (session-start-compact.sh) matches the helper ---
 
-test_start "clear (matching id): only the CURRENT file body is injected; fresh/stale are not"
+test_start "clear (matching id): only the CURRENT file is named; fresh/stale are not named at all"
 PROJECT=$(setup_shared_fixture)
 OUTPUT=$(run_compact "$PROJECT" "$CUR_ID" "clear")
-assert_contains "$OUTPUT" "BODY-CUR-MARKER"
-assert_not_contains "$OUTPUT" "BODY-FRESH-MARKER"
-assert_not_contains "$OUTPUT" "BODY-STALE-MARKER"
+assert_contains "$(echo "$OUTPUT" | session_state_block)" ".cpm-progress-${CUR_ID}.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-${FRESH_ID}.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-${STALE_ID}.md"
 
-test_start "clear (fresh new id, no match): no fixture file is injected as active state"
-PROJECT=$(setup_shared_fixture)
-OUTPUT=$(run_compact "$PROJECT" "brand-new-session" "clear")
+test_start "clear (matching id): no progress file body is emitted"
 assert_not_contains "$OUTPUT" "BODY-CUR-MARKER"
 assert_not_contains "$OUTPUT" "BODY-FRESH-MARKER"
 assert_not_contains "$OUTPUT" "BODY-STALE-MARKER"
 
+test_start "clear (fresh new id, no match): no fixture file is presented as active state"
+PROJECT=$(setup_shared_fixture)
+OUTPUT=$(run_compact "$PROJECT" "brand-new-session" "clear")
+assert_not_contains "$OUTPUT" ".cpm-progress-${CUR_ID}.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-${FRESH_ID}.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-${STALE_ID}.md"
+assert_not_contains "$OUTPUT" "BODY-CUR-MARKER"
+
 # --- Both hooks agree on the CURRENT set for the same fixture ---
 
-test_start "Both hooks inject the same CURRENT file as active state for the shared fixture"
+test_start "Both hooks name the same CURRENT file as active state for the shared fixture"
 PROJECT=$(setup_shared_fixture)
-STARTUP_OUT=$(run_startup "$PROJECT" "$CUR_ID")
-COMPACT_OUT=$(run_compact "$PROJECT" "$CUR_ID" "clear")
-if echo "$STARTUP_OUT" | grep -qF "BODY-CUR-MARKER" && echo "$COMPACT_OUT" | grep -qF "BODY-CUR-MARKER"; then
-  test_pass
-else
-  test_fail "Both hooks should inject the CURRENT file body"
-fi
+STARTUP_BLOCK=$(run_startup "$PROJECT" "$CUR_ID" | session_state_block)
+COMPACT_BLOCK=$(run_compact "$PROJECT" "$CUR_ID" "clear" | session_state_block)
+STARTUP_NAMED=$(printf '%s' "$STARTUP_BLOCK" | grep -o '\.cpm-progress-[a-z-]*\.md' | head -1)
+COMPACT_NAMED=$(printf '%s' "$COMPACT_BLOCK" | grep -o '\.cpm-progress-[a-z-]*\.md' | head -1)
+# Read out of each hook rather than compared to a literal, so a fixture rename that both
+# hooks follow stays green and one hook drifting apart from the other fails.
+assert_agrees "the file each hook presents as active state" \
+  "session-start.sh" "$STARTUP_NAMED" \
+  "session-start-compact.sh" "$COMPACT_NAMED"
 
 # --- The classifier reaches the same fixture from skill context ---
 #

@@ -73,13 +73,22 @@
 #   STATE      label, moscow, delivered|in-progress|untraced            (spec scope)
 #   EXCLUDED   label, moscow                                            (spec scope)
 #   SUMMARY    scope, requirements, untraced, delivered, in-progress    (spec scope)
-#   ROW        matrix-path, base, label, covered-by, verified|unverified (both scopes)
-#   CRITERION  matrix-path, label, covered-by, verified|unverified       (both scopes)
-#   UNRESOLVED matrix-path, label, covered-by                            (both scopes)
+#   ROW        matrix-path, base, label, covered-by, verified|unverified, tag (both scopes)
+#   CRITERION  matrix-path, label, covered-by, verified|unverified, tag       (both scopes)
+#   UNRESOLVED matrix-path, label, covered-by                                 (both scopes)
 #
 # `CRITERION` carries the story-originated rows — rows with no requirement behind them.
 # They are reported separately rather than as a `ROW` with an empty base, so nothing
 # downstream can count one toward a requirement.
+#
+# The `tag` on `ROW` and `CRITERION` is the matrix's Spec Test Approach cell — the test
+# approach the spec assigned — with its backticks removed, and empty when the column is
+# blank or absent. It is reported, never interpreted: a tick is a tick whatever tag sits
+# beside it, and the verdict below counts rows the same way it always has. What it lets a
+# reader do is separate the ticks a test produced from the ones resting on a human's
+# judgement (`[manual]`) or on an environment nobody here has (`[target]`) — a distinction
+# that was previously stated only in the matrix and invisible to everything reading it, so
+# a wall of green could not be told apart from a wall of self-assessment.
 #
 # `UNRESOLVED` carries a row that names a requirement the label cannot be resolved to —
 # in practice a label naming several, such as `ENV1–ENV5`. It is a record rather than a
@@ -254,11 +263,11 @@ emit_req() {
 }
 
 emit_row() {
-  printf 'ROW\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5"
+  printf 'ROW\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6"
 }
 
 emit_criterion() {
-  printf 'CRITERION\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4"
+  printf 'CRITERION\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5"
 }
 
 # No verified field: whether an unresolvable row carries a tick is not a fact worth
@@ -275,7 +284,7 @@ emit_unresolved() {
 # what stops a consumer counting one toward a requirement by accident.
 emit_matrix_rows() {
   local matrix_abs="$1" matrix_rel="$2"
-  local line rest kind base label covered verified
+  local line rest kind base label covered verified tag
   local tab
   tab="$(printf '\t')"
 
@@ -284,22 +293,29 @@ emit_matrix_rows() {
     # `read` collapses a run of tabs into a single delimiter — and a story-originated row
     # carries an empty base, which is exactly a run of two. Every field after it would
     # shift left, silently, and the record would still look well-formed.
+    #
+    # Every field is taken with `%%` — the *shortest* leading match — including the last two.
+    # `verified` previously used `#*` to take everything remaining, which is correct only
+    # while it is the final field; appending the tag would have parked it inside `verified`
+    # and left a record that still looked well-formed. The trailing field is the one that
+    # silently absorbs whatever is added after it, so it is not written that way.
     kind="${line%%$tab*}";  rest="${line#*$tab}"
     base="${rest%%$tab*}";  rest="${rest#*$tab}"
     label="${rest%%$tab*}"; rest="${rest#*$tab}"
     rest="${rest#*$tab}"                     # spec text: neither record type carries it
-    covered="${rest%%$tab*}"
-    verified="${rest#*$tab}"
+    covered="${rest%%$tab*}"; rest="${rest#*$tab}"
+    verified="${rest%%$tab*}"
+    tag="${rest#*$tab}"
 
     if [ "$kind" = "story-originated" ]; then
-      emit_criterion "$matrix_rel" "$label" "$covered" "$verified"
+      emit_criterion "$matrix_rel" "$label" "$covered" "$verified" "$tag"
     elif [ -z "$base" ]; then
       # A requirement row whose label resolved to nothing. Kept out of `ROW` because a ROW
       # with an empty base would join against no requirement while still counting as a row,
       # which is the silent version of this failure.
       emit_unresolved "$matrix_rel" "$label" "$covered"
     else
-      emit_row "$matrix_rel" "$base" "$label" "$covered" "$verified"
+      emit_row "$matrix_rel" "$base" "$label" "$covered" "$verified" "$tag"
     fi
   done
 }

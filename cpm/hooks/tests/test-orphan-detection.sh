@@ -85,15 +85,24 @@ make_stale "$PROJECT/docs/plans/.cpm-progress-old-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
 assert_contains "$OUTPUT" "STALE"
 
+# Each listed file is one row — `N. skill · phase · age` over its own path — rather than a
+# delimited block per file. The fields are unchanged; only the framing went, to keep the
+# payload inside the harness's 10,000-character cap (docs/maintenance/README.md). So this
+# still asserts all four fields reach the reader, just not on four separate lines.
 test_start "Stale record includes skill, phase, age, and file path"
 PROJECT=$(setup_project_dir)
 create_progress_file "$PROJECT" "old-session" "cpm:spec" "Section 3"
 make_stale "$PROJECT/docs/plans/.cpm-progress-old-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"current-session","source":"startup"}')
-assert_contains "$OUTPUT" "Skill: cpm:spec"
-assert_contains "$OUTPUT" "Phase: Section 3"
-assert_contains "$OUTPUT" "Age:"
+assert_contains "$OUTPUT" "cpm:spec"
+assert_contains "$OUTPUT" "Section 3"
+assert_contains "$OUTPUT" "old"
 assert_contains "$OUTPUT" ".cpm-progress-old-session.md"
+# The four fields must arrive together on one row, not merely appear somewhere in the
+# payload — skill and phase are echoed elsewhere, so presence alone would not show that a
+# reader can tell which file each belongs to.
+test_start "and presents them as a single row per file"
+assert_contains "$OUTPUT" "cpm:spec · Section 3 · "
 
 # --- Fresh other-session files (informational parallel sessions) ---
 

@@ -20,6 +20,94 @@ one without the other and the suite fails on the half that moved.
 - [`cpm:ralph` — ralph-loop state file schema](#cpmralph--ralph-loop-state-file-schema)
 - [`cpm:ralph` — `cpm:do` interaction gates](#cpmralph--cpmdo-interaction-gates)
 - [`cpm:epics` ↔ `coverage-rollup.sh` — the blocking classes](#cpmepics--coverage-rollupsh--the-blocking-classes)
+- [SessionStart hooks ↔ the harness — the hook payload size limit](#sessionstart-hooks--the-harness--the-hook-payload-size-limit)
+
+---
+
+## SessionStart hooks ↔ the harness — the hook payload size limit
+
+Both SessionStart hooks (`cpm/hooks/session-start.sh`, `cpm/hooks/session-start-compact.sh`)
+write to stdout, which Claude Code injects into the session context. **Hook output is capped
+at 10,000 characters.** Past that, the harness does not trim to the cap — it writes the whole
+output to a file under the session's `tool-results/` directory and inlines a ~2 KB preview,
+under a notice reading `Output too large (NNKB). Full output saved to: <path>` followed by
+`Preview (first 2KB):`.
+
+**This cap is the reason the hooks name files instead of emitting them.**
+
+| What | Value | Status |
+|---|---|---|
+| Cap on hook stdout | **10,000 characters** | Documented. |
+| What happens on breach | Replaced by a **~2 KB preview**, not trimmed to 10 KB | Bug — [anthropics/claude-code#44086](https://github.com/anthropics/claude-code/issues/44086). Closed as inactive, not fixed. |
+| The notice | Descriptive (`Full output saved to: …`), not imperative — the model is given a path but not told to read it | Bug — [anthropics/claude-code#55750](https://github.com/anthropics/claude-code/issues/55750), the SessionStart case specifically. Closed as a duplicate of #44086. |
+
+Both issues are **closed without a fix**, so this behaviour should be treated as the status
+quo rather than as something about to change.
+
+**There is no escape hatch in the output format.** The cap is on the output *string*, not on
+stdout specifically — the hooks reference states it covers `additionalContext`,
+`systemMessage` and plain stdout alike, for every hook type and event. Switching these hooks
+to the JSON `hookSpecificOutput.additionalContext` form would buy nothing, so do not spend
+time on it expecting to.
+
+**How it failed.** Before 2026-07-28 both hooks `cat`-ed `skill-conventions.md` (45,822 bytes)
+plus every current-session progress file, and the compact hook added the compact summary.
+One real session emitted 86,748 bytes. What reached context was bytes 0–2047: the session id,
+the user name, `## Roster Loading`, and 794 of the 1,435 bytes of `## Perspectives`, cut
+mid-word. `## Conversational Output` was at byte 28,335, `## Implementation Guidelines` at
+37,923, and the compact summary at 55,250. None arrived. No output said so — a session that
+had been told it received the shared conventions had received 2.4% of them.
+
+**Why the budget is where it is, and why the margin is thin.** `CPM_PAYLOAD_BUDGET` in
+`session-start.sh` is **9,600 characters** against the 10,000 cap, with a measured worst case
+of ~9,235. Characters, not bytes: the cap is stated in characters and this output is full of
+em dashes at three bytes each, so a byte-denominated budget compared against a
+character-denominated cap would be measuring the wrong thing.
+
+That is only ~8% headroom, and it is not comfortable. Over half the payload is the
+`CORE_SECTIONS` extract (~5,100 characters for three sections), which is a deliberate
+trade — inlining them saves every session a Read call — but it means **adding a section to
+`CORE_SECTIONS` is not a free change.** Re-measure before doing it. If the core has to grow,
+the cheaper savings have already been taken (the other-session lists are one row per file at
+`CPM_LIST_CAP=3`, and the section index is running text rather than a bulleted list), so the
+next lever is dropping a section back out of the core.
+
+**What actually defends against the failure, if the cap is breached anyway.** Ordering. The
+payload is emitted most-urgent-first — ralph warning, then the session's own state, then the
+conventions — so that anything inside the ~2 KB preview still reaches the session. The two
+things that can cost a user work are inside it; the conventions extract, which names a file
+that is on disk either way, is deliberately not. This is asserted, not merely intended.
+
+**When to update**: if a `Preview (first NKB)` notice ever shows a size other than 2 KB, or
+the 10,000-character cap changes, revise the figures here **and** `HARNESS_LIMIT` /
+`HARNESS_PREVIEW` in `cpm/hooks/tests/test-session-start-budget.sh`, which is the only other
+place those two external constants are written down.
+
+**Operative counterparts** (this record documents them; it does not define them):
+`CPM_PAYLOAD_BUDGET` and `CPM_LIST_CAP` in `cpm/hooks/session-start.sh`, `CORE_SECTIONS` in
+`cpm/hooks/lib/conventions-core.sh`, and the assertions in
+`cpm/hooks/tests/test-session-start-budget.sh` — which pin the payload's independence from
+document size, the emission order, and the budget's own relationship to the cap, not merely
+the payload's size.
+
+---
+
+## `cpm:ralph` — supported ralph-loop version
+
+**Supported: `ralph-loop@ninthspace-ralph` 1.2.0 or later.** This is a *stated* minimum, not an enforced one — see below for why — and it is written in four places that must agree:
+
+| Site | What it says |
+|---|---|
+| `README.md` (marketplace root) | Install instruction plus what is lost below it |
+| `cpm/README.md` | The same, with the per-change table |
+| `cpm/skills/ralph/SKILL.md` step 1c | The supported version, and the warning text naming it |
+| here | This record |
+
+`cpm/hooks/tests/test-ralph-supported-version.sh` extracts the version from each and requires one distinct value, so bumping the minimum in one place fails until it is bumped in all of them.
+
+**Why it is not enforced.** A registered Stop hook exposes no version to the skill, and a version is a proxy for the question that actually matters: what the hook *does* on a turn ending in a tool call. A hook can be installed, registered, and still delete the state file at the first iteration boundary. Step 1c therefore runs `cpm/hooks/lib/ralph-hook-probe.sh` against whichever hook is present and branches on its exit code. The version is what a user is told to install; the probe is the gate.
+
+**When to update**: raise the minimum when a fork behaviour that CPM's own documentation describes lands in a new release. As of 1.2.0 there are three — fail-closed extraction (1.1.0), the promise-marker disambiguation (1.2.0), and the honoured `active` field (1.2.0). The last two are recorded in the tables below and in review 02 (OBS-15, OBS-37).
 
 ---
 
@@ -39,6 +127,7 @@ iteration: 1
 max_iterations: {integer, 0 = unlimited}
 completion_promise: "{text}" or null
 started_at: "{utc_timestamp from Bash: date -u +\"%Y-%m-%dT%H:%M:%SZ\"}"
+session_id: {current session id, unquoted}
 ---
 
 {prompt text}
@@ -46,13 +135,24 @@ started_at: "{utc_timestamp from Bash: date -u +\"%Y-%m-%dT%H:%M:%SZ\"}"
 
 | Field | Type | Stop Hook Usage |
 |---|---|---|
-| `active` | boolean | Not currently checked by stop hook (presence of file implies active) |
+| `active` | boolean | **Plugin-dependent** — see below |
 | `iteration` | integer | Compared against `max_iterations`; incremented each loop |
 | `max_iterations` | integer | Loop stops when `iteration >= max_iterations` (0 = unlimited) |
 | `completion_promise` | string or null | Matched against `<promise>` tags in assistant output |
 | `started_at` | ISO 8601 string | Informational; not parsed by stop hook |
+| `session_id` | string | Compared against the hook's own session; a mismatch exits without touching the file. Absent or empty reads as legacy and does not gate |
 
-**When to update**: If the ralph-wiggum plugin changes the state file path, frontmatter field names, or parsing logic in `stop-hook.sh`, this skill's Step 3c must be updated to match. The stop hook uses `sed`, `grep`, and `awk` to parse the frontmatter — any format change that breaks these parsers will break the loop.
+**`active` is the one field whose meaning differs by plugin**, and `cpm:ralph` writes it as `true` on all of them:
+
+| Plugin | Reads `active`? | Effect of `active: false` |
+|---|---|---|
+| `ralph-loop@ninthspace-ralph` | Yes | Pauses: the session exits and the state file is left byte-for-byte untouched, so restoring `true` resumes at the same iteration |
+| `ralph-loop@claude-plugins-official` | No | None — the loop continues to its iteration cap |
+| `ralph-wiggum@claude-code-plugins` | No | None — the loop continues to its iteration cap |
+
+Where the field is unread, termination is tested by the state file's *existence* alone. The operative counterpart is in `cpm/skills/ralph/SKILL.md` Step 3c, which instructs the skill to tell the user which behaviour their installed hook has — the failure this guards is a kill switch that silently does nothing.
+
+**When to update**: If any ralph plugin changes the state file path, frontmatter field names, or parsing logic in `stop-hook.sh`, this skill's Step 3c must be updated to match. The stop hook uses `sed`, `grep`, and `awk` to parse the frontmatter — any format change that breaks these parsers will break the loop.
 
 ## `cpm:ralph` — `cpm:do` interaction gates
 

@@ -48,9 +48,13 @@ If explicit epic paths were provided in arguments, resolve them (expand globs). 
 1. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
 2. Use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` (`Done` reads as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn` — terminal, user-set statuses for work no longer needed; a retired epic has nothing to run). Use Grep and Read tools directly (Bash loops with shell variables lose context).
 3. If no runnable epics found (all `Complete` or retired), **branch on `{mode}`**:
-   - **Epic mode** — report to the user and stop: "No incomplete epics found. Nothing to run." Unchanged; this is what the three shapes that predate spec mode still reach.
+   - **Epic mode** — report to the user and stop: "No incomplete epics found. Nothing to run." Before stopping, glob `docs/specifications/[0-9]*-spec-*.md`; if any exist, name them and add one line: "Spec mode runs a spec from scratch — `/cpm:ralph {path}`." Then stop. **Do not offer spec mode, and do not ask which one to use.** The stop is still a stop.
    - **Spec mode** — do **not** stop, and do not emit that message. Zero epics is spec mode's starting state rather than a failure: the run's first phase is what writes them. Report "No epics for `{spec_path}` yet — phase 1 generates them." and continue pre-flight with an empty resolved list.
 4. Present the discovered epics and confirm with AskUserQuestion. In spec mode present `{spec_path}` alongside them, since the epics found are the run's starting position and the spec is what it is measured against — with none found there is still something to confirm.
+
+**Why the epic-mode stop names the specs but does not offer them.** The mode comes from the path, and a bare invocation supplied no path — so there is nothing to resolve, and a gate that resolved one would move the mode decision out of the argument and into a question. That matters more than it sounds: spec mode commits a loop to generating a whole epic set and delivering it, which is a much larger thing than the run the caller asked for, and an option presented as recommended gets accepted.
+
+The stop was nonetheless the wrong shape, and being a dead end is what makes it worth routing around: it reports that there is nothing to run in a repository that plainly has something to run, and names no way forward. Naming the specs and the command is the whole remedy — the user types the path, which is where the mode has always come from.
 
 For range-style references (e.g. `23 through 26`), expand to matching files: `docs/epics/23-epic-*.md`, `docs/epics/24-epic-*.md`, etc.
 
@@ -83,10 +87,12 @@ Formal plan mode (`EnterPlanMode`) creates an interactive approval gate that sta
 
 A ralph loop plugin's stop hook is the only external dependency — it intercepts session exit and feeds the prompt back to continue the loop. `cpm:ralph` writes the state file directly (no dependency on the setup script).
 
-**Three plugins provide that hook and CPM works with any of them.** `ralph-loop@ninthspace-ralph` is the fork CPM is developed against — the same plugin with fail-closed transcript extraction, so a transcript it cannot read no longer ends the run. `ralph-loop@claude-plugins-official` (Anthropic) is the line it forked from, and `ralph-wiggum@claude-code-plugins` the original before that. All three install the same hook at the same relative path under two distinct plugin names, so no name may be treated as *the* dependency — a check written against one reports "not installed" on a machine running another, and the fork and its upstream share a name and differ only by marketplace.
+**Three plugins provide that hook and CPM works with any of them.** `ralph-loop@ninthspace-ralph` **1.2.0 or later** is the supported configuration — the fork CPM is developed against, and the version this skill's documented loop behaviour is written against. `ralph-loop@claude-plugins-official` (Anthropic) is the line it forked from, and `ralph-wiggum@claude-code-plugins` the original before that. All three install the same hook at the same relative path under two distinct plugin names, so no name may be treated as *the* dependency — a check written against one reports "not installed" on a machine running another, and the fork and its upstream share a name and differ only by marketplace.
+
+**The version is stated, never checked.** A registered hook carries no version this skill can read, and a version is the weaker question anyway: step 3 below runs the hook and branches on what it *does*, which is what a version number is a proxy for. So name the supported version when telling a user what to install, and gate on the probe.
 
 1. Check if a ralph stop hook is registered by scanning the session's available hooks for a "Stop" hook referencing `ralph-loop`, `ralph-wiggum`, or `stop-hook.sh`.
-2. If not detected, warn the user: "No ralph stop hook detected. The loop mechanism requires a ralph-loop or ralph-wiggum plugin — without the stop hook, writing the state file will have no effect. Install `ralph-loop@ninthspace-ralph`, whose stop hook does not delete the loop's state file when it cannot read the transcript." Use AskUserQuestion with options: "Continue anyway" or "Stop".
+2. If not detected, warn the user: "No ralph stop hook detected. The loop mechanism requires a ralph-loop or ralph-wiggum plugin — without the stop hook, writing the state file will have no effect. Install `ralph-loop@ninthspace-ralph` 1.2.0 or later, whose stop hook does not delete the loop's state file when it cannot read the transcript, does not print the completion promise inside its own tags, and honours `active: false` as a pause." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 3. **Probe which direction the hook fails in**: resolve the plugin's `hooks/lib/ralph-hook-probe.sh` to an absolute path, run `bash <that path>`, and branch on its exit code. Unlike `{rollup_script}` (Step 1f) this path is never interpolated into the prompt — the probe answers a question about launching, so it runs once here and the loop never sees it. `0` — the hook fails closed; continue pre-flight without comment. `2` — no hook on disk; fold into the warning above rather than reporting twice. `1` — the probe could not run; say so and let the user decide, since an unrun probe is not a pass. `3` — **a hook fails open**: report "The installed stop hook deletes the loop's state file on a normal turn shape and exits 0. An unattended run would end silently and look like a clean finish." Name the hook the probe reported, since with both plugins enabled the safe one is not the one that matters. Use AskUserQuestion with "Patch or switch plugin first (recommended)" and "Arm the loop anyway".
 
 **Both plugins enabled is a real configuration, and the dangerous hook wins.** Two registered Stop hooks both fire on the same session, and the state file only has to be deleted by one of them for the loop to die. The probe therefore runs *every* hook it finds and lets a single fails-open verdict decide, rather than stopping at the first one that passes.
@@ -103,9 +109,12 @@ A ralph loop plugin's stop hook is the only external dependency — it intercept
 
 Discover the project's test runner for inclusion in the generated prompt:
 
-1. Check project config files (`composer.json`, `package.json`, `Makefile`, `pyproject.toml`, `Cargo.toml`) for test commands.
-2. If found, report: "Discovered test runner: {command}. This will be referenced in the generated prompt."
-3. If not found, note: "No test runner discovered. The generated prompt will instruct `/cpm:do` to discover one at runtime."
+1. **In spec mode, read the spec's environmental block first.** `{spec_path}` is resolved in Step 1a, so the file is already in hand. Read its `## Non-Functional Requirements` section and take the test tooling from the `ENVn` entries that name it — a test runner, a browser automation driver, an isolated test database. Report what the spec named, and whether it named a tool (`Pest 3 or later`) or a command: a tool is what the run has to install before it can have a command, so say which was found rather than reporting a tool as though it were runnable.
+2. Check project config files (`composer.json`, `package.json`, `Makefile`, `pyproject.toml`, `Cargo.toml`) for test commands. In spec mode these confirm or complete what step 1 found; in epic mode they are the only source.
+3. If found, report: "Discovered test runner: {command}. This will be referenced in the generated prompt."
+4. If not found, note: "No test runner discovered. The generated prompt will instruct `/cpm:do` to discover one at runtime."
+
+**Why the spec is consulted first, and only in spec mode.** A greenfield spec-mode run has no `composer.json`, no `package.json` and no `Makefile` — the application is what the run is about to build — so a discovery consulting only those files cannot succeed in the case spec mode exists for. It reports "no test runner discovered" and assembles a prompt telling `/cpm:do` to find one at runtime, while the answer sits in the file this same pre-flight already resolved. `cpm:spec` Step 3a is the single site at which a spec captures test tooling, which makes the `ENVn` entries a statement of what the target *must* provide; the config files are evidence of what the project currently *has*, and in epic mode that is the better question, which is why the order does not change there.
 
 #### 1e. Resume Detection
 
@@ -133,7 +142,45 @@ The generated prompt gates its completion promise on `coverage-rollup.sh`'s exit
 1. Resolve the plugin's `hooks/lib/coverage-rollup.sh` to an absolute path and store it as `{rollup_script}`.
 2. Confirm the file is readable. If it is not, warn the user: "The coverage roll-up script was not found at {path}. The loop will run, but its completion promise will not be script-backed — it would fall back to the model's own judgement, which is what the script-backed check exists to remove." Use AskUserQuestion with options: "Continue anyway" or "Stop".
 
+**The exit codes, stated here because assembly depends on them.** Both completion clauses and the phase predicate branch on `{rollup_script} --verdict`'s exit code, so the contract is guidance you read while assembling — not only text you copy into the template. Do not re-derive it by reading the script.
+
+| Code | Means | What the loop does with it |
+|---|---|---|
+| `0` | Ran cleanly, nothing outstanding | The only code that permits the completion promise |
+| `1` | Read failure — input unreadable, message on stderr names the file | Say the check could not run; never emit the promise |
+| `2` | Usage error — the invocation is wrong | Same as `1`: the check did not run |
+| `3` | Ran cleanly, work remains | Name the rows it emitted and keep working |
+| `4` | No matrix names this spec yet | Spec mode only, and only under `--verdict`: the one code that sends the loop into `/cpm:epics` |
+
+`4` is reachable only with `--verdict`; without the flag a no-matrix read collapses into `1`. Every code other than `0` and `3` means the verdict is unknown rather than negative, and the difference matters: a loop that treats "could not run" as "work remains" runs to its iteration cap on finished work.
+
 **Why resolved here rather than written as `${CLAUDE_PLUGIN_ROOT}`**: the prompt is fed back to the model as a plain user turn by the stop hook, not executed inside a skill, so a plugin-relative variable is not guaranteed to be set when the completion check runs — and an unset one expands to a bare `/hooks/lib/coverage-rollup.sh`, which exists nowhere — a path built from a variable that is set for hooks and not for the call that uses it, failing silently. Interpolating the resolved path keeps the prompt self-contained, which is what every other `{...}` in the template already does.
+
+#### 1g. Session-State Ignore Check
+
+The assembled prompt instructs the loop to commit after each completed story, and an autonomous run stages everything. Three files are session-scoped agent state that no run should be committing, and one of them changes on **every** iteration:
+
+| Path | Written by | Churn |
+|---|---|---|
+| `.claude/ralph-loop.local.md` | the ralph plugin | `iteration:` changes every cycle; the file is deleted on a clean finish |
+| `docs/plans/.cpm-progress-*` | every CPM skill (shared **Progress File Management**) | rewritten at each step |
+| `docs/plans/.cpm-compact-summary-*` | the PostCompact hook | written on compaction |
+
+Do this before arming, not after:
+
+1. Check whether the project ignores all three. A repository with no `.gitignore` at all ignores nothing.
+2. If any is unignored, show the user the lines that would be added and get approval — this edits a file in their repository, so it is their call:
+   ```
+   # Session-scoped agent state, not part of the project's history
+   /.claude/ralph-loop.local.md
+   /docs/plans/.cpm-*
+   ```
+   Use AskUserQuestion with "Add them" / "Continue without" / "Stop". On approval, append them to the project's root `.gitignore`, creating it if absent.
+3. If the user declines, continue — and say once that the loop's own state and CPM's progress files will appear in its commits.
+
+**Why this is pre-flight and not a prompt clause.** The leak is caused by the first commit, so a run that discovers it later has already made it: adding the ignore afterwards untracks the files but leaves them in the commits already written, and history is not rewritten. Every other CPM skill is safe without this because a human stages their work and does not type these paths; `cpm:ralph` is the only skill that commits with no one looking at the file list, which is what makes the check its business rather than the shared convention's.
+
+**`.claude/ralph-loop.local.md` is not CPM's file, and is included anyway.** It is the same class of mistake, this skill is what puts it on disk, and a user reading a commit full of loop churn will not care which plugin wrote it.
 
 ### Step 2: Prompt Assembly
 
@@ -215,6 +262,20 @@ When phase 2 has no epic left to work, run bash {rollup_script} --spec {spec_pat
 
 The measurement that would discriminate is the **untraced count** — requirements in a spec with no matrix row anywhere claiming them — and epic scope cannot produce it, because it has no requirement list to compare against. That is `--spec` scope's measurement, which `cpm:status` presents and which spec mode's phase predicate reads directly (see *The phase predicate* above); **epic mode has no spec-scope promise**, and gains none by counting its rows more carefully. So a passing completion line here means "the epics I was pointed at have no unverified rows left", never "the spec is delivered". A spec with a requirement no epic ever covered produces the same clean line.
 
+#### Wrap the assembled prompt before it leaves this step
+
+The template above is one line and stays one line — its stated length is measured on it. The **assembled** prompt is not: interpolation makes it longer still, and written as a single line it is what a human supervising an unattended run reads at every iteration, in a terminal that cannot render it. Wrap it here, once, so the dry-run in Step 3b and the file written in Step 3c cannot show different things:
+
+```
+fmt -s -w 100
+```
+
+**Use `fmt -s`, not `fold -s`.** They differ on exactly one case and it is the case this prompt contains: a token longer than the width. `fold` breaks it mid-token; `fmt` leaves it whole and lets the line run over. `{rollup_script}` interpolates to an absolute path inside the plugin cache — around 96 characters today — so the margin at width 100 is a few characters, and a version bump, a longer marketplace name or a longer home directory spends it. A hard break through that path writes the damage into the file, where the loop reads it every iteration; the display artifact this step exists to fix would become a real one.
+
+**No wrapped line may be exactly `---`.** The hook's body parser is `awk '/^---$/{i++; next} i>=2'`, which skips *every* line matching `^---$`, not only the two frontmatter fences — so such a line is silently dropped from the prompt. Wrapping only ever breaks at existing spaces, so this is reachable only if the body already contains `---` as a standalone token; the template's "use `--` for dashes" rule is what keeps it out, and this is the second reason for that rule.
+
+Wrapping is safe at every layer below: the parser above takes all lines after the frontmatter, and `jq --arg` escapes the newlines into the JSON it feeds back. The prompt is plain text with no markdown, so a line break is whitespace and nothing more — but it is *only* whitespace while no token is broken, which is what the tool choice above protects.
+
 ### Step 3: State File Write and Launch
 
 #### 3a. Existing State File Guard
@@ -269,6 +330,8 @@ If "Launch it":
 **Why `session_id` is written.** The state file is project-scoped but the Stop hook fires in *every* session open on that project. `ralph-loop` compares this field against the session its hook was invoked for and exits without touching the file when they differ, so a second window on the same repo neither steals the loop nor deletes its state. `ralph-wiggum` has no such field and ignores it, which is why writing it is safe on either plugin.
 
 **Write the real id or omit the field — never a placeholder.** A field that is absent, or present but empty, reads as legacy and the hook behaves as it always did. A field holding a *wrong* id matches no session, so every Stop hook exits early, the prompt is never fed back, and the loop silently does not run. That failure looks exactly like the loop having finished, which is the class of failure step 1c exists to remove — so if the session id is not available, leave the line out rather than guessing at it.
+
+**What `active: true` does, and where.** `ralph-loop@ninthspace-ralph` reads the field: anything other than `true` lets the session exit and leaves the state file untouched, so setting it `false` pauses a run and setting it back resumes at the same iteration. On the other two plugins the field is inert — they test termination by the state file's existence alone, so a user who sets it `false` there sees no error and no change, and the loop continues to its iteration cap. **Tell the user which behaviour they have** when reporting the launch (step 1c has already established which hook is installed), because the failure mode is a kill switch that appears to work. On any plugin, deleting `.claude/ralph-loop.local.md` stops the loop — that is the one instruction that holds everywhere.
 2. Output an activation message:
 
 ```

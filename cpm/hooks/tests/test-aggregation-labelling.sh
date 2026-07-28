@@ -220,7 +220,11 @@ assert_contains "$RALPH_PROMPT" "placed by cpm:do on its own work"
 test_start "the printed line says what it counts, so it cannot be read as a spec verdict"
 assert_contains "$RALPH_PROMPT" "counts rows in these epics, not requirements in a spec"
 
-RALPH_PROSE=$(awk '/^\*\*What the completion line measures/ { s = 1 } /^### Step 3:/ { s = 0 } s' \
+# Ends at the next heading of any level, not at `### Step 3:`. Anchoring on Step 3 made the
+# slice depend on this being the last prose in Step 2, so a later sub-section landing between
+# the two silently widened it — which is the failure assert-style bounds exist to catch, and
+# did.
+RALPH_PROSE=$(awk '/^\*\*What the completion line measures/ { s = 1 } /^#+ / { s = 0 } s' \
   "$SKILLS_DIR/ralph/SKILL.md")
 
 test_start "slice: the section documenting the site spans its own region and no more"

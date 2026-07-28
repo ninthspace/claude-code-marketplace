@@ -136,7 +136,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v3.7.0)
+### Claude Planning Method (v3.8.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
@@ -259,6 +259,15 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 - Compaction resilience — seamlessly survives Claude Code context compaction, with `/cpm:clean` for on-demand cleanup of leftover session-state files
 
 **Companion tool — cpm board:** a standalone terminal UI (`cpm/tools/board/`) that shows the CPM status of every project you register — a three-column Projects → Epics → Stories browser — and launches the right `/cpm:*` session for each without leaving the board. It reads each project's `docs/` planning artifacts read-only. See [the board README](./cpm/tools/board/README.md).
+
+**`/cpm:ralph` needs a Stop hook, and CPM does not ship one.** The autonomous loop is driven by a Stop hook from a separate plugin; every other skill works without one. Install:
+
+```
+/plugin marketplace add ninthspace/ralph-loop
+/plugin install ralph-loop@ninthspace-ralph
+```
+
+**`ralph-loop@ninthspace-ralph` 1.2.0 or later** is the supported configuration — it is what CPM's documented loop behaviour is written against. The loop also runs on `ralph-loop@claude-plugins-official` and `ralph-wiggum@claude-code-plugins`, and `/cpm:ralph` probes whichever hook is installed rather than checking a name or a version. What you lose below 1.2.0 is not an error message: an unreadable transcript ends the run silently and looks like a clean finish, every `<promise>` in the transcript is the hook's own reminder rather than the model's, and `active: false` in the loop's state file does nothing at all. See [the fork's README](https://github.com/ninthspace/ralph-loop) for what each change does.
 
 [View full documentation](./cpm/README.md) | [Interactive Training Guide](./cpm-training-guide.html)
 

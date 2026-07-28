@@ -312,10 +312,10 @@ section() { sed -n "/$1/,/$2/p" "$RALPH_SKILL"; }
 # The two-sided bound this suite introduced now lives in test-helpers.sh as
 # `assert_slice_bounded`, so the pattern is available to every suite rather than to this
 # one — retro 24 recommendation 4. Each range is still guarded once, where it is defined.
-PREFLIGHT_1F=$(section '^#### 1f\.' '^### Step 2')
+PREFLIGHT_1F=$(section '^#### 1f\.' '^#### 1g\.')
 
 test_start "slice: the roll-up pre-flight step spans its own section and no more"
-assert_slice_bounded "$RALPH_SKILL" '^#### 1f\.' '^### Step 2' 4 12
+assert_slice_bounded "$RALPH_SKILL" '^#### 1f\.' '^#### 1g\.' 4 30
 
 test_start "the template passes a resolved placeholder, not a runtime variable"
 assert_not_contains "$PROMPT" "CLAUDE_PLUGIN_ROOT"
@@ -325,6 +325,51 @@ assert_contains "$PREFLIGHT_1F" "absolute path"
 
 test_start "and fails loudly when the script is not there"
 assert_contains "$PREFLIGHT_1F" "was not found at"
+
+# --- The exit-code contract is readable where assembly needs it --------------------------
+#
+# Both completion clauses and the phase predicate branch on this script's exit code, so the
+# assembling agent needs the semantics as *guidance*. Stating them only inside the template
+# — the text being assembled — sent a live run grepping the script for `exit 1|2|3|4`.
+#
+# These are not prose greps. Each code is read out of `coverage-rollup.sh` and the skill is
+# required to document that number, so renumbering a constant in the script fails the suite
+# rather than leaving the skill quietly wrong. The pairing is what makes it an oracle: a
+# skill listing codes the script does not return would read perfectly and misroute the loop.
+
+rollup_const() { grep -m1 "^$1=" "$ROLLUP" | cut -d= -f2; }
+
+USAGE_CODE=$(rollup_const EXIT_USAGE)
+OUTSTANDING_CODE=$(rollup_const EXIT_OUTSTANDING)
+NO_MATRIX_CODE=$(rollup_const EXIT_NO_MATRIX)
+
+test_start "control: the script defines the three named exit constants this reads"
+if [ -n "$USAGE_CODE" ] && [ -n "$OUTSTANDING_CODE" ] && [ -n "$NO_MATRIX_CODE" ]; then
+  test_pass
+else
+  test_fail "could not read exit constants from $ROLLUP (usage='$USAGE_CODE' outstanding='$OUTSTANDING_CODE' no-matrix='$NO_MATRIX_CODE')"
+fi
+
+# 0 and 1 have no named constant — they are `exit 0` and `exit 1` literals — so they are
+# listed here rather than derived. Every code a caller can observe must appear.
+for code in 0 1 "$USAGE_CODE" "$OUTSTANDING_CODE" "$NO_MATRIX_CODE"; do
+  test_start "pre-flight documents exit code $code"
+  assert_contains "$PREFLIGHT_1F" "\`$code\`"
+done
+
+# The routing decision, checked against the script's own number rather than a literal 4.
+test_start "the no-matrix code is the one named as sending the loop into /cpm:epics"
+assert_contains "$PREFLIGHT_1F" "\`$NO_MATRIX_CODE\` is reachable only with \`--verdict\`"
+
+# The must-NOT: the whole point is that the agent stops re-deriving this from the source.
+test_start "and pre-flight tells the reader not to re-derive it from the script"
+assert_contains "$PREFLIGHT_1F" "Do not re-derive"
+
+# The phase predicate's exit-4 rule and this table must name the same code. Two sites
+# stating a routing decision is how they drift apart.
+test_start "the phase predicate branches on the same no-matrix code"
+assert_contains "$(section '^#### The phase predicate' '^#### ')" \
+  "Exit \`$NO_MATRIX_CODE\` is the only code that sends the loop into"
 
 test_start "the placeholder is listed among the prompt's interpolated variables"
 assert_contains "$(section '^### Step 2: Prompt Assembly' '^\*\*Template\*\*')" \

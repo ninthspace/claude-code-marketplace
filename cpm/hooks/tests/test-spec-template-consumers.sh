@@ -200,7 +200,7 @@ STEP_3A=$(step_3a)
 STEP_6D=$(step_6d)
 
 test_start "control: the Step 3a slice is bounded"
-assert_slice_bounded "$SPEC_SKILL" '^#### Step 3a: Environmental Constraints$' '^### Section 4:' 15 45
+assert_slice_bounded "$SPEC_SKILL" '^#### Step 3a: Environmental Constraints$' '^### Section 4:' 15 60
 
 test_start "control: the Step 6d slice is bounded"
 assert_slice_bounded "$SPEC_SKILL" '^#### Step 6d:' '^#### Step 6e:' 4 16

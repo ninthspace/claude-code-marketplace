@@ -67,7 +67,7 @@ step_3a() {
 # allow fails there too rather than only here.
 
 test_start "control: the Step 3a slice is bounded"
-assert_slice_bounded "$SPEC_SKILL" '^#### Step 3a: Environmental Constraints$' '^### Section 4:' 15 45
+assert_slice_bounded "$SPEC_SKILL" '^#### Step 3a: Environmental Constraints$' '^### Section 4:' 15 60
 
 test_start "control: the inheritance section slice is bounded"
 assert_slice_bounded "$SPEC_SKILL" '^### Constraint Inheritance (Startup)$' '^## Process$' 8 30

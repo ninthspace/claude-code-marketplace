@@ -162,9 +162,14 @@ run_without_env() {
   env ${env_args[@]+"${env_args[@]}"} "$@"
 }
 
+# The two counters measure different things and must not be printed as a fraction.
+# TESTS_RUN counts test_start — test cases. TESTS_PASSED counts test_pass, which every
+# assert_* helper calls — assertions. A test case holding three assertions contributes 1
+# and 3, so `21/19` was a routine result and not the impossibility it read as. Name the
+# units instead: an `X/Y` with X > Y invites exactly one reading, and it is the wrong one.
 test_summary() {
   echo ""
-  echo "Results: $TESTS_PASSED/$TESTS_RUN passed, $TESTS_FAILED failed"
+  echo "Results: $TESTS_PASSED assertions passed in $TESTS_RUN tests, $TESTS_FAILED failed"
   if [ "$TESTS_FAILED" -gt 0 ]; then
     exit 1
   fi

@@ -203,11 +203,29 @@ assert_empty "$(grep -nE 'https?://' "$DO_SKILL")"
 
 test_start "cpm:epics still tags mockup-conformance criteria manual, never automated"
 if grep -qF 'design target' "$EPICS_SKILL" \
-  && grep -qF 'never** an automated markup-parsing test' "$EPICS_SKILL"; then
+  && grep -qF 'Never write an automated markup-parsing test' "$EPICS_SKILL"; then
   test_pass
 else
   test_fail "the mockup-referencing-criteria block lost one of its two rules"
 fi
+
+# The rule covers two kinds of asset and only one of them is built. Read literally without
+# this split, a data-flow diagram earns a `[manual]` visual-conformance criterion — a
+# criterion with no deliverable to conform to, unverifiable in both directions.
+test_start "cpm:epics distinguishes a mockup from a diagram"
+if grep -qF 'A **mockup**' "$EPICS_SKILL" && grep -qF 'A **diagram**' "$EPICS_SKILL"; then
+  test_pass
+else
+  test_fail "the companion-asset rule no longer branches on which kind of asset it is"
+fi
+
+test_start "and a diagram earns no criterion rather than a manual one"
+assert_contains "$(cat "$EPICS_SKILL")" 'no criterion at all'
+
+# The must-NOT, stated positively because a reader hitting an unreferenced diagram will
+# otherwise read it as a coverage hole and add the criterion the rule above forbids.
+test_start "an unreferenced diagram is named as the correct outcome, not a gap"
+assert_contains "$(cat "$EPICS_SKILL")" 'not a coverage gap'
 
 test_start "The convention still states companion assets are not published"
 # The reason is asserted with the rule: a rule whose rationale is deleted is a rule

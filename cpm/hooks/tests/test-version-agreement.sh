@@ -118,10 +118,29 @@ $(awk -F'"' '/"source"[[:space:]]*:/ {s=$4} /"version"[[:space:]]*:/ && s {print
 EOF
 assert_empty "$MISMATCHES"
 
-test_start "cpm/README.md states no version at all"
-# It is the one documentation file with no version site, deliberately: a per-skill
-# reference that names a release is a file that goes stale every release.
-assert_empty "$(grep -nE 'v?[0-9]+\.[0-9]+\.[0-9]+' "$REPO/cpm/README.md")"
+# The rule is that cpm/README.md carries no version *of CPM's own*: a per-skill reference
+# that names a release is a file that goes stale every release. A declared minimum for an
+# external dependency is the opposite — it changes when that dependency's contract changes,
+# never when CPM ships — and it is exactly what a reader installing CPM needs, so it is
+# allowed and bounded rather than swept up by a blanket "no digits" grep.
+#
+# Bounded two ways: the permitted lines must name the dependency, and CPM's own version is
+# asserted absent separately below. Without the second, widening this to "ignore lines
+# mentioning ralph-loop" would let a stale CPM version ride along on such a line.
+DEP_NAME='ralph-loop'
+
+test_start "cpm/README.md states no version except a declared dependency minimum"
+STRAY=$(grep -nE 'v?[0-9]+\.[0-9]+\.[0-9]+' "$REPO/cpm/README.md" | grep -vF "$DEP_NAME")
+assert_empty "$STRAY"
+
+test_start "and never CPM's own version, on any line"
+assert_empty "$(grep -nF "$VERSION" "$REPO/cpm/README.md")"
+
+# The control: the exemption is only meaningful if the file actually exercises it. If the
+# dependency minimum is ever removed, this fires and the exemption above should go with it
+# rather than sitting there as an unused hole.
+test_start "control: the dependency minimum is present, so the exemption is not dead"
+assert_contains "$(grep -E "$DEP_NAME.*[0-9]+\.[0-9]+\.[0-9]+" "$REPO/cpm/README.md")" "$DEP_NAME"
 
 # --- must NOT pin a version literal in any test assertion -------------------------
 

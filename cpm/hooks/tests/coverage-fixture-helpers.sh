@@ -25,7 +25,8 @@
 #                                [--wont <text>]...
 #                                             — write a spec, print its path
 #   coverage_fixture_matrix <slug> <source-spec> [--dir <path>] [--epic <path>]
-#                                [--row <label> <spec-text> <criterion> <covered-by> <verified>]...
+#                                [[--tag <value>] --row <label> <spec-text> <criterion>
+#                                  <covered-by> <verified>]...
 #                                             — write a coverage matrix, print its path
 #   coverage_fixture_count                    — print how many fixture directories exist
 #   coverage_rollup_run <arg>...              — run coverage-rollup.sh, print its records
@@ -402,9 +403,12 @@ coverage_fixture_spec() {
 # anything else. A typo would otherwise become a silently unverified row, and a test
 # about verification state would pass for the wrong reason.
 #
-# The Spec Test Approach column is fixed at `—`. Nothing in spec 44's requirement list
-# reads it, and a fixture knob nothing exercises is a knob that rots; adding it is a
-# one-line change if a later story needs one.
+# The Spec Test Approach column defaults to `—` and is set for one row at a time by a
+# `--tag <value>` preceding that row. It applies to the next `--row` only and resets after,
+# rather than staying in force: a sticky value is inherited by every row after the one it
+# was written for, and a row that quietly acquired `[target]` is exactly the state the
+# extraction it exercises exists to make visible. A `--tag` with no row after it is an
+# error rather than a no-op, for the same reason.
 coverage_fixture_matrix() {
   local slug="$1"
   local source_spec="$2"
@@ -419,10 +423,23 @@ coverage_fixture_matrix() {
 
   local dir=""
   local epic=""
-  local row_labels=() row_spec_texts=() row_criteria=() row_covered=() row_verified=()
+  local row_labels=() row_spec_texts=() row_criteria=() row_covered=() row_verified=() row_tags=()
+  local pending_tag=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
+      --tag)
+        if [ $# -lt 2 ]; then
+          echo "coverage_fixture_matrix: --tag needs a value" >&2
+          return 1
+        fi
+        if [ -n "$pending_tag" ]; then
+          echo "coverage_fixture_matrix: --tag given twice with no --row between them" >&2
+          return 1
+        fi
+        pending_tag="$2"
+        shift 2
+        ;;
       --dir)
         if [ $# -lt 2 ]; then
           echo "coverage_fixture_matrix: --dir needs a path" >&2
@@ -456,6 +473,8 @@ coverage_fixture_matrix() {
         row_spec_texts+=("$3")
         row_criteria+=("$4")
         row_covered+=("$5")
+        row_tags+=("${pending_tag:-—}")
+        pending_tag=""
         shift 6
         ;;
       *)
@@ -464,6 +483,11 @@ coverage_fixture_matrix() {
         ;;
     esac
   done
+
+  if [ -n "$pending_tag" ]; then
+    echo "coverage_fixture_matrix: --tag $pending_tag has no --row after it" >&2
+    return 1
+  fi
 
   if [ -n "$dir" ]; then
     _coverage_fixture_check_dir "$dir" || return 1
@@ -495,12 +519,13 @@ coverage_fixture_matrix() {
       else
         verified_cell=" "
       fi
-      printf '| %s | %s | %s | %s | %s | — |%s|\n' \
+      printf '| %s | %s | %s | %s | %s | %s |%s|\n' \
         "$((i + 1))" \
         "${row_labels[$i]}" \
         "${row_spec_texts[$i]}" \
         "${row_criteria[$i]}" \
         "${row_covered[$i]}" \
+        "${row_tags[$i]}" \
         "$verified_cell"
       i=$((i + 1))
     done

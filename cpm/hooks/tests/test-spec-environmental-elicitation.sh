@@ -69,8 +69,11 @@ step_3a() {
 test_start "control: the spec output template slice is bounded"
 assert_slice_bounded "$SPEC_SKILL" '^# Spec: {Title}$' '^```$' 30 90
 
+# The upper bound sits well below what a broken end anchor produces — the same slice run to
+# end-of-file is 225 non-blank lines — so it still separates "this step grew" from "the range
+# stopped matching Section 4", which is the only thing it is here to tell apart.
 test_start "control: the Step 3a slice is bounded, not the whole file"
-assert_slice_bounded "$SPEC_SKILL" '^#### Step 3a: Environmental Constraints$' '^### Section 4:' 15 45
+assert_slice_bounded "$SPEC_SKILL" '^#### Step 3a: Environmental Constraints$' '^### Section 4:' 15 60
 
 test_start "control: the non-functional block of the template is non-empty"
 assert_contains "$(nfr_block)" "NFR1"

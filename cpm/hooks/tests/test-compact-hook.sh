@@ -46,48 +46,55 @@ PROJECT=$(setup_project_dir)
 echo "# State for abc-123" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 echo "# State for def-456" > "$PROJECT/docs/plans/.cpm-progress-def-456.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_contains "$OUTPUT" "# State for abc-123"
+assert_contains "$OUTPUT" ".cpm-progress-abc-123.md"
 
 test_start "Does not output non-matching session files on exact match"
 PROJECT=$(setup_project_dir)
 echo "# State for abc-123" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 echo "# State for def-456" > "$PROJECT/docs/plans/.cpm-progress-def-456.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_not_contains "$OUTPUT" "# State for def-456"
+assert_not_contains "$OUTPUT" ".cpm-progress-def-456.md"
 
-test_start "No matching session file: other-session files are NOT injected (no cat-all)"
+test_start "No matching session file: other-session files are NOT named (no name-them-all)"
 PROJECT=$(setup_project_dir)
 echo "# State for def-456" > "$PROJECT/docs/plans/.cpm-progress-def-456.md"
 echo "# State for ghi-789" > "$PROJECT/docs/plans/.cpm-progress-ghi-789.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"no-match","source":"compact"}')
-assert_not_contains "$OUTPUT" "# State for def-456"
-assert_not_contains "$OUTPUT" "# State for ghi-789"
+assert_not_contains "$OUTPUT" ".cpm-progress-def-456.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-ghi-789.md"
 
-test_start "Compact (same session): only the matching progress file is injected as active state"
+test_start "Compact (same session): only the matching progress file is active state"
 PROJECT=$(setup_project_dir)
 echo "# State for sess-current" > "$PROJECT/docs/plans/.cpm-progress-sess-current.md"
 echo "# State for sess-other" > "$PROJECT/docs/plans/.cpm-progress-sess-other.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-current","source":"compact"}')
-assert_contains "$OUTPUT" "# State for sess-current"
+assert_contains "$OUTPUT" ".cpm-progress-sess-current.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-sess-other.md"
+
+# The bodies must never appear, whatever the classification. This is the payload-bounding
+# rule asserted where it can regress: a `cat` restored anywhere in the hook fires here, and
+# it is stated once rather than repeated under every case below.
+test_start "No progress file body is emitted, for any classification"
+assert_not_contains "$OUTPUT" "# State for sess-current"
 assert_not_contains "$OUTPUT" "# State for sess-other"
 
-test_start "Malformed JSON: no file injected as active state (fail-safe, no resurrection)"
+test_start "Malformed JSON: no file named as active state (fail-safe, no resurrection)"
 PROJECT=$(setup_project_dir)
 echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(run_hook "$PROJECT" 'not valid json')
-assert_not_contains "$OUTPUT" "# State for abc"
+assert_not_contains "$OUTPUT" ".cpm-progress-abc.md"
 
-test_start "Empty stdin: no file injected as active state; still exits cleanly"
+test_start "Empty stdin: no file named as active state; still exits cleanly"
 PROJECT=$(setup_project_dir)
 echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(echo "" | CLAUDE_PROJECT_DIR="$PROJECT" bash "$HOOK_SCRIPT" 2>/dev/null)
-assert_not_contains "$OUTPUT" "# State for abc"
+assert_not_contains "$OUTPUT" ".cpm-progress-abc.md"
 
-test_start "Missing session_id field: no file injected as active state"
+test_start "Missing session_id field: no file named as active state"
 PROJECT=$(setup_project_dir)
 echo "# State for abc" > "$PROJECT/docs/plans/.cpm-progress-abc.md"
 OUTPUT=$(run_hook "$PROJECT" '{"source":"compact"}')
-assert_not_contains "$OUTPUT" "# State for abc"
+assert_not_contains "$OUTPUT" ".cpm-progress-abc.md"
 
 test_start "Produces no progress file output when no progress files exist"
 PROJECT=$(setup_project_dir)
@@ -99,35 +106,37 @@ test_start "Legacy support: falls back to .cpm-progress.md when no session files
 PROJECT=$(setup_project_dir)
 echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_contains "$OUTPUT" "# Legacy state"
+assert_contains "$OUTPUT" ".cpm-progress.md"
 
-test_start "On clear, other-session file is NOT injected as active state (no silent resurrection)"
+test_start "On clear, other-session file is NOT named as active state (no silent resurrection)"
 PROJECT=$(setup_project_dir)
 echo "# State for old-session" > "$PROJECT/docs/plans/.cpm-progress-old-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"new-session","source":"clear"}')
 assert_contains "$OUTPUT" "CPM_SESSION_ID: new-session"
-assert_not_contains "$OUTPUT" "# State for old-session"
+assert_not_contains "$OUTPUT" ".cpm-progress-old-session.md"
 
-test_start "On clear with multiple other-session files, none are blanket-cat as active state"
+test_start "On clear with multiple other-session files, none are named as active state"
 PROJECT=$(setup_project_dir)
 echo "# State for old-1" > "$PROJECT/docs/plans/.cpm-progress-old-1.md"
 echo "# State for old-2" > "$PROJECT/docs/plans/.cpm-progress-old-2.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"fresh-session","source":"clear"}')
-assert_not_contains "$OUTPUT" "# State for old-1"
-assert_not_contains "$OUTPUT" "# State for old-2"
+assert_not_contains "$OUTPUT" ".cpm-progress-old-1.md"
+assert_not_contains "$OUTPUT" ".cpm-progress-old-2.md"
 
-test_start "On clear, a file matching the new session id IS injected as active state"
+test_start "On clear, a file matching the new session id IS named as active state"
 PROJECT=$(setup_project_dir)
 echo "# State for fresh-session" > "$PROJECT/docs/plans/.cpm-progress-fresh-session.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"fresh-session","source":"clear"}')
-assert_contains "$OUTPUT" "# State for fresh-session"
+assert_contains "$OUTPUT" ".cpm-progress-fresh-session.md"
 
 test_start "Legacy file ignored when session-scoped files exist"
 PROJECT=$(setup_project_dir)
 echo "# Session state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_not_contains "$OUTPUT" "# Legacy state"
+assert_contains "$OUTPUT" ".cpm-progress-abc-123.md"
+# The legacy name is not a substring of the session-scoped one, so this discriminates.
+assert_not_contains "$OUTPUT" "plans/.cpm-progress.md"
 
 # --- User name injection tests ---
 
@@ -158,29 +167,39 @@ else
   assert_not_contains "$OUTPUT" "CPM_USER_NAME"
 fi
 
-# --- Compact summary injection tests ---
+# --- Compact summary tests ---
+#
+# The summary file is written by post-compact.sh from the harness's own `compact_summary`
+# field, so its length is set by how much was compacted — 31 KB on one observed session.
+# The hook names it rather than emitting it, for the same reason it names the progress
+# file. The block keeps its own delimiters, so "which file is this" stays answerable.
 
-test_start "Injects compact summary after progress file when both exist"
+test_start "Names the compact summary alongside the progress file when both exist"
 PROJECT=$(setup_project_dir)
 echo "# Progress state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 echo "# Compact Summary (PostCompact)" > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
 echo "This is the narrative." >> "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_contains "$OUTPUT" "# Progress state"
-assert_contains "$OUTPUT" "This is the narrative."
+assert_contains "$OUTPUT" ".cpm-progress-abc-123.md"
+assert_contains "$OUTPUT" ".cpm-compact-summary-abc-123.md"
 
-test_start "Compact summary appears after progress file content"
+test_start "and emits neither file's body"
+assert_not_contains "$OUTPUT" "# Progress state"
+assert_not_contains "$OUTPUT" "This is the narrative."
+
+test_start "Compact summary appears after the progress file"
 PROJECT=$(setup_project_dir)
 echo "# Progress state" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 echo "# Compact Summary (PostCompact)" > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-# Progress content should come before the summary delimiter
-PROGRESS_POS=$(echo "$OUTPUT" | grep -n "# Progress state" | head -1 | cut -d: -f1)
+# Structured state before narrative supplement. Anchored on each block's own delimiter,
+# which is what survives the switch from bodies to names.
+PROGRESS_POS=$(echo "$OUTPUT" | grep -n "CPM SESSION STATE" | head -1 | cut -d: -f1)
 SUMMARY_POS=$(echo "$OUTPUT" | grep -n "CPM COMPACT SUMMARY" | head -1 | cut -d: -f1)
 if [ -n "$PROGRESS_POS" ] && [ -n "$SUMMARY_POS" ] && [ "$PROGRESS_POS" -lt "$SUMMARY_POS" ]; then
   test_pass
 else
-  test_fail "Progress file should appear before compact summary"
+  test_fail "Progress file block should precede the compact summary block (got ${PROGRESS_POS:-none} / ${SUMMARY_POS:-none})"
 fi
 
 test_start "Compact summary injection uses clear header/separator"
@@ -191,33 +210,43 @@ OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
 assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
 assert_contains "$OUTPUT" "--- END COMPACT SUMMARY ---"
 
-test_start "Injects compact summary alone when no progress file exists"
+test_start "Names the compact summary alone when no progress file exists"
 PROJECT=$(setup_project_dir)
 echo "Summary without progress." > "$PROJECT/docs/plans/.cpm-compact-summary-abc-123.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_contains "$OUTPUT" "Summary without progress."
+assert_contains "$OUTPUT" ".cpm-compact-summary-abc-123.md"
 assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
+assert_not_contains "$OUTPUT" "Summary without progress."
 
-test_start "Skips compact summary when no summary file exists"
+# The must-NOT that keeps the block honest: no summary file, no summary block. An empty
+# block would tell a recovering session to go and read a file that is not there.
+test_start "Skips the compact summary block entirely when no summary file exists"
 PROJECT=$(setup_project_dir)
 echo "# Progress only" > "$PROJECT/docs/plans/.cpm-progress-abc-123.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"compact"}')
-assert_contains "$OUTPUT" "# Progress only"
+assert_contains "$OUTPUT" ".cpm-progress-abc-123.md"
 assert_not_contains "$OUTPUT" "CPM COMPACT SUMMARY"
 
-test_start "Falls back to unsuffixed compact summary file"
+test_start "Falls back to the unsuffixed compact summary file"
 PROJECT=$(setup_project_dir)
 echo "Fallback summary." > "$PROJECT/docs/plans/.cpm-compact-summary.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"no-match","source":"compact"}')
-assert_contains "$OUTPUT" "Fallback summary."
+assert_contains "$OUTPUT" ".cpm-compact-summary.md"
+assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
 
-test_start "Compact same-session: matching progress file AND its summary companion are both injected"
+test_start "Compact same-session: the progress file AND its summary companion are both named"
 PROJECT=$(setup_project_dir)
 echo "# Progress for sess-x" > "$PROJECT/docs/plans/.cpm-progress-sess-x.md"
 echo "Narrative summary for sess-x." > "$PROJECT/docs/plans/.cpm-compact-summary-sess-x.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"sess-x","source":"compact"}')
-assert_contains "$OUTPUT" "# Progress for sess-x"
-assert_contains "$OUTPUT" "Narrative summary for sess-x."
+assert_contains "$OUTPUT" ".cpm-progress-sess-x.md"
+assert_contains "$OUTPUT" ".cpm-compact-summary-sess-x.md"
 assert_contains "$OUTPUT" "--- CPM COMPACT SUMMARY ---"
+
+# Both files are named, and a recovering session is told to go and read them. That
+# instruction is the entire recovery path now, so its absence is a silent failure.
+test_start "and the reader is told to read them"
+assert_contains "$OUTPUT" "Read this file now"
+assert_contains "$OUTPUT" "Read it for what was"
 
 test_summary

@@ -4,7 +4,8 @@
 **Source**: `/Users/chris/Work/git/ralph-test2` — autonomous run of `/cpm:ralph docs/specifications/01-spec-expense-settler.md`
 **Scope**: Plugin (`cpm` 3.7.0), evidenced by a live autonomous run against a separate greenfield repo
 **Method**: Read-only observation, 45s poll, ~5 hours. Every claim verified against source or a throwaway fixture before being recorded.
-**Findings**: 38 observations — 12 actionable against the plugin (5 fixed, 7 open), 2 belonging to the Stop-hook plugin, the remainder evidence about the run
+**Findings**: 38 observations — 14 actionable against the plugin (all 14 fixed), 2 belonging to the Stop-hook plugin (both fixed in the fork)
+**Fixed** (2026-07-28): OBS-1, 2, 3, 5, 6, 8, 10, 19 (tiers 1–2) · OBS-4, 9, 12, 14, 21, 37 (tier 3) · OBS-15, 37 in the fork · **Open**: none
 
 ## Summary
 
@@ -24,38 +25,50 @@ Verified against `cpm` 3.7.0 source on 2026-07-28. Line references are to that r
 |---|---|---|---|
 | 8, 10 | `cov_base_label` strips only a trailing parenthesised qualifier, so `FR7 — Pence-exact remainder rule` and `R1 — Subagent delegation` never match `FR7` / `R1`. Range labels (`FR3-FR5`) are a third unhandled form. | `cpm/hooks/lib/coverage-parse.sh` | **Fixed.** A descriptive tail is stripped; a label naming several requirements resolves to nothing and the row is reported `UNRESOLVED` rather than reduced to its first member. Spec 40 went from `SUMMARY spec 10 10 0 0` exit 3 to `10 0 10 0` exit 0. The new record found one live malformed row (`FR8, FR5` in `46-02`), since split. |
 | 1 | `coverage-rollup.sh` returns **1** for a missing `docs/epics/`, and the phase clause reads exit 1 as "could not run — stop". Iteration 1 of a greenfield spec-mode run *is* that state. | `cpm/hooks/lib/coverage-rollup.sh` | **Fixed.** A missing *default* directory returns 4, so a first iteration routes to phase 1; a `--matrix-dir` the caller named and got wrong keeps the read-failure code, so a typo is not answered by generating epics into a path nothing will read. OBS-3's `mkdir` workaround was never codified and is now unnecessary. |
-| 6 | The autonomous `cpm:epics` wrote its progress file as `docs/plans/cpm-session-state-epics.md`; the convention is `docs/plans/.cpm-progress-{session_id}.md`. Nothing can discover the file it wrote. | 14 skills deferring without stating the path | **Fixed at the immediate layer.** All 18 skills that keep a progress file now state the path and the session-less fallback at the deferral point. The root — an 80.8 KB SessionStart payload inlined at 2 KB, so *every* "follow the shared X procedure" pointer targets an unread file — is untouched and remains the larger finding. |
+| 6 | The autonomous `cpm:epics` wrote its progress file as `docs/plans/cpm-session-state-epics.md`; the convention is `docs/plans/.cpm-progress-{session_id}.md`. Nothing can discover the file it wrote. | 14 skills deferring without stating the path | **Fixed at both layers.** Immediate: all 18 skills that keep a progress file now state the path and the session-less fallback at the deferral point. Root: both SessionStart hooks emitted whole documents — one live payload measured 86,748 characters against a **documented 10,000-character cap** — so *every* "follow the shared X procedure" pointer targeted a file the agent had not read. Both hooks now emit a bounded core plus pointers, name progress files rather than inlining them, and order output so the content that can cost a user work survives the ~2 KB preview. Worst case 9,235 characters. See *OBS-6 root cause* below. |
 
 Two things surfaced while fixing these, neither part of the original 38:
 
 - **The documented fallback is outside the classifier glob.** `skill-conventions.md:144` names `.cpm-progress.md` for the hooks-absent case; `progress-classify.sh` globs `.cpm-progress-*.md`, which requires a session suffix. Consistent rather than broken — `CPM_SESSION_ID` comes from the same hooks whose absence selects the fallback, so nothing is classifying in that case — but the two halves live in different files and neither mentions the other. Now pinned by a test so widening the glob is a deliberate act.
 - **`test-inspect-skill.sh` pinned a file rather than a change.** Its criterion is that introducing `/cpm:inspect` left `/cpm:audit` alone; its implementation compared the working tree against the commit before inspect appeared, which asserts that `cpm/skills/audit/` never changes again. The OBS-6 sweep touched audit and failed a criterion it has nothing to do with. Corrected to compare the commit that added inspect against its parent — the change that could actually have violated the must-NOT — and verified still to fire when pointed at a commit that did touch audit.
 
-### Tier 2 — design decisions, not mechanical fixes
+### Tier 2 — fixed 2026-07-28
 
 | Obs | Finding | Component | Status |
 |---|---|---|---|
-| 19 | `[target]` conflates production-host facts (genuinely uncheckable) with development-environment facts (checkable by anything running in that environment). Separately, `coverage_matrix_rows` emits columns `$2,$3,$4,$6,$8` — column 7, where the tag lives, is **never extracted**, so a self-ticked `[target]` row counts as ordinary verification. | `cpm/hooks/lib/coverage-parse.sh`, `cpm/skills/spec/SKILL.md` | **Open.** The vocabulary needs splitting before extracting the column is worth doing. ENV6/ENV8 were legitimately ticked; ENV1–ENV5 host claims were not checkable. |
-| 5 | Test-runner discovery checks `composer.json`, `package.json`, `Makefile`… none of which exist in the greenfield case spec mode exists for. The spec's `ENVn` block states the answer, and `cpm:spec` calls that block *"the only place test tooling is captured"*. | `cpm/skills/ralph/SKILL.md:104-108` | **Open.** In spec mode, read `ENVn` first and config files second. Note `cpm:epics` *did* read the block correctly — the defect is confined to ralph's pre-flight reporting. |
-| 2 | Bare `/cpm:ralph` in a spec-only repo: the skill says stop, the agent offered spec mode instead. The entire field test ran on the improvised branch. | `cpm/skills/ralph/SKILL.md:51` | **Open — needs a decision.** Either carve the case out explicitly or make the branch harder to route around. The helpful behaviour is currently undocumented improvisation. |
+| 19 | `[target]` conflates production-host facts (genuinely uncheckable) with development-environment facts (checkable by anything running in that environment). Separately, `coverage_matrix_rows` emits columns `$2,$3,$4,$6,$8` — column 7, where the tag lives, is **never extracted**, so a self-ticked `[target]` row counts as ordinary verification. | `cpm/hooks/lib/coverage-parse.sh`, `cpm/skills/spec/SKILL.md` | **Fixed, without splitting the vocabulary.** `[target]`'s own definition was already precise — *"can only run against the real deployment target"* — so ENV6 was never a `[target]` claim. What routed it there was the definition's *"environmental requirements and restrictions are the usual case"* plus Step 6d's *"add it there — labelled, falsifiable, and verified `[target]`"*, which sends every tooling entry to the tag even though Step 3a's own table splits Development from Production. The split now decides the tag at all three routing sites. Column 7 is extracted as a trailing `tag` field on `ROW` and `CRITERION`; the verdict is unchanged, since discounting a ticked `[target]` would make every spec with a host requirement permanently outstanding. |
+| 5 | Test-runner discovery checks `composer.json`, `package.json`, `Makefile`… none of which exist in the greenfield case spec mode exists for. The spec's `ENVn` block states the answer, and `cpm:spec` calls that block *"the only place test tooling is captured"*. | `cpm/skills/ralph/SKILL.md:104-108` | **Fixed.** In spec mode Step 1d reads `{spec_path}`'s `ENVn` entries first and the config files second; epic mode is unchanged, where a manifest is the better evidence. The step now also distinguishes a tool the spec named from a command that can be run. |
+| 2 | Bare `/cpm:ralph` in a spec-only repo: the skill says stop, the agent offered spec mode instead. The entire field test ran on the improvised branch. | `cpm/skills/ralph/SKILL.md:51` | **Fixed — the stop stays a stop.** The epic-mode branch now globs `docs/specifications/`, names any specs it finds and gives the spec-mode command, then stops; it explicitly must not offer spec mode or ask which to use. The dead end was what made the branch worth routing around; the mode still comes from the path the caller types, and a bare invocation supplied none. |
 
-### Tier 3 — cheap, do alongside
+Three things surfaced while fixing these:
+
+- **`ROW`'s trailing field silently absorbed whatever was appended after it.** `emit_matrix_rows` split its last field with `${rest#*$tab}` — everything remaining — which is correct only while that field is last. Appending the tag parked it inside `verified`, and the record still looked well-formed. Every field is now taken with the shortest-match form.
+- **A possessive inside an awk program deletes the rest of it.** The library header already warned that `_COVERAGE_AWK_LIB` is one single-quoted shell string; the same is true of each awk program in the file, and `cell's` in a comment I added ended the quoting mid-program. It surfaced as a shell syntax error only because a backtick followed; anything else would have been accepted and mangled the program. The warning now covers every program in the file.
+- **`UNRESOLVED` was never added to `cpm:status`.** The Tier 1 fix introduced a record type and no skill was told how to render it. Added, along with a rendering rule — and the correspondence that would have caught it was itself passing vacuously, because no fixture produced the record.
+
+### Tier 3 — fixed 2026-07-28
 
 | Obs | Finding | Component | Status |
 |---|---|---|---|
-| 4 | The exit-code contract is stated only *inside* the prompt template — text being assembled, not guidance the assembling agent reads. Costs ~3 tool calls per run re-deriving it from the script. | `cpm/skills/ralph/SKILL.md:159` | Open |
-| 9 | The companion-asset rule says "a UI mockup **or diagram**" and prescribes `[manual]` visual conformance. A data-flow diagram is not built to look like anything. A mockup is a design target; a diagram is an argument. | `cpm/skills/epics/SKILL.md:177` | Open |
-| 37 | CPM writes `active: true` into the ralph state file but ships no Stop hook, and the hook that exists terminates on file *existence*. `session-start.sh:59` already documents deletion as the kill switch. | `cpm/skills/ralph/SKILL.md:239,261` | Open — CPM's half only. Drop the field or say it is inert; a no-op named `active` is the trap. |
-| 12, 21 | No gitignore guidance anywhere in ralph's SKILL.md or shared conventions. The loop committed CPM's own session state before catching it. | `cpm/skills/ralph/SKILL.md` | Open |
-| 3 | Pre-flight wrote to the repo (`mkdir -p docs/epics`) to get past OBS-1. | `cpm/skills/ralph/SKILL.md` | Absorbed — disappears when OBS-1 is fixed at the script. |
+| 4 | The exit-code contract is stated only *inside* the prompt template — text being assembled, not guidance the assembling agent reads. Costs ~3 tool calls per run re-deriving it from the script. | `cpm/skills/ralph/SKILL.md:159` | **Fixed.** Step 1f — where the script is resolved — now carries the contract as guidance, with the rule the re-derivation kept getting wrong: every code other than `0` and `3` means the verdict is *unknown*, not negative. `test-ralph-promise.sh` reads each code out of `coverage-rollup.sh`'s own constants and requires the skill to document that number, so renumbering a constant fails the suite rather than leaving the skill quietly wrong. |
+| 9 | The companion-asset rule says "a UI mockup **or diagram**" and prescribes `[manual]` visual conformance. A data-flow diagram is not built to look like anything. A mockup is a design target; a diagram is an argument. | `cpm/skills/epics/SKILL.md:177` | **Fixed.** The prohibition on extracting requirements now applies to every asset; the visual-conformance criterion applies only to a mockup. A diagram gets **no criterion at all**, and going unreferenced is named as the correct outcome rather than a coverage gap — the reading that would otherwise reintroduce the criterion. |
+| 37 | CPM writes `active: true` into the ralph state file but ships no Stop hook, and the hook that exists terminates on file *existence*. `session-start.sh:59` already documents deletion as the kill switch. | `cpm/skills/ralph/SKILL.md:239,261` | **Fixed — and the resolution changed while it was open.** The review offered two options, *honour it* or *drop it*; the ninthspace fork took the first (below), so the field is no longer a no-op everywhere and dropping it would have discarded a working control. Step 3c now states which plugin honours it, that it is inert on the other two, and that deleting the state file is the stop that works on all three. The plugin table in `docs/maintenance/README.md` records the coupling, and `test-ralph-session-state-hygiene.sh` reads *which plugin* out of both documents and compares them. |
+| 12, 21 | No gitignore guidance anywhere in ralph's SKILL.md or shared conventions. The loop committed CPM's own session state before catching it. | `cpm/skills/ralph/SKILL.md` | **Fixed.** New pre-flight step 1g checks all three transient paths before arming, and proposes the ignore lines through a user gate rather than editing the repo silently. Placement is the fix: the leak is caused by the first commit, so a check that runs afterwards has already lost — untracking does not remove the files from commits already made. The shared Progress File Management convention states the entry and why an interactive session never sees the problem. |
+| 3 | Pre-flight wrote to the repo (`mkdir -p docs/epics`) to get past OBS-1. | `cpm/skills/ralph/SKILL.md` | Absorbed — disappeared when OBS-1 was fixed at the script. |
 
-### Not CPM's to fix
+### Not CPM's to fix — fixed in the fork, 2026-07-28
 
-| Obs | Finding | Owner |
-|---|---|---|
-| 15 | The Stop hook prints the completion promise every iteration, so any transcript grep for `SPEC_DELIVERED` fires on the instruction rather than the emission. | `ralph-loop` plugin — `cpm/README.md:213` is explicit that CPM supplies no Stop hook |
-| 37 | The hook ignores the `active:` field entirely; the only occurrences of the string are comments. | `ralph-loop` plugin |
-| 14 | The assembled prompt is one 5,246-character line (template is 3,188 at `ralph/SKILL.md:172`). It cost a run. | Verify whether a single line is required by the hook's feedback format before treating this as CPM's choice. |
+Both were addressed in `ralph-loop@ninthspace-ralph`, each with its own suite and each verified by reverting the change and confirming the assertions fail. The fork's README documents all three of its behavioural changes.
+
+| Obs | Finding | Owner | Status |
+|---|---|---|---|
+| 15 | The Stop hook prints the completion promise every iteration, so any transcript grep for `SPEC_DELIVERED` fires on the instruction rather than the emission. | `ralph-loop` plugin — `cpm/README.md:213` is explicit that CPM supplies no Stop hook | **Fixed in the fork.** The reminder names the promise text and the tag separately, so every tagged occurrence in a transcript is the model's. Completion additionally emits `RALPH_PROMISE_MATCHED`, which nothing else prints. `tests/test-promise-markers.sh`, 12 assertions — including that the reminder still carries the text, the tag name and the do-not-lie warning, without which deleting it outright would pass. |
+| 37 | The hook ignores the `active:` field entirely; the only occurrences of the string are comments. | `ralph-loop` plugin | **Fixed in the fork.** Anything other than `true` allows the exit and leaves the state file byte-for-byte untouched, so a pause is reversible and resumes at the same iteration; an absent field still runs, as every pre-existing state file relies on. `/cancel-ralph` still deletes. `tests/test-active-field.sh`, 11 assertions. |
+| 14 | The assembled prompt is one 5,246-character line (template is 3,188 at `ralph/SKILL.md:172`). It cost a run. | CPM's, confirmed — a single line is not required by the hook. | **Fixed, with the proposed tool changed.** See below. |
+
+**OBS-14's fix is `fmt -s -w 100`, not the `fold -s -w 100` this document proposed.** Re-verified against the fork's current hook: the body parser takes every line after the frontmatter and `jq --arg` escapes the newlines, so a multi-line body round-trips verbatim — the single line was never required. But `fold -s` and `fmt -s` differ on exactly one input, and the assembled prompt contains it. A token longer than the width: `fold` breaks it mid-token, `fmt` leaves it whole and lets the line run over. `{rollup_script}` interpolates to a plugin-cache path measured at **96 characters** against a 100-column target, so `fold`'s margin is four characters — spent by a version bump (`3.7.0` → `3.10.0`), a longer marketplace name, or a longer home directory. Past that, `fold` writes the break into the file the loop re-reads every iteration, which is strictly worse than the defect: the evidence here is an operator stopping a run over `ninths/hooks`, and `fold` is the one change that would make that shape real rather than a terminal artifact.
+
+A second rule came out of the same check and is not in the original observation. The hook's parser is `awk '/^---$/{i++; next} i>=2'`, which skips **every** line matching `^---$`, not only the two frontmatter fences — so a body line that is exactly `---` is silently dropped from the prompt. Verified: a body of `first line` / `---` / `second line` is fed back as `first line` / `second line`. Unreachable from the current template, whose "use `--` for dashes" rule keeps `---` out; but wrapping makes body line structure meaningful for the first time, so the rule is now stated where the wrap is. `test-ralph-prompt-wrapping.sh` extracts that awk program from the skill's own prose and runs it, so the claim about an external parser is demonstrated rather than recorded.
 
 ### Fixed — not from the 38
 
@@ -283,6 +296,40 @@ load. Root: the SessionStart hook payload has exceeded the inline limit on all 1
 recorded — see the /doctor finding — so *every* "follow the shared X procedure" reference in every CPM
 skill is currently a pointer into a file the agent has not read. This is the first observed instance of
 that costing correctness rather than just tokens.
+
+### OBS-6 root cause — fixed 2026-07-28
+
+The limit is **documented, and lower than this review assumed**: hook output is capped at 10,000
+characters, covering `additionalContext` and `systemMessage` as well as stdout, so there is no escape
+hatch in the output format. Past the cap Claude Code does not trim to it — it persists the whole
+output and inlines a ~2 KB preview, under a notice that gives a path but does not instruct anyone to
+read it. Both halves are open upstream bugs, closed without a fix
+([#44086](https://github.com/anthropics/claude-code/issues/44086),
+[#55750](https://github.com/anthropics/claude-code/issues/55750)).
+
+Measured on a live payload from this repo: **86,748 characters**, of which the first 2,048 arrived —
+the session id, the user name, `## Roster Loading`, and 794 of the 1,435 bytes of `## Perspectives`,
+cut mid-word. `## Conversational Output` sat at byte 28,335, `## Implementation Guidelines` at 37,923,
+the compact summary at 55,250. None of it arrived, and nothing said so.
+
+What changed, in both `session-start.sh` and `session-start-compact.sh`:
+
+- **Nothing whose length is set by a document is emitted in full.** Progress files and the compact  
+  summary are named, with the fields needed to decide whether to open them. The conventions are a  
+  bounded core (`CORE_SECTIONS` in `hooks/lib/conventions-core.sh`) plus the file path, an index, and  
+  an imperative to read it.
+- **Nothing whose length is set by a count is emitted unbounded.** The other-session lists stop at  
+  `CPM_LIST_CAP` and report how many they left out.
+- **Output is ordered by what a session cannot afford to lose** — ralph warning, then the session's own  
+  state, then the conventions — so the two things that can cost a user work survive the ~2 KB preview  
+  even if the cap is breached. The conventions extract deliberately does not; it names a file that is  
+  on disk either way.
+
+Worst case measured at **9,235 characters** against a 9,600 budget. The margin is thin and the
+`CORE_SECTIONS` extract is over half of it, so adding a section to that list is not a free change.
+`test-session-start-budget.sh` pins the payload's independence from document size, the emission order,
+the preview-survival property, and the budget's own relationship to the cap. Full record, including
+what is documented versus observed: `docs/maintenance/README.md`.
 
 **Positive note from the same event.** The epic breakdown itself is sound: 7 epics with correct
 parent-scoped two-part numbering (`01-01` … `01-07`), and a dedicated `01-07-epic-environmental-verification`,

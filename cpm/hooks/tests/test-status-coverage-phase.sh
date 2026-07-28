@@ -78,9 +78,12 @@ for label in $MUST_LABELS; do
 done
 
 # The fixture carries one of every shape the records can take — a delivered requirement, an
-# in-progress one, untraced ones, a ruled-out one, and a story-originated row. Assertions
-# below range over the record types the run actually produced, so a thinner fixture would
-# quietly narrow what they cover rather than failing.
+# in-progress one, untraced ones, a ruled-out one, a story-originated row, and a row whose
+# label names more than one requirement. Assertions below range over the record types the run
+# actually produced, so a thinner fixture would quietly narrow what they cover rather than
+# failing. The multi-label row is what makes `UNRESOLVED` one of them: without it the page
+# could name a record type the fixture never produces and the correspondence below would
+# report it as unknown to the script.
 FIX_SPEC=$(coverage_fixture_spec 60-spec-presentation \
   --dir "$PROJ/docs/specifications" "${spec_args[@]}" \
   --should FR9 "a should-have requirement" \
@@ -91,7 +94,8 @@ coverage_fixture_matrix 60-01-coverage-presentation "docs/specifications/60-spec
   --dir "$PROJ/docs/epics" \
   --row FR1 "the verbatim text of FR1" "the FR1 criterion" "Story 1" '✓' \
   --row FR2 "the verbatim text of FR2" "the FR2 criterion" "Story 2" '' \
-  --row "(story-originated)" "—" "a criterion with no requirement behind it" "Story 2" '' >/dev/null
+  --row "(story-originated)" "—" "a criterion with no requirement behind it" "Story 2" '' \
+  --row "FR1, FR2" "two requirements against one criterion" "the criterion that claims both" "Story 3" '' >/dev/null
 
 # Run the extracted command exactly as written, from inside the fixture project, with
 # CLAUDE_PROJECT_DIR genuinely unset — `env -u` removes it rather than emptying it, and

@@ -122,8 +122,21 @@ fi
 test_start "README states no skill count"
 assert_empty "$(grep -nE '\b[0-9]{1,3} skills\b' "$README")"
 
-test_start "README states no version literal"
-assert_empty "$(grep -nE 'v?[0-9]+\.[0-9]+\.[0-9]+' "$README")"
+# Narrowed to what "snapshot value" means here: a number that goes stale when *CPM* ships.
+# A declared minimum for an external dependency does not — it moves when that dependency's
+# contract moves — and the README carries one deliberately.
+#
+# The full rule, including the bound on which lines may carry a dependency version, lives in
+# `test-version-agreement.sh`, which owns it. This is the snapshot half only; duplicating the
+# exemption in two suites is how the two come to disagree about what is allowed.
+CPM_VERSION=$(awk -F'"' '/"version"[[:space:]]*:/ {print $4; exit}' \
+  "$SCRIPT_DIR/../../.claude-plugin/plugin.json")
+
+test_start "control: CPM's own version could be read from the manifest"
+assert_equals "non-empty" "$( [ -n "$CPM_VERSION" ] && echo non-empty || echo empty )"
+
+test_start "README states no version literal of CPM's own"
+assert_empty "$(grep -nF "$CPM_VERSION" "$README")"
 
 test_start "The README's file tree matches the skills on disk"
 # The tree is an enumeration, which is a snapshot by construction — the one kind this

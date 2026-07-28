@@ -126,11 +126,15 @@ create_progress_file "$PROJECT" "sess-1" "cpm:do" "Task execution"
 OUTPUT=$(run_hook "$PROJECT" 'not valid json')
 assert_contains "$OUTPUT" "cpm:do"  # File appears somewhere (orphan section when no session ID parsed)
 
-test_start "Legacy support: injects .cpm-progress.md when no session files exist"
+test_start "Legacy support: names .cpm-progress.md when no session files exist"
 PROJECT=$(setup_project_dir)
 echo "# Legacy state" > "$PROJECT/docs/plans/.cpm-progress.md"
 OUTPUT=$(run_hook "$PROJECT" '{"session_id":"abc-123","source":"startup"}')
-assert_contains "$OUTPUT" "# Legacy state"
+assert_contains "$OUTPUT" ".cpm-progress.md"
+assert_contains "$OUTPUT" "CPM SESSION STATE"
+# The legacy path is the one most likely to keep a `cat` after the others lose theirs,
+# because it is reached only by projects predating session-scoped naming.
+assert_not_contains "$OUTPUT" "# Legacy state"
 
 test_start "Legacy file ignored when session-scoped files exist"
 PROJECT=$(setup_project_dir)

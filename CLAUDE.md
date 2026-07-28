@@ -33,19 +33,27 @@ If you catch yourself reading from or writing to `~/.claude/plugins/cache/`, **s
 
 ## What belongs in `cpm/shared/skill-conventions.md`
 
-CPM's SessionStart hook injects this file **in full, into every session in this repo** — before any skill is invoked, and whether or not one ever is. It is the only CPM file with unconditional reach, which makes adding to it different in kind from adding to a SKILL.md.
+CPM's SessionStart hooks inject **a bounded extract** of this file into every session in this repo — the sections named in `CORE_SECTIONS` (`cpm/hooks/lib/conventions-core.sh`) in full, every other section as one line of index, and the file's path with an instruction to read it. The hooks used to `cat` the whole file; they stopped on 2026-07-28 because at 45 KB it exceeded the size past which the harness stops inlining hook output, so the sections after the first one and a half were reaching no session at all. The measurements are in `docs/maintenance/README.md`.
 
-A section earns its place there by being referenced by **several** skills. Before adding one, or when reviewing what is already there:
+So there are now **two** questions, not one, and they are decided separately.
+
+**1. Does it belong in the shared file?** A section earns its place by being referenced by **several** skills:
 
 ```sh
 grep -rl "Section Name" cpm/skills/*/SKILL.md | wc -l
 ```
 
 - **Referenced by several skills** — it belongs in the shared file. That is what the file is for.
-- **Referenced by one or two** — put it in those skills. A shared section with two consumers costs every other session nothing but attention.
+- **Referenced by one or two** — put it in those skills. A shared section with two consumers earns its keep in neither.
 - **Referenced by none** — it is documentation, not context. It belongs in `docs/`, not in the session preamble.
 
+**2. Does it belong in `CORE_SECTIONS`?** Only if it must hold in a session where **no skill is ever invoked**. That is a much smaller set, and reference count does not decide it: `Stale-Progress Check` is referenced by all 20 skills and is still not core, because every one of those references is a skill that can read it. `Conversational Output` is core because it governs a reply that no skill was involved in.
+
+The bar for core is high and should stay high — it is the only part with unconditional reach, and it is the part that has to stay small for any of it to arrive. **Adding a section to `CORE_SECTIONS` is a change to what every session pays for; adding one to the file is not.**
+
 **A relevance check rather than a byte budget**, because a byte target can be met by deleting rules. Moving content to where it is used is the only way to satisfy this one. Growth history, per-section reference counts, and the deferred relocation inventory: `docs/quick/27-quick-shared-conventions-relevance-check-spec.md`.
+
+Note that the file's own growth is now much cheaper than it was, which is a reason to keep applying the check rather than to relax it: a section nothing references costs one index line instead of its length, so the pressure that used to enforce this rule automatically is gone.
 
 **Before relocating a section**, grep the suites for assertions that reach into `cpm/shared/skill-conventions.md` by path while claiming to test a rule's *content*. A relocation and a mutation look identical to a location-pinned test.
 

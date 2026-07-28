@@ -161,8 +161,9 @@ It emits tab-separated records, one per line, with the record type in field 1:
 | `STATE` | label, MoSCoW heading, `delivered` \| `in-progress` \| `untraced` |
 | `EXCLUDED` | label, MoSCoW heading — a requirement the spec ruled out, rather than one that is missing |
 | `SUMMARY` | scope, requirements, untraced, delivered, in-progress |
-| `ROW` | matrix path, base label, label, covered by, `verified` \| `unverified` |
-| `CRITERION` | matrix path, label, covered by, `verified` \| `unverified` — a story-originated row, with no requirement behind it |
+| `ROW` | matrix path, base label, label, covered by, `verified` \| `unverified`, test approach tag |
+| `CRITERION` | matrix path, label, covered by, `verified` \| `unverified`, test approach tag — a story-originated row, with no requirement behind it |
+| `UNRESOLVED` | matrix path, label, covered by — a row whose label names no single requirement, such as `ENV1–ENV5`. It carries no verified field: the row resolves to nothing, so a tick on it verifies nothing |
 
 **Render it like this:**
 
@@ -171,9 +172,12 @@ It emits tab-separated records, one per line, with the record type in field 1:
 3. **Quote each requirement's verbatim text**, the third field of its `REQ` record, exactly as the spec wrote it. That text is what a stakeholder actually asked for, and paraphrasing it here is how the thing that was asked for stops matching the thing that was built.
 4. **Show each requirement's state** — *delivered*, *in progress*, or *untraced*. Never a proportion: a requirement with four of five rows verified is *in progress*, not 80% delivered.
 5. **List ruled-out requirements separately**, from the `EXCLUDED` records, as ruled out rather than outstanding. A requirement reaches that record by either of the two ways a spec says "not this iteration" — a `Won't Have` heading, or a `### Deferred` / `### Out of Scope` bullet naming it under `## Scope`. The record does not say which route it took; when that matters, the spec is the place to look.
-6. **Close with the `SUMMARY` counts.**
+6. **Name any `UNRESOLVED` rows, and say the requirements they claim are not covered by them.** Such a row names more than one requirement in a cell that holds one — `ENV1–ENV5`, `FR8, FR5` — so its single tick would mark several requirements verified on one piece of evidence. It is a defect in the matrix rather than in the work, and it is worth surfacing precisely because the document looks complete: the row reads as coverage while every requirement it names is counted untraced. Say which matrix, and that the fix is one row per requirement.
+7. **Close with the `SUMMARY` counts.**
 
 **Say what the `✓` marks mean, wherever this section shows them.** They are **aggregation, not verification**. Every `✓` was placed by `cpm:do` on its own work; unioning them reports what `do` claimed, more conveniently, and adds no independent evidence. A wall of green must not be read as confirmation that anything works. The untraced count is the part of this section that discriminates — the spec's requirement list is written by a human and the matrices are generated later from it, so a gap between them is a real finding rather than a foregone one.
+
+**And separate the marks a test produced from the ones nothing could.** Each `ROW` and `CRITERION` carries the test approach the spec assigned. `[target]` and `[manual]` are the two whose ticks rest on something other than a test having run — one on an environment nobody here has, the other on a human's judgement — so a section reporting *"every row verified"* over a set that is largely those two is reporting agreement, not evidence. Where any verified row carries either tag, say how many and which requirements, in the same breath as the counts. Do not reweight or discount anything: a tick is a tick, and this is a statement about what the ticks rest on.
 
 #### The stakeholder page (on request only)
 
@@ -181,7 +185,7 @@ An artifact can be published from this output on request — follow the shared *
 
 For `status` the artifact is here the one page that spans a spec's epics: every requirement a stakeholder asked for, with its state and the matrix rows behind it, in a form that can be handed to someone who has no repository and no way to open twenty coverage matrices. The requirement text a stakeholder used survives to a `✓` only inside each matrix's verbatim column, and no single document currently spans them. That justification is also the test for anything else the page might carry — as with companion assets, if you cannot write the one-line justification for what the visual carries that the prose cannot, it has not earned its place.
 
-**Render it from the same records, by the same rules.** The page shows the output of the one invocation above — the same `MATRIX`, `REQ`, `STATE`, `EXCLUDED`, `SUMMARY`, `ROW` and `CRITERION` records the section renders — and follows rendering rules 1–6 above, read from there rather than repeated here. The two the reader will notice first are rules 1 and 2: untraced requirements before anything else, then the spec's own MoSCoW headings in the spec's order. Do not re-run the script for the page and do not restate the rules alongside it — a second run could disagree with the section the reader just read, and a second statement of a rule is the thing that drifts from it. If the section was not produced — the phase skipped, or the script exited non-zero — there is no page to publish either.
+**Render it from the same records, by the same rules.** The page shows the output of the one invocation above — the same `MATRIX`, `REQ`, `STATE`, `EXCLUDED`, `SUMMARY`, `ROW`, `CRITERION` and `UNRESOLVED` records the section renders — and follows rendering rules 1–7 above, read from there rather than repeated here. The two the reader will notice first are rules 1 and 2: untraced requirements before anything else, then the spec's own MoSCoW headings in the spec's order. Do not re-run the script for the page and do not restate the rules alongside it — a second run could disagree with the section the reader just read, and a second statement of a rule is the thing that drifts from it. If the section was not produced — the phase skipped, or the script exited non-zero — there is no page to publish either.
 
 **Carry the aggregation statement onto the page.** The `✓` marks mean the same thing there as they do in the section, and a page is the artefact most likely to be read by someone who was not in the session and did not see it said.
 

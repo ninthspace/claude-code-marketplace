@@ -212,7 +212,7 @@ ARITIES=$(printf '%s\n' "$SPEC_OUT" | awk -F'\t' '{ a[$1] = NF } END {
   n = split("CRITERION MATRIX REQ ROW", order, " ")
   for (i = 1; i <= n; i++) if (order[i] in a) printf "%s=%d ", order[i], a[order[i]]
 }')
-assert_equals "CRITERION=5 MATRIX=3 REQ=4 ROW=6 " "$ARITIES"
+assert_equals "CRITERION=6 MATRIX=3 REQ=4 ROW=7 " "$ARITIES"
 
 test_start "the separator is a tab and nothing else — no line carries a stray separator"
 NON_TAB=$(printf '%s\n' "$SPEC_OUT" | LC_ALL=C grep -c $'\t' || true)

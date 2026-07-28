@@ -16,8 +16,8 @@
 #       LABEL, one per line, for every requirement label named in a bullet under the
 #       spec's `## Scope` → `### Deferred` or `### Out of Scope` heading.
 #   coverage_matrix_rows <matrix-path>
-#       KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED, one record per
-#       data row of the matrix's coverage table.
+#       KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED<TAB>TAG, one record
+#       per data row of the matrix's coverage table.
 #   coverage_base_label <label>
 #       The base requirement a possibly-qualified label refers to.
 #   coverage_environmental_class <label>
@@ -191,6 +191,13 @@ function cov_base_label(label,   n, p, lead) {
 # Note for anyone editing the comments in this library: it is one single-quoted shell
 # string, so a lone apostrophe closes it and every awk function after that point silently
 # disappears. Write around it rather than escaping it.
+#
+# The same holds for every awk program below, each of which is single-quoted the same way.
+# One possessive in one of their comments ends the quoting mid-program, and what happens
+# next depends on what follows: a backtick or a `$` becomes a shell syntax error, anything
+# else is accepted and mangles the program. Only the loud half announces itself, so the rule
+# is the same everywhere in this file — no apostrophes inside an awk program, comments
+# included. Write the possessive the long way round.
 function cov_environmental_class(s,   p) {
   p = cov_label_prefix(cov_trim(s))
   if (p == "ENVX") return "restriction"
@@ -519,7 +526,7 @@ coverage_spec_scope_deferrals() {
 # Emit one record per data row of a coverage matrix's table.
 #
 # Usage: coverage_matrix_rows docs/epics/44-01-coverage-coverage-rollup-script.md
-# Emits: KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED
+# Emits: KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED<TAB>TAG
 #
 #   KIND     — `requirement` or `story-originated`
 #   BASE     — the label with any qualifier resolved away (empty for story-originated)
@@ -527,10 +534,25 @@ coverage_spec_scope_deferrals() {
 #   SPEC_TEXT— column 3, verbatim
 #   COVERED_BY — column 5, verbatim
 #   VERIFIED — `verified` or `unverified`
+#   TAG      — column 6: the test approach the spec assigned, backticks stripped, or empty
 #
 # `✓` is the only value read as verified. Anything else in that cell — a note, a tick of
 # a different codepoint, a stray word — reads as unverified, so a cell nobody meant as
 # proof cannot become proof.
+#
+# --- Why the tag is extracted rather than left in the document ------------------
+#
+# `[target]` and `[manual]` are the two tags whose ticks rest on something other than a
+# test having run: one on a human's judgement, the other on an environment nobody here
+# has. Left unextracted they are invisible to every consumer, so a row ticked on a human
+# verdict counts as ordinary verification and a reader is told only that the matrix is
+# green. The tag is reported verbatim rather than classified here — what a tag *means* is
+# a policy question, answered where the records are read, for the same reason the MoSCoW
+# heading travels with the label rather than being resolved in the parser.
+#
+# It is emitted last because every existing consumer indexes positionally, and appending
+# leaves those indices where they are. A field inserted mid-record shifts everything after
+# it and each consumer keeps parsing without complaint.
 #
 # A row is `story-originated` when its label carries the `(story-originated)` qualifier
 # *or* its spec text is `—`. Either signal alone is enough: a row with no spec text has no
@@ -570,6 +592,13 @@ coverage_matrix_rows() {
       label = cov_trim($3)
       spec_text = cov_trim($4)
       covered_by = cov_trim($6)
+      # Backticks are how the column renders a tag, not part of it. Stripping them is the
+      # same normalisation `verified` gets from `✓`: a consumer comparing against `[target]`
+      # would otherwise have to know the markup of the cell, and the one that forgets
+      # matches nothing and reports every row as untagged.
+      tag = $7
+      gsub(/`/, "", tag)
+      tag = cov_trim(tag)
       verified_cell = cov_trim($8)
 
       kind = "requirement"
@@ -580,7 +609,7 @@ coverage_matrix_rows() {
       base = (kind == "story-originated") ? "" : cov_base_label(label)
       verified = (verified_cell == TICK) ? "verified" : "unverified"
 
-      printf "%s\t%s\t%s\t%s\t%s\t%s\n", kind, base, label, spec_text, covered_by, verified
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", kind, base, label, spec_text, covered_by, verified, tag
     }
   ' "$matrix"
 }
