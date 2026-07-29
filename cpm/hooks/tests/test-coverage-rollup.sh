@@ -212,7 +212,7 @@ ARITIES=$(printf '%s\n' "$SPEC_OUT" | awk -F'\t' '{ a[$1] = NF } END {
   n = split("CRITERION MATRIX REQ ROW", order, " ")
   for (i = 1; i <= n; i++) if (order[i] in a) printf "%s=%d ", order[i], a[order[i]]
 }')
-assert_equals "CRITERION=6 MATRIX=3 REQ=4 ROW=7 " "$ARITIES"
+assert_equals "CRITERION=7 MATRIX=3 REQ=4 ROW=8 " "$ARITIES"
 
 test_start "the separator is a tab and nothing else — no line carries a stray separator"
 NON_TAB=$(printf '%s\n' "$SPEC_OUT" | LC_ALL=C grep -c $'\t' || true)
@@ -1027,6 +1027,45 @@ coverage_fixture_matrix 74-01-coverage-target-done "docs/specifications/74-spec-
 run_verdict --spec "$TV_SPEC" --matrix-dir "$TV_DIR" --verdict
 test_start "a verified [target] row still counts as delivered"
 assert_equals "$RC_DELIVERED_RUN" "$V_RC"
+
+# --- the two columns can disagree, and the spec's is not the one to believe ----------
+#
+# The shape a live run produced. A spec collapsed its environment requirements into ranges
+# (`ENV6-ENV8`) and tagged the range `[target]`, including entries whose own text reads
+# "Development environment provides..." -- checkable on the machine reading them. `cpm:epics`
+# does not edit the spec: it recorded the mis-tagging and wrote criteria that check the
+# tooling the way it can be checked, so the row carries `[target]` in the Spec Test Approach
+# column and `[integration]` in the criterion. Fourteen such rows existed in that one epic.
+#
+# Deciding target-only from the spec column alone calls those rows unverifiable and ends the
+# run. That is the livelock's failure arriving from the other side, and worse: the run stops
+# cleanly, reports a reason, and leaves real work undone. In that same run three rows were
+# exactly this -- `[integration]` criteria never verified -- so the verdict it should have
+# received was "keep working", not "nothing here can close these".
+MX_DIR=$(coverage_fixture_dir verdict-mixed-tags)
+MX_SPEC=$(coverage_fixture_spec 75-spec-mixed-tags --dir "$MX_DIR" \
+  --must ENV6 "Development environment provides Pest 3+")
+coverage_fixture_matrix 75-01-coverage-mixed-tags "docs/specifications/75-spec-mixed-tags.md" \
+  --dir "$MX_DIR" \
+  --tag '[target]' \
+  --row ENV6 "Development environment provides Pest 3+" \
+    'the suite runs and exits 0 `[integration]`' "Story 1" '' >/dev/null
+: > "$MX_DIR/75-01-epic-mixed-tags.md"
+
+test_start "control: the fixture's two tag columns really do disagree"
+MX_RECORDS=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" --spec "$MX_SPEC" --matrix-dir "$MX_DIR" 2>/dev/null)
+assert_equals "[target]	[integration]" \
+  "$(printf '%s\n' "$MX_RECORDS" | awk -F'\t' '$1=="ROW" { printf "%s\t%s", $7, $8 }')"
+
+run_verdict --spec "$MX_SPEC" --matrix-dir "$MX_DIR" --verdict
+test_start "a [target] spec tag over an automated criterion is outstanding, not target-only"
+assert_equals "$RC_OUTSTANDING_RUN" "$V_RC"
+
+# The other direction, so the rule is not simply "believe the criterion": a criterion that
+# says nothing must not cancel a spec tag that does. Untagged criteria are the common case
+# in matrices written before the criterion column carried tags at all.
+test_start "and an untagged criterion leaves the spec's own tag standing"
+assert_equals "$RC_TARGET_ONLY" "$(run_verdict --spec "$T_SPEC" --matrix-dir "$T_DIR" --verdict; printf '%s' "$V_RC")"
 
 # And the default path is untouched: the new code is confined to --verdict, the same
 # containment the no-matrix code got, checked here rather than assumed.

@@ -526,7 +526,7 @@ coverage_spec_scope_deferrals() {
 # Emit one record per data row of a coverage matrix's table.
 #
 # Usage: coverage_matrix_rows docs/epics/44-01-coverage-coverage-rollup-script.md
-# Emits: KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED<TAB>TAG
+# Emits: KIND<TAB>BASE<TAB>LABEL<TAB>SPEC_TEXT<TAB>COVERED_BY<TAB>VERIFIED<TAB>TAG<TAB>CRIT_TAG
 #
 #   KIND     — `requirement` or `story-originated`
 #   BASE     — the label with any qualifier resolved away (empty for story-originated)
@@ -535,6 +535,7 @@ coverage_spec_scope_deferrals() {
 #   COVERED_BY — column 5, verbatim
 #   VERIFIED — `verified` or `unverified`
 #   TAG      — column 6: the test approach the spec assigned, backticks stripped, or empty
+#   CRIT_TAG — the tags inline in column 4, the story criterion, same normalisation
 #
 # `✓` is the only value read as verified. Anything else in that cell — a note, a tick of
 # a different codepoint, a stray word — reads as unverified, so a cell nobody meant as
@@ -553,6 +554,23 @@ coverage_spec_scope_deferrals() {
 # It is emitted last because every existing consumer indexes positionally, and appending
 # leaves those indices where they are. A field inserted mid-record shifts everything after
 # it and each consumer keeps parsing without complaint.
+#
+# --- Why the criterion's own tag is extracted too ------------------------------
+#
+# A matrix carries tags in two columns and they do not have to agree. The Spec Test Approach
+# is what the *spec* assigned to the requirement; the tags inline in the Story Criterion are
+# what `cpm:epics` assigned to the criterion it actually wrote. When a spec mis-tags a
+# checkable requirement `[target]` — collapsed ranges like `ENV6–ENV8` make that cheap, and
+# a live run met exactly that — `cpm:epics` does not edit the spec. It adds criteria that
+# check the thing the way it can be checked here, and those criteria carry `[integration]`
+# while the spec column still reads `[target]`.
+#
+# A consumer reading only the spec column therefore sees `[target]` on a row that a test can
+# close, and the wrong answer is the dangerous direction: "nothing here can verify this" on
+# work that is merely unfinished. Both are reported, separately and unclassified, so the
+# consumer can require *both* to be unautomated before believing it.
+#
+# Appended after TAG for the same positional reason TAG itself was.
 #
 # A row is `story-originated` when its label carries the `(story-originated)` qualifier
 # *or* its spec text is `—`. Either signal alone is enough: a row with no spec text has no
@@ -601,6 +619,17 @@ coverage_matrix_rows() {
       tag = cov_trim(tag)
       verified_cell = cov_trim($8)
 
+      # The criterion cell is prose with tags at the end of it, so the tags are collected
+      # rather than trimmed off whole. Everything that is not a bracketed token is dropped,
+      # which is what keeps the field a tag set and not a second copy of the criterion.
+      crit_tag = ""
+      crit_cell = $5
+      gsub(/`/, "", crit_cell)
+      while (match(crit_cell, /\[[a-z]+\]/)) {
+        crit_tag = crit_tag substr(crit_cell, RSTART, RLENGTH)
+        crit_cell = substr(crit_cell, RSTART + RLENGTH)
+      }
+
       kind = "requirement"
       if (index(label, "(story-originated)") > 0 || spec_text == DASH) {
         kind = "story-originated"
@@ -609,7 +638,7 @@ coverage_matrix_rows() {
       base = (kind == "story-originated") ? "" : cov_base_label(label)
       verified = (verified_cell == TICK) ? "verified" : "unverified"
 
-      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", kind, base, label, spec_text, covered_by, verified, tag
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", kind, base, label, spec_text, covered_by, verified, tag, crit_tag
     }
   ' "$matrix"
 }

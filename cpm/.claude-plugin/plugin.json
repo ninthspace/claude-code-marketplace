@@ -1,7 +1,7 @@
 {
   "name": "cpm",
   "description": "Claude Planning Method — facilitated planning with multi-perspective party mode for Claude Code, tuned for Claude Opus 5. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "author": {
     "name": "Chris Aves"
   },

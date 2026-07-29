@@ -48,6 +48,16 @@
 # state a name a caller can terminate on, and leaves 0 meaning what it always meant, so a
 # run against the real host can still say a spec is fully verified.
 #
+# **5 reads both tag columns, and that is not a refinement.** A spec that mis-tags a
+# checkable requirement `[target]` — collapsed ranges such as `ENV6–ENV8` make it a single
+# careless cell — does not stop `cpm:epics`, which leaves the spec alone and writes criteria
+# that check the thing properly. The resulting row says `[target]` in the spec column and
+# `[integration]` in the criterion. Deciding 5 from the spec column alone declares that row
+# unverifiable and terminates a run with work genuinely left to do, which is the same
+# failure as the livelock 5 was introduced to end, reached from the opposite side and much
+# harder to see afterwards: the run stops cleanly and reports a reason. So the withholding
+# test requires both columns to agree, and a disagreement resolves toward keeping working.
+#
 # Code 4 exists because a loop working from a spec starts with no matrices at all, and that
 # is iteration 1 rather than a failure (spec 45, FR7 / AD2). Before it, that state and a
 # genuine read failure were both exit 1, so a loop could not tell "keep working" from "stop".
@@ -95,7 +105,7 @@
 #   STATE      label, moscow, delivered|in-progress|untraced            (spec scope)
 #   EXCLUDED   label, moscow                                            (spec scope)
 #   SUMMARY    scope, requirements, untraced, delivered, in-progress    (spec scope)
-#   ROW        matrix-path, base, label, covered-by, verified|unverified, tag (both scopes)
+#   ROW        matrix-path, base, label, covered-by, verified|unverified, tag, criterion tag
 #   CRITERION  matrix-path, label, covered-by, verified|unverified, tag       (both scopes)
 #   UNRESOLVED matrix-path, label, covered-by                                 (both scopes)
 #
@@ -105,12 +115,17 @@
 #
 # The `tag` on `ROW` and `CRITERION` is the matrix's Spec Test Approach cell — the test
 # approach the spec assigned — with its backticks removed, and empty when the column is
-# blank or absent. It is reported, never interpreted: a tick is a tick whatever tag sits
-# beside it, and the verdict below counts rows the same way it always has. What it lets a
-# reader do is separate the ticks a test produced from the ones resting on a human's
-# judgement (`[manual]`) or on an environment nobody here has (`[target]`) — a distinction
-# that was previously stated only in the matrix and invisible to everything reading it, so
-# a wall of green could not be told apart from a wall of self-assessment.
+# blank or absent. The `criterion tag` beside it is the tags written inline in the Story
+# Criterion cell, which is what `cpm:epics` assigned to the criterion it actually wrote.
+# They are reported separately because they do not have to agree, and the disagreement is
+# load-bearing: see the note on code 5 below.
+#
+# Neither changes what a tick means — a tick is a tick whatever tags sit beside it, and the
+# delivered/in-progress counts are what they always were. What they let a reader do is
+# separate the ticks a test produced from the ones resting on a human's judgement
+# (`[manual]`) or on an environment nobody here has (`[target]`) — a distinction that was
+# previously stated only in the matrix and invisible to everything reading it, so a wall of
+# green could not be told apart from a wall of self-assessment.
 #
 # `UNRESOLVED` carries a row that names a requirement the label cannot be resolved to —
 # in practice a label naming several, such as `ENV1–ENV5`. It is a record rather than a
@@ -287,11 +302,11 @@ emit_req() {
 }
 
 emit_row() {
-  printf 'ROW\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6"
+  printf 'ROW\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6" "$7"
 }
 
 emit_criterion() {
-  printf 'CRITERION\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5"
+  printf 'CRITERION\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "$5" "$6"
 }
 
 # No verified field: whether an unresolvable row carries a tick is not a fact worth
@@ -308,7 +323,7 @@ emit_unresolved() {
 # what stops a consumer counting one toward a requirement by accident.
 emit_matrix_rows() {
   local matrix_abs="$1" matrix_rel="$2"
-  local line rest kind base label covered verified tag
+  local line rest kind base label covered verified tag crit_tag
   local tab
   tab="$(printf '\t')"
 
@@ -328,18 +343,24 @@ emit_matrix_rows() {
     label="${rest%%$tab*}"; rest="${rest#*$tab}"
     rest="${rest#*$tab}"                     # spec text: neither record type carries it
     covered="${rest%%$tab*}"; rest="${rest#*$tab}"
-    verified="${rest%%$tab*}"
-    tag="${rest#*$tab}"
+    verified="${rest%%$tab*}"; rest="${rest#*$tab}"
+    tag="${rest%%$tab*}"
+    crit_tag="${rest#*$tab}"
+    # A record with no criterion tag ends at `tag`, so `#*` finds no tab and returns the
+    # whole of `rest` — which is `tag` again. Reading it back as the criterion's own tag
+    # would make every untagged criterion inherit the spec's, and `[target]` is exactly the
+    # value that must not spread that way.
+    [ "$crit_tag" = "$tag" ] && case "$rest" in *"$tab"*) ;; *) crit_tag="" ;; esac
 
     if [ "$kind" = "story-originated" ]; then
-      emit_criterion "$matrix_rel" "$label" "$covered" "$verified" "$tag"
+      emit_criterion "$matrix_rel" "$label" "$covered" "$verified" "$tag" "$crit_tag"
     elif [ -z "$base" ]; then
       # A requirement row whose label resolved to nothing. Kept out of `ROW` because a ROW
       # with an empty base would join against no requirement while still counting as a row,
       # which is the silent version of this failure.
       emit_unresolved "$matrix_rel" "$label" "$covered"
     else
-      emit_row "$matrix_rel" "$base" "$label" "$covered" "$verified" "$tag"
+      emit_row "$matrix_rel" "$base" "$label" "$covered" "$verified" "$tag" "$crit_tag"
     fi
   done
 }
@@ -690,10 +711,11 @@ rollup_run_scope() {
 # the way two predicates over the same buffer eventually would.
 rollup_verdict() {
   # Field numbers count the record type as field 1, so a `ROW`'s five documented fields sit
-  # at $2..$6 and its verified cell is $6, not $5 — and its tag is $7. `CRITERION` has one
-  # field fewer, so the same two cells are $5 and $6. Reading the record format's own
-  # numbering straight into awk puts every test one field to the left, where a verified row
-  # compares unequal to "verified" and every verdict comes back outstanding.
+  # at $2..$6 and its verified cell is $6, not $5 — its spec tag is $7 and its criterion tag
+  # $8. `CRITERION` has one field fewer, so the same cells are $5, $6 and $7. Reading the
+  # record format's own numbering straight into awk puts every test one field to the left,
+  # where a verified row compares unequal to "verified" and every verdict comes back
+  # outstanding.
   #
   # `actionable` wins over `target` whenever both are set: a run with real work left is
   # outstanding however many target rows sit beside it.
@@ -705,8 +727,19 @@ rollup_verdict() {
     function target_only(tag) {
       return tag ~ /\[target\]/ && tag !~ /\[(unit|integration|feature)\]/
     }
-    $1 == "ROW"        && $6 != "verified" { if (target_only($7)) target = 1; else actionable = 1 }
-    $1 == "CRITERION"  && $5 != "verified" { if (target_only($6)) target = 1; else actionable = 1 }
+    # Both columns, and either one offering an automated tag is enough to keep the row in
+    # play. The spec column alone is not the answer: when a spec mis-tags a checkable
+    # requirement `[target]`, `cpm:epics` leaves the spec alone and writes criteria that
+    # check it properly, so the row reads `[target]` from the spec and `[integration]` from
+    # the criterion. Believing only the spec calls that row unverifiable here and stops a
+    # run that had work left -- the failure this whole verdict exists to avoid, arrived at
+    # from the other side.
+    function withheld(spec_tag, crit_tag) {
+      if (crit_tag != "") return target_only(spec_tag) && target_only(crit_tag)
+      return target_only(spec_tag)
+    }
+    $1 == "ROW"        && $6 != "verified" { if (withheld($7, $8)) target = 1; else actionable = 1 }
+    $1 == "CRITERION"  && $5 != "verified" { if (withheld($6, $7)) target = 1; else actionable = 1 }
     $1 == "STATE"      && $4 == "untraced" { actionable = 1 }
     $1 == "UNRESOLVED"                     { actionable = 1 }
     END {

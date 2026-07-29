@@ -161,8 +161,8 @@ It emits tab-separated records, one per line, with the record type in field 1:
 | `STATE` | label, MoSCoW heading, `delivered` \| `in-progress` \| `untraced` |
 | `EXCLUDED` | label, MoSCoW heading — a requirement the spec ruled out, rather than one that is missing |
 | `SUMMARY` | scope, requirements, untraced, delivered, in-progress |
-| `ROW` | matrix path, base label, label, covered by, `verified` \| `unverified`, test approach tag |
-| `CRITERION` | matrix path, label, covered by, `verified` \| `unverified`, test approach tag — a story-originated row, with no requirement behind it |
+| `ROW` | matrix path, base label, label, covered by, `verified` \| `unverified`, test approach tag, criterion tag |
+| `CRITERION` | matrix path, label, covered by, `verified` \| `unverified`, test approach tag, criterion tag — a story-originated row, with no requirement behind it |
 | `UNRESOLVED` | matrix path, label, covered by — a row whose label names no single requirement, such as `ENV1–ENV5`. It carries no verified field: the row resolves to nothing, so a tick on it verifies nothing |
 
 **Render it like this:**
@@ -178,6 +178,8 @@ It emits tab-separated records, one per line, with the record type in field 1:
 **Say what the `✓` marks mean, wherever this section shows them.** They are **aggregation, not verification**. Every `✓` was placed by `cpm:do` on its own work; unioning them reports what `do` claimed, more conveniently, and adds no independent evidence. A wall of green must not be read as confirmation that anything works. The untraced count is the part of this section that discriminates — the spec's requirement list is written by a human and the matrices are generated later from it, so a gap between them is a real finding rather than a foregone one.
 
 **And separate the marks a test produced from the ones nothing could.** Each `ROW` and `CRITERION` carries the test approach the spec assigned. `[target]` and `[manual]` are the two whose ticks rest on something other than a test having run — one on an environment nobody here has, the other on a human's judgement — so a section reporting *"every row verified"* over a set that is largely those two is reporting agreement, not evidence. Where any verified row carries either tag, say how many and which requirements, in the same breath as the counts. Do not reweight or discount anything: a tick is a tick, and this is a statement about what the ticks rest on.
+
+**Read both tag fields, and report a disagreement as its own finding.** The seventh field is the tag the *spec* assigned to the requirement; the eighth is the tag on the *criterion* `cpm:epics` actually wrote, and they need not match. The disagreement worth naming is a spec tag of `[target]` over an automated criterion: it means the spec withheld a requirement from verification that the breakdown found a way to check anyway — almost always a mis-tagged requirement rather than a deliberate one, and it is easiest to create by tagging a collapsed range such as `ENV6–ENV8` in one cell. Report those rows separately from the genuinely unverifiable ones. Read as `[target]` they look permanently out of reach; read as what they are, they are ordinary outstanding work.
 
 #### The stakeholder page (on request only)
 

@@ -46,7 +46,17 @@ echo "==========================================================================
 # --- Slice --------------------------------------------------------------------------------
 
 PRED_START='^#### The phase predicate'
-PRED_END='^\*\*Template\*\*'
+# The next heading of any level, not `**Template**`. The old terminator assumed this section
+# was permanently the last thing before the template block, which is a claim about the file's
+# layout rather than about the predicate — and it stopped being true the moment a sibling
+# section was added between them, at which point every assertion below silently widened to
+# cover that section's prose too.
+#
+# `\{1,\}` and not `\+`: this is a BRE fed to `sed`, where `\+` is a literal plus and the
+# pattern silently never matches — which does not fail, it runs the slice to end-of-file and
+# passes every `assert_contains` against the whole document. The `^#+ ` form elsewhere in
+# this directory is correct because those are `awk`, which is ERE.
+PRED_END='^#\{1,\} '
 predicate_slice() { sed -n "/$PRED_START/,/$PRED_END/p" "$1"; }
 
 test_start "slice: the phase predicate section spans its own block and no more"
