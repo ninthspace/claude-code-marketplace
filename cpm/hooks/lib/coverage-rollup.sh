@@ -549,6 +549,7 @@ rollup_emit_derived() {
 rollup_spec_scope() {
   local spec_abs spec_base source_spec m
   local matrices=()
+  local no_matrix=""
 
   spec_abs="$(rollup_abs_path "$SPEC_PATH")"
   if [ ! -r "$spec_abs" ]; then
@@ -573,21 +574,21 @@ rollup_spec_scope() {
       return 1
     fi
     echo "coverage-rollup: no matrix directory at $MATRIX_DIR — nothing names $spec_base as its source spec" >&2
-    return "$EXIT_NO_MATRIX"
+    no_matrix=1
+  else
+    for m in "$MATRIX_DIR"/*-coverage-*.md; do
+      [ -f "$m" ] || continue
+      coverage_is_matrix_name "${m##*/}" || continue
+      if [ ! -r "$m" ]; then
+        echo "coverage-rollup: cannot read matrix: $m" >&2
+        return 1
+      fi
+      source_spec="$(coverage_matrix_source_spec "$m")"
+      [ -n "$source_spec" ] || continue
+      [ "${source_spec##*/}" = "$spec_base" ] || continue
+      matrices+=("$m")
+    done
   fi
-
-  for m in "$MATRIX_DIR"/*-coverage-*.md; do
-    [ -f "$m" ] || continue
-    coverage_is_matrix_name "${m##*/}" || continue
-    if [ ! -r "$m" ]; then
-      echo "coverage-rollup: cannot read matrix: $m" >&2
-      return 1
-    fi
-    source_spec="$(coverage_matrix_source_spec "$m")"
-    [ -n "$source_spec" ] || continue
-    [ "${source_spec##*/}" = "$spec_base" ] || continue
-    matrices+=("$m")
-  done
 
   # No matrices is *not* full coverage — it is a spec nothing has been broken down for,
   # or a discovery that failed. Reporting it as a clean run would be complete by default.
@@ -598,12 +599,12 @@ rollup_spec_scope() {
   # return code rather than a variable because the caller runs it inside `$( )` — a global
   # set here could not reach the parent. The non-`--verdict` path maps it straight back to 1,
   # so epic 44-01's contract is unchanged (AD2).
-  if [ ${#matrices[@]} -eq 0 ]; then
+  if [ -z "$no_matrix" ] && [ ${#matrices[@]} -eq 0 ]; then
     echo "coverage-rollup: no matrix in $MATRIX_DIR names $spec_base as its source spec" >&2
-    return "$EXIT_NO_MATRIX"
+    no_matrix=1
   fi
 
-  for m in "${matrices[@]}"; do
+  for m in ${matrices[@]+"${matrices[@]}"}; do
     emit_matrix "$(rollup_rel_path "$m")" "$(coverage_matrix_source_spec "$m")"
   done
 
@@ -630,11 +631,24 @@ rollup_spec_scope() {
     emit_req "$label" "$moscow" "$text"
   done
 
-  rollup_emit_derived "$spec_abs" "${matrices[@]}"
+  rollup_emit_derived "$spec_abs" ${matrices[@]+"${matrices[@]}"}
 
-  for m in "${matrices[@]}"; do
+  for m in ${matrices[@]+"${matrices[@]}"}; do
     emit_matrix_rows "$m" "$(rollup_rel_path "$m")"
   done
+
+  # The records above are emitted on the no-matrix path too, and only the code differs.
+  # `4` still means *nothing names this spec yet*, so no branch the loop takes moves — but
+  # a caller that must report figures before branching now has figures to report. Spec
+  # mode's first iteration is always this path, and the prompt asks for a COUNTS line
+  # every iteration "including the ones that stop"; before this, that line was the one
+  # thing the script could not supply on the one iteration guaranteed to occur.
+  #
+  # Every requirement comes back `untraced` here because none is traced, which is a true
+  # reading rather than a placeholder: the figures are comparable with the next
+  # iteration's, so a stall check has something to compare.
+  [ -n "$no_matrix" ] && return "$EXIT_NO_MATRIX"
+  return 0
 }
 
 # --- Epic scope -----------------------------------------------------------------

@@ -238,7 +238,9 @@ Present the test approach tag vocabulary to the user:
 
 #### Step 6b: Tag Acceptance Criteria
 
-For each must-have functional requirement from Section 2, propose a test approach tag for each acceptance criterion. **Default to automation** — boundary-crossing → `[integration]`, isolated logic → `[unit]`, user-visible workflow → `[feature]`. Propose `[manual]` only when automation is genuinely infeasible (visual/UX judgement, third-party UI you don't control, content review, observability checks against external systems), and when you do, include a one-line justification stating what blocks automation. `[manual]` is the exception, not a peer of the automated tags — see `cpm:epics`'s **Default to automation** guideline for the full automatable/manual category lists. Use AskUserQuestion to confirm or adjust. Flag any criterion too vague to tag and ask the user to refine it.
+For each must-have functional requirement from Section 2, **and for each non-functional requirement from Section 3**, propose a test approach tag for each acceptance criterion. **Default to automation** — boundary-crossing → `[integration]`, isolated logic → `[unit]`, user-visible workflow → `[feature]`. Propose `[manual]` only when automation is genuinely infeasible (visual/UX judgement, third-party UI you don't control, content review, observability checks against external systems), and when you do, include a one-line justification stating what blocks automation. `[manual]` is the exception, not a peer of the automated tags — see `cpm:epics`'s **Default to automation** guideline for the full automatable/manual category lists. Use AskUserQuestion to confirm or adjust. Flag any criterion too vague to tag and ask the user to refine it.
+
+**An NFR with no row here is admissible to this skill and blocking downstream, which is why it is named.** `coverage-rollup.sh` counts every requirement it can parse — `NFRn` alongside `FRn` — so an NFR that reaches the epics with no acceptance criterion still has to be traced to a matrix row before a spec-mode loop can leave phase 1. `cpm:epics` will close the gap by writing a row with an empty test approach, which is honest (there was no tag to propagate) and leaves `cpm:do` verifying against nothing. The requirement most likely to land here is the one phrased as an absence — *no dependencies*, *no configuration*, *never mutates X* — because there is no artefact to point at. Give it an observable: a check that the absence holds is a criterion; the absence itself is not.
 
 **Probe for must-NOT clauses**: For each criterion, ask: "Are there behaviours this criterion explicitly allows that you would reject?" Capture rejected behaviours as paired `must NOT` lines alongside the positive criterion (e.g. "must NOT allow password reset without rate limiting"). Include must-NOT lines in the Acceptance Criteria Coverage table with their own tags.
 
@@ -383,7 +385,7 @@ Test approach tags used in this spec:
 | {Requirement label} | {Criterion text} | {[tag]} |
 | {Requirement label} | {Criterion text} | {[tag]} |
 
-{Each must-have requirement has at least one testable criterion with a tag. Criteria flagged during Section 6b as vague should be refined before inclusion here.}
+{Each must-have requirement and each non-functional requirement has at least one testable criterion with a tag. Criteria flagged during Section 6b as vague should be refined before inclusion here.}
 
 ### Integration Boundaries
 {Key integration points between architectural components, derived from ADRs if available}

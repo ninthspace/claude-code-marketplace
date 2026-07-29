@@ -179,4 +179,45 @@ printf '%s\n' "$UNLABELLED" > "$FIXTURE"
 test_start "control: the same fixture with the labels stripped traces nothing"
 assert_empty "$(coverage_spec_requirements "$FIXTURE")"
 
+# --- Every class the roll-up counts must be a class Section 6b gives criteria to ----------
+#
+# The same shape as the failure this suite was written for, one column over. There the parser
+# counted a class the template did not label; here it counts a class Section 6b did not
+# require a criterion for. `coverage_spec_requirements` emits `NFRn` records alongside `FRn`,
+# so a spec-mode loop has to trace every NFR to a matrix row before it can leave phase 1 —
+# while Step 6b asked for tags on must-have *functional* requirements only. An NFR with no
+# acceptance criterion was therefore admissible to `cpm:spec` and blocking to `cpm:ralph`.
+#
+# Observed: an NFR reading "git and a POSIX shell, nothing else" reached the epics with no
+# criterion, `cpm:epics` closed the gap with a row carrying an empty test approach, and the
+# phase-1 predicate was satisfied by a row nothing could verify against.
+#
+# The oracle is the parser, not the prose: assert it really does count the class, then assert
+# the instruction covers it. Either half alone passes on a version where the two disagree.
+NFR_FIXTURE=$(mktemp -t spec-nfr-XXXXXX)
+{
+  printf '# Spec: NFR reach\n\n## Functional Requirements\n\n### Must Have\n\n'
+  printf -- '- **FR1 — A thing.** It does the thing.\n\n'
+  printf '## Non-Functional Requirements\n\n'
+  printf -- '- **NFR1 — No dependencies.** Nothing beyond a POSIX shell.\n'
+} > "$NFR_FIXTURE"
+
+test_start "control: the roll-up counts a non-functional requirement as a requirement"
+assert_equals "NFR1" "$(coverage_spec_requirements "$NFR_FIXTURE" | awk -F'\t' '$1 ~ /^NFR/ { print $1 }')"
+
+SPEC_TEXT=$(cat "$SPEC_SKILL")
+TAG_STEP=$(sed -n '/^#### Step 6b:/,/^#### /p' "$SPEC_SKILL")
+
+test_start "and Step 6b asks for a criterion on that class, not only on functional ones"
+assert_contains "$TAG_STEP" "non-functional requirement"
+
+# The named trap. A requirement phrased as an absence is the one with no artefact to point a
+# criterion at, and it is the shape that reaches the epics untagged — so the guidance has to
+# say what to do rather than only that the class is included.
+test_start "and it says how to give an absence an observable"
+assert_contains "$TAG_STEP" "the absence itself is not"
+
+test_start "the output template's coverage note names the class too"
+assert_contains "$SPEC_TEXT" "each non-functional requirement has at least one testable criterion"
+
 test_summary

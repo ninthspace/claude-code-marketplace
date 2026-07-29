@@ -1114,9 +1114,50 @@ test_start "the diagnostic still names the directory and the spec it looked for"
 N_ERR=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict 2>&1 >/dev/null || true)
 assert_contains "$N_ERR" "no matrix in $N_DIR names 71-spec-no-matrix.md as its source spec"
 
-test_start "and the no-matrix run emits no records on stdout"
+# The no-matrix path emits its records like any other. This inverts an earlier assertion that
+# required stdout to be empty here, and the inversion is the point rather than a casualty: a
+# caller told to report figures *before* branching on the code has, on the one iteration
+# guaranteed to take this path, no figures to report. The exit code is what carries the
+# meaning; silence carried nothing.
+test_start "the no-matrix run still emits a SUMMARY record"
 run_verdict --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict
-assert_empty "$V_OUT"
+assert_contains "$V_OUT" "SUMMARY"
+
+test_start "and every requirement in it reads untraced, since none is traced"
+N_SUM=$(printf '%s\n' "$V_OUT" | awk -F'\t' '$1 == "SUMMARY" { print $3, $4, $5, $6 }')
+N_REQ=$(printf '%s\n' "$V_OUT" | awk -F'\t' '$1 == "SUMMARY" { print $3 }')
+assert_equals "$N_REQ $N_REQ 0 0" "$N_SUM"
+
+# The other route to the same code, and the one a real first iteration takes. Above, the
+# directory exists and holds no matching matrix; here there is no `docs/epics/` at all, which
+# is what a repository that has never run `cpm:epics` looks like. They are separate branches
+# in the script, so an assertion on one leaves the other free to return early — and it is this
+# one that runs at iteration 1 of every spec-mode run.
+D_ROOT=$(mktemp -d -t rollup-nodir-XXXXXX)
+mkdir -p "$D_ROOT/docs/specifications"
+cp "$N_SPEC" "$D_ROOT/docs/specifications/"
+D_RC=0
+D_OUT=$( cd "$D_ROOT" && run_without_env CLAUDE_PROJECT_DIR -- \
+  bash "$ROLLUP" --spec "docs/specifications/$(basename "$N_SPEC")" --verdict 2>/dev/null ) || D_RC=$?
+
+test_start "control: the fixture really has no matrix directory"
+assert_equals "absent" "$( [ -d "$D_ROOT/docs/epics" ] && echo present || echo absent )"
+
+test_start "a missing matrix directory emits records too, not only a code"
+assert_contains "$D_OUT" "SUMMARY"
+
+test_start "and returns the same code as a directory holding no matching matrix"
+assert_equals "$RC_NO_MATRIX" "$D_RC"
+
+# The must-NOT that keeps this from becoming a false-clean report. Records on stdout are what
+# a completed run looks like, so the risk the change introduces is a caller reading this path
+# as one — the exit code has to stay the thing that separates them.
+test_start "and it is still not the code a fully-delivered run returns"
+if [ "$V_RC" != "$RC_DELIVERED_RUN" ]; then
+  test_pass
+else
+  test_fail "no-matrix and fully-delivered both returned $V_RC"
+fi
 
 # The script's usage text describes its own exit codes, which makes it a document describing
 # a program — and retro 24's finding is that asserting the two halves separately never

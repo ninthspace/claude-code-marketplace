@@ -121,7 +121,7 @@ Discover the project's test runner for inclusion in the generated prompt:
 Check for evidence of a previous Ralph run:
 
 1. **Glob** `docs/plans/.cpm-ralph-log-*.md` for the iteration logs earlier runs wrote (Step 2's iteration-log clause).
-2. If one exists, read it and report what it shows: how many iterations ran, what the last line's counts and commit were, and whether the last few lines repeat — a run that ended on repeated lines stalled rather than finished, and that is the single most useful thing to know before arming another one.
+2. If one exists, read it and report what it shows: how many iterations ran, what the last line's counts, commit and tree were, and whether the last few lines repeat — a run that ended on repeated lines stalled rather than finished, and that is the single most useful thing to know before arming another one.
 3. Use Grep to check the target epic docs' `**Status**:` fields to confirm the current state. Use Grep and Read tools directly.
 4. If a previous run is detected, present the state to the user with AskUserQuestion: "Found a previous Ralph run. {N} epics completed, {M} remaining. Resume from where it left off?" Options: "Resume" or "Start fresh (ignore previous state)".
 
@@ -222,18 +222,21 @@ The template carries the clause below, interpolated as `{log_clause}`. It is one
 ```
 Before anything else each iteration, append one line to docs/plans/.cpm-ralph-log-{session_id}.md
 reading ITER {n} | {the COUNTS or COVERAGE figures verbatim} | exit {code} | {git rev-parse
---short HEAD}, creating the file if absent. Then read the last three lines: if all three carry
-the same figures and the same commit, print STALLED: {n} iterations with no change at {commit}
-and stop the loop.
+--short HEAD 2>/dev/null || echo no-commit} | {git status --porcelain | cksum}, creating the
+file if absent. Then read the last three lines: if all three carry the same figures, the same
+commit and the same tree, print STALLED: {n} iterations with no change at {commit} and stop
+the loop.
 ```
 
 **One interpolation site, and it has to be that one.** Spec mode assembles its prompt by replacing the template's opening sentence and its completion clause (Step 3b); everything between them survives verbatim. `{log_clause}` therefore sits in the clause chain after `{resume_clause}`, inside that surviving middle, and both modes get it from a single placeholder. In either replaced region it would reach one mode and not the other — and the mode it would miss is spec mode, the longer-running of the two and the one a stall is most expensive in.
 
-**Only facts a command produced.** Every field is the verbatim output of something already run this iteration — the roll-up's `SUMMARY` figures, its exit code, and `git rev-parse`. Nothing here is the loop's account of what it did, and that is the point rather than an economy: the loop's *narrative* is already in the commits and the transcript, and a narrative clause is the kind that quietly stops being obeyed. A live run's per-story observations went 12, 6, 8 across its first three epics and then **zero across its last sixteen stories**, with nothing detecting the silence. A line that is either appended or absent cannot decay that way, and its absence says something too.
+**Only facts a command produced.** Every field is the verbatim output of something already run this iteration — the roll-up's `SUMMARY` figures, its exit code, `git rev-parse`, and `git status`. Nothing here is the loop's account of what it did, and that is the point rather than an economy: the loop's *narrative* is already in the commits and the transcript, and a narrative clause is the kind that quietly stops being obeyed. A live run's per-story observations went 12, 6, 8 across its first three epics and then **zero across its last sixteen stories**, with nothing detecting the silence. A line that is either appended or absent cannot decay that way, and its absence says something too.
 
 **Why the stall check earns a second stopping condition.** Exit `5` terminates one *known* cause of non-convergence. This terminates the *class*: three iterations with identical figures at an identical commit means nothing was delivered, whatever the reason — including reasons not yet found. The run that motivated this repeated 34 times over three hours; the check would have ended it at three.
 
-**Both conditions, never one.** Figures alone false-positive on a legitimately long iteration — a large refactor can deliver nothing measurable for an hour and still be working. The commit is what disambiguates, and it works precisely because the templates already require a commit after each completed story: unchanged figures *and* an unchanged `HEAD` means no story finished either.
+**A repository with no commits is a normal first-iteration state.** `git rev-parse HEAD` exits 128 there and writes to stderr, so without the fallback that field carries `fatal: Needed a single revision` — an error string standing in a data column, on exactly the iterations someone diagnosing a failed run reads first.
+
+**Three conditions, and the third is the only independent one.** Figures alone false-positive on a legitimately long iteration — a large refactor can deliver nothing measurable for an hour and still be working. The commit looks like it disambiguates that and mostly does not: the figures move when `cpm:do` marks rows, the commit moves when `cpm:do` commits, and both happen because a piece of work finished. Two readings of one event are not two conditions. The tree fingerprint is the one signal that moves *while* work is in progress rather than when it lands, so it is what separates *quiet* from *stuck* — and it is the only one that moves at all during phase 1, where nothing commits and no row is marked until the first `/cpm:do`.
 
 **The path is dot-prefixed so Step 1g's existing ignore already covers it.** `/docs/plans/.cpm-*` is one of the three lines that step offers, so the log needs no new gate and no second question — and a log the loop writes every iteration is exactly the churn that step exists to keep out of the user's commits.
 

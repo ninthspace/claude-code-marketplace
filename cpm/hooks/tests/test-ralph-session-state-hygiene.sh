@@ -166,6 +166,11 @@ LOG_SECTION=$(sed -n '/^#### The iteration log/,/^\*\*Template\*\*/p' "$RALPH_SK
 # has dropped one — the paragraph mentioning it is enough to satisfy the grep.
 LOG_CLAUSE=$(printf '%s\n' "$LOG_SECTION" | awk '/^```/{n++; next} n==1')
 
+# Phrase assertions run against the clause with its line breaks flattened. The block is hard
+# wrapped, so where a sentence happens to break is a typographic accident — a phrase assertion
+# that fails because a clause got one word longer is testing the wrap, not the rule.
+LOG_FLAT=$(printf '%s\n' "$LOG_CLAUSE" | tr '\n' ' ' | tr -s ' ')
+
 test_start "slice: the iteration-log section is bounded"
 assert_slice_bounded "$RALPH_SKILL" '^#### The iteration log' '^\*\*Template\*\*' 8 40
 
@@ -181,15 +186,28 @@ fi
 test_start "the logged line carries the commit, not only the counts"
 assert_contains "$LOG_CLAUSE" 'git rev-parse'
 
-test_start "the stall check requires both the figures and the commit to be unchanged"
-if printf '%s\n' "$LOG_CLAUSE" | grep -qF 'same figures and the same commit'; then
+# A repository with no commits is the normal state at iteration 1 of a run started in a fresh
+# directory, and `git rev-parse HEAD` exits 128 there. Without the fallback the field carries
+# the stderr text, which compares equal across iterations exactly as a real value would — so
+# the defect hides inside a working stall check rather than breaking it.
+test_start "and falls back rather than letting git's stderr stand in the field"
+assert_contains "$LOG_FLAT" 'no-commit'
+
+# The independent signal. The figures move when cpm:do marks rows and the commit moves when
+# cpm:do commits — both on work landing, so they are two readings of one event. The tree is
+# the only field that moves while work is still in progress.
+test_start "the logged line carries a working-tree fingerprint too"
+assert_contains "$LOG_FLAT" 'git status --porcelain'
+
+test_start "the stall check requires the figures, the commit and the tree to be unchanged"
+if printf '%s\n' "$LOG_FLAT" | grep -qF 'the same figures, the same commit and the same tree'; then
   test_pass
 else
-  test_fail "the stall condition does not require both"
+  test_fail "the stall condition does not require all three"
 fi
 
 test_start "and it names the stopping action rather than only saying to stop"
-assert_contains "$LOG_CLAUSE" 'stop the loop'
+assert_contains "$LOG_FLAT" 'stop the loop'
 
 # The must-NOT. The whole argument for this log is that it records what a command returned,
 # not what the loop thought it was doing — a narrative clause is the kind that goes quiet

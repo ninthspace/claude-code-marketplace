@@ -57,6 +57,14 @@ test_start "control: the repository root resolves, so the assertions below have 
 assert_contains "$REPO_ROOT" "/"
 
 # --- Criterion 1: the durable records are byte-identical before and after ---------------
+#
+# The baseline was regenerated once since it was taken, and the reason belongs beside it
+# because a regenerated baseline is indistinguishable from a defeated one. `rollup_spec_scope`
+# now emits its records on the no-matrix path as well as the matching one, so the archived
+# specs — which no matrix names — went from `<no records>` to their own `REQ` and `EXCLUDED`
+# lines. Nothing that already emitted records changed, and no exit code moved: the diff was
+# 82 `REQ` and 7 `EXCLUDED` additions against 82 removed `<no records>` markers, which is the
+# whole of it. A future diff that touches a spec already carrying records is a regression.
 
 REGENERATED=$(cd "$REPO_ROOT" && bash "$GENERATOR" 2>/dev/null)
 
