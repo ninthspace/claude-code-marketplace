@@ -43,7 +43,7 @@
       "name": "cpm",
       "source": "./cpm",
       "description": "Claude Planning Method — facilitated planning with multi-perspective party mode for Claude Code, tuned for Claude Opus 5. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-      "version": "3.8.0",
+      "version": "3.9.0",
       "keywords": [
         "planning",
         "discovery",

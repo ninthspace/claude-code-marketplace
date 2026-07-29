@@ -164,8 +164,13 @@ coverage_fixture_matrix 80-01-coverage-done "docs/specifications/80-spec-ralph.m
 coverage_fixture_matrix 80-02-coverage-open "docs/specifications/80-spec-ralph.md" \
   --dir "$R_DIR" --epic "$R_DIR/80-02-epic-open.md" \
   --row FR1 "a requirement" "the FR1 criterion" "Story 1" '' >/dev/null
+coverage_fixture_matrix 80-03-coverage-target "docs/specifications/80-spec-ralph.md" \
+  --dir "$R_DIR" --epic "$R_DIR/80-03-epic-target.md" \
+  --tag '[target]' \
+  --row NFR1 "a requirement about the production host" "the NFR1 criterion" "Story 1" '' >/dev/null
 : > "$R_DIR/80-01-epic-done.md"
 : > "$R_DIR/80-02-epic-open.md"
+: > "$R_DIR/80-03-epic-target.md"
 
 # Substitute the template's placeholders and run what is left, with CLAUDE_PROJECT_DIR unset
 # — the environment a model-issued Bash call actually has (AD5).
@@ -186,12 +191,21 @@ assert_contains "$RUN_CMD" "coverage-rollup.sh"
 RC_DELIVERED="$RUN_RC"
 run_templated "$R_DIR/80-02-epic-open.md"
 RC_OUTSTANDING="$RUN_RC"
+run_templated "$R_DIR/80-03-epic-target.md"
+RC_TARGET="$RUN_RC"
 
 test_start "the command the template names exits 0 when every row is verified"
 assert_equals "0" "$RC_DELIVERED"
 
 test_start "and exits 3 when a row is not"
 assert_equals "3" "$RC_OUTSTANDING"
+
+test_start "and a third code when the only unverified row is [target]"
+if [ "$RC_TARGET" != "$RC_DELIVERED" ] && [ "$RC_TARGET" != "$RC_OUTSTANDING" ]; then
+  test_pass
+else
+  test_fail "the target-only fixture returned $RC_TARGET, the same as delivered or outstanding"
+fi
 
 test_start "control: the two fixtures produce different codes, so the pair means something"
 if [ "$RC_DELIVERED" != "$RC_OUTSTANDING" ]; then
@@ -208,6 +222,7 @@ fi
 # template's prose separately does not assert that they refer to the same thing.
 TEMPLATE_OK_CODE=$(printf '%s\n' "$PROMPT" | sed -n 's/.*let its exit code decide: on \([0-9]*\),.*/\1/p')
 TEMPLATE_OPEN_CODE=$(printf '%s\n' "$PROMPT" | sed -n 's/.*; on \([0-9]*\), do not output it, name the unverified.*/\1/p')
+TEMPLATE_TARGET_CODE=$(printf '%s\n' "$PROMPT" | sed -n 's/.*; on \([0-9]*\), do not output it, print TARGET-ONLY.*/\1/p')
 
 test_start "the template's emit branch names the code the script returns when delivered"
 assert_equals "$RC_DELIVERED" "$TEMPLATE_OK_CODE"
@@ -215,11 +230,31 @@ assert_equals "$RC_DELIVERED" "$TEMPLATE_OK_CODE"
 test_start "the template's keep-working branch names the code it returns when outstanding"
 assert_equals "$RC_OUTSTANDING" "$TEMPLATE_OPEN_CODE"
 
-test_start "control: both codes were actually extracted from the template"
-if [ -n "$TEMPLATE_OK_CODE" ] && [ -n "$TEMPLATE_OPEN_CODE" ]; then
+# The branch a stated character budget cannot defend. Removing it moves the template's
+# length, so the budget assertion fires — but it fires for every edit, which makes it a
+# change detector rather than an oracle for this branch. This compares the branch to a code
+# the script was just observed returning.
+test_start "the template's target-only branch names the code it returns for a [target] row"
+assert_equals "$RC_TARGET" "$TEMPLATE_TARGET_CODE"
+
+test_start "control: all three codes were actually extracted from the template"
+if [ -n "$TEMPLATE_OK_CODE" ] && [ -n "$TEMPLATE_OPEN_CODE" ] && [ -n "$TEMPLATE_TARGET_CODE" ]; then
   test_pass
 else
-  test_fail "extracted '[$TEMPLATE_OK_CODE]' and '[$TEMPLATE_OPEN_CODE]' — an empty one compares against nothing"
+  test_fail "extracted '[$TEMPLATE_OK_CODE]' '[$TEMPLATE_OPEN_CODE]' '[$TEMPLATE_TARGET_CODE]' — an empty one compares against nothing"
+fi
+
+# The branch has to end the run rather than route it somewhere else, and "stop the loop" is
+# inert unless the template also says what stopping does — the template is the only thing the
+# loop reads, so a definition living in the skill's prose would never reach it.
+test_start "the target-only branch stops the loop by naming the state file"
+TARGET_BRANCH=$(printf '%s\n' "$PROMPT" | grep -oE 'on 5,[^;]*')
+if printf '%s\n' "$TARGET_BRANCH" | grep -qF 'do not output it' &&
+   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'active: false in .claude/ralph-loop.local.md' &&
+   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'delete that file instead'; then
+  test_pass
+else
+  test_fail "the target-only branch reads: $TARGET_BRANCH"
 fi
 
 # --- Criterion 2: the promise carries its evidence ---------------------------------------
@@ -342,24 +377,34 @@ rollup_const() { grep -m1 "^$1=" "$ROLLUP" | cut -d= -f2; }
 USAGE_CODE=$(rollup_const EXIT_USAGE)
 OUTSTANDING_CODE=$(rollup_const EXIT_OUTSTANDING)
 NO_MATRIX_CODE=$(rollup_const EXIT_NO_MATRIX)
+TARGET_ONLY_CODE=$(rollup_const EXIT_TARGET_ONLY)
 
-test_start "control: the script defines the three named exit constants this reads"
-if [ -n "$USAGE_CODE" ] && [ -n "$OUTSTANDING_CODE" ] && [ -n "$NO_MATRIX_CODE" ]; then
+test_start "control: the script defines the four named exit constants this reads"
+if [ -n "$USAGE_CODE" ] && [ -n "$OUTSTANDING_CODE" ] && [ -n "$NO_MATRIX_CODE" ] &&
+   [ -n "$TARGET_ONLY_CODE" ]; then
   test_pass
 else
-  test_fail "could not read exit constants from $ROLLUP (usage='$USAGE_CODE' outstanding='$OUTSTANDING_CODE' no-matrix='$NO_MATRIX_CODE')"
+  test_fail "could not read exit constants from $ROLLUP (usage='$USAGE_CODE' outstanding='$OUTSTANDING_CODE' no-matrix='$NO_MATRIX_CODE' target-only='$TARGET_ONLY_CODE')"
 fi
 
 # 0 and 1 have no named constant — they are `exit 0` and `exit 1` literals — so they are
 # listed here rather than derived. Every code a caller can observe must appear.
-for code in 0 1 "$USAGE_CODE" "$OUTSTANDING_CODE" "$NO_MATRIX_CODE"; do
+for code in 0 1 "$USAGE_CODE" "$OUTSTANDING_CODE" "$NO_MATRIX_CODE" "$TARGET_ONLY_CODE"; do
   test_start "pre-flight documents exit code $code"
   assert_contains "$PREFLIGHT_1F" "\`$code\`"
 done
 
-# The routing decision, checked against the script's own number rather than a literal 4.
-test_start "the no-matrix code is the one named as sending the loop into /cpm:epics"
-assert_contains "$PREFLIGHT_1F" "\`$NO_MATRIX_CODE\` is reachable only with \`--verdict\`"
+# The containment, checked against the script's own numbers rather than literals. Both of the
+# `--verdict`-only codes are named, so adding one to the script without documenting the
+# containment fails here rather than silently leaving the table one code short.
+test_start "pre-flight names both --verdict-only codes as reachable only with the flag"
+assert_contains "$PREFLIGHT_1F" \
+  "\`$NO_MATRIX_CODE\` and \`$TARGET_ONLY_CODE\` are reachable only with \`--verdict\`"
+
+# The terminal state is the one that broke in the field: exit 3 kept a run alive across 34
+# iterations of finished work. `5` earns its row only if the row says the run ends there.
+test_start "the target-only code is documented as terminal"
+assert_contains "$PREFLIGHT_1F" "**Terminal.**"
 
 # The must-NOT: the whole point is that the agent stops re-deriving this from the source.
 test_start "and pre-flight tells the reader not to re-derive it from the script"

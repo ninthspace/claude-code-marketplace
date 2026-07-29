@@ -143,13 +143,13 @@ DOCUMENTED=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" 2>&1 >/dev/nul
 BRANCHED=$(branch_codes "$COMPLETION")
 
 test_start "control: the script documents a code set at all"
-if [ "$(printf '%s' "$DOCUMENTED" | wc -w | tr -d ' ')" = "5" ]; then
+if [ "$(printf '%s' "$DOCUMENTED" | wc -w | tr -d ' ')" = "6" ]; then
   test_pass
 else
   test_fail "read '$DOCUMENTED' from the usage text"
 fi
 
-# The clause names 0, 3 and 4 explicitly and covers 1 and 2 with its catch-all, so the
+# The clause names 0, 3, 4 and 5 explicitly and covers 1 and 2 with its catch-all, so the
 # explicit set is a subset — a branch on a code the script never returns is what fails here.
 test_start "every code the completion clause names is one the script documents"
 UNKNOWN=""
@@ -323,11 +323,14 @@ else
 fi
 
 # Phase 2's mirror hole: "keep working" with nothing left to work on is the same loop by
-# another door. Its exit-3 branch has to bound the continuation.
+# another door. Its exit-3 branch has to bound the continuation, and the bound has to name
+# an action — a live run spent 34 iterations re-running a finished suite because its exit-3
+# branch said to stop without saying what stopping consisted of, and ending a turn is the
+# one thing a Stop hook intercepts.
 test_start "the completion clause's exit-3 branch bounds how long it keeps working"
 KEEP=$(printf '%s\n' "$COMPLETION" | grep -oE 'on 3,[^;]*;')
 if printf '%s\n' "$KEEP" | grep -qF 'only while an epic still has unfinished work' &&
-   printf '%s\n' "$KEEP" | grep -qF 'stopping otherwise'; then
+   printf '%s\n' "$KEEP" | grep -qF 'stop the loop'; then
   test_pass
 else
   test_fail "the exit-3 branch reads: $KEEP"
@@ -335,11 +338,53 @@ fi
 
 test_start "control: an unbounded 'keep working' is detected"
 UNBOUNDED=$(printf '%s\n' "$KEEP" |
-  sed 's/ only while an epic still has unfinished work, stopping otherwise since another pass over epics that are already complete cannot change the verdict//')
+  sed 's/ only while an epic still has unfinished work -- if none has, stop the loop, since another pass over epics that are already complete cannot change the verdict//')
 if printf '%s\n' "$UNBOUNDED" | grep -qF 'only while an epic'; then
   test_fail "the mutation left the bound in place: $UNBOUNDED"
 else
   test_pass
 fi
+
+# "Stop the loop" is a phrase in three branches and would be inert without a definition of
+# what stopping *does*. The clause carries one, and it has to be an instruction to act on
+# a file rather than an instruction to end the turn.
+test_start "the clause defines what stopping the loop consists of"
+if printf '%s\n' "$COMPLETION" | grep -qF 'Stop the loop means:' &&
+   printf '%s\n' "$COMPLETION" | grep -qF 'active: false in .claude/ralph-loop.local.md'; then
+  test_pass
+else
+  test_fail "the completion clause names no mechanism for stopping"
+fi
+
+test_start "and it carries a fallback for a plugin that ignores that field"
+if printf '%s\n' "$COMPLETION" | grep -qF 'delete .claude/ralph-loop.local.md'; then
+  test_pass
+else
+  test_fail "no fallback for a plugin that does not read active:"
+fi
+
+test_start "control: a definition-less 'stop the loop' is detected"
+NO_MECH=$(printf '%s\n' "$COMPLETION" | sed 's/Stop the loop means:[^.]*\.//')
+if printf '%s\n' "$NO_MECH" | grep -qF 'Stop the loop means:'; then
+  test_fail "the mutation left the definition in place"
+else
+  test_pass
+fi
+
+# The new terminal branch, asserted the same way as the others: it withholds the promise,
+# reports what it could not check, and stops — the three things that make it terminal
+# rather than another route back into the loop.
+test_start "the exit-5 branch withholds the promise, reports, and stops"
+TARGET_BRANCH=$(printf '%s\n' "$COMPLETION" | grep -oE 'on 5,[^;]*;')
+if printf '%s\n' "$TARGET_BRANCH" | grep -qF 'do not output it' &&
+   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'TARGET-ONLY' &&
+   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'stop the loop'; then
+  test_pass
+else
+  test_fail "the exit-5 branch reads: $TARGET_BRANCH"
+fi
+
+test_start "and it does not send the run back to phase 1, which 4 does"
+assert_not_contains "$TARGET_BRANCH" "phase 1"
 
 test_summary

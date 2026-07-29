@@ -939,7 +939,36 @@ fi
 test_start "control: the matrix directory is not empty, and its matrix names another spec"
 assert_contains "$(cat "$N_DIR/71-01-coverage-other.md")" "70-spec-verdict.md"
 
-# The four codes this script can already return, measured rather than assumed, so "distinct"
+# --- target-only: outstanding that nothing here can close ---------------------------
+#
+# A `[target]` criterion is checkable only against the real deployment target, so an
+# unverified one is not work waiting to be done. Folded into "outstanding" it made 0
+# unreachable for any spec naming a production-host requirement, and the caller was told to
+# keep working on work that did not exist — a live autonomous run met that by repeating a
+# finished test suite 34 times.
+#
+# Two requirements, deliberately: one ordinary row verified, one `[target]` row not. Without
+# the verified row the fixture could not tell "target-only" from "a matrix with one row".
+T_DIR=$(coverage_fixture_dir verdict-target-only)
+T_SPEC=$(coverage_fixture_spec 72-spec-target --dir "$T_DIR" \
+  --must FR1 "a requirement checkable here" \
+  --must NFR1 "a requirement about the production host")
+coverage_fixture_matrix 72-01-coverage-target "docs/specifications/72-spec-target.md" \
+  --dir "$T_DIR" \
+  --tag '[integration]' --row FR1 "a requirement checkable here" "the FR1 criterion" "Story 1" '✓' \
+  --tag '[target]' --row NFR1 "a requirement about the production host" "the NFR1 criterion" "Story 1" '' >/dev/null
+: > "$T_DIR/72-01-epic-target.md"
+
+test_start "control: the fixture has one verified row and one unverified [target] row"
+T_RECORDS=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" --spec "$T_SPEC" --matrix-dir "$T_DIR" 2>/dev/null)
+if [ "$(printf '%s\n' "$T_RECORDS" | awk -F'\t' '$1=="ROW" && $6=="verified"' | grep -c .)" -eq 1 ] &&
+   [ "$(printf '%s\n' "$T_RECORDS" | awk -F'\t' '$1=="ROW" && $6!="verified" && $7 ~ /\[target\]/' | grep -c .)" -eq 1 ]; then
+  test_pass
+else
+  test_fail "fixture is not one-verified-one-target: $(printf '%s' "$T_RECORDS" | awk -F'\t' '$1=="ROW"{print $3,$6,$7}' | tr '\n' '|')"
+fi
+
+# The five codes this script can already return, measured rather than assumed, so "distinct"
 # below is a comparison against what the program does and not against literals in this file.
 run_verdict --spec "$W_SPEC" --matrix-dir "$W_DIR" --verdict
 RC_DELIVERED_RUN="$V_RC"
@@ -952,6 +981,58 @@ RC_USAGE="$V_RC"
 
 run_verdict --spec "$N_SPEC" --matrix-dir "$N_DIR" --verdict
 RC_NO_MATRIX="$V_RC"
+
+run_verdict --spec "$T_SPEC" --matrix-dir "$T_DIR" --verdict
+RC_TARGET_ONLY="$V_RC"
+
+test_start "--verdict returns a code of its own when every unverified row is [target]"
+if [ "$RC_TARGET_ONLY" != "$RC_DELIVERED_RUN" ] &&
+   [ "$RC_TARGET_ONLY" != "$RC_OUTSTANDING_RUN" ] &&
+   [ "$RC_TARGET_ONLY" != "$RC_NO_MATRIX" ] &&
+   [ "$RC_TARGET_ONLY" != "$RC_UNREADABLE" ] &&
+   [ "$RC_TARGET_ONLY" != "$RC_USAGE" ]; then
+  test_pass
+else
+  test_fail "target-only returned $RC_TARGET_ONLY, which collides with another verdict"
+fi
+
+# The distinction that makes the code worth having: a target row beside genuine outstanding
+# work is still outstanding. Only when *nothing else* remains does the verdict change — so
+# this cannot be used to stop a run that still has work to do.
+TM_DIR=$(coverage_fixture_dir verdict-target-mixed)
+TM_SPEC=$(coverage_fixture_spec 73-spec-mixed --dir "$TM_DIR" \
+  --must FR1 "a requirement still being worked" \
+  --must NFR1 "a requirement about the production host")
+coverage_fixture_matrix 73-01-coverage-mixed "docs/specifications/73-spec-mixed.md" \
+  --dir "$TM_DIR" \
+  --tag '[integration]' --row FR1 "a requirement still being worked" "the FR1 criterion" "Story 1" '' \
+  --tag '[target]' --row NFR1 "a requirement about the production host" "the NFR1 criterion" "Story 1" '' >/dev/null
+: > "$TM_DIR/73-01-epic-mixed.md"
+
+run_verdict --spec "$TM_SPEC" --matrix-dir "$TM_DIR" --verdict
+test_start "a [target] row beside ordinary outstanding work is still outstanding"
+assert_equals "$RC_OUTSTANDING_RUN" "$V_RC"
+
+# A ticked `[target]` row is verified exactly as before. The change reads the tag to decide
+# what an *unverified* row means and must not touch what a verified one means — discounting
+# those was the reading epic 44-03 rejected, and it is a different bug in the same place.
+TV_DIR=$(coverage_fixture_dir verdict-target-verified)
+TV_SPEC=$(coverage_fixture_spec 74-spec-target-done --dir "$TV_DIR" \
+  --must NFR1 "a requirement about the production host")
+coverage_fixture_matrix 74-01-coverage-target-done "docs/specifications/74-spec-target-done.md" \
+  --dir "$TV_DIR" \
+  --tag '[target]' --row NFR1 "a requirement about the production host" "the NFR1 criterion" "Story 1" '✓' >/dev/null
+: > "$TV_DIR/74-01-epic-target-done.md"
+
+run_verdict --spec "$TV_SPEC" --matrix-dir "$TV_DIR" --verdict
+test_start "a verified [target] row still counts as delivered"
+assert_equals "$RC_DELIVERED_RUN" "$V_RC"
+
+# And the default path is untouched: the new code is confined to --verdict, the same
+# containment the no-matrix code got, checked here rather than assumed.
+test_start "target-only does not leak onto the default path, where cpm:status reads it"
+run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" --spec "$T_SPEC" --matrix-dir "$T_DIR" >/dev/null 2>&1
+assert_equals "0" "$?"
 
 test_start "--verdict returns a code of its own when the spec is readable and no matrix names it"
 if [ "$RC_NO_MATRIX" != "$RC_UNREADABLE" ] &&
@@ -1002,30 +1083,33 @@ assert_empty "$V_OUT"
 # a program — and retro 24's finding is that asserting the two halves separately never
 # asserts that they agree. A code added without being documented, or documented without ever
 # being returned, is invisible to every assertion above. Both sets are gathered from runs:
-# the documented one by running the script with no arguments, the measured one from the five
+# the documented one by running the script with no arguments, the measured one from the six
 # runs above.
 USAGE_TEXT=$(run_without_env CLAUDE_PROJECT_DIR -- bash "$ROLLUP" 2>&1 >/dev/null || true)
 DOCUMENTED_CODES=$(printf '%s\n' "$USAGE_TEXT" |
   sed -n '/^--verdict changes only the exit code/,/usage error\./p' |
   grep -oE '(^|[^0-9])[0-9]([^0-9]|$)' | grep -oE '[0-9]' | sort -u | tr '\n' ' ')
-MEASURED_CODES=$(printf '%s\n%s\n%s\n%s\n%s\n' \
-  "$RC_DELIVERED_RUN" "$RC_OUTSTANDING_RUN" "$RC_NO_MATRIX" "$RC_UNREADABLE" "$RC_USAGE" |
+MEASURED_CODES=$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' \
+  "$RC_DELIVERED_RUN" "$RC_OUTSTANDING_RUN" "$RC_NO_MATRIX" "$RC_TARGET_ONLY" \
+  "$RC_UNREADABLE" "$RC_USAGE" |
   sort -u | tr '\n' ' ')
 
 test_start "control: the usage text names a code set at all"
-if [ "$(printf '%s' "$DOCUMENTED_CODES" | wc -w | tr -d ' ')" = "5" ]; then
+if [ "$(printf '%s' "$DOCUMENTED_CODES" | wc -w | tr -d ' ')" = "6" ]; then
   test_pass
 else
-  test_fail "extracted '$DOCUMENTED_CODES' from the usage text — expected five codes"
+  test_fail "extracted '$DOCUMENTED_CODES' from the usage text — expected six codes"
 fi
 
 test_start "the exit codes the usage text documents are the codes the script returns"
 assert_equals "$DOCUMENTED_CODES" "$MEASURED_CODES"
 
 test_start "control: a documented code the script never returns is detected"
-FAKE_DOCUMENTED=$(printf '%s\n5\n' "$DOCUMENTED_CODES" | tr ' ' '\n' | grep -E '.' | sort -u | tr '\n' ' ')
+# 9 rather than a plausible next code: the injected value has to be one the script cannot
+# return, and every small integer is now spoken for or a candidate for the next code added.
+FAKE_DOCUMENTED=$(printf '%s\n9\n' "$DOCUMENTED_CODES" | tr ' ' '\n' | grep -E '.' | sort -u | tr '\n' ' ')
 if [ "$FAKE_DOCUMENTED" = "$MEASURED_CODES" ]; then
-  test_fail "adding a sixth documented code left the two sets equal"
+  test_fail "adding an extra documented code left the two sets equal"
 else
   test_pass
 fi
@@ -1041,10 +1125,10 @@ header_codes() {
 HEADER_CODES=$(header_codes "$ROLLUP")
 
 test_start "control: the header comment names a code set at all"
-if [ "$(printf '%s' "$HEADER_CODES" | wc -w | tr -d ' ')" = "5" ]; then
+if [ "$(printf '%s' "$HEADER_CODES" | wc -w | tr -d ' ')" = "6" ]; then
   test_pass
 else
-  test_fail "extracted '$HEADER_CODES' from the header comment — expected five codes"
+  test_fail "extracted '$HEADER_CODES' from the header comment — expected six codes"
 fi
 
 test_start "the header comment documents the same codes the script returns"

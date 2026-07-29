@@ -35,9 +35,18 @@
 #
 #   0  the computation completed **and** nothing is outstanding
 #   3  the computation completed cleanly, but work is outstanding
+#   5  the only outstanding rows are `[target]` — nothing here can close them
 #   4  the spec was readable and no matrix names it — spec scope only
 #   1  an input could not be read
 #   2  usage error
+#
+# Code 5 exists because 3 has no reachable exit for a caller that cannot reach the
+# deployment target. A `[target]` row is unverifiable here **by definition** — `cpm:epics`
+# says so directly: it "withholds a criterion from verification permanently". So a spec
+# naming any production-host requirement could never return 0 from a development machine,
+# and 3's "keep working" was advice about work that did not exist. Splitting it gives that
+# state a name a caller can terminate on, and leaves 0 meaning what it always meant, so a
+# run against the real host can still say a spec is fully verified.
 #
 # Code 4 exists because a loop working from a spec starts with no matrices at all, and that
 # is iteration 1 rather than a failure (spec 45, FR7 / AD2). Before it, that state and a
@@ -54,6 +63,19 @@
 # scope only — any requirement in the `untraced` state. The verdict is computed from
 # exactly the records that were emitted, so it can never disagree with the output a reader
 # is looking at.
+#
+# **Target-only** is outstanding that nothing here can close. A `[target]` criterion is
+# checkable only against the real deployment target, so an unverified one is not work
+# waiting to be done — it is work this environment is not entitled to do. Reported as its
+# own exit code because the two demand opposite responses: outstanding means keep working,
+# target-only means stop. Collapsing them into 3 gave a caller no reachable terminal state,
+# and an autonomous loop met that by re-running a finished test suite for three hours.
+#
+# The split is on the tag alone, never on how many rows carry it: one unverified `[target]`
+# row alongside genuine outstanding work is still 3, because the ordinary work is still
+# there to do. Only when *every* remaining unverified row is `[target]` does the verdict
+# become 5. A ticked `[target]` row still counts as verified exactly as before — this reads
+# the tag to decide what an *unverified* row means, and changes nothing about a verified one.
 #
 # Relative paths resolve against the project root, which comes from
 # `lib/resolve-project-root.sh` — the same chain the guard and the classifier use.
@@ -109,6 +131,7 @@ LIB_DIR="${0%/*}"
 EXIT_USAGE=2
 EXIT_OUTSTANDING=3
 EXIT_NO_MATRIX=4
+EXIT_TARGET_ONLY=5
 
 usage() {
   cat >&2 <<'EOF'
@@ -120,8 +143,9 @@ Emits tab-separated coverage records. Spec scope discovers matrices by their
 **Source spec** field; epic scope reports row states for the named epics only.
 
 --verdict changes only the exit code, never the output: 0 when nothing is
-outstanding, 3 when the computation completed but work remains, 4 when the spec
-is readable and no matrix names it, 1 on a read failure, 2 on a usage error.
+outstanding, 3 when the computation completed but work remains, 5 when the only
+work left is [target] and so cannot be checked from this environment, 4 when the
+spec is readable and no matrix names it, 1 on a read failure, 2 on a usage error.
 EOF
 }
 
@@ -661,17 +685,35 @@ rollup_run_scope() {
 # requirements behind it are already untraced, so the verdict would be outstanding either
 # way; in epic scope there is no spec to compare against and nothing else would notice, and
 # a matrix nobody can join against is not a clean run in either scope.
-rollup_outstanding() {
+# Prints one of `clean`, `target-only`, or `outstanding` — one awk pass, so the two
+# questions ("is anything left?" and "is any of it doable here?") cannot come to disagree
+# the way two predicates over the same buffer eventually would.
+rollup_verdict() {
   # Field numbers count the record type as field 1, so a `ROW`'s five documented fields sit
-  # at $2..$6 and its verified cell is $6, not $5. Reading the record format's own numbering
-  # straight into awk puts every test one field to the left, where a verified row compares
-  # unequal to "verified" and every verdict comes back outstanding.
+  # at $2..$6 and its verified cell is $6, not $5 — and its tag is $7. `CRITERION` has one
+  # field fewer, so the same two cells are $5 and $6. Reading the record format's own
+  # numbering straight into awk puts every test one field to the left, where a verified row
+  # compares unequal to "verified" and every verdict comes back outstanding.
+  #
+  # `actionable` wins over `target` whenever both are set: a run with real work left is
+  # outstanding however many target rows sit beside it.
   printf '%s\n' "$1" | awk -F'\t' '
-    $1 == "ROW"        && $6 != "verified" { outstanding = 1 }
-    $1 == "CRITERION"  && $5 != "verified" { outstanding = 1 }
-    $1 == "STATE"      && $4 == "untraced" { outstanding = 1 }
-    $1 == "UNRESOLVED"                     { outstanding = 1 }
-    END { exit outstanding ? 0 : 1 }
+    # Only a tag that is target-and-nothing-checkable withholds a row from this environment.
+    # A row carrying `[target]` *and* an automated tag is contradictory tagging, and the
+    # safe reading is the one that keeps working: stopping early is the worse failure, since
+    # it ends a run with work genuinely left to do and looks like completion afterwards.
+    function target_only(tag) {
+      return tag ~ /\[target\]/ && tag !~ /\[(unit|integration|feature)\]/
+    }
+    $1 == "ROW"        && $6 != "verified" { if (target_only($7)) target = 1; else actionable = 1 }
+    $1 == "CRITERION"  && $5 != "verified" { if (target_only($6)) target = 1; else actionable = 1 }
+    $1 == "STATE"      && $4 == "untraced" { actionable = 1 }
+    $1 == "UNRESOLVED"                     { actionable = 1 }
+    END {
+      if (actionable)   print "outstanding"
+      else if (target)  print "target-only"
+      else              print "clean"
+    }
   '
 }
 
@@ -691,9 +733,10 @@ if [ "$VERDICT" = "no" ]; then
 fi
 
 # With `--verdict`, the same records are emitted and the exit code additionally distinguishes
-# "nothing outstanding" from "computed cleanly, work remains" (AD4, epic 44-03). Buffering is
-# what makes the verdict provably a reading of the emitted output; the bytes on stdout are
-# identical either way, which is NFR4's one-output-format rule holding across the flag.
+# "nothing outstanding" from "computed cleanly, work remains" (AD4, epic 44-03) and from
+# "what remains cannot be checked here". Buffering is what makes the verdict provably a
+# reading of the emitted output; the bytes on stdout are identical either way, which is
+# NFR4's one-output-format rule holding across the flag.
 ROLLUP_OUTPUT="$(rollup_run_scope)"
 ROLLUP_RC=$?
 
@@ -705,7 +748,8 @@ if [ "$ROLLUP_RC" -ne 0 ]; then
   exit "$ROLLUP_RC"
 fi
 
-if rollup_outstanding "$ROLLUP_OUTPUT"; then
-  exit "$EXIT_OUTSTANDING"
-fi
-exit 0
+case "$(rollup_verdict "$ROLLUP_OUTPUT")" in
+  outstanding) exit "$EXIT_OUTSTANDING" ;;
+  target-only) exit "$EXIT_TARGET_ONLY" ;;
+  *)           exit 0 ;;
+esac

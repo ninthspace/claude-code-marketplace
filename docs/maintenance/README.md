@@ -152,6 +152,8 @@ session_id: {current session id, unquoted}
 
 Where the field is unread, termination is tested by the state file's *existence* alone. The operative counterpart is in `cpm/skills/ralph/SKILL.md` Step 3c, which instructs the skill to tell the user which behaviour their installed hook has — the failure this guards is a kill switch that silently does nothing.
 
+**Both generated prompts write this field to stop themselves**, which is what makes the row above a contract rather than a note. A loop cannot stop by saying it is stopping: ending a turn is precisely what the Stop hook intercepts, so an instruction to stop that names no action instructs nothing. Both templates therefore define *stop the loop* as setting `active: false` in the state file, leaving the rest byte-for-byte intact so the run can be inspected or resumed. Because the field is unread on two of the three plugins, each definition carries a second clause: if the same prompt arrives again with the same verdict, delete the state file instead — the one termination every plugin in the table honours. If a plugin ever changes which of the two it obeys, both templates change with it, and `test-ralph-promise.sh` and `test-ralph-two-phase-prompt.sh` assert that each *stop the loop* still names a mechanism.
+
 **When to update**: If any ralph plugin changes the state file path, frontmatter field names, or parsing logic in `stop-hook.sh`, this skill's Step 3c must be updated to match. The stop hook uses `sed`, `grep`, and `awk` to parse the frontmatter — any format change that breaks these parsers will break the loop.
 
 ## `cpm:ralph` — `cpm:do` interaction gates
