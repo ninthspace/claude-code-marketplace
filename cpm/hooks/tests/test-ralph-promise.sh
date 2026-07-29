@@ -247,15 +247,22 @@ fi
 # The branch has to end the run rather than route it somewhere else, and "stop the loop" is
 # inert unless the template also says what stopping does — the template is the only thing the
 # loop reads, so a definition living in the skill's prose would never reach it.
-test_start "the target-only branch stops the loop by naming the state file"
+test_start "the target-only branch stops the loop by removing the state file"
 TARGET_BRANCH=$(printf '%s\n' "$PROMPT" | grep -oE 'on 5,[^;]*')
 if printf '%s\n' "$TARGET_BRANCH" | grep -qF 'do not output it' &&
-   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'active: false in .claude/ralph-loop.local.md' &&
-   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'delete that file instead'; then
+   printf '%s\n' "$TARGET_BRANCH" | grep -qF 'delete .claude/ralph-loop.local.md'; then
   test_pass
 else
   test_fail "the target-only branch reads: $TARGET_BRANCH"
 fi
+
+# The mechanism is a delete rather than an `active: false` pause, and that is a decision with
+# a consequence outside this file: `cleancheck-guard.sh` suppresses the shared Stale-Progress
+# Check on the state file's *existence*, so a run that stopped by pausing would leave CPM's
+# safety net silently off in that project for every later session. Asserting the delete is
+# present is not enough — a template carrying both would satisfy it and still leave the file.
+test_start "and it does not instead pause the loop, which would leave the file behind"
+assert_not_contains "$TARGET_BRANCH" "active: false"
 
 # --- Criterion 2: the promise carries its evidence ---------------------------------------
 #

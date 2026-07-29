@@ -109,6 +109,8 @@ the payload's size.
 
 **When to update**: raise the minimum when a fork behaviour that CPM's own documentation describes lands in a new release. As of 1.2.0 there are three — fail-closed extraction (1.1.0), the promise-marker disambiguation (1.2.0), and the honoured `active` field (1.2.0). The last two are recorded in the tables below and in review 02 (OBS-15, OBS-37).
 
+**The fork is ahead of the minimum, deliberately.** 1.2.1 adds a marker on the pause path, so a paused run is attributable in a transcript instead of reading like a crashed session. Nothing in CPM branches on it — the run summary already reports the outcome, and CPM stops by deleting the file rather than pausing — so it changes what a reader sees afterwards, not what a run does. The minimum stays at 1.2.0 for that reason: raising it would make users reinstall for a behaviour no CPM instruction depends on, which is exactly the coupling this record exists to keep honest.
+
 ---
 
 ## `cpm:ralph` — ralph-loop state file schema
@@ -152,7 +154,9 @@ session_id: {current session id, unquoted}
 
 Where the field is unread, termination is tested by the state file's *existence* alone. The operative counterpart is in `cpm/skills/ralph/SKILL.md` Step 3c, which instructs the skill to tell the user which behaviour their installed hook has — the failure this guards is a kill switch that silently does nothing.
 
-**Both generated prompts write this field to stop themselves**, which is what makes the row above a contract rather than a note. A loop cannot stop by saying it is stopping: ending a turn is precisely what the Stop hook intercepts, so an instruction to stop that names no action instructs nothing. Both templates therefore define *stop the loop* as setting `active: false` in the state file, leaving the rest byte-for-byte intact so the run can be inspected or resumed. Because the field is unread on two of the three plugins, each definition carries a second clause: if the same prompt arrives again with the same verdict, delete the state file instead — the one termination every plugin in the table honours. If a plugin ever changes which of the two it obeys, both templates change with it, and `test-ralph-promise.sh` and `test-ralph-two-phase-prompt.sh` assert that each *stop the loop* still names a mechanism.
+**Neither generated prompt uses this field to stop itself, and that is deliberate.** A loop cannot stop by saying it is stopping — ending a turn is precisely what the Stop hook intercepts — so both templates define *stop the loop* as an action on a file. The action is **deleting** the state file, not setting `active: false`, for a reason that lives outside this record: `cleancheck-guard.sh` suppresses the shared Stale-Progress Check on this file's *existence*, so a run that ended by pausing would leave CPM's safety net silently off in that project for every later session and every skill. On any spec naming a production-host requirement that is the ordinary way runs end, so it would not stay rare. The delete is also the one termination all three plugins in the table honour, and the same one the hook itself performs on a matched promise — a run that stops this way leaves the project in the state a finished run leaves it in.
+
+The field therefore matters here only as a *user-facing* kill switch, which is what the table above and Step 3c are about. `test-ralph-promise.sh` and `test-ralph-two-phase-prompt.sh` assert both halves: that each *stop the loop* names a mechanism, and that the mechanism is not a pause.
 
 **When to update**: If any ralph plugin changes the state file path, frontmatter field names, or parsing logic in `stop-hook.sh`, this skill's Step 3c must be updated to match. The stop hook uses `sed`, `grep`, and `awk` to parse the frontmatter — any format change that breaks these parsers will break the loop.
 

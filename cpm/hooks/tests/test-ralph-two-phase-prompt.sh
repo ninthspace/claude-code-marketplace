@@ -350,18 +350,18 @@ fi
 # a file rather than an instruction to end the turn.
 test_start "the clause defines what stopping the loop consists of"
 if printf '%s\n' "$COMPLETION" | grep -qF 'Stop the loop means:' &&
-   printf '%s\n' "$COMPLETION" | grep -qF 'active: false in .claude/ralph-loop.local.md'; then
+   printf '%s\n' "$COMPLETION" | grep -qF 'delete .claude/ralph-loop.local.md'; then
   test_pass
 else
   test_fail "the completion clause names no mechanism for stopping"
 fi
 
-test_start "and it carries a fallback for a plugin that ignores that field"
-if printf '%s\n' "$COMPLETION" | grep -qF 'delete .claude/ralph-loop.local.md'; then
-  test_pass
-else
-  test_fail "no fallback for a plugin that does not read active:"
-fi
+# The delete rather than an `active: false` pause, and the reason is outside this file:
+# `cleancheck-guard.sh` suppresses the shared Stale-Progress Check on the state file's
+# *existence*, so a pause leaves CPM's safety net silently off in that project for every
+# later session. A clause carrying both would satisfy the assertion above and still do it.
+test_start "and stopping is a delete, not a pause that leaves the file behind"
+assert_not_contains "$COMPLETION" "active: false"
 
 test_start "control: a definition-less 'stop the loop' is detected"
 NO_MECH=$(printf '%s\n' "$COMPLETION" | sed 's/Stop the loop means:[^.]*\.//')
