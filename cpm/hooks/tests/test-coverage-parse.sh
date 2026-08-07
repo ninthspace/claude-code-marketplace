@@ -249,9 +249,14 @@ assert_empty "$(coverage_matrix_rows "$TEST_TMPDIR/no-such-matrix.md" 2>/dev/nul
 # extraction over one of each is what stops the parser from being correct only about
 # shapes it was handed.
 
-REPO_ROOT="$SCRIPT_DIR/../../.."
-REAL_SPEC="$REPO_ROOT/docs/specifications/44-spec-coverage-rollup.md"
-REAL_MATRIX="$REPO_ROOT/docs/epics/44-01-coverage-coverage-rollup-script.md"
+# Real documents, at a location this suite owns. They are copies of two of the project's
+# own — see fixtures/real-docs/README.md — because what makes them worth reading is that
+# they were not written to be read by a test, not where the project is currently filing
+# them. `/cpm:archive` moves a delivered chain out of `docs/`, and a path pinned there
+# fails on a project-management event that has nothing to do with the parser.
+REAL_DOCS="$SCRIPT_DIR/fixtures/real-docs"
+REAL_SPEC="$REAL_DOCS/docs/specifications/44-spec-coverage-rollup.md"
+REAL_MATRIX="$REAL_DOCS/docs/epics/44-01-coverage-coverage-rollup-script.md"
 
 # These are asserted readable rather than guarded with `if [ -r ]`. A guard turns a moved
 # or renamed document into eight assertions that quietly stop running, and a suite whose

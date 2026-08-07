@@ -587,17 +587,25 @@ assert_empty "$STDOUT_ON_FAILURE"
 # Story 6 — the read-only guarantee and the input invariants
 # ======================================================================================
 #
-# These run against the repository's own documents, not fixtures. Both are assertions
-# about the real inputs the script trusts, and a fixture cannot stand in for either: a
-# constructed matrix says nothing about whether the twenty present ones point at specs
-# that exist, and a constructed directory says nothing about whether a run over the real
-# tree left it alone.
+# These run against real documents rather than constructed ones. A constructed matrix says
+# nothing about whether the ones people actually write point at specs that exist, and a
+# constructed directory says nothing about whether a run over a real tree leaves it alone.
+#
+# Real, but not *live*: the documents are copies held under `fixtures/real-docs`, which is
+# laid out as a repository root of its own so a matrix's recorded `**Source spec**:` path
+# resolves inside it. `/cpm:archive` moves a delivered chain out of `docs/`, and a suite
+# pinned to the live tree does not merely fail when that happens — it goes vacuous, because
+# an inventory assertion over an empty directory passes while examining nothing. The status
+# of a planning document is a project-management fact and belongs nowhere in this suite.
+# See fixtures/real-docs/README.md.
 
-test_start "the repository root resolves, so the assertions below have a subject"
-if [ -n "$REPO_ROOT" ] && [ -d "$REPO_ROOT/docs/epics" ]; then
+REAL_DOCS="$SCRIPT_DIR/fixtures/real-docs"
+
+test_start "the real-document fixture root resolves, so the assertions below have a subject"
+if [ -d "$REAL_DOCS/docs/epics" ] && [ -d "$REAL_DOCS/docs/specifications" ]; then
   test_pass
 else
-  test_fail "Could not resolve a repository root with docs/epics from $SCRIPT_DIR"
+  test_fail "Could not find the real-document corpus at $REAL_DOCS"
 fi
 
 # --- Task 6.1: NFR1, read-only ---------------------------------------------------------
@@ -608,15 +616,18 @@ fi
 # tracked/untracked classification.
 
 docs_checksums() {
-  find "$REPO_ROOT/docs/specifications" "$REPO_ROOT/docs/epics" -type f -name '*.md' \
+  find "$REAL_DOCS/docs/specifications" "$REAL_DOCS/docs/epics" -type f -name '*.md' \
     | LC_ALL=C sort | while IFS= read -r f; do cksum "$f"; done
 }
 
 BEFORE_STATUS=$(cd "$REPO_ROOT" && git status --porcelain)
 BEFORE_SUMS=$(docs_checksums)
 
-REAL_OUT=$(rollup --spec "$REPO_ROOT/docs/specifications/44-spec-coverage-rollup.md")
-REAL_EPIC_OUT=$(rollup --epic "$REPO_ROOT/docs/epics/44-01-epic-coverage-rollup-script.md")
+REAL_SPEC_44="$REAL_DOCS/docs/specifications/44-spec-coverage-rollup.md"
+REAL_EPIC_44="$REAL_DOCS/docs/epics/44-01-epic-coverage-rollup-script.md"
+
+REAL_OUT=$(rollup --spec "$REAL_SPEC_44" --matrix-dir "$REAL_DOCS/docs/epics")
+REAL_EPIC_OUT=$(rollup --epic "$REAL_EPIC_44")
 
 AFTER_STATUS=$(cd "$REPO_ROOT" && git status --porcelain)
 AFTER_SUMS=$(docs_checksums)
@@ -666,7 +677,7 @@ source_spec_findings() {
     src=$(coverage_matrix_source_spec "$f")
     if [ -z "$src" ]; then
       printf 'no-field\t%s\n' "$f"
-    elif [ ! -f "$REPO_ROOT/$src" ] && [ ! -f "$src" ]; then
+    elif [ ! -f "$REAL_DOCS/$src" ] && [ ! -f "$src" ]; then
       printf 'unresolved\t%s\t%s\n' "$f" "$src"
     fi
   done
@@ -683,14 +694,14 @@ matrix_names_in() {
   done
 }
 
-REAL_MATRICES=$(matrix_names_in "$REPO_ROOT/docs/epics")
-REAL_FINDINGS=$(source_spec_findings "$REPO_ROOT/docs/epics")
+REAL_MATRICES=$(matrix_names_in "$REAL_DOCS/docs/epics")
+REAL_FINDINGS=$(source_spec_findings "$REAL_DOCS/docs/epics")
 
-test_start "the repository has coverage matrices to check"
+test_start "the corpus has coverage matrices to check"
 if [ "$(printf '%s\n' "$REAL_MATRICES" | grep -c .)" -gt 0 ]; then
   test_pass
 else
-  test_fail "Found no coverage matrices under $REPO_ROOT/docs/epics"
+  test_fail "Found no coverage matrices under $REAL_DOCS/docs/epics"
 fi
 
 test_start "every present matrix carries a **Source spec** field"
@@ -705,7 +716,7 @@ assert_empty "$(printf '%s\n' "$REAL_FINDINGS" | awk -F'\t' '$1 == "unresolved" 
 S6_DIR=$(coverage_fixture_dir invariants)
 coverage_fixture_matrix 50-01-coverage-broken "docs/specifications/50-spec-does-not-exist.md" \
   --dir "$S6_DIR" --row FR1 "a requirement" "a criterion" "Story 1" '✓' >/dev/null
-coverage_fixture_matrix 51-01-coverage-fine "docs/specifications/44-spec-coverage-rollup.md" \
+coverage_fixture_matrix 51-01-coverage-fine "$REAL_SPEC_44" \
   --dir "$S6_DIR" --row FR1 "a requirement" "a criterion" "Story 1" '✓' >/dev/null
 printf '# Matrix with no source spec field\n\n| # |\n' > "$S6_DIR/52-01-coverage-fieldless.md"
 

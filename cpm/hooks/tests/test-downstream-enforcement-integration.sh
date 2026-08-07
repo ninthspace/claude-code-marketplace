@@ -63,7 +63,10 @@ SPEC_SKILL="$SCRIPT_DIR/../../skills/spec/SKILL.md"
 EPICS_SKILL="$SCRIPT_DIR/../../skills/epics/SKILL.md"
 DO_SKILL="$SCRIPT_DIR/../../skills/do/SKILL.md"
 RALPH_SKILL="$SCRIPT_DIR/../../skills/ralph/SKILL.md"
-EPIC_DOC="$REPO_ROOT/docs/epics/46-03-epic-downstream-enforcement.md"
+# A copy, at a location this suite owns — fixtures/real-docs/README.md says why. The epic's
+# delta table is the subject; whether the epic is currently filed under `docs/epics/` or
+# `docs/archive/epics/` is not.
+EPIC_DOC="$SCRIPT_DIR/fixtures/real-docs/docs/epics/46-03-epic-downstream-enforcement.md"
 
 echo "Testing cross-story integration for downstream enforcement (Epic 46-03 Story 4)"
 

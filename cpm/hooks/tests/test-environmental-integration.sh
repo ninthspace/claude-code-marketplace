@@ -100,16 +100,34 @@ assert_equals "$SPECS_ON_DISK" "$SPECS_IN_BASELINE"
 
 # Both directories, stated separately. The set equality above would still hold if the
 # generator and this assertion had made the same mistake about where specs live, since both
-# read the same two paths -- so the count each directory contributes is asserted to be
-# non-zero, which is what "a baseline over the live directory alone" would fail.
+# read the same two paths -- so each directory is asserted to be *fully represented* in the
+# baseline, which is what "a baseline over the live directory alone" would fail.
+#
+# Stated as representation rather than as two non-zero counts, because either directory may
+# legitimately hold nothing: `/cpm:archive` sweeping the last delivered chain empties
+# `docs/specifications/`, and a project that has never archived has an empty
+# `docs/archive/specifications/`. A non-zero control would fail on a correct baseline the
+# day either happens -- and would then have to be deleted to go green, taking the real
+# check with it. Which chains are archived is a project-management fact; that no spec is
+# missing from the baseline is the property.
 LIVE_COUNT=$(cd "$REPO_ROOT" && ls docs/specifications/*.md 2>/dev/null | wc -l | tr -d ' ')
 ARCHIVE_COUNT=$(cd "$REPO_ROOT" && ls docs/archive/specifications/*.md 2>/dev/null | wc -l | tr -d ' ')
 
-test_start "control: the live specification directory contributes specs"
-assert_equals "yes" "$([ "$LIVE_COUNT" -gt 0 ] && echo yes || echo no)"
+specs_missing_from_baseline() {
+  local dir="$1" name
+  (cd "$REPO_ROOT" && ls "$dir"/*.md 2>/dev/null) | sed 's#.*/##' | while IFS= read -r name; do
+    printf '%s\n' "$SPECS_IN_BASELINE" | grep -qxF "$name" || printf '%s\n' "$dir/$name"
+  done
+}
 
-test_start "control: the archive directory contributes specs too"
-assert_equals "yes" "$([ "$ARCHIVE_COUNT" -gt 0 ] && echo yes || echo no)"
+test_start "control: the two directories together hold specs to have covered"
+assert_equals "yes" "$([ "$((LIVE_COUNT + ARCHIVE_COUNT))" -gt 0 ] && echo yes || echo no)"
+
+test_start "every spec in the live directory reaches the baseline"
+assert_empty "$(specs_missing_from_baseline docs/specifications)"
+
+test_start "every spec in the archive directory reaches the baseline too"
+assert_empty "$(specs_missing_from_baseline docs/archive/specifications)"
 
 test_start "and the baseline covers as many specs as both directories hold"
 assert_equals "$((LIVE_COUNT + ARCHIVE_COUNT))" "$(printf '%s\n' "$SPECS_IN_BASELINE" | grep -c .)"
@@ -155,12 +173,20 @@ assert_empty "$REAL_ERRORS"
 AUG_DIR=$(coverage_fixture_dir env-augmented-real)
 AUG_SPEC="$AUG_DIR/46-spec-environmental-requirements.md"
 
+# Copied from the real-document corpus rather than the live tree: the point of augmenting a
+# real spec is that it was not written to be parsed by this test, which stays true wherever
+# the project files it. See fixtures/real-docs/README.md.
+REAL_SPEC_46="$SCRIPT_DIR/fixtures/real-docs/docs/specifications/46-spec-environmental-requirements.md"
+
+test_start "control: the spec this criterion augments is present to augment"
+assert_equals "yes" "$([ -f "$REAL_SPEC_46" ] && echo yes || echo no)"
+
 awk '{ print }
      /^## Non-Functional Requirements$/ {
        print ""
        print "- **ENV1 — PHP 8.2 or later available on the target host**"
        print "- **ENVX1 — must not require a queue worker**"
-     }' "$REPO_ROOT/docs/specifications/46-spec-environmental-requirements.md" > "$AUG_SPEC"
+     }' "$REAL_SPEC_46" > "$AUG_SPEC"
 
 AUG_OUT=$(cd "$REPO_ROOT" && coverage_rollup_run --spec "$AUG_SPEC")
 
@@ -172,7 +198,7 @@ assert_equals "$(printf 'ENV1\nENVX1')" "$(
 # And that the augmentation changed something: a spec whose ENV labels were silently dropped
 # would give an identical requirement count to the unaugmented original, and the assertion
 # above would be the only thing standing between that and a green run.
-ORIG_OUT=$(cd "$REPO_ROOT" && coverage_rollup_run --spec docs/specifications/46-spec-environmental-requirements.md)
+ORIG_OUT=$(cd "$REPO_ROOT" && coverage_rollup_run --spec "$REAL_SPEC_46")
 ORIG_REQS=$(coverage_count_type "$ORIG_OUT" REQ)
 AUG_REQS=$(coverage_count_type "$AUG_OUT" REQ)
 

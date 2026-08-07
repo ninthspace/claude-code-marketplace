@@ -156,10 +156,19 @@ test_start "Planning documents still record the versions that were true when wri
 # The inverse guard. A bump that swept `docs/` would erase the record of what shipped
 # when, and would pass every assertion above. Epic 40-04 recorded the 2.9.1 → 3.0.0
 # bump; that text must survive every later release.
-if grep -rqE '[0-9]+\.[0-9]+\.[0-9]+' "$REPO/docs/epics" 2>/dev/null; then
+#
+# Both directories, because the record this guard names is exactly the kind of document
+# `/cpm:archive` sweeps: epic 40-04 is archived, and every version string in the epics
+# tree now sits under `docs/archive/`. That is not a reference into the archive needing to
+# resolve — it is a corpus sweep over the historical record, and the archive is where the
+# historical record lives. `make-coverage-baseline.sh` reads both paths for the same
+# reason. A guard reading only the live directory would call a routine archive the erasure
+# it exists to catch.
+if grep -rqE '[0-9]+\.[0-9]+\.[0-9]+' \
+  "$REPO/docs/epics" "$REPO/docs/archive/epics" 2>/dev/null; then
   test_pass
 else
-  test_fail "no version strings remain in docs/epics — history may have been rewritten"
+  test_fail "no version strings remain in either epics directory — history may have been rewritten"
 fi
 
 # --- Negative controls -------------------------------------------------------------

@@ -37,6 +37,7 @@ source "$SCRIPT_DIR/test-helpers.sh"
 
 RALPH_SKILL="$SCRIPT_DIR/../../skills/ralph/SKILL.md"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+REAL_DOCS="$SCRIPT_DIR/fixtures/real-docs"
 
 echo "Testing: ralph's spec-path input shape (Epic 45-02 Story 1)"
 echo "==========================================================="
@@ -196,11 +197,16 @@ else
   test_fail "extracted spec='$SPEC_DIR' epic='$EPIC_DIR' — an empty one globs the whole repo"
 fi
 
-test_start "the directory the spec row names is where this repo's specs live"
-assert_contains "$(ls "$REPO_ROOT/$SPEC_DIR" 2>/dev/null | grep -- '-spec-')" "-spec-"
+# Globbed in the real-document corpus rather than the live tree. The claim is that the
+# table's directories are the ones CPM's documents are named and shaped for — a table
+# reading `docs/specs/` classifies nothing and no amount of grepping its prose would notice
+# — and that claim is about the convention, not about which chains happen to be archived
+# today. The corpus mirrors the convention's layout, so a renamed directory still fails.
+test_start "the directory the spec row names is the one specs are filed under"
+assert_contains "$(ls "$REAL_DOCS/$SPEC_DIR" 2>/dev/null | grep -- '-spec-')" "-spec-"
 
-test_start "the directory the epic row names is where this repo's epics live"
-assert_contains "$(ls "$REPO_ROOT/$EPIC_DIR" 2>/dev/null | grep -- '-epic-')" "-epic-"
+test_start "the directory the epic row names is the one epics are filed under"
+assert_contains "$(ls "$REAL_DOCS/$EPIC_DIR" 2>/dev/null | grep -- '-epic-')" "-epic-"
 
 test_start "and the two rows name different directories, so the rule discriminates"
 if [ "$SPEC_DIR" != "$EPIC_DIR" ]; then
@@ -348,11 +354,11 @@ classify() {
   done < <(mode_rows "$file")
 }
 
-REAL_EPIC="docs/epics/$(ls "$REPO_ROOT/docs/epics" | grep -- '-epic-' | head -1)"
-REAL_SPEC="docs/specifications/$(ls "$REPO_ROOT/docs/specifications" | grep -- '-spec-' | head -1)"
+REAL_EPIC="docs/epics/$(ls "$REAL_DOCS/docs/epics" | grep -- '-epic-' | head -1)"
+REAL_SPEC="docs/specifications/$(ls "$REAL_DOCS/docs/specifications" | grep -- '-spec-' | head -1)"
 
 test_start "control: a real epic path and a real spec path were found to classify"
-if [ -f "$REPO_ROOT/$REAL_EPIC" ] && [ -f "$REPO_ROOT/$REAL_SPEC" ]; then
+if [ -f "$REAL_DOCS/$REAL_EPIC" ] && [ -f "$REAL_DOCS/$REAL_SPEC" ]; then
   test_pass
 else
   test_fail "epic='$REAL_EPIC' spec='$REAL_SPEC' — one of them is not a file"
