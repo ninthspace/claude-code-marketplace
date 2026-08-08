@@ -4,7 +4,8 @@
 **Source**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Scope**: Spec (no epic exists — reviewed against the spec directly)  
 **Agents**: Jordan, Margot, Bella, Casey  
-**Findings**: 15 (4 critical, 11 warnings, 0 suggestions)
+**Findings**: 15 (4 critical, 11 warnings, 0 suggestions)  
+**Artifacts**: [dpm — Schema Map](https://claude.ai/code/artifact/bb0b3460-708c-4fdf-8cf8-7664457c896b) · source `docs/artifacts/47-dpm-schema-map.html`
 
 ## Summary
 

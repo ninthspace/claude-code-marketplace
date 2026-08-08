@@ -1,7 +1,8 @@
 # Spec: dpm — SQLite-Backed Artefact Persistence
 
 **Date**: 2026-08-08  
-**Brief**: none — authored from a facilitated design conversation, taking CPM as the reference implementation
+**Brief**: none — authored from a facilitated design conversation, taking CPM as the reference implementation  
+**Artifacts**: [dpm — Schema Map](https://claude.ai/code/artifact/bb0b3460-708c-4fdf-8cf8-7664457c896b) · source `docs/artifacts/47-dpm-schema-map.html`
 
 ## Problem Summary
 

@@ -1,0 +1,776 @@
+<!--
+  dpm — Schema Map. Source of a published Claude artifact.
+
+  Live at: https://claude.ai/code/artifact/bb0b3460-708c-4fdf-8cf8-7664457c896b
+  Registered in: docs/artifacts/index.md
+  Describes:     docs/specifications/47-spec-dpm-sqlite-persistence.md
+
+  To update: edit THIS file, then publish it with the Artifact tool passing the
+  URL above as `url`. Publishing without it mints a second URL for the same page.
+  The figures and the "what the constraints reject" table are checked against a
+  real database — extract the spec's sql blocks, run them, and probe before
+  changing a number here.
+
+  This file is wrapped in <!doctype html><head></head><body> at publish time,
+  so it deliberately has no doctype, html, head or body tags of its own.
+-->
+<title>dpm — Schema Map</title>
+
+<style>
+  :root {
+    --ground:      #EEF0F4;
+    --surface:     #FFFFFF;
+    --surface-2:   #F7F8FB;
+    --ink:         #171A21;
+    --ink-soft:    #4A5160;
+    --ink-faint:   #7B8394;
+    --rule:        #D3D8E2;
+    --rule-soft:   #E4E8EF;
+    --accent:      #2B44C7;
+    --accent-soft: #E5E8FA;
+    --vocab:       #9A5A08;
+    --vocab-soft:  #F7EDDD;
+    --reject:      #A8231C;
+    --reject-soft: #F8E7E5;
+    --plate:       #FBFAF6;
+    --plate-rule:  #DDD8CB;
+
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0F1218;
+      --surface:     #171B23;
+      --surface-2:   #1D222C;
+      --ink:         #E7EAF0;
+      --ink-soft:    #A6AEBF;
+      --ink-faint:   #767E8F;
+      --rule:        #2C3340;
+      --rule-soft:   #232935;
+      --accent:      #8C9CF5;
+      --accent-soft: #1E2542;
+      --vocab:       #E0A45C;
+      --vocab-soft:  #33261492;
+      --reject:      #F0918A;
+      --reject-soft: #33191799;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0F1218;
+    --surface:     #171B23;
+    --surface-2:   #1D222C;
+    --ink:         #E7EAF0;
+    --ink-soft:    #A6AEBF;
+    --ink-faint:   #767E8F;
+    --rule:        #2C3340;
+    --rule-soft:   #232935;
+    --accent:      #8C9CF5;
+    --accent-soft: #1E2542;
+    --vocab:       #E0A45C;
+    --vocab-soft:  #33261492;
+    --reject:      #F0918A;
+    --reject-soft: #33191799;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 4vw, 2.5rem) 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead { display: flex; flex-direction: column; gap: 1.15rem; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.9rem, 4.6vw, 3rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 .dim { color: var(--ink-faint); }
+
+  .standfirst {
+    font-size: 1.12rem;
+    color: var(--ink-soft);
+    max-width: 42rem;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  .figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .figure {
+    flex: 1 1 7rem;
+    padding: 0.85rem 1rem;
+    border-right: 1px solid var(--rule-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .figure:last-child { border-right: 0; }
+  .figure b {
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .figure span {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- sections ---------- */
+
+  section { display: flex; flex-direction: column; gap: 1.1rem; }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 1.28rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  h2 .count {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 400;
+  }
+
+  h3 {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  p { margin: 0; max-width: 44rem; text-wrap: pretty; }
+  p.wide { max-width: none; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: 2px;
+    padding: 0.05em 0.32em;
+  }
+
+  /* ---------- cluster ---------- */
+
+  .cluster {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+  }
+  .cluster-head {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .cluster-head p { font-size: 0.94rem; color: var(--ink-soft); }
+
+  .plate {
+    background: var(--plate);
+    border-top: 1px solid var(--plate-rule);
+    border-bottom: 1px solid var(--plate-rule);
+    padding: 1.1rem;
+    overflow-x: auto;
+  }
+  .plate .mermaid { min-width: min-content; }
+
+  .holds {
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .tt {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    padding: 0.16rem 0.44rem;
+    border-radius: 2px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+    white-space: nowrap;
+  }
+  .tt.v { border-color: var(--vocab); color: var(--vocab); background: var(--vocab-soft); }
+
+  .impossible {
+    margin: 0;
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--rule-soft);
+    background: var(--surface-2);
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    max-width: none;
+  }
+  .impossible b {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--reject);
+    display: block;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+  }
+
+  /* ---------- tables ---------- */
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; font-family: var(--sans); font-size: 0.87rem; }
+  th, td { padding: 0.5rem 0.85rem; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.m { font-family: var(--mono); font-size: 0.8rem; white-space: nowrap; }
+  td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  td.dim { color: var(--ink-faint); }
+
+  .seed td:first-child { font-family: var(--mono); font-size: 0.8rem; color: var(--vocab); white-space: nowrap; }
+  .seed td:nth-child(2) { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-soft); }
+
+  .never { color: var(--reject); font-family: var(--mono); font-size: 0.78rem; }
+  .ok    { color: var(--accent); font-family: var(--mono); font-size: 0.78rem; }
+
+  /* ---------- vocab cards ---------- */
+
+  .vocabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem; }
+  .vocab-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--vocab);
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+  }
+  .vocab-card header {
+    padding: 0.7rem 0.95rem;
+    border-bottom: 1px solid var(--rule-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .vocab-card header code { background: none; border: 0; padding: 0; color: var(--vocab); font-size: 0.82rem; }
+  .vocab-card header span {
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .vocab-card ol { margin: 0; padding: 0.6rem 0.95rem 0.85rem 2.1rem; display: flex; flex-direction: column; gap: 0.18rem; }
+  .vocab-card li { font-family: var(--sans); font-size: 0.855rem; color: var(--ink); }
+  .vocab-card li span { color: var(--ink-faint); font-size: 0.94em; }
+  .vocab-card li.unused { color: var(--ink-faint); }
+  .vocab-card li.unused em { color: var(--reject); font-style: normal; font-size: 0.85em; font-family: var(--mono); }
+  .vocab-card footer {
+    margin-top: auto;
+    padding: 0.6rem 0.95rem;
+    border-top: 1px solid var(--rule-soft);
+    background: var(--surface-2);
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .callout p { max-width: 46rem; font-size: 0.96rem; }
+
+  .note {
+    font-size: 0.86rem;
+    color: var(--ink-faint);
+    font-family: var(--sans);
+    max-width: 46rem;
+  }
+
+  footer.colophon {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.25rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+  }
+
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Spec 47 · Data model</p>
+    <h1>dpm <span class="dim">/</span> schema map</h1>
+    <p class="standfirst">
+      Thirty-seven tables that hold CPM's planning artefacts as rows instead of prose. Every
+      relationship a markdown file records in a sentence is a foreign key here; every vocabulary
+      it names in a paragraph is a table. The six rules that <em>cannot</em> be constraints are
+      written down too, because an unenforceable invariant nobody listed is one nobody checks.
+    </p>
+    <div class="figures">
+      <div class="figure"><b>37</b><span>tables</span></div>
+      <div class="figure"><b>63</b><span>foreign keys</span></div>
+      <div class="figure"><b>33</b><span>CHECK clauses</span></div>
+      <div class="figure"><b>5</b><span>triggers</span></div>
+      <div class="figure"><b>6</b><span>vocabularies</span></div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Identity <span class="count">5 tables</span></h2>
+    <p>Everything that produces a file shares one table. A kind declares how it is numbered and what may parent it, and both declarations are enforced against the rows rather than merely recorded beside them.</p>
+
+    <div class="cluster">
+      <div class="cluster-head">
+        <h3>document + numbering + parentage</h3>
+        <p>Numbering is two-level: a spec is numbered globally, an epic within its spec, restarting at 1 per parent — and a third scheme, <code>none</code>, for kinds that carry no number at all. Which scheme applies is the kind's business, so <code>numbering</code> is carried on the row and pinned by a composite key, letting one <code>CHECK</code> enumerate all three.</p>
+      </div>
+      <div class="plate">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#2B44C7','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
+erDiagram
+  document_kind        ||--o{ document             : "classifies + numbering"
+  document_kind        ||--o{ document_kind_parent : "may parent"
+  document_kind_parent ||--o{ document             : "allow-lists parent"
+  document_kind        ||--o{ number_sequence      : counts
+  document             ||--o{ document             : "parent, kind-checked"
+  document             ||--o{ document_section     : prose
+  document             ||--o{ number_sequence      : "child seq"
+</pre>
+      </div>
+      <div class="holds">
+        <span class="tt">document_kind</span><span class="tt v">document_kind_parent</span><span class="tt">document</span><span class="tt">number_sequence</span><span class="tt">document_section</span>
+      </div>
+      <p class="impossible"><b>Cannot happen</b>An epic hanging off a review, or any document parented onto a kind its own kind does not allow — the allow-list is a table and the claim is checked against the parent's own row, so it cannot be satisfied by lying about it. A kind declared root-numbered storing a sequence instead. A retired number returning to circulation.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Per-kind detail <span class="count">9 tables</span></h2>
+    <p>Four of the thirteen document kinds carry structure a prose column would destroy. The other nine get no detail table at all — the test is whether anything <em>reads</em> the field, not whether the list looks symmetrical.</p>
+
+    <div class="cluster">
+      <div class="cluster-head">
+        <h3>library, ADR, review, quick</h3>
+        <p>The library's <code>scope</code> earns a table because every skill filters on it before deciding what to load; a discussion's narrative does not, because nothing does anything with it but render it. Each detail table's primary key <em>is</em> its document's, so the one-to-one is structural rather than a rule to maintain.</p>
+      </div>
+      <div class="plate">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#2B44C7','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
+erDiagram
+  document         ||--|| library_document   : "scope is queryable"
+  library_document ||--o{ library_scope      : "skill or all"
+  document         ||--|| adr                : "decision state"
+  adr              ||--o{ adr_option         : considered
+  adr_option       ||--o{ adr_option_tradeoff: "per axis"
+  document         ||--|| review             : "scope narrowing"
+  review           ||--o{ review_agent       : participated
+  document         ||--|| quick              : "met / not met"
+  quick            ||--o{ quick_criterion    : outcome
+</pre>
+      </div>
+      <div class="holds">
+        <span class="tt">library_document</span><span class="tt">library_scope</span><span class="tt">adr</span><span class="tt">adr_option</span><span class="tt">adr_option_tradeoff</span><span class="tt">review</span><span class="tt">review_agent</span><span class="tt">quick</span><span class="tt">quick_criterion</span>
+      </div>
+      <p class="impossible"><b>Cannot happen</b>A detail row outliving its document, or two of them for one document. A review recording what it reviewed in a second place that can disagree with the first — what was reviewed is the document's parent, and the detail table only narrows it to a story.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The spine <span class="count">10 tables</span></h2>
+    <p>Spec to requirement to epic to story to task, joined back by coverage. This is where drift costs the most, and where 1,479 lines of CPM shell parsing become a query.</p>
+
+    <div class="cluster">
+      <div class="cluster-head">
+        <h3>requirements → coverage</h3>
+        <p>Two criterion sets exist, not one: a spec states its own, an epic states different ones per story. Coverage joins them at the grain of a <em>verbatim fragment</em>, so one requirement with three obligations gets three independently verified rows.</p>
+      </div>
+      <div class="plate">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#2B44C7','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
+erDiagram
+  document             ||--o{ requirement          : "spec states"
+  requirement          ||--o{ requirement          : "sub-label"
+  requirement          ||--o{ acceptance_criterion : "spec-side"
+  requirement          ||--o{ coverage             : traced
+  document             ||--o{ story                : "epic holds"
+  story                ||--o{ task                 : "broken into"
+  story                ||--o{ story_criterion      : "story-side"
+  story_criterion      ||--o{ coverage             : satisfies
+  coverage             ||--o{ coverage_story       : "delivered by"
+  story                ||--o{ coverage_story       : delivers
+  test_approach        ||--o{ criterion_approach   : tags
+  acceptance_criterion ||--o{ criterion_approach   : tagged
+  test_approach        ||--o{ story_criterion_approach : tags
+  story_criterion      ||--o{ story_criterion_approach : tagged
+</pre>
+      </div>
+      <div class="holds">
+        <span class="tt">requirement</span><span class="tt">acceptance_criterion</span><span class="tt">story</span><span class="tt">task</span><span class="tt">story_criterion</span><span class="tt">coverage</span><span class="tt">coverage_story</span><span class="tt">test_approach</span><span class="tt">criterion_approach</span><span class="tt">story_criterion_approach</span>
+      </div>
+      <p class="impossible"><b>Cannot happen</b>A verified coverage row surviving an edit to the text it verified — two triggers clear <code>verified_at</code> and <code>binding_hash</code> the moment either the requirement or the criterion changes. The same fragment bound to the same criterion twice, inflating the covered count: identity is <code>(requirement, fragment, criterion)</code>, and display order is no part of it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Edges <span class="count">3 tables</span></h2>
+    <p>Blocking is a relationship, not a status. Kinds are rows, so a new relationship is data rather than a migration, and <code>gates_work</code> separates the edge that stops work from the ones that only record lineage.</p>
+
+    <div class="cluster">
+      <div class="cluster-head">
+        <h3>dependency + retro feed-forward</h3>
+        <p>Source and target may each be a document or a story — an epic blocked by epics, a story blocked by a story, a spec that builds on another spec, an ADR that constrains one.</p>
+      </div>
+      <div class="plate">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#2B44C7','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
+erDiagram
+  dependency_kind ||--o{ dependency        : types
+  document        ||--o{ dependency        : "source / target"
+  story           ||--o{ dependency        : "source / target"
+  document        ||--o{ retro_application : "retro applied to"
+</pre>
+      </div>
+      <div class="holds">
+        <span class="tt">dependency_kind</span><span class="tt">dependency</span><span class="tt">retro_application</span>
+      </div>
+      <p class="impossible"><b>Cannot happen</b>An artefact depending on itself. The same edge stored twice — a <code>coalesce()</code> expression index closes the gap a plain composite <code>UNIQUE</code> leaves open when three of five columns are NULL.</p>
+      <p class="impossible" style="border-left-color:#9A5A08"><b>Can happen</b>A cycle. <code>A blocks B</code> and <code>B blocks A</code> are two legal rows, because reachability is not something a row-level constraint can see — and a readiness query over a cycle returns <em>nothing ready</em>, which reads exactly like <em>everything is done</em>. It is the first entry in the register below.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Judgement <span class="count">5 tables</span></h2>
+    <p>Retro observations, review findings and audit findings all reach the same vocabulary table — and each reference names the domain it may draw from, so the vocabulary and the choice of vocabulary are both enforced. Their categories were the least durable thing in CPM, so they are the most constrained thing here.</p>
+
+    <div class="cluster">
+      <div class="cluster-head">
+        <h3>taxonomy-driven records</h3>
+        <p>An observation is written against a story and later gathered into a retro, so it may hold both parents at once: the story is where it came from and survives the promotion, the retro is where it ended up. Retirement keeps its date and reason and reverses by setting both back to NULL.</p>
+      </div>
+      <div class="plate">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#9A5A08','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
+erDiagram
+  taxonomy    ||--o{ observation_category : categorises
+  observation ||--o{ observation_category : "spans 1..n"
+  document    ||--o{ observation          : "retro holds"
+  story       ||--o{ observation          : "story holds"
+  document    ||--o{ finding              : "review holds"
+  taxonomy    ||--o{ finding              : "category + severity"
+  task        ||--o{ finding              : remediates
+  document    ||--o{ audit_finding        : "audit holds"
+  taxonomy    ||--o{ audit_finding        : "dimension + severity"
+</pre>
+      </div>
+      <div class="holds">
+        <span class="tt v">taxonomy</span><span class="tt">observation</span><span class="tt v">observation_category</span><span class="tt">finding</span><span class="tt">audit_finding</span>
+      </div>
+      <p class="impossible"><b>Cannot happen</b>A category stored as free text. A severity sitting in a category slot, or an audit dimension in a severity slot — each reference joins <code>(id, domain)</code> against a composite key, so drawing from the wrong vocabulary fails at write time rather than merely rendering oddly. An observation marked retired with no reason recorded, or promoted to a document that is not a library document.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Register &amp; state <span class="count">5 tables</span></h2>
+    <p>Published artifacts, session state, search, and schema version.</p>
+
+    <div class="cluster">
+      <div class="cluster-head">
+        <h3>artifact, session, search</h3>
+        <p>One join table replaces an index file <em>and</em> hand-written backlinks in every source document — the same fact in two places, kept in step by hand, with no diagnostic when they disagree.</p>
+      </div>
+      <div class="plate">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#2B44C7','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
+erDiagram
+  artifact         ||--o{ artifact_document : "published from"
+  document         ||--o{ artifact_document : "produced"
+  document_section ||--|| document_fts      : indexes
+  session          ||--o{ session           : "superseded by"
+</pre>
+      </div>
+      <div class="holds">
+        <span class="tt">artifact</span><span class="tt">artifact_document</span><span class="tt">session</span><span class="tt">document_fts</span><span class="tt">schema_version</span>
+      </div>
+      <p class="impossible"><b>Cannot happen</b>An artifact register and a document backlink disagreeing about the same association. A search index lagging a write — triggers maintain it, so a result set is never quietly incomplete.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Taxonomies <span class="count">6 vocabularies</span></h2>
+    <p class="wide">Seeded on creation, referenced by foreign key, editable per project. <code>retired_at</code> lets a project stop offering a term without invalidating rows that already use it, and <code>singular</code> holds the per-item display form alongside the category name.</p>
+
+    <div class="vocabs">
+
+      <div class="vocab-card">
+        <header><code>domain = 'observation'</code><span>7 terms</span></header>
+        <ol>
+          <li>Smooth Deliveries <span>· smooth delivery</span></li>
+          <li>Scope Surprises <span>· scope surprise</span></li>
+          <li>Criteria Gaps <span>· criteria gap</span></li>
+          <li class="unused">Complexity Underestimates <em>— never used</em></li>
+          <li>Codebase Discoveries <span>· codebase discovery</span></li>
+          <li>Testing Gaps <span>· testing gap</span></li>
+          <li>Patterns Worth Reusing <span>· pattern worth reusing</span></li>
+        </ol>
+        <footer>Many-to-many. Real observations span two — <code>testing gap / pattern</code> was invented three times because the format allowed one.</footer>
+      </div>
+
+      <div class="vocab-card">
+        <header><code>domain = 'finding'</code><span>10 terms</span></header>
+        <ol>
+          <li>Unclear Requirements</li>
+          <li>Missing Acceptance Criteria</li>
+          <li>Hidden Complexity</li>
+          <li>Architectural Risks</li>
+          <li>Testability Concerns</li>
+          <li>Scope Creep</li>
+          <li>Dependency Risks</li>
+          <li>Spec Compliance</li>
+          <li>ADR Compliance</li>
+          <li>Missing Test Coverage</li>
+        </ol>
+        <footer>The control case. Given as literal headings in a template, these survived real use nearly intact.</footer>
+      </div>
+
+      <div class="vocab-card">
+        <header><code>domain = 'audit_dimension'</code><span>9 terms</span></header>
+        <ol>
+          <li>Architectural decay</li>
+          <li>Consistency rot</li>
+          <li>Type &amp; contract debt</li>
+          <li>Test debt</li>
+          <li>Dependency &amp; config debt</li>
+          <li>Performance</li>
+          <li>Error handling &amp; observability</li>
+          <li>Security</li>
+          <li>Documentation drift</li>
+        </ol>
+        <footer>Swept evenly; a scope hint deepens attention without skipping a dimension.</footer>
+      </div>
+
+      <div class="vocab-card">
+        <header><code>domain = 'severity'</code><span>3 terms</span></header>
+        <ol>
+          <li>Critical</li>
+          <li>Warning</li>
+          <li>Suggestion</li>
+        </ol>
+        <footer>Shared by <code>finding</code> and <code>audit_finding</code>, so a review and an audit rank the same way.</footer>
+      </div>
+
+      <div class="vocab-card">
+        <header><code>test_approach</code><span>6 terms</span></header>
+        <ol>
+          <li>unit <span>· level</span></li>
+          <li>integration <span>· level</span></li>
+          <li>feature <span>· level</span></li>
+          <li>manual <span>· level</span></li>
+          <li>target <span>· level</span></li>
+          <li>tdd <span>· mode</span></li>
+        </ol>
+        <footer>Its own table rather than a <code>taxonomy</code> domain, because <code>kind</code> distinguishes a level from a workflow mode — <code>tdd</code> composes with any level.</footer>
+      </div>
+
+      <div class="vocab-card">
+        <header><code>dependency_kind</code><span>3 terms</span></header>
+        <ol>
+          <li>blocks <span>· gates work</span></li>
+          <li>builds_on <span>· lineage</span></li>
+          <li>constrains <span>· lineage</span></li>
+        </ol>
+        <footer><code>builds_on</code> exists because three real specifications carry a hand-written field CPM never defined.</footer>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Why the vocabularies are tables</h2>
+    <p class="wide">CPM fixes seven retro categories, named in a prose sentence inside a shared procedure. Across 22 real retro files in one project they were written eleven different ways.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Intended category</th><th>Written as</th><th class="n">Uses</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="m">smooth deliveries</td><td class="m">Smooth Deliveries</td><td class="n">7</td></tr>
+          <tr><td class="dim m">↳</td><td class="m">What Went Smoothly <span class="never">paraphrase</span></td><td class="n">5</td></tr>
+          <tr><td class="dim m">↳</td><td class="m">Smooth Delivery</td><td class="n">5</td></tr>
+          <tr><td class="m">codebase discoveries</td><td class="m">Codebase Discoveries</td><td class="n">15</td></tr>
+          <tr><td class="dim m">↳</td><td class="m">Codebase Discovery</td><td class="n">2</td></tr>
+          <tr><td class="m">testing gaps</td><td class="m">Testing Gaps</td><td class="n">11</td></tr>
+          <tr><td class="dim m">↳</td><td class="m">Testing Gap</td><td class="n">1</td></tr>
+          <tr><td class="dim m">↳</td><td class="m">Testing Notes <span class="never">invented</span></td><td class="n">1</td></tr>
+          <tr><td class="m">scope surprises</td><td class="m">Scope Surprises · Scope Surprise</td><td class="n">2</td></tr>
+          <tr><td class="m">criteria gaps</td><td class="m">Criteria Gaps</td><td class="n">2</td></tr>
+          <tr><td class="m">patterns worth reusing</td><td class="m">Patterns Worth Reusing <span class="ok">held</span></td><td class="n">18</td></tr>
+          <tr><td class="m">complexity underestimates</td><td class="m never">never appeared</td><td class="n">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>The control case sits in the same project, by the same author, in the same period.</strong> Review finding categories held almost perfectly — all ten used, roughly seven strays across a hundred headings.</p>
+      <p>The difference is not discipline, it is form. Review categories appear as <em>literal headings in an output template</em> and get copied. Retro categories appear as <em>prose inside a shared procedure</em> and get restated in the author's own words.</p>
+      <p class="note">Eleven spellings of seven categories cannot occur when the category is an id.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The rules a constraint cannot hold <span class="count">6 invariants</span></h2>
+    <p class="wide">Some rules span rows the way a foreign key cannot — reachability across a graph, a row's existence conditional on a column elsewhere, agreement between two ends of a four-table join. Writing them down is the whole point: an invariant with no constraint <em>and</em> no register entry is enforced by nothing and is invisible, because nothing fails and nothing warns.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th class="n">#</th><th>Invariant</th><th>Why it cannot be a constraint</th><th>Refused at write by</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="n">1</td><td>No cycle among work-gating edges</td><td>Reachability is not row-local</td><td class="m">link tool</td></tr>
+          <tr><td class="n">2</td><td>An ADR marked superseded has a <code>supersedes</code> edge</td><td>A row's existence, conditional on a column elsewhere</td><td class="m">status tool, sets both or neither</td></tr>
+          <tr><td class="n">3</td><td>A coverage row's requirement and criterion share a spec</td><td>A four-table join</td><td class="m">coverage create tool</td></tr>
+          <tr><td class="n">4</td><td>A <code>coverage_story</code> names a story in the right epic</td><td>Same shape as #3</td><td class="m">coverage link tool</td></tr>
+          <tr><td class="n">5</td><td>A sequence leads every number already allocated</td><td>An aggregate over another table</td><td class="m">upsert holds it by construction</td></tr>
+          <tr><td class="n">6</td><td>An edge's ends are kinds that edge admits</td><td>Needs both ends' kinds, and the legal set varies by edge</td><td class="m">link tool</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>Every entry is closed twice</strong> — refused at the write path so it cannot arrive, and reported by the integrity tool so it can be found if it arrives another way, chiefly by restoring a dump. Each has an acceptance criterion; the register itself is under test, so a check the tool performs that no entry names is a failure as much as the reverse.</p>
+      <p><strong>#3 is the one that matters.</strong> It is the only entry whose violation produces a <em>plausible</em> result rather than an obviously broken one — a matrix joining one spec's requirement to another spec's criterion renders perfectly, rolls up to a percentage, and is wrong.</p>
+      <p class="note">Three more started here and left. Parentage by kind, numbering scheme, and library promotion all turned out to be row-local given one denormalised column, and became real constraints — which is the intended direction of travel for anything on this list that can make the trip.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the constraints reject <span class="count">verified</span></h2>
+    <p class="wide">Each row was attempted against the live schema. All were refused.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Attempt</th><th>Refused by</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Epic naming a spec that does not exist</td><td class="m never">FOREIGN KEY</td></tr>
+          <tr><td>Epic parented onto an epic</td><td class="m never">FK → document_kind_parent</td></tr>
+          <tr><td>A parent claim misdescribing the parent it points at</td><td class="m never">FK (parent_id, parent_kind) → document (id, kind)</td></tr>
+          <tr><td>Review parented onto a kind not allow-listed for it</td><td class="m never">FK → document_kind_parent</td></tr>
+          <tr><td>A child-numbered kind declared root-numbered</td><td class="m never">FK (kind, numbering) + CHECK</td></tr>
+          <tr><td>An unnumbered kind carrying a number</td><td class="m never">CHECK, numbering-aware</td></tr>
+          <tr><td>The same fragment bound to one criterion twice</td><td class="m never">UNIQUE (requirement, fragment, criterion)</td></tr>
+          <tr><td>A severity used where a category belongs</td><td class="m never">FK (id, domain) → taxonomy</td></tr>
+          <tr><td>An audit dimension used as a severity</td><td class="m never">FK (id, domain) → taxonomy</td></tr>
+          <tr><td>An observation promoted to a non-library document</td><td class="m never">FK (id, kind) → document</td></tr>
+          <tr><td>Requirement class outside its vocabulary</td><td class="m never">CHECK class IN (…)</td></tr>
+          <tr><td>Duplicate edge with three NULL columns</td><td class="m never">coalesce() expression index</td></tr>
+          <tr><td>Artefact depending on itself</td><td class="m never">CHECK</td></tr>
+          <tr><td>Observation retired with no reason</td><td class="m never">CHECK (retired_at IS NULL) = (retired_reason IS NULL)</td></tr>
+          <tr><td>Verification surviving an edit to its criterion</td><td class="m never">AFTER UPDATE trigger</td></tr>
+          <tr><td>Status word outside its enum</td><td class="m never">CHECK status IN (…)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">Running the schema is what found most of these. Three of the four defects in the last review were invisible on the page and appeared only when SQLite resolved the column names — the search index in particular declared a column its content table did not have, so it accepted <code>CREATE</code> and failed on every query. A schema review that does not execute the schema is proofreading.</p>
+
+    <div class="callout">
+      <p><strong>Two things the schema now accepts that it used to refuse</strong>, which is the same work in the other direction. A kind declared to carry no number was previously impossible to insert at all — the vocabulary offered the value and the constraint forbade it. And an observation gathered into a retro had to surrender the story it came from, so promotion destroyed its own provenance.</p>
+      <p class="note">Two different fragments of one requirement, cited against the same criterion, were also rejected — because identity had been keyed to display order rather than to the fragment.</p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>docs/specifications/47-spec-dpm-sqlite-persistence.md</span>
+    <span>37 tables · 63 FKs · 33 CHECKs · 5 triggers · 6 registered invariants</span>
+    <span>DDL executed and probed, not asserted</span>
+  </footer>
+
+</div>
