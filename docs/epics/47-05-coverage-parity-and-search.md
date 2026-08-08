@@ -25,6 +25,7 @@
 | 15 | FR24 | retirement stops rows arriving as well as preserving those that have | A create tool refuses a vocabulary row retired through Story 2's retire tool, and the refusal names the retired item | Story 6 | `[integration]` | |
 | 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR | Story 6 | `[integration]` | |
 | 17 | NFR7 (must NOT) | Every piece of state is reachable through a read tool without SQL | must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool | Story 6 | `[integration]` | |
+| 18 | FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | Story 2 | `[integration]` | |
 
 **Mapping notes.**
 
@@ -67,3 +68,11 @@ unusable identifier.
 the "Address review findings" story, which records repairs to this breakdown rather than
 obligations drawn from the spec, so its criteria have no requirement to bind to. The
 both-directions set comparison should expect exactly those two as an unmatched remainder.
+
+**Row 18 was added by the second pivot of 2026-08-08**, which made the agent roster an FR24
+vocabulary. It is the criterion that justifies the table: CPM's `agents/roster.yaml` can only
+be overridden by replacing the whole file, so a project wanting one extra persona must fork
+all ten and maintain the fork — which is why the override has never been used, while
+appending to the shipped roster has. FR24's seeded-extensible-retirable semantics express
+append directly. The row sits here rather than in 47-08 because it asserts the *tool* half;
+`party` reading the table is 47-08 row 17.

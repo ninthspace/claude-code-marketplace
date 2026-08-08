@@ -196,16 +196,16 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Story**: 8  
 **Status**: Pending  
 **Blocked by**: —  
-**Satisfies**: FR25
+**Satisfies**: FR25, FR24
 
 **Acceptance Criteria**:
 
-- A party run loads its roster and reads the artifact under discussion through read tools [feature]
+- A party run loads its roster from the `agent` table and reads the artifact under discussion through read tools, with no YAML parse and no roster file on disk [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
-### Load the roster and the artifact under discussion through read tools
+### Load the roster from the `agent` table and the artifact through read tools
 **Task**: 8.1  
-**Description**: The lightest conversion in the corpus — `party` writes nothing and its facilitation is untouched.  
+**Description**: The lightest conversion in the corpus — `party` writes nothing and its facilitation is untouched. Until the pivot of 2026-08-08 "its roster" named no table: personas lived in `agents/roster.yaml` and `review_agent.agent` was free text, so this skill would have kept a YAML parse in a corpus whose whole thesis is that nothing parses files. The roster is now an FR24 vocabulary (Epic 47-01 Story 2), which is also what makes a project-added persona reach this skill without a plugin change.  
 **Status**: Pending
 
 ### Write tests for Convert `party`

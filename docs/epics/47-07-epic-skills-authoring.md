@@ -119,7 +119,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 
 **Acceptance Criteria**:
 
-- A review run writes `review` with its `scope` and `scope_story_id`, `review_agent` rows for the roster, and `finding` rows with severity and category as taxonomy references [feature]
+- A review run writes `review` with its `scope` and `scope_story_id`, `review_agent` rows referencing `agent` rows rather than carrying persona names as text, and `finding` rows with severity and category as taxonomy references [feature]
 - A story-scoped review parents onto the epic and narrows by `scope_story_id`, rather than appending `-s2` to a filename [integration]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 

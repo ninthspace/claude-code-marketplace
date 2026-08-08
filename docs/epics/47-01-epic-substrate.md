@@ -75,6 +75,7 @@ invariants SQLite cannot hold.
 - A severity row is rejected in a category slot, and an audit dimension in a severity slot, on `finding` and `audit_finding` alike [unit]
 - Retiring a taxonomy row leaves rows referencing it intact and readable [unit]
 - must NOT — a new row is accepted referencing a taxonomy row, test approach or dependency kind already retired, so that retirement stops rows arriving as well as preserving those that have [unit]
+- `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, so the roster is a vocabulary rather than free text [unit]
 - must NOT — a `document_kind` row exists that the parity enumeration does not name, or the reverse [unit]
 - An `adr` parents onto a spec, a brief or a discussion, and onto an epic not at all [unit]
 - A `retro` parents onto an epic, a spec or a quick record — the three sources `cpm:retro` actually accepts [unit]
@@ -90,13 +91,18 @@ invariants SQLite cannot hold.
 **Description**: Covers the severity-in-a-category-slot rejections on `finding` and `audit_finding` alike. A plain `REFERENCES taxonomy(id)` would relocate the drift rather than remove it.  
 **Status**: Pending
 
-### Implement retirement so it stops new rows arriving as well as preserving those that have
+### Write and seed the `agent` table, and point `review_agent` and `finding` at it
 **Task**: 2.3  
+**Description**: The roster becomes a vocabulary under FR24 — its own table rather than a `taxonomy` domain, for the reason `test_approach` is one: it carries four columns no other vocabulary needs. Seed from CPM's `agents/roster.yaml`. Both referencing columns are declared several hundred lines before `agent` in the Data Model's DDL order; SQLite resolves a foreign key at write time rather than at `CREATE`, so the forward reference holds — asserted by the story's rejection criterion rather than assumed.  
+**Status**: Pending
+
+### Implement retirement so it stops new rows arriving as well as preserving those that have
+**Task**: 2.4  
 **Description**: Covers cross-row register #10 — the half of the retirement promise that was previously enforced by nothing.  
 **Status**: Pending
 
 ### Write tests for Seed and constrain every vocabulary
-**Task**: 2.4  
+**Task**: 2.5  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
 **Status**: Pending
 
@@ -178,20 +184,29 @@ invariants SQLite cannot hold.
 **Story**: 5  
 **Status**: Pending  
 **Blocked by**: Story 1  
-**Satisfies**: FR12
+**Satisfies**: FR12, FR24
 
 **Acceptance Criteria**:
 
 - A database at schema version *n* is migrated to *n+1* on server start with no user action [integration]
+- A vocabulary default the plugin adds after a database was created appears in it on the next server start, and a term the project added under the same name is not overwritten [integration]
+- A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable [integration]
+- must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present [integration]
+- must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning [unit]
 
 ### Write `schema_version` and the ordered migration runner applied on server start
 **Task**: 5.1  
 **Description**: Forward-only, no user intervention. The runner is a second path to the same schema as the DDL, which is what Story 8's first criterion exists to catch.  
 **Status**: Pending
 
-### Write tests for Version the schema and migrate forward-only
+### Restrict vocabulary migrations to insert-if-absent and retire-if-live
 **Task**: 5.2  
-**Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
+**Description**: FR24's evolution clause. A plugin-side vocabulary change is a migration, never a re-seed, and only two operations are legal: `INSERT` guarded on absence **by primary key**, and `UPDATE … SET retired_at WHERE retired_at IS NULL`. Guarding on the key rather than on live terms is what stops the resurrection case — retirement sets a column, so a retired row is still present. Rewriting a vocabulary row's text is not an operation, and that ban is what makes both permitted ones idempotent without the schema recording which rows a project has touched: no provenance column, no content hash, no reconcile.  
+**Status**: Pending
+
+### Write tests for Version the schema and migrate forward-only
+**Task**: 5.3  
+**Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`. The four vocabulary-evolution criteria each need a database created *before* the change and migrated into it — a test that seeds the new state directly asserts nothing about the upgrade path.  
 **Status**: Pending
 
 ---

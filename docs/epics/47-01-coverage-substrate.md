@@ -88,6 +88,11 @@
 | 78 | FR27 | joined to the artefacts that deliver them | A document assigned to two milestones keeps both across a migration, and the spec-scoping pair check still refuses a cross-spec assignment afterwards | Story 8 | `[integration]` | |
 | 79 | FR12 (must NOT) | applied automatically on server start, so a plugin update never requires the user to intervene | must NOT — the migration runner and the DDL produce schemas differing in any constraint, index or trigger | Story 8 | `[integration]` | |
 | 80 | FR26 (must NOT) | Completeness is therefore a separate, deliberate claim on the requirement | must NOT — completeness is derived from fragment offsets rather than claimed, so connective prose must be bound to satisfy it | Story 7 | `[unit]` | |
+| 81 | FR24 | The agent roster is a table: `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries | `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, so the roster is a vocabulary rather than free text | Story 2 | `[unit]` | |
+| 82 | FR24 | A vocabulary default the plugin adds after a database was created appears in it on the next server start, and a term the project added under the same name is not overwritten | A vocabulary default the plugin adds after a database was created appears in it on the next server start, and a term the project added under the same name is not overwritten | Story 5 | `[integration]` | |
+| 83 | FR24 | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | Story 5 | `[integration]` | |
+| 84 | FR24 (must NOT) | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | Story 5 | `[integration]` | |
+| 85 | FR24 (must NOT) | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | Story 5 | `[unit]` | |
 
 **Rows 30–60 were added on 2026-08-08**, when the cross-epic union check ran early against
 the spec's 113 tagged criteria and found FR21 uncovered in every epic. They are appended
@@ -161,3 +166,13 @@ pass" — alongside the thirteen roll-up rows declared above. Declaring it is th
 34's recommendation is that an intended remainder be written down so the comparison has an
 expected result rather than an unexplained one, and an undeclared exception is
 indistinguishable from the defect this pivot just fixed.
+
+**Rows 81–85 were added by the second pivot of 2026-08-08**, which made the agent roster an
+FR24 vocabulary and settled what happens to a seeded vocabulary when the plugin ships a new
+default. Rows 82–85 sit on Story 5 rather than Story 2 because the mechanism is FR12's
+migration runner even though the policy is FR24's — the story's `Satisfies` names both. Row
+81 is Story 2's because it is a schema constraint, and it was verified by execution before it
+was written: `review_agent` and `finding` are declared several hundred lines before `agent`
+in the Data Model's DDL order, and the forward reference holds because SQLite resolves a
+foreign key at write time rather than at `CREATE`. Executing it is also what confirmed the
+full DDL still runs clean at thirty-nine tables.

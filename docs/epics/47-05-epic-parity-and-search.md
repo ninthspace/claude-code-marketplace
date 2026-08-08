@@ -82,10 +82,11 @@ a note has to carry.
 - An observation carrying two categories round-trips, and appears under both in the projection [integration]
 - Retiring a test approach and a dependency kind leaves rows using them intact, as it does for a taxonomy row [unit]
 - must NOT — any vocabulary is seeded and extensible but cannot be retired [unit]
+- A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit [integration]
 
-### Write add and retire tools for taxonomy rows, test approaches and dependency kinds
+### Write add and retire tools for taxonomy rows, test approaches, dependency kinds and agents
 **Task**: 2.1  
-**Description**: Three vocabularies, one retirement semantic. Epic 47-01 Story 2 built the constraint; this makes it reachable without SQL, which is what "extensible per project" requires.  
+**Description**: Four vocabularies, one retirement semantic. Epic 47-01 Story 2 built the constraint; this makes it reachable without SQL, which is what "extensible per project" requires. The `agent` roster is the case that motivated FR24's evolution clause: CPM's `agents/roster.yaml` can only be overridden by replacing the whole file, so adding one persona means forking all ten and maintaining the fork. Append is the operation projects actually perform, and it is the one the file cannot express.  
 **Status**: Pending
 
 ### Attach more than one category to an item through the join, and project both

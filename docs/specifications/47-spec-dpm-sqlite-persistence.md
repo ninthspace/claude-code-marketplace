@@ -50,7 +50,7 @@ None of this is bad engineering. It is the necessary consequence of choosing a s
 - **FR27 — The build order is data.** A specification's milestones are rows scoped to it, ordered, and joined to the artefacts that deliver them — so "which epics are in M2" is a query, and an epic that spans two milestones says so rather than being filed under one. Without this, a build order stated in prose is unreachable to every tool that would sequence work by it.
 - **FR28 — A reference from one artefact's prose to another is a marker, never a number.** Cross-artefact references that are structural are foreign keys (FR2). The rest — a sentence in an epic's notes naming another epic, a retro observation citing the spec it came from — are written `{{ref:<id>}}` and resolved by the renderer to the target's current human identifier. A stored number would go stale the moment a merge renumbered its target, and no tool could find it to repair (FR8).
 - **FR22 — Relationships between artefacts are typed edges, not status values.** Blocking, spec-to-spec lineage, and ADR constraint are rows in one edge table with a kind, so "which epics are ready" is a query, a blocker's completion is visible to everything downstream, and a new relationship kind is data rather than a migration. Source and target may each be a document or a story.
-- **FR24 — Every controlled vocabulary is a table, and projects may edit it.** Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable without invalidating rows that already use them. An item may carry more than one category where the work genuinely spans two.
+- **FR24 — Every controlled vocabulary is a table, and projects may edit it.** Observation categories, finding categories, audit dimensions, severities, test approaches and **agent personas** are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable without invalidating rows that already use them. An item may carry more than one category where the work genuinely spans two. A vocabulary default the plugin later adds or retires reaches an existing project through **FR12's migration channel, never a re-seed**: a migration may *insert a term that is absent* and *retire a term that is live*, and may **not** rewrite the text of a term that rows already reference. Both permitted operations are idempotent and neither reads project state, so a project's own additions, edits and retirements survive every upgrade without the schema having to record which rows it touched.
 - **FR23 — Two-level numbering.** Root-numbered kinds (a spec) and child-numbered kinds (an epic, numbered within its spec and restarting at 1 per parent) are both allocated monotonically and never reused.
 - **FR25 — The skill corpus is twenty-two files, enumerated here, each rewritten against the tool surface.** Naming them is what makes AD6's largest line item plannable and testable. The corpus mirrors CPM's, one for one: `architect`, `archive`, `artifact`, `audit`, `brief`, `clean`, `consult`, `discover`, `do`, `epics`, `inspect`, `library`, `party`, `pivot`, `present`, `quick`, `ralph`, `retro`, `review`, `spec`, `status`, `templates`. **What makes a dpm skill different from its CPM counterpart is subtraction, and it is the same subtraction in every file**: no filename construction, no glob, no number allocation, no markdown parsing, no progress-file lifecycle, and no procedure that recovers an entity by reading what an earlier skill wrote. Each of those is a tool call. What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business.
 
@@ -143,14 +143,14 @@ It loads with no flag and needs no native module. `better-sqlite3` was rejected 
 
 | Line item | Count | Derived from |
 |---|---|---|
-| Tables | 38 real, plus 2 FTS5 virtual | The Data Model, counted from the executed DDL |
+| Tables | 39 real, plus 2 FTS5 virtual | The Data Model, counted from the executed DDL |
 | Typed entity tools | ~69 | 23 tables × create, read, update |
 | Cross-cutting tools | ~9 | link, search, integrity, migrate, dump, restore, merge-renumber, allocate-number, claim-coverage |
 | Projection templates | 13 | One per document kind — the ten child entity types render inside their parent's template, as does the ADR, which is why 13 is right here and wrong above |
 | Triggers | 22 | 3 FTS on `document_section`, 12 FTS on the four indexed child tables, 3 coverage unverify, 4 coverage-claim unclaim. Thirteen are written out in the Data Model; the other nine are the same three-trigger pattern on the remaining indexed tables, and FR9's completeness criterion is what asserts they exist |
 | Skill files | 22 | The corpus enumerated in FR25 |
 
-Roughly **78 tools** rather than 45–55, against 40 tables and 22 skills. AD6 asserts this is affordable; a decision that expensive should carry its own number, and the number is larger than the first draft of this paragraph claimed.
+Roughly **78 tools** rather than 45–55, against 41 tables and 22 skills. AD6 asserts this is affordable; a decision that expensive should carry its own number, and the number is larger than the first draft of this paragraph claimed.
 
 **Build order, which is not a release plan.** AD6 is unchanged — nothing releases until all of it works — but the order in which it is built is a real constraint and leaving it unstated hands the decision to whoever decomposes the spec:
 
@@ -449,7 +449,7 @@ CREATE TABLE review (
 
 CREATE TABLE review_agent (
   document_id  TEXT NOT NULL REFERENCES review(document_id) ON DELETE CASCADE,
-  agent        TEXT    NOT NULL,
+  agent        TEXT NOT NULL REFERENCES agent(name),
   PRIMARY KEY (document_id, agent)
 );
 
@@ -847,6 +847,30 @@ CREATE TABLE taxonomy (
   UNIQUE (id, domain)             -- parent key for the domain-scoped FKs below
 );
 
+-- The agent roster, a vocabulary like the `taxonomy` domains but its own table
+-- for the reason `test_approach` is: it carries columns no other vocabulary
+-- needs. In CPM this is `agents/roster.yaml`, whose header says the project
+-- copy "completely replaces this default — no merging", so adding one persona
+-- means forking all ten and maintaining the fork. The observed practice is
+-- append-only, which is what FR24 provides and the file cannot.
+--
+-- `personality` and `communication_style` are prose and nothing filters on
+-- them, which under AD7 would argue for leaving them out. They are columns
+-- anyway, because a project-added persona needs somewhere to put its own —
+-- keeping them in a plugin file keyed by name breaks the append case that is
+-- the whole point of the table.
+CREATE TABLE agent (
+  name                TEXT PRIMARY KEY,      -- 'pm', 'architect' — the id skills reference
+  display_name        TEXT    NOT NULL,      -- 'Jordan'
+  icon                TEXT    NOT NULL,      -- single emoji, the party-mode prefix
+  role                TEXT    NOT NULL,      -- 'Product Manager'
+  personality         TEXT    NOT NULL,
+  communication_style TEXT    NOT NULL,
+  position            INTEGER NOT NULL,
+  retired_at          TEXT,                  -- FR24 applies here too
+  UNIQUE (display_name)                      -- two Jordans make the rendered output ambiguous
+);
+
 -- Each reference to `taxonomy` pins the domain it is allowed to draw from, in a
 -- column the CHECK holds to one value, and joins BOTH columns to the composite
 -- parent key. A plain `REFERENCES taxonomy(id)` would let a severity row sit in
@@ -856,7 +880,7 @@ CREATE TABLE finding (
   review_id       TEXT NOT NULL,
   review_kind     TEXT NOT NULL DEFAULT 'review' CHECK (review_kind = 'review'),
   position        INTEGER NOT NULL,   -- projection order; without it a review's findings render unordered
-  agent           TEXT,
+  agent           TEXT REFERENCES agent(name),   -- nullable: not every finding is attributed
   category_id     TEXT NOT NULL,
   category_domain TEXT NOT NULL DEFAULT 'finding'
                     CHECK (category_domain = 'finding'),
@@ -1334,6 +1358,12 @@ Every count in this document that describes a table in this document is checked 
 | FR24 | Retiring a test approach and a dependency kind leaves rows using them intact, as it does for a taxonomy row | `[unit]` |
 | FR24 | must NOT — any vocabulary is seeded and extensible but cannot be retired | `[unit]` |
 | FR24 | must NOT — a new row is accepted referencing a taxonomy row, test approach or dependency kind already retired, so that retirement stops rows arriving as well as preserving those that have | `[unit]` |
+| FR24 | The agent roster is a table: `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, and every persona a skill offers is read from the table rather than from a file | `[integration]` |
+| FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | `[integration]` |
+| FR24 | A vocabulary default the plugin adds after a database was created appears in it on the next server start, and a term the project added under the same name is not overwritten | `[integration]` |
+| FR24 | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | `[integration]` |
+| FR24 | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | `[integration]` |
+| FR24 | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | `[unit]` |
 | FR23 | Two epics under different specs may both hold sequence 1; two under the same spec may not | `[unit]` |
 | FR23 | Child sequences restart at 1 per parent and never reuse a value after deletion | `[unit]` |
 | FR23 | must NOT — a row carries both `number` and `sequence`, or neither, unless its kind is declared `numbering = 'none'` | `[unit]` |

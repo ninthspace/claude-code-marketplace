@@ -24,7 +24,7 @@
 | 14 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 6 | `[unit]` | |
 | 15 | FR9 | a search that covers only sections misses the majority of what a user would look for | A consult run retrieves prior context through the search tool rather than by reading files, and a term held only on a child row is reachable | Story 7 | `[feature]` | |
 | 16 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 7 | `[unit]` | |
-| 17 | FR25 | each rewritten against the tool surface | A party run loads its roster and reads the artifact under discussion through read tools | Story 8 | `[feature]` | |
+| 17 | FR24 | agent personas are rows referenced by foreign key — seeded with defaults, extensible per project | A party run loads its roster from the `agent` table and reads the artifact under discussion through read tools, with no YAML parse and no roster file on disk | Story 8 | `[feature]` | |
 | 18 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 8 | `[unit]` | |
 | 19 | FR25 | no filename construction, no glob, no number allocation, no markdown parsing, no progress-file lifecycle | None of the eight skill files contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle | Story 9 | `[unit]` | |
 | 20 | FR3 | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation | None of the eight skill files contains a SQL keyword or a `sqlite3` invocation | Story 9 | `[unit]` | |
@@ -58,3 +58,10 @@ the fix is that the state be reachable, not merely that the failure be loud.
 eight of twenty-two files; both complete in Epic 47-09. FR13's rows here are the call-site
 half, its tool-side half being Epic 47-03's — so FR13 also reads as partially covered in two
 matrices.
+
+**Row 17 remapped from FR25 to FR24 in the second pivot of 2026-08-08.** Its criterion said
+`party` "loads its roster … through read tools", and until that pivot no table held a roster
+— personas lived in `agents/roster.yaml` and `review_agent.agent` was free text. The row was
+filed under FR25 because it read as one more skill conversion; what it actually asserts is a
+vocabulary being reachable, which is FR24's. The schema half is Epic 47-01 row 81 and the
+tool half is Epic 47-05 row 18, so FR24 is partially covered here too.
