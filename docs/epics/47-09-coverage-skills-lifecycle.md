@@ -33,14 +33,37 @@
 | 23 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: every candidate is still listed before anything is asked, only what was named and confirmed is deleted, and the skill is still unreachable from an autonomous loop | Story 3 | `[feature]` | |
 | 24 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: pre-flight still probes the stop hook and branches on what it finds, and a detected previous run is still offered as a resume rather than restarted over | Story 4 | `[feature]` | |
 | 25 | FR25 (must NOT) | must NOT — a skill satisfies every subtraction sweep while retaining none of its counterpart's facilitation, so a corpus of twenty-two files each carrying a title and a single tool call passes | Every one of the twenty-two carries a passing facilitation criterion on its own story, checked here as a roll-up: the five sweeps above are all negative, and a corpus of twenty-two files each holding a title and a single tool call satisfies every one of them | Story 5 | `[unit]` | |
+| 26 | FR25 (must NOT) | must NOT — the pipeline-stage comparison reports success because CPM's `skills/` directory was absent, rather than failing on a fixture it could not read | must NOT — the pipeline-stage comparison reports success because CPM's `skills/` directory was absent, rather than failing on a fixture it could not read | Story 5 | `[integration]` | |
 
 **Mapping notes.**
 
-**Rows 11–15 are the only rows in the entire breakdown whose Story Criterion is verbatim
-identical to the Spec Text.** FR25's corpus-wide criteria are already written as assertions
-over the finished corpus, so there is nothing to specialise — the story adds only the scope
-phrase "swept across all twenty-two", which names what "no skill file" means once the corpus
-is closed.
+**Rows 11, 12 and 26 have a Story Criterion verbatim identical to their Spec Text; rows
+13–15 differ only by an appended scope phrase.** FR25's corpus-wide criteria are already
+written as assertions over the finished corpus, so there is little to specialise — rows 13–15
+add "swept across all twenty-two", which names what "no skill file" means once the corpus is
+closed, and rows 11, 12 and 26 add nothing because the spec criterion is already an assertion
+about exactly this story.
+
+This note previously claimed rows 11–15 were **the only** such rows in the breakdown. That was
+wrong twice over and is corrected here rather than carried. It was internally inconsistent on
+its own terms — it called 13–15 identical in one clause and described the phrase they add in
+the next — and the uniqueness claim has since been falsified by the two pivots of 2026-08-08,
+which added Epic 47-01 rows 82–85 and Epic 47-05 row 18 and rewrote Epic 47-05 row 1, all
+verbatim-identical, alongside Epic 47-04 row 6. Ten rows across four matrices now have the
+property. It is unremarkable where a spec criterion is already scoped to one story, which is
+the case in every one of them.
+
+**Row 26 settles what dpm's suite may read outside its own tree**, and is the second half of
+a distinction the spec now draws in *What the suite reads outside dpm*. Row 12's comparison
+reads CPM's `skills/` **directory names** — CPM ships at `cpm/` in the same marketplace
+repository, so it is a sibling directory in the same commit, needing no version pin and no
+install step. Row 26 is the guard on it: a suite run from an extracted plugin copy has no
+`cpm/` beside it, and a set comparison against a directory that does not exist passes
+trivially. The check that exists to catch a short list is the one most easily satisfied by
+finding nothing at all, which is NFR6's false pass in its purest form. **Nothing here reads
+CPM's `SKILL.md` content** — the retention criteria on rows 21–24 and across Epics 47-06 to
+47-08 name their behaviours in the criterion and drive the dpm skill, because an oracle that
+the thing under test can edit is not an oracle.
 
 **Row 2 maps to FR21, not FR25.** The subtraction is real, but what the criterion asserts is
 that the triggers do the work — a claim about FR21's decay behaviour reaching the skill

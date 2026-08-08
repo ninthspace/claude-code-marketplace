@@ -1274,6 +1274,51 @@ Every count in this document that describes a table in this document is checked 
 - `[target]` — Mechanically checkable, but only against a real deployment target. Not self-assessable in an autonomous run.
 - `[tdd]` — Workflow mode, composable with any level tag.
 
+### What the suite reads outside dpm
+
+Two criteria below reach outside dpm's own tree, and they are different in kind. Saying which
+is which is the difference between a declared dependency and an accidental one.
+
+**CPM's skill directory is a name oracle, and that is the whole of it.** FR25's list of
+twenty-two is hand-kept, and a hand-kept list can be short. The only thing that catches a
+short list is comparing it against CPM's own `skills/` directory — a set comparison over
+**directory names**, reading no file. CPM ships at `cpm/` in the same marketplace repository
+as dpm, so this is a sibling directory in the same commit: no version pin, no install step,
+no skew between what the suite reads and what the repository holds. When CPM gains a pipeline
+stage the comparison fails, and that failure is correct — dpm is short a skill and someone
+should find out from a test rather than from a user.
+
+**An absent fixture is a failure, not a skip.** A suite run from an extracted plugin copy has
+no `cpm/` beside it, and a name comparison against a directory that does not exist passes
+trivially. That is NFR6's false pass in its purest form: the check that exists to catch a
+short list is the check most easily satisfied by finding nothing at all.
+
+**CPM's `SKILL.md` *content* is not an oracle of any kind.** The retention criterion asserts
+that each converted skill still performs its counterpart's gates and refusals — but the
+behaviours are named in that skill's own criterion, and the test drives the **dpm** skill to
+check them. Nothing reads CPM's prose at test time. Three reasons, and the second is the one
+that matters:
+
+- **The extraction is not possible.** "Still refuses an untestable criterion" is not derivable  
+  from a paragraph by any means a suite could run. It would need a hand-written manifest of  
+  CPM's behaviours — a third hand-kept list, existing to check the second.
+- **It would couple dpm's suite to CPM's wording, and fail in the safe direction only.** CPM's  
+  skill files get edited for prose reasons, and a dpm test failing on a rewording is noise.  
+  The reverse is the real cost: CPM removing a gate would silently license dpm to remove it  
+  too, and the suite would report success all the way down. A test whose oracle can be edited  
+  by the thing it is testing is not a test.
+- **It would quietly contradict the Scope section.** CPM is unmodified and remains installable  
+  alongside; a suite that pins CPM's behaviour withdraws that freedom without saying so.
+
+CPM's `SKILL.md` is what an author reads while *writing* the criterion. That is the same
+relationship FR10 already has with a real CPM project's `docs/` tree — which supplied the
+artefact list, disagrees with CPM's documentation, and is not a fixture either.
+
+**What this leaves uncovered, stated rather than papered over.** A criterion naming too few
+behaviours passes while the conversion drops the rest. The corpus roll-up catches a skill with
+*no* retention criterion; nothing mechanical catches one that is merely thin. That judgement
+is `[manual]` and belongs to whoever reviews the conversion.
+
 ### Acceptance Criteria Coverage
 
 | Requirement | Acceptance Criterion | Test Approach |
@@ -1289,8 +1334,9 @@ Every count in this document that describes a table in this document is checked 
 | FR25 | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | `[unit]` |
 | FR25 | No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — each is a tool call | `[unit]` |
 | FR25 | Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory | `[integration]` |
+| FR25 | must NOT — the pipeline-stage comparison reports success because CPM's `skills/` directory was absent, rather than failing on a fixture it could not read | `[integration]` |
 | FR25 | must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool | `[integration]` |
-| FR25 | Each converted skill still performs its counterpart's gates, questions and refusals, asserted **per skill** against the behaviours that skill's CPM `SKILL.md` defines — subtraction is what changes, and the facilitation is what does not | `[feature]` |
+| FR25 | Each converted skill still performs its counterpart's gates, questions and refusals — the behaviours named in that skill's own criterion, asserted **per skill** by driving the dpm skill and never by reading CPM's `SKILL.md` | `[feature]` |
 | FR25 | must NOT — a skill satisfies every subtraction sweep while retaining none of its counterpart's facilitation, so a corpus of twenty-two files each carrying a title and a single tool call passes | `[unit]` |
 | FR4 | A status value outside its enum is rejected by `CHECK`, not coerced | `[unit]` |
 | FR4 | Loading a corpus whose labels are all replaced with opaque identifiers leaves every class, MoSCoW band and exclusion value unchanged | `[integration]` |

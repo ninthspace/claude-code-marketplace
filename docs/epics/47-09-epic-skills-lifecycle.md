@@ -133,6 +133,7 @@ them is mostly deletion.
 - The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name [integration]
 - No skill writes a literal artefact number into a prose column; a reference to another artefact is written `{{ref:<id>}}` — swept across all twenty-two [unit]
 - Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory [integration]
+- must NOT — the pipeline-stage comparison reports success because CPM's `skills/` directory was absent, rather than failing on a fixture it could not read [integration]
 - No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — swept across all twenty-two [unit]
 - Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation — swept across all twenty-two [unit]
 - must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool, swept across all twenty-two [unit]
@@ -145,7 +146,7 @@ them is mostly deletion.
 
 ### Compare the corpus against CPM's own skill directory
 **Task**: 5.2  
-**Description**: FR25's list could itself be short. Comparing against the directory is what makes "every pipeline stage a user can reach" checkable rather than a claim about the list.  
+**Description**: FR25's list could itself be short. Comparing against the directory is what makes "every pipeline stage a user can reach" checkable rather than a claim about the list. It reads **directory names only** — CPM ships at `cpm/` in the same marketplace repository, so this is a sibling directory in the same commit, needing no version pin and no install step. The comparison must fail when that directory is absent: a suite run from an extracted plugin copy has no `cpm/` beside it, and a set comparison against nothing passes trivially, which is the check that exists to catch a short list being satisfied by finding nothing at all.  
 **Status**: Pending
 
 ### Sweep all twenty-two files for the five subtractions and for SQL
