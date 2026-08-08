@@ -8,7 +8,7 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR10 | All twenty-three entity types — thirteen seeded `document_kind` rows, eight child tables and two standalone tables — have a create tool, and the enumeration has no member without one | All twenty-three entity types — thirteen seeded `document_kind` rows, eight child tables and two standalone tables — have a create tool, and the enumeration has no member without one | Story 1 | `[integration]` | |
+| 1 | FR10 | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | Story 1 | `[integration]` | |
 | 2 | FR10 | The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree. | An observation written against a story and later gathered into a retro retains its `story_id`, so its origin is still queryable | Story 1 | `[unit]` | |
 | 3 | FR24 | seeded with defaults, extensible per project | A project-added category is usable without a schema migration | Story 2 | `[integration]` | |
 | 4 | FR24 | An item may carry more than one category where the work genuinely spans two. | An observation carrying two categories round-trips, and appears under both in the projection | Story 2 | `[integration]` | |
@@ -23,7 +23,7 @@
 | 13 | FR9 (must NOT) | Artefact bodies *and* the hand-written text on their child rows | must NOT — a search covers `document_section` only, so text held on a child row is unreachable while the tool reports success | Story 5 | `[integration]` | |
 | 14 | FR9 | `entry_fts` covers those, tagged by entity, so `entity:requirement AND helpers` scopes a search and an untagged query spans everything | Creating one row of every indexed entity type through its own tool, then searching a term common to all of them, returns a hit from every one — the tools and the triggers are built by different stories and nothing else runs them together | Story 6 | `[integration]` | |
 | 15 | FR24 | retirement stops rows arriving as well as preserving those that have | A create tool refuses a vocabulary row retired through Story 2's retire tool, and the refusal names the retired item | Story 6 | `[integration]` | |
-| 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every one of the twenty-three entity types, created through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR | Story 6 | `[integration]` | |
+| 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR | Story 6 | `[integration]` | |
 | 17 | NFR7 (must NOT) | Every piece of state is reachable through a read tool without SQL | must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool | Story 6 | `[integration]` | |
 
 **Mapping notes.**
@@ -34,11 +34,17 @@ full, so FR10's create-tool half is satisfied by this epic's matrix alone. The t
 remains Epic 47-04's. FR10 is therefore covered across three matrices and complete in none —
 self-hosting register entry 1, in the requirement that gave the register its first entry.
 
-**Rows 1 and 16 were recounted by the pivot of 2026-08-08**, from twenty-two types to
-twenty-three: FR27 added `milestone` as an eighth child table. Row 1's Spec Text is now
-identical to its criterion, FR10's enumeration clause having been rewritten in the spec to
-carry the arithmetic. Both rows are unverified under the verification rule. `document_milestone`
-is not a twenty-fourth type — it is a join, and joins have never been counted here.
+**Rows 1 and 16 no longer carry a count, as of the pivot of 2026-08-08.** Both stated a total
+that had already been recounted once — from twenty-two to twenty-three, when FR27 added
+`milestone` as an eighth child table — and the total was wrong in its noun besides: twenty-three
+is the number of *tables*, while FR10 enumerates twenty-two *types*, the two differing because
+`brief` is two document kinds, `coverage` is both a kind and a child table, and the verification
+record is deliberately no table at all. Both rows now assert against `sqlite_master` instead, so
+adding a table changes no text here. Row 1's Spec Text remains identical to its criterion. Both
+rows are unverified under the verification rule.
+
+The arithmetic itself, and the phrase to quote if a count is ever needed again, live in one place:
+the Data Model's *"thirteen document kinds, eight child tables and two standalone tables"*.
 
 **Row 4's spec text is FR24's own multi-category clause, not the criterion's projection
 half.** The projection is where the two categories are observed; FR24 is what requires there
@@ -56,3 +62,8 @@ Story 6 exists.
 **Row 17 maps to NFR7, not FR9.** The clause is about reachability through read tools, which
 is NFR7's subject; FR9 would be satisfied by a search that finds text and hands back an
 unusable identifier.
+
+**Story 7's two criteria have no rows here, and that is declared rather than missed.** It is
+the "Address review findings" story, which records repairs to this breakdown rather than
+obligations drawn from the spec, so its criteria have no requirement to bind to. The
+both-directions set comparison should expect exactly those two as an unmatched remainder.

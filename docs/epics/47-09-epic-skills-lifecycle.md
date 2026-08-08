@@ -164,18 +164,18 @@ them is mostly deletion.
 **Story**: 6  
 **Status**: Pending  
 **Blocked by**: Story 5  
-**Satisfies**: FR10, FR14, NFR6, and the self-hosting check
+**Satisfies**: FR10, FR14, NFR6
 
 **Acceptance Criteria**:
 
-- Spec 47, review 04, retro 33, the nine epic documents and their nine coverage matrices all load through create tools, and the projection regenerates each of them [feature]
+- Every artefact whose lineage roots at spec 47 loads through create tools, and the projection regenerates each of them — the spec, every review and retro sourced from it or from its epics, the nine epic documents, their nine coverage matrices, and every artifact registered against any of them. The set is derived by walking lineage, not enumerated here, so an artefact the corpus gains after this criterion was written is still covered [feature]
 - The loaded corpus passes `PRAGMA foreign_key_check` and every entry in the invariant register [integration]
 - Every entry in the self-hosting register is closed, or explicitly waived with a recorded reason; no entry remains OPEN [integration]
 - must NOT — a corpus artefact loads with content dropped because no column held it, and the load reports success [integration]
 
-### Load spec 47, review 04, retro 33, the nine epics and the nine coverage matrices through create tools
+### Derive the corpus from spec 47's lineage and load every member through create tools
 **Task**: 6.1  
-**Description**: Through the tools, not by import — AD8 means there is no import path, so this is a fixture written against the tool surface like every other.  
+**Description**: Through the tools, not by import — AD8 means there is no import path, so this is a fixture written against the tool surface like every other. **Derive the membership, do not list it.** This criterion named "spec 47, review 04, retro 33, the nine epics and the nine coverage matrices" until review 05, and by then it was already short by three: retro 34, whose `**Source**` is spec 47 and which was written the same day; the schema-map artifact registered in the spec's own `**Artifacts**:` field (`docs/artifacts/47-dpm-schema-map.html`); and review 05 itself. The artifact omission had teeth beyond completeness — `artifact` and `artifact_document` are two of the twenty-three tables, and with no artifact in the corpus the check that gates the whole build never exercised either. A hand-kept enumeration needs editing every time the corpus grows, which is the failure this spec removes everywhere else by reading the set from the live schema; the same answer applies to the corpus itself.  
 **Status**: Pending
 
 ### Regenerate the projection and compare it against what was loaded
@@ -197,6 +197,23 @@ them is mostly deletion.
 **Task**: 6.5  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
 **Status**: Pending
+
+---
+
+## Address review findings
+**Story**: 7  
+**Status**: Complete — applied by `/cpm:pivot` on 2026-08-08 from review 05  
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- Each critical and warning finding from review 05 scoped to this epic has been addressed
+- Existing acceptance criteria on other stories continue to pass
+
+### Fix: the self-hosting corpus enumeration is hand-kept and already incomplete
+**Task**: 7.1  
+**Description**: [warning] Story 6's first criterion names "Spec 47, review 04, retro 33, the nine epic documents and their nine coverage matrices". Two members of that corpus are missing: **retro 34**, whose `**Source**` is spec 47 and which was written the same day, and the **schema-map artifact** registered in the spec's own `**Artifacts**:` field (source `docs/artifacts/47-dpm-schema-map.html`). The artifact omission has teeth beyond completeness — `artifact` and `artifact_document` are two of the twenty-three tables, and with no artifact in the corpus the standing check that gates the whole build never exercises either. Review 05 is a further member. The list is also the wrong shape for the job: it needs editing every time the corpus gains a member, which is the hand-kept-enumeration failure the spec removes everywhere else by reading the set from the live schema. Prefer deriving the corpus — every artefact whose lineage roots at spec 47 — over naming it.  
+**Status**: Complete — Story 6's criterion, Task 6.1 and matrix row 16 now derive membership by lineage
 
 ---
 

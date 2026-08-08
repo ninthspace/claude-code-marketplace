@@ -87,6 +87,7 @@
 | 77 | FR26 | and decays like a verification | A completeness claim made before a migration survives it, and a coverage row inserted after the migration still clears the claim — the same trigger-loss failure one level up, on the four FR26 triggers rather than the three FR21 ones | Story 8 | `[integration]` | |
 | 78 | FR27 | joined to the artefacts that deliver them | A document assigned to two milestones keeps both across a migration, and the spec-scoping pair check still refuses a cross-spec assignment afterwards | Story 8 | `[integration]` | |
 | 79 | FR12 (must NOT) | applied automatically on server start, so a plugin update never requires the user to intervene | must NOT — the migration runner and the DDL produce schemas differing in any constraint, index or trigger | Story 8 | `[integration]` | |
+| 80 | FR26 (must NOT) | Completeness is therefore a separate, deliberate claim on the requirement | must NOT — completeness is derived from fragment offsets rather than claimed, so connective prose must be bound to satisfy it | Story 7 | `[unit]` | |
 
 **Rows 30–60 were added on 2026-08-08**, when the cross-epic union check ran early against
 the spec's 113 tagged criteria and found FR21 uncovered in every epic. They are appended
@@ -111,9 +112,27 @@ directions; nothing in the breakdown ran it until the pivot.
 **Why FR21 was missed, since the omission is the interesting part.** Story 1 writes the DDL,
 and the DDL contains the three triggers — so the work was in scope and only its *verification*
 was absent. A criterion asserting the schema is created does not assert a trigger fires, and
-FR21 is the one requirement in this spec whose entire content is that something fires. §1234
-records that the real corpus exposed eight schema defects, one of them a false pass in this
-exact subsystem; the breakdown had reproduced the same blind spot one layer up.
+FR21 is the one requirement in this spec whose entire content is that something fires. The
+spec's **Test Infrastructure** section records that the real corpus exposed eight schema
+defects, one of them a false pass in this exact subsystem; the breakdown had reproduced the
+same blind spot one layer up.
+
+**Row 80 was added on 2026-08-08 by the pivot that applied review 05**, and it closes the
+same gap this note describes, one requirement over. FR26's must-NOT — that completeness is
+claimed rather than derived from fragment offsets — was the only one of the spec's 130 tagged
+criteria carried by no story in any of the nine epics, found by a fuzzy cross-epic union run
+against the spec rather than by reading. The shape is FR21's exactly: the *work* was in scope,
+since Story 7 already writes the four unclaim triggers, and only the assertion that the
+derived alternative stays rejected was missing. Its absence is what let the partial-coverage
+note below say FR26 was complete.
+
+**This note previously cited the spec by line number, and the citation had gone stale** — it
+read `§1234`, which the spec's own pivot moved by 206 lines. Review 05 found five such
+references across the breakdown, four of them off by exactly the ten lines the spec gained
+when FR26, FR27 and FR28 were inserted. They are now quoted by section heading, which does not
+move when the document above it grows. That is FR28's argument applied to the breakdown's own
+prose: a reference that stores a position goes stale the moment the target shifts, and nothing
+can find it to repair.
 
 **Rows 43–53, 67 and 68 expand a roll-up, and are the one declared exception to the rule that
 every matrix row cites a criterion the epic carries.** They specialise Story 6's "Each of the
@@ -125,7 +144,20 @@ appearing in the document that records entry 1. The set comparison run at the en
 pivot expects exactly these thirteen and nothing else.
 
 **Partial coverage note**: FR10 is covered here only in its seeding half (rows 13 and 61).
-Its other obligation — all twenty-three entity types having a create tool — belongs to Epics
-47-03 and 47-05. FR26 is complete here; FR27's projection half belongs to Epic 47-04. Since
+Its other obligation — every table having a create tool — belongs to Epics
+47-03 and 47-05. FR26 is complete here **as of row 80** — it was not when this note first
+claimed it was, and review 05 is what caught the gap between the claim and the rows.
+FR27's projection half belongs to Epic 47-04. Since
 this pivot, the schema *can* distinguish partial coverage from full: FR26 makes completeness
 a claim rather than a roll-up, which is what register entry 1 asked for.
+
+**The "Address review findings" story's two criteria have no rows here, and that is the
+second declared exception.** A remediation story records repairs to *this breakdown*, not
+obligations drawn from the spec, so there is no requirement for its criteria to bind to and a
+row would assert coverage of nothing. The both-directions set comparison should therefore
+expect exactly two unmatched epic criteria per amended epic — "Each critical and warning
+finding … has been addressed" and "Existing acceptance criteria on other stories continue to
+pass" — alongside the thirteen roll-up rows declared above. Declaring it is the point: retro
+34's recommendation is that an intended remainder be written down so the comparison has an
+expected result rather than an unexplained one, and an undeclared exception is
+indistinguishable from the defect this pivot just fixed.

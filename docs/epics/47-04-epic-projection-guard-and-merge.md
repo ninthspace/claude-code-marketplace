@@ -187,6 +187,23 @@ projection file and this is where projection filenames are decided.
 
 ---
 
+## Address review findings
+**Story**: 6  
+**Status**: Complete — applied by `/cpm:pivot` on 2026-08-08 from review 05  
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- Each critical and warning finding from review 05 scoped to this epic has been addressed
+- Existing acceptance criteria on other stories continue to pass
+
+### Fix: `§195`, `§201` and `§202` resolve to the wrong passages
+**Task**: 6.1  
+**Description**: [warning] This epic's Notes cite `AD9 §202` for *"That is a tool in scope, not a convention to remember"* (actually spec line 212) and `AD9 §195`, twice, for *"every cross-reference in the projection becomes a moving target"* (actually line 205). The coverage matrix cites `AD9 §201` for the ULID-ordering passage (actually line 211). All three are off by exactly **+10** — the lines the spec gained when the pivot inserted FR26, FR27 and FR28 above them — so they were correct when written and were invalidated by an amendment to the document they point into, within the same session. Two of the three sit in the passage explaining why FR28 makes a prose reference a marker rather than a number, on the grounds that a stored number "would go stale the moment a merge renumbered its target, and no tool could find it to repair". Repoint them, and prefer a quoted phrase or a section heading to a line number. Epics 47-01 and 47-05 carry the other two instances.  
+**Status**: Complete — all three repointed to AD9's headings; the drift itself is now recorded in the Notes
+
+---
+
 ## Notes
 
 ### Self-hosting register — entries in this epic's scope
@@ -207,13 +224,23 @@ a reference a `{{ref:<id>}}` marker resolved at render time, and FR8 now says pl
 nothing is rewritten because no reference ever stored a number. **The resolution work is this
 epic's**: Task 1.5, and the merge-side criterion on Story 4.
 
-The entry was worth its place because AD9 §202 stated the rewrite as settled — *"That is a
-tool in scope, not a convention to remember"* — and AD9 §195 already knew prose references
-exist, having rejected render-time numbering on the grounds that *"every cross-reference in
-the projection becomes a moving target"*. The two passages together assumed a reference model
-the Data Model did not provide. FR28's answer is that render-time numbering is correct after
-all, and §195's objection dissolves once the marker holds a ULID rather than a number: the
-target moves, the marker does not.
+The entry was worth its place because AD9's **Consequence**, in its second bullet ("The number
+collision survives, and is resolved deliberately"), stated the rewrite as settled — *"That is
+a tool in scope, not a convention to remember"* — while AD9's **Rejected: numbers derived at
+render time** already knew prose references exist, having turned that option down on the
+grounds that *"every cross-reference in the projection becomes a moving target"*. The two
+passages together assumed a reference model the Data Model did not provide. FR28's answer is
+that render-time numbering is correct after all, and the objection dissolves once the marker
+holds a ULID rather than a number: the target moves, the marker does not.
+
+**These three citations were line numbers until review 05, and all three had gone stale** —
+`§202`, `§195` twice, and `§201` in the coverage matrix, each off by exactly the ten lines the
+spec gained when the pivot inserted FR26, FR27 and FR28 above them. They were correct when
+written and were invalidated within the same session by an amendment to the document they
+point into. The irony is not incidental to this epic: these are the notes explaining why FR28
+makes a prose reference a marker instead of a number, and they were themselves prose
+references that stored a position. They now quote AD9's headings, which do not move when the
+document above them grows.
 
 ### Requirements only partially covered by this epic
 

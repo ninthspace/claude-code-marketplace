@@ -186,7 +186,7 @@ invariants SQLite cannot hold.
 
 ### Write `schema_version` and the ordered migration runner applied on server start
 **Task**: 5.1  
-**Description**: Forward-only, no user intervention. The runner is a second path to the same schema as the DDL, which is what Story 7's first criterion exists to catch.  
+**Description**: Forward-only, no user intervention. The runner is a second path to the same schema as the DDL, which is what Story 8's first criterion exists to catch.  
 **Status**: Pending
 
 ### Write tests for Version the schema and migrate forward-only
@@ -252,6 +252,7 @@ invariants SQLite cannot hold.
 - control — an edit leaving the requirement's text byte-identical does not clear the claim, and neither does an update to an unrelated column [unit]
 - A requirement with fragments bound and no claim is distinguishable by query from one with the same fragments and a current claim [integration]
 - must NOT — `coverage_claimed_at` is set while `coverage_claim_hash` is NULL, or the reverse [unit]
+- must NOT — completeness is derived from fragment offsets rather than claimed, so connective prose must be bound to satisfy it [unit]
 
 ### Write the three `AFTER UPDATE OF` triggers, one per column the binding is computed from
 **Task**: 7.1  
@@ -309,6 +310,38 @@ invariants SQLite cannot hold.
 
 ---
 
+## Address review findings
+**Story**: 9  
+**Status**: Complete — applied by `/cpm:pivot` on 2026-08-08 from review 05  
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- Each critical and warning finding from review 05 scoped to this epic has been addressed
+- Existing acceptance criteria on other stories continue to pass
+
+### Fix: FR26's must-NOT criterion is carried by no story in any epic
+**Task**: 9.1  
+**Description**: [critical] Spec:1311 — *"must NOT — completeness is derived from fragment offsets rather than claimed, so connective prose must be bound to satisfy it"* — is carried by no story in any of the nine epics, and no matrix row cites it; `offset` and `connective` appear nowhere in `docs/epics/`. This epic's Story 7 owns FR26, and this matrix's note asserts "FR26 is complete here", so the gap and the false claim are both here. Add the criterion to Story 7 and a row to the coverage matrix, then correct the note. Without it an implementer can derive completeness from fragment offsets, pass the other six FR26 criteria and both controls, and reintroduce the alternative the Data Model rejects under **"Completeness is a claim and not a computation, and the alternative is worth stating because it looks better than it is"**.  
+**Status**: Complete — criterion added to Story 7, matrix row 80 added, completeness note corrected
+
+### Fix: Task 5.1 cites Story 7's first criterion, which is Story 8's
+**Task**: 9.2  
+**Description**: [warning] Task 5.1's description says the migration runner "is a second path to the same schema as the DDL, which is what Story 7's first criterion exists to catch". Story 7's first criterion is about a story criterion's text edit clearing verification; the DDL-versus-migration parity criterion is **Story 8's**. The note is right about the risk and wrong about where it closes.  
+**Status**: Complete — Task 5.1 now cites Story 8
+
+### Fix: `§1234` in the coverage matrix resolves to the wrong passage
+**Task**: 9.3  
+**Description**: [warning] The matrix's mapping notes cite `§1234` for the spec's record that the real corpus exposed eight schema defects. Spec line 1234 is `### Deferred`; the passage is at line 1440. One of five stale spec line-references across the breakdown — see Epic 47-04 and 47-05 for the others. Prefer a quoted phrase or a section heading over a line number, since a line number into an amendable document is the failure FR28 exists to prevent.  
+**Status**: Complete — repointed to the spec's **Test Infrastructure** heading
+
+### Decision: Story 1 stays whole, and the reason is recorded rather than the split deferred
+**Task**: 9.4  
+**Description**: [warning] Review 05 observed that Story 1 carries 17 acceptance criteria against FR1, FR2, FR27, AD7, AD9 and NFR6 — the whole 38-table schema — in four implementation tasks, blocks six of this epic's seven other stories, and gates four further epics transitively. Nothing partial can land. **Chris decided on 2026-08-08 to leave it whole**, and the trade is worth stating because the observation is correct and was not rejected. Splitting means either renumbering Stories 1–9, which churns roughly 79 `Covered by` cells in the coverage matrix, or appending new stories out of build order. Both are large edits to citation-bearing text, and three of the same review's findings — a row bound to a story that did not exist, five stale spec line-references, a task pointing at the wrong story — were caused by exactly that kind of churn. The sizing risk is a scheduling cost, paid once and visibly; the citation risk is a correctness cost that hides. Tasks 1.1–1.5 already decompose the work, so the story is large to *track* rather than large to *do*. Revisit if Story 1 stalls in execution: at that point the matrix is being edited anyway.  
+**Status**: Complete — decision recorded; no split performed
+
+---
+
 ## Notes
 
 ### Self-hosting register
@@ -350,6 +383,6 @@ express, and both are now in Story 6's thirteen.
 ### Requirements only partially covered by this epic
 
 FR10's seeding half is covered (Story 2's parity-enumeration criterion). Its other
-obligation — all twenty-three entity types having a create tool — belongs to Epics 47-03 and
+obligation — every table having a create tool — belongs to Epics 47-03 and
 47-05, so FR10 reads as fully covered only in the cross-epic union, not in this epic's
 coverage matrix. This is register entry 1 in miniature, and is the reason it was noticed.

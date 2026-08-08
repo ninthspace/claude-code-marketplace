@@ -18,12 +18,12 @@
 | 8 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 3 | `[unit]` | |
 | 9 | FR11 | Adoption is an `UPDATE` | A ralph run carries its loop state in `session` rows, and a resume under a new session id adopts the prior row rather than reading a progress file | Story 4 | `[feature]` | |
 | 10 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 4 | `[unit]` | |
-| 11 | FR25 | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | Story 5 | `[integration]` | |
+| 11 | FR25 | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | Story 5 | `[unit]` | |
 | 12 | FR25 | Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory | Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory | Story 5 | `[integration]` | |
 | 13 | FR25 | No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle | No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — swept across all twenty-two | Story 5 | `[unit]` | |
 | 14 | FR3 | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation — swept across all twenty-two | Story 5 | `[unit]` | |
 | 15 | FR25 (must NOT) | must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool | must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool, swept across all twenty-two | Story 5 | `[unit]` | |
-| 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Spec 47, review 04, retro 33, the nine epic documents and their nine coverage matrices all load through create tools, and the projection regenerates each of them | Story 6 | `[feature]` | |
+| 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every artefact whose lineage roots at spec 47 loads through create tools, and the projection regenerates each of them — the spec, every review and retro sourced from it or from its epics, the nine epic documents, their nine coverage matrices, and every artifact registered against any of them. The set is derived by walking lineage, not enumerated here, so an artefact the corpus gains after this criterion was written is still covered | Story 6 | `[feature]` | |
 | 17 | FR14 | A verification tool reports orphans, dangling links, and each entry in the cross-row invariant register (Data Model), so a corrupted state is diagnosable without SQL. | The loaded corpus passes `PRAGMA foreign_key_check` and every entry in the invariant register | Story 6 | `[integration]` | |
 | 18 | FR10 | The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree. | Every entry in the self-hosting register is closed, or explicitly waived with a recorded reason; no entry remains OPEN | Story 6 | `[integration]` | |
 | 19 | NFR6 (must NOT) | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. This spec's subject applied to itself: the failure being designed against is one that looks like success. | must NOT — a corpus artefact loads with content dropped because no column held it, and the load reports success | Story 6 | `[integration]` | |
@@ -41,7 +41,25 @@ is closed.
 that the triggers do the work — a claim about FR21's decay behaviour reaching the skill
 layer. Epic 47-01 Story 7 proves the triggers fire; this proves `pivot` stopped doing it by
 hand. The pipe characters in the criterion are escaped for the table and are literal in the
-epic document.
+epic document. **Any check comparing this column against the epic's criteria must unescape
+before comparing** — review 05 ran exactly that comparison and row 2 was its only false
+positive across all nine pairs. The escaping is required by table syntax and is not
+divergence; the fix belongs in the check, never in the criterion.
+
+**Row 11's approach was `[integration]` until review 05; the spec tags it `[unit]`.** This
+column carries the *spec's* approach, so where the epic and the spec disagree the spec wins
+and the epic's own tag is the thing to reconsider. One row in 241 across the breakdown, which
+is why it reads as a slip rather than a pattern — but a column named "Spec Test Approach"
+that holds the epic's value asserts a provenance it does not have, and a reader using it to
+check one document against the other is checking a document against itself.
+
+**Row 16 was rewritten by the pivot that applied review 05.** It enumerated the corpus by
+name — "spec 47, review 04, retro 33, the nine epics and the nine coverage matrices" — and
+was already short by three when the review ran: retro 34, the schema-map artifact in the
+spec's `**Artifacts**:` field, and review 05 itself. It now derives membership by walking
+lineage. The artifact was the costly omission: `artifact` and `artifact_document` are two of
+the twenty-three tables, and the check that gates the whole build was never exercising
+either.
 
 **Row 5's Spec Text is two adjacent sentences of FR5**, quoted together because the criterion
 asserts both halves and neither sentence carries it alone: the first says numbers are never
@@ -73,3 +91,8 @@ requirement rather than contributing to one — which is itself the observation 
 self-hosting register entry 1. FR28 is the exception among the pivot's three new
 requirements: its two halves sit in Epic 47-04 and in row 20 here, so it closes in this
 matrix too.
+
+**Story 7's two criteria have no rows here, and that is declared rather than missed.** It is
+the "Address review findings" story, which records repairs to this breakdown rather than
+obligations drawn from the spec, so its criteria have no requirement to bind to. The
+both-directions set comparison should expect exactly those two as an unmatched remainder.

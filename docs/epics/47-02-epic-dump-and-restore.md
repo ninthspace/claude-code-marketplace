@@ -101,6 +101,23 @@ partial-coverage state recorded as self-hosting register entry 1.
 
 ---
 
+## Address review findings
+**Story**: 4  
+**Status**: Complete — applied by `/cpm:pivot` on 2026-08-08 from review 05  
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- Each critical and warning finding from review 05 scoped to this epic has been addressed
+- Existing acceptance criteria on other stories continue to pass
+
+### Fix: coverage matrix row 12 is bound to a story that does not exist
+**Task**: 4.1  
+**Description**: [critical] Row 12 of `47-02-coverage-dump-and-restore.md` names **Story 4** under `Covered by`. This epic had three stories when the review ran; the criterion — "A dump taken before and after a no-op read produces identical bytes, so reading does not perturb dump order" — sits on **Story 3**. The matrix's own mapping note repeats the error ("the criterion was already on Story 4"), so it is recorded twice and self-corroborating. Correct both the row and the note. A coverage row that cannot resolve to a story is retro 34's "green mark with nothing behind it" one column over: a roll-up either breaks on it or silently drops it, and a dropped row lowers the denominator rather than raising an error. Note that this remediation story is itself numbered 4 — the fix is to repoint row 12 at Story 3, not to let the new numbering make the stale citation accidentally resolve.  
+**Status**: Complete — row 12 repointed to Story 3, mapping note corrected and the near-miss recorded
+
+---
+
 ## Notes
 
 ### Self-hosting register — entries in this epic's scope

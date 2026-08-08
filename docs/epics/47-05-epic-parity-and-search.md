@@ -10,6 +10,18 @@ enumeration and makes the corpus searchable. The dependency on 47-04 is narrow a
 Story 2's multi-category criterion and Story 6's parity closure both assert what the
 projection renders.
 
+**The `Blocked by` field above over-constrains this epic, and the excess is a milestone
+inversion.** What this epic actually waits on is 47-04's **projection**, which is Stories 1
+and 2 and is M2 work. It does **not** wait on 47-04 Story 4, the merge tool, which is M4 —
+later in AD6's build order than this entire epic. Read literally, the field holds M3 behind
+M4 for a third of the build. The field stays as it is because `Blocked by` is declared per
+epic and 47-04 is the epic that spans two milestones (self-hosting register entry 2), so
+there is nowhere in this format to say "Stories 1–2 of 47-04, not Story 4". Anyone sequencing
+from the field should read this paragraph with it. FR22 is what removes the limitation once
+dpm holds this corpus: a `dependency` edge's source and target may each be a document **or a
+story**, so the narrow dependency becomes expressible and the inversion stops being something
+a note has to carry.
+
 ## Give the remaining sixteen entity types create, read and update tools [plan]
 **Story**: 1  
 **Status**: Pending  
@@ -18,7 +30,7 @@ projection renders.
 
 **Acceptance Criteria**:
 
-- All twenty-three entity types — thirteen seeded `document_kind` rows, eight child tables and two standalone tables — have a create tool, and the enumeration has no member without one [integration]
+- Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration [integration]
 - An observation written against a story and later gathered into a retro retains its `story_id`, so its origin is still queryable [unit]
 
 ### Write create, read and update tools for the ten remaining document kinds
@@ -46,9 +58,9 @@ projection renders.
 **Description**: FR27's tool half — create a milestone scoped to a spec at a given position, and join an artefact to one. The join tool is where register #12 is enforced: the document and the milestone must belong to the same spec, which no foreign key can express because it needs `document.parent_id` walked to the root.  
 **Status**: Pending
 
-### Enumerate the twenty-three entity types against the registered tool list
+### Enumerate the live table list against the registered tool list
 **Task**: 1.6  
-**Description**: Read the enumeration from the seeded `document_kind` rows plus a declared list of child and standalone tables, and compare against what the server registered. This is what makes the boundary with Epic 47-03 non-load-bearing — see the Notes. It reads the set from the live schema, so it caught `milestone` the moment FR27 added it, without amendment.  
+**Description**: Read the table list from `sqlite_master` and compare against what the server registered, in both directions — neither side is a hand-kept enumeration. This is what makes the boundary with Epic 47-03 non-load-bearing — see the Notes. It reads the set from the live schema, so it caught `milestone` the moment FR27 added it, without amendment.  
 **Status**: Pending
 
 ### Write tests for Give the remaining sixteen entity types create, read and update tools
@@ -188,13 +200,35 @@ projection renders.
 
 - Creating one row of every indexed entity type through its own tool, then searching a term common to all of them, returns a hit from every one — the tools and the triggers are built by different stories and nothing else runs them together [integration]
 - A create tool refuses a vocabulary row retired through Story 2's retire tool, and the refusal names the retired item [integration]
-- Every one of the twenty-three entity types, created through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR [integration]
+- Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR [integration]
 - must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool [integration]
 
 ### Write integration tests for Parity and search
 **Task**: 6.1  
 **Description**: The third criterion is the parity closure: FR10's enumeration (Story 1) and FR10's templates (Epic 47-04 Story 2) are the same requirement checked in two epics, and this is the only place both are true at once. The final clause guards the seam NFR7 cares about — a search index drifted from the tables returns hits nothing can open.  
 **Status**: Pending
+
+---
+
+## Address review findings
+**Story**: 7  
+**Status**: Complete — applied by `/cpm:pivot` on 2026-08-08 from review 05  
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- Each critical and warning finding from review 05 scoped to this epic has been addressed
+- Existing acceptance criteria on other stories continue to pass
+
+### Fix: the epic-level blocker inverts the milestone order
+**Task**: 7.1  
+**Description**: [warning] This epic is M3 and declares `**Blocked by**: … Epic 47-04-epic-projection-guard-and-merge`. Epic 47-04 spans **M2 and M4** — its merge tool is M4 work — so followed literally, M3 cannot start until M4's merge tool is complete, reversing AD6's build order for a third of the build. This epic's header note says the real dependency is narrow (Story 2's projection assertion and Story 6's parity closure, both against 47-04's M2 half), but nothing machine-readable records that and `cpm:do`'s readiness pass reads the field, not the note. Narrow the declaration to the stories it actually depends on, or record the milestone-half distinction where a reader of the field will find it. FR22 exists to make blocking a typed edge whose source and target "may each be a document or a story", and this is the case that needs it.  
+**Status**: Complete — the inversion is now stated in the header beside the field, since the format cannot express the narrow edge
+
+### Fix: `§332` resolves to the wrong passage
+**Task**: 7.2  
+**Description**: [warning] This epic's Notes say "Rather than fixing a number that the spec itself qualifies at §332". Spec line 332 is blank; the passage that qualifies the arithmetic — *"The arithmetic does not reduce to a subtraction…"* — is at line 345. One of five stale spec line-references across the breakdown; Epics 47-01 and 47-04 carry the others. Prefer a quoted phrase or a section heading to a line number.  
+**Status**: Complete — repointed to the Data Model's parity-contract heading and its quoted sentence
 
 ---
 
@@ -208,17 +242,30 @@ the migration runner, which makes this epic the runner's first real customer. Ep
 Story 8's DDL-versus-migration parity criterion covers them once they land, so the split
 costs no assertion. Approved by Chris on 2026-08-08.
 
-### Where the twenty-three types divide between this epic and 47-03
+### Where the tables divide between this epic and 47-03
 
 Epic 47-03 Story 2 covers seven spine types by name; this epic covers the rest. The count
 does not resolve cleanly — `coverage` is both a `document_kind` and a child table, `brief` is
 two kinds, and `session state` has a table built in 47-03 Story 6 without typed tools
-enumerated there. Rather than fixing a number that the spec itself qualifies at §332, Story
+enumerated there. Rather than fixing a number that the spec itself qualifies under **"The
+kinds are seeded data, and the list is the parity contract"** in the Data Model — the
+paragraph beginning *"The arithmetic does not reduce to a subtraction"* — Story
 1's enumeration criterion reads the set from the live schema and fails on any member without
 a tool. **The boundary is therefore not load-bearing**: however it is drawn, the enumeration
 catches anything that falls between the two epics. This is the one place in the breakdown
 where a partial split is safe, and it is safe only because the requirement was written as an
 enumeration rather than a count.
+
+Epic 47-03 said "the remaining fifteen" against this epic's "sixteen" until review 05. Both
+are now sixteen — the Data Model's
+*thirteen document kinds, eight child tables and two standalone tables*, less the spine's
+seven — with the `session` qualification stated in 47-03 where the number appears, rather
+than left to a reader to reconcile from a third note.
+
+The pivot of 2026-08-08 removed the count from Story 1's criterion altogether: it now reads
+the table list from `sqlite_master` and compares it against the registered tools, so no
+number in this epic is load-bearing. Story 1's heading still says "sixteen" because it names
+a scope split rather than an assertion, and the split is the thing this note declares safe.
 
 ### Self-hosting register — entries in this epic's scope
 

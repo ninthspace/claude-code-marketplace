@@ -235,7 +235,7 @@ The projection — M2's other half — is Epic 47-04.
 - A create call whose enum value the column's `CHECK` rejects fails at the tool boundary, and no row is written [integration]
 - The conformance test passes against the running server's actual registered tool list, not a fixture of it [integration]
 - A session created, resumed under a new id, and read back returns the state written before the resume [integration]
-- Every tool the server registers appears in the reachability assertion, and every table appears in exactly one tool's declared coverage [integration]
+- Every tool the server registers appears in the reachability assertion, and every table appears in at least one tool's declared coverage [integration]
 - must NOT — a tool accepts an argument the schema rejects, so validation happens at neither layer [integration]
 
 ### Write integration tests for Server and spine tools
@@ -245,13 +245,35 @@ The projection — M2's other half — is Epic 47-04.
 
 ---
 
+## Address review findings
+**Story**: 9  
+**Status**: Complete — applied by `/cpm:pivot` on 2026-08-08 from review 05  
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- Each critical and warning finding from review 05 scoped to this epic has been addressed
+- Existing acceptance criteria on other stories continue to pass
+
+### Fix: Story 5 and Story 8 state reachability requirements that cannot both pass
+**Task**: 9.1  
+**Description**: [critical] Story 5 requires that "every table in `sqlite_master` is reachable through **at least one** read tool"; Story 8 requires that "every table appears in **exactly one** tool's declared coverage". `document` is read by the read tool of every one of the thirteen kinds, and `taxonomy` by `finding`, `observation` and `audit_finding` — so exactly-one is not merely stricter, it is unsatisfiable against this schema. NFR7 (spec:1383) says at-least-one, so Story 8 also invents an obligation the spec does not carry. Reconcile Story 8's clause to the spec's wording, and update the matching coverage row. Neither criterion is wrong read alone, which is the reading retro 33 recorded as the one that cannot find this.  
+**Status**: Complete — Story 8 and matrix row 26 now read "at least one", matching NFR7
+
+### Fix: this epic says "the remaining fifteen"; Epic 47-05 says "sixteen"
+**Task**: 9.2  
+**Description**: [warning] This epic states "47-05 the remaining fifteen types" and "The remaining fifteen are Epic 47-05", both unqualified. Epic 47-05 titles its Story 1 "Give the remaining **sixteen** entity types create, read and update tools". The two reconcile only via this epic's own FR11 placement note — `session` has its tool here but is counted in 47-05's accounting — which is a derivation held in a third location and stated in neither. 47-05 already routes around the count by reading the enumeration from the live schema; either adopt that qualification here or state the derivation where the number appears. Retro 33's "count in code, quote in prose", returning for a third session.  
+**Status**: Complete — both statements now read "sixteen", with the `session` derivation stated inline
+
+---
+
 ## Notes
 
 ### Self-hosting register — entries in this epic's scope
 
 The register lives in Epic 47-01's Notes. No entry is closable here; all four need spec
 changes. Entry 1 is however **most visible in this epic**: FR10 now has partial coverage in
-three separate epics (47-01 seeding, 47-03 spine create tools, 47-05 the remaining fifteen
+three separate epics (47-01 seeding, 47-03 spine create tools, 47-05 the remaining sixteen
 types), and nothing in dpm as specified could distinguish that from FR10 being fully covered.
 It is the clearest live instance of the entry in the whole breakdown.
 
@@ -273,6 +295,14 @@ server concern that every skill needs from the first conversion, so the tool liv
 - **FR3** — the tool-boundary half (rows 21–22). Its other clause, "No skill contains SQL,  
   and no skill constructs a query", is a property of the skill corpus and belongs to Epics  
   47-06 through 47-09.
-- **FR10** — the seven spine entity types only. The remaining fifteen are Epic 47-05.
+- **FR10** — the seven spine entity types only. The remaining **sixteen** are Epic 47-05's —  
+  the Data Model's *thirteen document kinds, eight child tables and two standalone tables*,  
+  less this epic's seven. One of the sixteen, `session`, has its table  
+  and its tool built *here* under FR11 and is counted there only for the enumeration's  
+  arithmetic, so 47-05 writes fifteen tools against sixteen accounted types. The derivation  
+  is stated here because the number alone cannot be reconciled from either epic on its own:  
+  until review 05 this note said "fifteen" while 47-05 said "sixteen", and the note that made  
+  them consistent lived in a third place. Prefer 47-05 Story 1's enumeration over either  
+  number — it reads the set from the live schema and fails on any member without a tool.
 - **FR4**, **FR5**, **FR14**, **FR22** — the tool-boundary half of each; the schema half is  
   Epic 47-01.

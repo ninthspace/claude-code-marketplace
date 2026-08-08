@@ -12,7 +12,7 @@
 | 2 | NFR2 | The server refuses to start with a clear message below its minimum Node version rather than failing on a missing module. | The server refuses to start below the Node floor with a message naming the required version | Story 1 | `[integration]` | |
 | 3 | NFR3 | The MCP stdio transport owns stdout. All logging, including Node's `ExperimentalWarning` for `node:sqlite`, goes to stderr or is suppressed (`NODE_NO_WARNINGS=1`). | A full session's stdout parses as well-formed JSON-RPC with no stray output | Story 1 | `[integration]` | |
 | 4 | FR1 | Every CPM artefact type is a table with typed columns, not a markdown file parsed at read time. | Creating each artefact type produces a row readable by its typed read tool | Story 2 | `[integration]` | |
-| 5 | FR10 | All twenty-three entity types — thirteen seeded `document_kind` rows, eight child tables and two standalone tables — have a create tool, and the enumeration has no member without one | The seven spine entity types — spec, requirement, story criterion, epic, story, task, coverage — each have create, read and update tools | Story 2 | `[integration]` | |
+| 5 | FR10 | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | The seven spine entity types — spec, requirement, story criterion, epic, story, task, coverage — each have create, read and update tools | Story 2 | `[integration]` | |
 | 6 | FR4 (must NOT) | Nothing infers a type by parsing an identifier. | must NOT — the `requirement` create tool accepts a class inferred from `label`, rather than requiring `class` as an argument | Story 2 | `[unit]` | |
 | 7 | FR4 | Requirement class, MoSCoW band, status, test-approach tag, and coverage verification state are typed columns constrained by `CHECK`. | Every `requirement` and `acceptance_criterion` type distinction is readable from a column with `label` and `text` withheld | Story 2 | `[integration]` | |
 | 8 | FR5 (must NOT) | Human-facing artefact numbers are allocated monotonically and are never reused, including after archival. | Allocating a number through its tool returns the value and never a success without one | Story 3 | `[unit]` | |
@@ -33,7 +33,7 @@
 | 23 | AD10 | It runs in the suite, not at build time. | The conformance test passes against the running server's actual registered tool list, not a fixture of it | Story 8 | `[integration]` | |
 | 24 | FR3 | dpm ships an MCP server whose tool schemas are the write contract. | A spec created through its tool, then an epic under it, then a story, then a coverage row binding a requirement fragment to a story criterion, all succeed in sequence and read back consistently through their read tools | Story 8 | `[integration]` | |
 | 25 | FR11 | The progress-file subsystem — session-suffixed filenames, hook injection, adoption on `--resume`, compact-summary companions — is replaced by a session table. Adoption is an `UPDATE`; staleness is a `WHERE` clause. | A session created, resumed under a new id, and read back returns the state written before the resume | Story 8 | `[integration]` | |
-| 26 | AD10 | It runs in the suite, not at build time. | Every tool the server registers appears in the reachability assertion, and every table appears in exactly one tool's declared coverage | Story 8 | `[integration]` | |
+| 26 | AD10 | It runs in the suite, not at build time. | Every tool the server registers appears in the reachability assertion, and every table appears in at least one tool's declared coverage | Story 8 | `[integration]` | |
 
 **Partial coverage to flag.**
 
@@ -43,7 +43,7 @@ criterion is "Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invoca
 property of the skill corpus and belongs to Epics 47-06 through 47-09.
 
 **FR10's create-tool criterion (row 5) covers the seven spine types only.** The remaining
-sixteen entity types are Epic 47-05 — sixteen rather than fifteen since the pivot of
+sixteen tables are Epic 47-05 — sixteen rather than fifteen since the pivot of
 2026-08-08 added `milestone` (FR27). FR10 therefore has partial coverage across three epics,
 making it the clearest live instance of self-hosting register entry 1 in this breakdown.
 
@@ -60,3 +60,14 @@ partially covered here and completed in 47-09.
 
 **FR4, FR5, FR14 and FR22** each appear here in their tool-boundary half only; the schema
 half is Epic 47-01's matrix.
+
+**Story 9's two criteria have no rows here, and that is declared rather than missed.** It is
+the "Address review findings" story, which records repairs to this breakdown rather than
+obligations drawn from the spec, so its criteria have no requirement to bind to. The
+both-directions set comparison should expect exactly those two as an unmatched remainder.
+
+**Row 26 read "exactly one tool's declared coverage" until review 05.** It now reads "at
+least one", matching both Story 5's criterion and NFR7. The two were not merely different
+wordings of one rule: `document` is read by every kind's read tool and `taxonomy` by three
+child-table tools, so exactly-one was unsatisfiable against this schema, and an epic holding
+both criteria could not pass.

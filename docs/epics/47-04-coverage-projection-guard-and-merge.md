@@ -37,9 +37,11 @@
 
 **Row 3 maps to AD9, not FR6**, even though the spec's Acceptance Criteria Coverage table
 files that criterion under FR6. The property being asserted — an insertion-order-independent
-render — is delivered by ULIDs sorting by creation time, and AD9 §201 says so in the words
-quoted. FR6 states the obligation; AD9 supplies the mechanism, so the mechanism is what the
-row is bound to.
+render — is delivered by ULIDs sorting by creation time, and AD9's **Consequence** says so in
+the words quoted, in its first bullet ("Ids sort by creation time and carry no meaning"). FR6
+states the obligation; AD9 supplies the mechanism, so the mechanism is what the row is bound
+to. The citation read `§201` until review 05, by which point the spec's own pivot had moved
+the passage ten lines; it is quoted by heading now for the reason FR28 exists.
 
 **Rows 5 and 13 map to AD8.** Row 5 is the module-list assertion the spec tags AD8. Row 13's
 clause the spec also tags AD8, and its Spec Text is FR7's own explanation of why one-wayness
@@ -67,3 +69,8 @@ clause is already written as an assertion over the finished projection, so there
 to specialise. The ADR is named separately from the ten non-document types because it is not
 one of them — it is a `document_kind` with `dir IS NULL`, a document that renders inside
 another document, and it is the only member of that class.
+
+**Story 6's two criteria have no rows here, and that is declared rather than missed.** It is
+the "Address review findings" story, which records repairs to this breakdown rather than
+obligations drawn from the spec, so its criteria have no requirement to bind to. The
+both-directions set comparison should expect exactly those two as an unmatched remainder.
