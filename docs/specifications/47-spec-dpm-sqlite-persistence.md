@@ -306,7 +306,17 @@ CREATE UNIQUE INDEX number_sequence_child
 
 **Parentage is constrained by kind, which is the last mile of the `**Source spec**` fix.** A plain `parent_id REFERENCES document(id)` guarantees the parent *exists* — the Problem Summary's first complaint — but not that it is the right sort of thing. An epic could hang off a review, a retro off a runbook, and every foreign key would be satisfied. `document_kind_parent` is the allow-list, `parent_kind` is denormalised alongside `parent_id`, and two further composite foreign keys close both halves: `(kind, parent_kind)` against the allow-list rejects an illegal pairing, and `(parent_id, parent_kind)` against `document(id, kind)` rejects a row whose `parent_kind` misdescribes the parent it actually points at. Neither can be satisfied by lying, because the second checks the claim against the parent's own row.
 
-**And the same pinning applies to every other reference into `document`, because the argument does not stop at parentage.** A first version of this schema applied the pattern to `parent_id` and `observation.library_doc_id` and to nothing else, which left sixteen references guaranteeing only that *a* document existed: `story.epic_id` accepted a spec, `requirement.spec_id` accepted an epic, and a `library_document` detail row attached to a spec — each verified by execution, each rendering a plausible tree that is not the real one. So every reference whose target kind is fixed carries a `CHECK`-pinned kind column and a composite foreign key to `document(id, kind)`: `requirement.spec_id`, `story.epic_id`, `finding.review_id`, `observation.retro_id`, `audit_finding.audit_id`, `retro_application.retro_id`, and all four detail tables. Three references stay unpinned deliberately and for stated reasons — `document_section.document_id` and `artifact_document.document_id` legitimately admit any kind, `retro_application.applied_to_id` likewise, and `dependency`'s two ends vary by edge kind, which is register entry #6.
+**And the same pinning applies to every other reference into `document`, because the argument does not stop at parentage.** A first version of this schema applied the pattern to `parent_id` and `observation.library_doc_id` and to nothing else, which left sixteen references guaranteeing only that *a* document existed: `story.epic_id` accepted a spec, `requirement.spec_id` accepted an epic, and a `library_document` detail row attached to a spec — each verified by execution, each rendering a plausible tree that is not the real one. So every reference whose target kind is fixed carries a `CHECK`-pinned kind column and a composite foreign key to `document(id, kind)`: `requirement.spec_id`, `story.epic_id`, `finding.review_id`, `observation.retro_id`, `audit_finding.audit_id`, `retro_application.retro_id`, and all four detail tables.
+
+**The references that stay unpinned are enumerated here, and this list is the authority.** Each is deliberate and each has a stated reason; anything downstream that needs the set names *the ones the Data Model names* rather than counting them, because the count is what went stale the last three times and a list cannot.
+
+- `document_section.document_id` and `artifact_document.document_id` legitimately admit any kind.
+- `retro_application.applied_to_id` likewise — a retro's lesson may be applied to a document of any kind.
+- `number_sequence.parent_id` — the parent a child-numbered kind is counted within, which varies by kind: an epic counts under a spec, an ADR under a spec, a brief or a discussion.
+- `document_milestone.document_id` — any kind of document may deliver a milestone, and whether the pairing is coherent is register entry #12 rather than a constraint.
+- `dependency`'s two ends vary by edge kind, which is register entry #6.
+
+A foreign key added later that names `document(id)` alone belongs in this list or it is a defect; there is nowhere else for it to be correct.
 
 The composite foreign key carries `ON DELETE CASCADE` and replaces the single-column one rather than sitting beside it. Two foreign keys to the same parent with different delete actions is how a schema acquires a delete whose outcome depends on which children happen to exist.
 
@@ -851,7 +861,7 @@ CREATE TABLE taxonomy (
 -- for the reason `test_approach` is: it carries columns no other vocabulary
 -- needs. In CPM this is `agents/roster.yaml`, whose header says the project
 -- copy "completely replaces this default — no merging", so adding one persona
--- means forking all ten and maintaining the fork. The observed practice is
+-- means forking all nine and maintaining the fork. The observed practice is
 -- append-only, which is what FR24 provides and the file cannot.
 --
 -- `personality` and `communication_style` are prose and nothing filters on
@@ -1327,7 +1337,7 @@ is `[manual]` and belongs to whoever reviews the conversion.
 | FR2 | Creating an epic with a non-existent `spec_id` fails, and no row is written | `[integration]` |
 | FR2 | must NOT — a foreign-key violation is accepted because `foreign_keys` defaulted off on a fresh connection | `[integration]` |
 | FR2 | Every column named `*_id` on every table appears in that table's `PRAGMA foreign_key_list`, with no exceptions list (AD7) | `[unit]` |
-| FR2 | Every foreign key whose target is `document` names `(id, kind)`, except the three the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend | `[unit]` |
+| FR2 | Every foreign key whose target is `document` names `(id, kind)`, except the ones the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend | `[unit]` |
 | FR2 | must NOT — a `story` is accepted under a spec, a `requirement` under an epic, or a detail row on a document of another kind | `[unit]` |
 | FR4 | Every `requirement` and `acceptance_criterion` type distinction is readable from a column with `label` and `text` withheld | `[integration]` |
 | FR3 | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation | `[integration]` |

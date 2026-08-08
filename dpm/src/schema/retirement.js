@@ -1,0 +1,152 @@
+/**
+ * Retirement guards, derived from the schema rather than written into it.
+ *
+ * FR24 makes retirement two promises, and a foreign key keeps only one of them. Rows that
+ * already reference a retired term stay intact and readable — that is what *not* deleting the
+ * row buys, and it costs nothing. The other half is that **no new row may arrive** against a
+ * retired term, and SQLite has no way to say that in a foreign key: the reference is still
+ * satisfiable, because the parent row is still there. Before this module that half was
+ * enforced by nothing, which is the state cross-row register #10 exists to name.
+ *
+ * So it is said in a trigger. The triggers are **generated** from `PRAGMA foreign_key_list`
+ * rather than hand-written, because the alternative is remembering: nine referencing columns
+ * today, two more when Story 4 adds `dependency_kind`, and an unbounded number after that as
+ * vocabularies accumulate. A hand-written guard that someone forgets to add fails silently
+ * and looks exactly like one that is working.
+ *
+ * **The predicate is `retired_at`, not a list of vocabularies.** That sweeps in `observation`,
+ * whose `retired_at` is the marker `cpm:retro retire` writes on a spent lesson — so a retired
+ * observation stops gaining new categories. That is the right reading of the same promise and
+ * it is asserted rather than excluded; narrowing the predicate would mean maintaining exactly
+ * the list this module exists to avoid.
+ *
+ * The cost, taken deliberately: not all DDL lives in the numbered `.sql` files any more. Story
+ * 5's migration path has to call this same generator for its `sqlite_schema` comparison against
+ * a freshly created database to hold.
+ */
+
+/** Tables dpm authored, excluding the shadow tables FTS5 creates beside a virtual one. */
+function authoredTables(db) {
+  const all = db
+    .prepare("SELECT name, sql FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+    .all();
+
+  const virtual = all
+    .filter((table) => /^\s*CREATE\s+VIRTUAL\s+TABLE/i.test(table.sql ?? ''))
+    .map((table) => table.name);
+
+  return all
+    .filter((table) => !virtual.some((v) => table.name !== v && table.name.startsWith(`${v}_`)))
+    .map((table) => table.name);
+}
+
+/** One entry per foreign key, with its columns in declaration order — composite keys included. */
+function foreignKeys(db, table) {
+  const rows = db.prepare(`PRAGMA foreign_key_list(${table})`).all();
+
+  return [...new Set(rows.map((row) => row.id))].map((id) => {
+    const columns = rows.filter((row) => row.id === id).sort((a, b) => a.seq - b.seq);
+
+    return {
+      parent: columns[0].table,
+      from: columns.map((column) => column.from),
+      to: columns.map((column) => column.to),
+    };
+  });
+}
+
+function columnsOf(db, table) {
+  return db.prepare(`PRAGMA table_info(${table})`).all();
+}
+
+function primaryKeyColumns(db, table) {
+  return columnsOf(db, table)
+    .filter((column) => column.pk > 0)
+    .sort((a, b) => a.pk - b.pk)
+    .map((column) => column.name);
+}
+
+/**
+ * Every reference into a table that can be retired.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {{table: string, parent: string, from: string[], to: string[]}[]}
+ */
+export function vocabularyReferences(db) {
+  const references = [];
+
+  for (const table of authoredTables(db)) {
+    const retirable = (parent) => columnsOf(db, parent).some((c) => c.name === 'retired_at');
+
+    for (const key of foreignKeys(db, table)) {
+      if (!retirable(key.parent)) continue;
+
+      references.push({
+        table,
+        parent: key.parent,
+        from: key.from,
+        // `to` is NULL when a reference names no columns and resolves against the parent's
+        // primary key implicitly. Every reference in this schema is explicit, so the fallback
+        // is never taken today — and a trigger keyed on `undefined` would be silently wrong.
+        to: key.to.every((column) => column !== null) ? key.to : primaryKeyColumns(db, key.parent),
+      });
+    }
+  }
+
+  return references;
+}
+
+/** `finding.category_id, finding.category_domain` — the phrase the abort message carries. */
+function describe(reference) {
+  return reference.from.map((column) => `${reference.table}.${column}`).join(', ');
+}
+
+export function guardName(reference, event) {
+  return `${reference.table}_${reference.from.join('_')}_not_retired_on_${event}`;
+}
+
+function guard(reference, event) {
+  const match = reference.to
+    .map((column, index) => `${column} = NEW.${reference.from[index]}`)
+    .join(' AND ');
+
+  // `UPDATE OF` and not a bare `UPDATE`: a row that references a term retired after it was
+  // written must stay editable in its other columns, or "leaves rows referencing it intact"
+  // would mean intact and frozen. Narrowing to the reference columns is what keeps the two
+  // halves of the promise from contradicting each other.
+  const on = event === 'insert'
+    ? `BEFORE INSERT ON ${reference.table}`
+    : `BEFORE UPDATE OF ${reference.from.join(', ')} ON ${reference.table}`;
+
+  // A NULL reference selects no row, so the subquery is NULL and the WHEN is false — which is
+  // what a nullable reference like `finding.agent` needs, and what a `NOT NULL` one never
+  // reaches.
+  return `
+    CREATE TRIGGER ${guardName(reference, event)}
+    ${on} FOR EACH ROW
+    WHEN (SELECT retired_at FROM ${reference.parent} WHERE ${match}) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: ${describe(reference)} references a retired ${reference.parent} row');
+    END
+  `;
+}
+
+/**
+ * Create a guard per referencing column, for inserts and for updates of that column.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {string[]} The trigger names created — so a caller and a test can distinguish a
+ *   generator that ran from one that produced nothing, which a green suite cannot.
+ */
+export function createRetirementGuards(db) {
+  const created = [];
+
+  for (const reference of vocabularyReferences(db)) {
+    for (const event of ['insert', 'update']) {
+      db.exec(guard(reference, event));
+      created.push(guardName(reference, event));
+    }
+  }
+
+  return created;
+}

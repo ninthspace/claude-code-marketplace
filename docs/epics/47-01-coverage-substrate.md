@@ -8,19 +8,19 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR1 | Every CPM artefact type is a table with typed columns, not a markdown file parsed at read time. | Every column named `*_id` on every table appears in that table's `PRAGMA foreign_key_list`, with no exceptions list (AD7) | Story 1 | `[unit]` | |
-| 2 | FR2 | `PRAGMA foreign_keys=ON` is enforced on every connection, and a violation is an error at write time rather than a discrepancy discovered later. | Creating an epic with a non-existent `spec_id` fails, and no row is written | Story 1 | `[integration]` | |
-| 3 | FR2 (must NOT) | `PRAGMA foreign_keys=ON` is enforced on every connection | must NOT — a foreign-key violation is accepted because `foreign_keys` defaulted off on a fresh connection | Story 1 | `[integration]` | |
-| 4 | FR2 | An epic cannot name a spec that does not exist; a coverage row cannot cite an absent requirement | Every foreign key whose target is `document` names `(id, kind)`, except the three the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend | Story 1 | `[unit]` | |
-| 5 | FR2 (must NOT) | An epic cannot name a spec that does not exist | must NOT — a `story` is accepted under a spec, a `requirement` under an epic, or a detail row on a document of another kind | Story 1 | `[unit]` | |
-| 6 | AD9 | every surrogate primary key in the schema is a ULID stored as `TEXT` | Every primary key in `sqlite_schema` is declared `TEXT`, excluding the FTS5 shadow tables, which SQLite creates with `INTEGER PRIMARY KEY` and dpm does not author | Story 1 | `[unit]` | |
-| 7 | AD9 | Ids sort by creation time and carry no meaning. | Ten thousand ids generated in one process are unique and sort in generation order | Story 1 | `[unit]` | |
-| 8 | FR4 | Requirement class, MoSCoW band, status, test-approach tag, and coverage verification state are typed columns constrained by `CHECK`. | A status value outside its enum is rejected by `CHECK`, not coerced | Story 2 | `[unit]` | |
-| 9 | FR24 | Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key | must NOT — any category, severity, dimension or approach is stored as free text rather than a foreign key | Story 2 | `[integration]` | |
-| 10 | FR24 | seeded with defaults, extensible per project, and retirable without invalidating rows that already use them | A severity row is rejected in a category slot, and an audit dimension in a severity slot, on `finding` and `audit_finding` alike | Story 2 | `[unit]` | |
-| 11 | FR24 | retirable without invalidating rows that already use them | Retiring a taxonomy row leaves rows referencing it intact and readable | Story 2 | `[unit]` | |
+| 1 | FR1 | Every CPM artefact type is a table with typed columns, not a markdown file parsed at read time. | Every column named `*_id` on every table appears in that table's `PRAGMA foreign_key_list`, with no exceptions list (AD7) | Story 1 | `[unit]` | ✓ |
+| 2 | FR2 | `PRAGMA foreign_keys=ON` is enforced on every connection, and a violation is an error at write time rather than a discrepancy discovered later. | Creating an epic with a non-existent `spec_id` fails, and no row is written | Story 1 | `[integration]` | ✓ |
+| 3 | FR2 (must NOT) | `PRAGMA foreign_keys=ON` is enforced on every connection | must NOT — a foreign-key violation is accepted because `foreign_keys` defaulted off on a fresh connection | Story 1 | `[integration]` | ✓ |
+| 4 | FR2 | An epic cannot name a spec that does not exist; a coverage row cannot cite an absent requirement | Every foreign key whose target is `document` names `(id, kind)`, except the ones the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend | Story 1 | `[unit]` | ✓ |
+| 5 | FR2 (must NOT) | An epic cannot name a spec that does not exist | must NOT — a `story` is accepted under a spec, a `requirement` under an epic, or a detail row on a document of another kind | Story 1 | `[unit]` | ✓ |
+| 6 | AD9 | every surrogate primary key in the schema is a ULID stored as `TEXT` | Every primary key in `sqlite_schema` is declared `TEXT`, excluding the FTS5 shadow tables, which SQLite creates with `INTEGER PRIMARY KEY` and dpm does not author | Story 1 | `[unit]` | ✓ |
+| 7 | AD9 | Ids sort by creation time and carry no meaning. | Ten thousand ids generated in one process are unique and sort in generation order | Story 1 | `[unit]` | ✓ |
+| 8 | FR4 | Requirement class, MoSCoW band, status, test-approach tag, and coverage verification state are typed columns constrained by `CHECK`. | A status value outside its enum is rejected by `CHECK`, not coerced | Story 2 | `[unit]` | ✓ |
+| 9 | FR24 | Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key | must NOT — any category, severity, dimension or approach is stored as free text rather than a foreign key | Story 2 | `[integration]` | ✓ |
+| 10 | FR24 | seeded with defaults, extensible per project, and retirable without invalidating rows that already use them | A severity row is rejected in a category slot, and an audit dimension in a severity slot, on `finding` and `audit_finding` alike | Story 2 | `[unit]` | ✓ |
+| 11 | FR24 | retirable without invalidating rows that already use them | Retiring a taxonomy row leaves rows referencing it intact and readable | Story 2 | `[unit]` | ✓ |
 | 12 | FR24 (must NOT) | retirable without invalidating rows that already use them | must NOT — a new row is accepted referencing a taxonomy row, test approach or dependency kind already retired, so that retirement stops rows arriving as well as preserving those that have | Story 2 | `[unit]` | |
-| 13 | FR10 | Every artefact type CPM produces is modelled from the outset | must NOT — a `document_kind` row exists that the parity enumeration does not name, or the reverse | Story 2 | `[unit]` | |
+| 13 | FR10 | Every artefact type CPM produces is modelled from the outset | must NOT — a `document_kind` row exists that the parity enumeration does not name, or the reverse | Story 2 | `[unit]` | ✓ |
 | 14 | FR5 | Human-facing artefact numbers are allocated monotonically and are never reused, including after archival. | Numbers allocated across create-archive-create never repeat, including past 99 | Story 3 | `[unit]` | |
 | 15 | FR5 | No glob, no filename parse, no archive-mirror contract. | The first allocation for a kind with no `number_sequence` row returns 1, and the first child allocation under a new parent does the same | Story 3 | `[unit]` | |
 | 16 | FR5 (must NOT) | Human-facing artefact numbers are allocated monotonically | must NOT — an allocation returns no row, or returns success without a number | Story 3 | `[unit]` | |
@@ -37,14 +37,14 @@
 | 27 | NFR6 | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. | Every condition in the false-pass register has a test asserting it blocks rather than warns, and the register has no unregistered entries | Story 6 | `[integration]` | |
 | 28 | FR12 | applied automatically on server start | A database built by running the migration set from empty has a `sqlite_schema` identical to one built by executing the DDL directly — every table, index, trigger and constraint | Story 8 | `[integration]` | |
 | 29 | FR14 | each entry in the cross-row invariant register (Data Model) | The integrity tool passes on a freshly migrated and seeded database, and fails on each of the thirteen register violations injected into it in turn | Story 8 | `[integration]` | |
-| 30 | FR2 | An epic cannot name a spec that does not exist | An epic whose `parent_id` names a review is rejected, and one naming a spec is accepted | Story 1 | `[unit]` | |
-| 31 | FR2 | an artifact link cannot point at a missing document | A review parents onto either a spec or an epic, both being allow-listed, and onto a runbook not at all | Story 1 | `[unit]` | |
-| 32 | FR2 (must NOT) | a coverage row cannot cite an absent requirement | must NOT — `observation.library_doc_id` accepts a document that is not of kind `library` | Story 1 | `[unit]` | |
-| 33 | FR2 (must NOT) | a violation is an error at write time rather than a discrepancy discovered later | must NOT — a document's `parent_kind` can misdescribe the kind of the parent it points at | Story 1 | `[unit]` | |
-| 34 | NFR6 | a constraint violation swallowed | Binding the same `(requirement_id, spec_fragment, story_criterion_id)` twice is rejected, and two different fragments against one criterion are both accepted | Story 1 | `[unit]` | |
-| 35 | NFR6 (must NOT) | Any condition that could produce a false pass | must NOT — any `UNIQUE` constraint over a nullable column is relied on to reject duplicates, given SQLite's distinct-NULL semantics | Story 1 | `[unit]` | |
-| 36 | NFR6 (must NOT) | the failure being designed against is one that looks like success | must NOT — `coverage` identity depends on `position`, so that display order can admit or reject a binding | Story 1 | `[unit]` | |
-| 37 | FR4 | Nothing infers a type by parsing an identifier. | Loading a corpus whose labels are all replaced with opaque identifiers leaves every class, MoSCoW band and exclusion value unchanged | Story 2 | `[integration]` | |
+| 30 | FR2 | An epic cannot name a spec that does not exist | An epic whose `parent_id` names a review is rejected, and one naming a spec is accepted | Story 1 | `[unit]` | ✓ |
+| 31 | FR2 | an artifact link cannot point at a missing document | A review parents onto either a spec or an epic, both being allow-listed, and onto a runbook not at all | Story 1 | `[unit]` | ✓ |
+| 32 | FR2 (must NOT) | a coverage row cannot cite an absent requirement | must NOT — `observation.library_doc_id` accepts a document that is not of kind `library` | Story 1 | `[unit]` | ✓ |
+| 33 | FR2 (must NOT) | a violation is an error at write time rather than a discrepancy discovered later | must NOT — a document's `parent_kind` can misdescribe the kind of the parent it points at | Story 1 | `[unit]` | ✓ |
+| 34 | NFR6 | a constraint violation swallowed | Binding the same `(requirement_id, spec_fragment, story_criterion_id)` twice is rejected, and two different fragments against one criterion are both accepted | Story 1 | `[unit]` | ✓ |
+| 35 | NFR6 (must NOT) | Any condition that could produce a false pass | must NOT — any `UNIQUE` constraint over a nullable column is relied on to reject duplicates, given SQLite's distinct-NULL semantics | Story 1 | `[unit]` | ✓ |
+| 36 | NFR6 (must NOT) | the failure being designed against is one that looks like success | must NOT — `coverage` identity depends on `position`, so that display order can admit or reject a binding | Story 1 | `[unit]` | ✓ |
+| 37 | FR4 | Nothing infers a type by parsing an identifier. | Loading a corpus whose labels are all replaced with opaque identifiers leaves every class, MoSCoW band and exclusion value unchanged | Story 2 | `[integration]` | ✓ |
 | 38 | FR23 | restarting at 1 per parent | Child sequences restart at 1 per parent and never reuse a value after deletion | Story 3 | `[unit]` | |
 | 39 | FR23 | both allocated monotonically and never reused | A kind declared `numbering = 'none'` accepts a document carrying neither `number` nor `sequence` | Story 3 | `[unit]` | |
 | 40 | FR23 (must NOT) | Root-numbered kinds (a spec) and child-numbered kinds | must NOT — a kind declared `numbering = 'root'` accepts a row carrying `sequence`, or the reverse | Story 3 | `[unit]` | |
@@ -68,11 +68,11 @@
 | 58 | FR21 (must NOT) | Every coverage matrix CPM writes states this rule in prose and relies on an agent to honour it; here the database enforces it. | must NOT — a coverage row holds `verified_at` while `binding_hash` is NULL, or the reverse | Story 7 | `[unit]` | |
 | 59 | FR21 (must NOT) | a trigger must watch every column the binding is computed from, and the binding is computed from two texts held in three places | must NOT — any column the binding is computed from can be edited without clearing verification | Story 7 | `[unit]` | |
 | 60 | FR21 | and decays when that text changes | A coverage row verified before a migration is still verified after it, and a text edit made after the migration still clears it — a migration that recreates a table drops its triggers, and nothing in Story 5 or Story 7 alone observes that | Story 8 | `[integration]` | |
-| 61 | FR10 | Every artefact type CPM produces is modelled from the outset | `document_kind.dir` is nullable, and a kind declaring `dir IS NULL` accepts documents that render inside a parent rather than into a file of their own | Story 1 | `[unit]` | |
-| 62 | FR27 | A specification's milestones are rows scoped to it, ordered, and joined to the artefacts that deliver them | Two specs may each hold a milestone labelled `M1`; one spec may not hold two, and positions are unique within a spec | Story 1 | `[unit]` | |
-| 63 | FR27 (must NOT) | an epic that spans two milestones says so rather than being filed under one | must NOT — an artefact's milestone is a column, so an epic spanning two must be filed under one | Story 1 | `[unit]` | |
-| 64 | FR2 | An epic cannot name a spec that does not exist | An `adr` parents onto a spec, a brief or a discussion, and onto an epic not at all | Story 2 | `[unit]` | |
-| 65 | FR2 | An epic cannot name a spec that does not exist | A `retro` parents onto an epic, a spec or a quick record — the three sources `cpm:retro` actually accepts | Story 2 | `[unit]` | |
+| 61 | FR10 | Every artefact type CPM produces is modelled from the outset | `document_kind.dir` is nullable, and a kind declaring `dir IS NULL` accepts documents that render inside a parent rather than into a file of their own | Story 1 | `[unit]` | ✓ |
+| 62 | FR27 | A specification's milestones are rows scoped to it, ordered, and joined to the artefacts that deliver them | Two specs may each hold a milestone labelled `M1`; one spec may not hold two, and positions are unique within a spec | Story 1 | `[unit]` | ✓ |
+| 63 | FR27 (must NOT) | an epic that spans two milestones says so rather than being filed under one | must NOT — an artefact's milestone is a column, so an epic spanning two must be filed under one | Story 1 | `[unit]` | ✓ |
+| 64 | FR2 | An epic cannot name a spec that does not exist | An `adr` parents onto a spec, a brief or a discussion, and onto an epic not at all | Story 2 | `[unit]` | ✓ |
+| 65 | FR2 | An epic cannot name a spec that does not exist | A `retro` parents onto an epic, a spec or a quick record — the three sources `cpm:retro` actually accepts | Story 2 | `[unit]` | ✓ |
 | 66 | FR27 | so "which epics are in M2" is a query | An epic joined to two milestones is returned by a readiness query for either, and reports both | Story 4 | `[integration]` | |
 | 67 | FR14 | each entry in the cross-row invariant register (Data Model) | A `document_milestone` row whose document and milestone belong to different specs is reported (register #12) | Story 6 | `[unit]` | |
 | 68 | FR14 | each entry in the cross-row invariant register (Data Model) | A `{{ref:}}` marker naming a deleted document is reported, naming the column and row it sits in, and a marker naming a live document is not (register #13) | Story 6 | `[unit]` | |
@@ -88,14 +88,14 @@
 | 78 | FR27 | joined to the artefacts that deliver them | A document assigned to two milestones keeps both across a migration, and the spec-scoping pair check still refuses a cross-spec assignment afterwards | Story 8 | `[integration]` | |
 | 79 | FR12 (must NOT) | applied automatically on server start, so a plugin update never requires the user to intervene | must NOT — the migration runner and the DDL produce schemas differing in any constraint, index or trigger | Story 8 | `[integration]` | |
 | 80 | FR26 (must NOT) | Completeness is therefore a separate, deliberate claim on the requirement | must NOT — completeness is derived from fragment offsets rather than claimed, so connective prose must be bound to satisfy it | Story 7 | `[unit]` | |
-| 81 | FR24 | The agent roster is a table: `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries | `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, so the roster is a vocabulary rather than free text | Story 2 | `[unit]` | |
+| 81 | FR24 | The agent roster is a table: `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries | `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, so the roster is a vocabulary rather than free text | Story 2 | `[unit]` | ✓ |
 | 82 | FR24 | A vocabulary default the plugin adds after a database was created appears in it on the next server start, and a term the project added under the same name is not overwritten | A vocabulary default the plugin adds after a database was created appears in it on the next server start, and a term the project added under the same name is not overwritten | Story 5 | `[integration]` | |
 | 83 | FR24 | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | Story 5 | `[integration]` | |
 | 84 | FR24 (must NOT) | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | Story 5 | `[integration]` | |
 | 85 | FR24 (must NOT) | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | Story 5 | `[unit]` | |
 | 86 | NFR1 | The plugin installs by clone or marketplace fetch with no build step, no `node-gyp`, and no per-platform binary. | `dpm/` is installable from the marketplace manifest as a plugin alongside `cpm/`, with no build step | Story 0 | `[target]` | |
-| 87 | NFR1 (must NOT) | no `node-gyp`, and no per-platform binary | must NOT — a dependency is added whose install requires compilation | Story 0 | `[unit]` | |
-| 88 | AD8 (must NOT) | dpm parses no prose anywhere. Markdown is strictly write-only output with no reader in the system. | must NOT — a fixture is a markdown file parsed at load, rather than built by calling create tools | Story 0 | `[integration]` | |
+| 87 | NFR1 (must NOT) | no `node-gyp`, and no per-platform binary | must NOT — a dependency is added whose install requires compilation | Story 0 | `[unit]` | ✓ |
+| 88 | AD8 (must NOT) | dpm parses no prose anywhere. Markdown is strictly write-only output with no reader in the system. | must NOT — a fixture is a markdown file parsed at load, rather than built by calling create tools | Story 0 | `[integration]` | ✓ |
 
 **Rows 30–60 were added on 2026-08-08**, when the cross-epic union check ran early against
 the spec's 113 tagged criteria and found FR21 uncovered in every epic. They are appended
@@ -216,3 +216,15 @@ requirement covered across two epics is the ordinary case FR26 exists to make vi
 is declared here for that reason. Row 88 binds to AD8 rather than to the Test Infrastructure
 passage that says the same thing, because AD8's *"dpm parses no prose anywhere"* is a
 requirement bullet and the passage is not.
+
+**Row 12 is deliberately unmarked after Story 2's gate, and it is the only Story 2 row that
+is.** Its criterion names three vocabularies — "a taxonomy row, test approach or dependency
+kind already retired" — and `dependency_kind` is created by Story 4 Task 4.1, so two thirds of
+the row were demonstrated at Story 2's gate and the third could not be. Both halves of the
+promise were exercised for `taxonomy` and for `test_approach`: a row written before retirement
+still reads back and still joins to its retired term, and a new row against that term is
+refused by name. The `dependency_kind` clause is **inherited rather than demonstrated** — the
+guard that closes it is generated from `PRAGMA foreign_key_list` rather than written per
+table, so it will cover `dependency_kind` on the day Task 4.1 lands with no new code and
+nothing to remember. That is a good reason to expect the row to pass and not a reason to mark
+it, which is the distinction this cell is recording. Story 4's gate marks it.

@@ -3,7 +3,13 @@
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
 **Status**: Pending  
-**Blocked by**: —
+**Blocked by**: —  
+**Retro applied**: 33 · Codebase discovery · Applied — every DDL batch is executed against a real SQLite database as it is written; each kind-pinning and rejection criterion is asserted by a failed INSERT rather than by reading the constraint  
+**Retro applied**: 33 · Codebase discovery · Applied — no probe or test counts unless `PRAGMA foreign_keys=ON` was set on that same connection; Story 1's fresh-connection criterion asserts against a reopened temp-file database, not a shared handle  
+**Retro applied**: 33 · Codebase discovery · Applied — Task 1.3's ULID switch sweeps for consumers assuming an integer rowid (FTS5 in particular) before being declared done  
+**Retro applied**: 35 · Complexity underestimate · Applied — every count this epic states is derived from the spec's Data Model at the moment the task needs it, and the build follows the derived number rather than the epic's prose figure  
+**Retro applied**: 35 · Testing gap · Applied — no test or check run is piped through `head`/`tail`; full output goes to a file and is read, so a cut-off buffer is never read as a clean pass  
+**Retro applied**: 33 · Pattern worth reusing · Applied — after each DDL-writing task the whole schema is re-run from empty, catching a break at the batch that caused it rather than at Story 8's parity gate
 
 Milestone M1 (AD6). Nothing here is user-facing: the plugin skeleton and test harness, the
 schema, its seeded vocabularies, number allocation, the edge table, migrations, and the
@@ -18,9 +24,12 @@ is identity only.
 
 ## Stand up the plugin skeleton and the test harness
 **Story**: 0  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: —  
-**Satisfies**: NFR1, and the spec's **Test Infrastructure** section
+**Satisfies**: NFR1, and the spec's **Test Infrastructure** section  
+**Retro**: [Codebase discovery] `node:sqlite` is not `sqlite3` on the point retro 33 warned about — `DatabaseSync`'s `enableForeignKeyConstraints` defaults to **true**, so a connection enforces unless something disables it, and the harness's non-enforcing connection has to be built through the constructor rather than by omitting a `PRAGMA`; Story 1's fresh-connection criterion is still worth its place, since Task 1.4 must set the pragma explicitly rather than inherit an experimental API's default.  
+**Retro**: [Pattern worth reusing] Every guard this story produced was mutation-checked by planting the violation it exists to catch — a seam-bypassing fixture, a markdown fixture, a `better-sqlite3` dependency — and each failed the right test before being reverted; worth repeating for Story 6's register-to-check parity and Story 7's triggers, where a check that cannot fail passes exactly as loudly as one that works.  
+**Retro**: [Codebase discovery] `node --test` on Node 22.18 does not accept a directory argument — it resolves the path as a module and fails — so the suite's one command is a quoted glob Node expands itself (`node --test "dpm/**/*.test.js"`), or a bare `node --test` run from `dpm/`.
 
 **Acceptance Criteria**:
 
@@ -33,35 +42,40 @@ is identity only.
 ### Create the `dpm/` plugin directory, its manifest and its marketplace entry
 **Task**: 0.1  
 **Description**: `dpm/` sits beside `cpm/` in the same marketplace repository, which is not an incidental layout: the spec's **Testing Strategy** requires the suite to read CPM's `skills/` directory as a name oracle for FR25's twenty-two, and states that being a sibling in the same commit is what removes the version pin. Covers the marketplace-installability criterion, which is `[target]` for the same reason Epic 47-03's NFR1 criterion is — it needs a real install to assess.  
-**Status**: Pending
+**Status**: Complete
 
 ### Stand up the test harness on `node --test` with a per-test database lifecycle
 **Task**: 0.2  
 **Description**: `node --test` is the runner, and the reason is AD5's reason one layer over: the spec asks for "a Node test setup", NFR1 bans any dependency requiring compilation at install, and every third-party runner is an `npm install` this plugin has no way to perform from a plugin cache directory. Node's built-in runner is already present wherever the Node floor is met, so the suite inherits the floor rather than adding a precondition. Covers the isolation and one-command criteria. Each test takes its own database — in-memory by default, temp-file where a test must reopen a connection, since `PRAGMA foreign_keys` is per-connection and Story 1's fresh-connection criterion cannot be asserted against a single shared handle.  
-**Status**: Pending
+**Status**: Complete
 
 ### Build fixtures through the tool surface, not from markdown
 **Task**: 0.3  
 **Description**: Covers the must-NOT. AD8 means no import path exists to exercise, so a fixture parsed from a file would be testing a code path dpm does not have. Until Epic 47-03 ships the MCP tools, the builder calls the same statements those tools will wrap and exposes one seam — a single module the tools replace — so the substitution is one edit rather than a rewrite of every fixture. Name that seam explicitly; a fixture layer that reaches into the schema directly is the thing this task exists to prevent.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Stand up the plugin skeleton and the test harness
 **Task**: 0.4  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`. The isolation criterion needs two tests observed in one process — a single test that cleans up after itself asserts nothing about leakage between them.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Create the core schema with kind-pinned references [plan]
 **Story**: 1  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 0  
-**Satisfies**: FR1, FR2, FR27, AD7, AD9, NFR6
+**Satisfies**: FR1, FR2, FR27, AD7, AD9, NFR6  
+**Retro**: [Codebase discovery] SQLite implies `NOT NULL` only for `INTEGER PRIMARY KEY`; for every other type it preserves a longstanding bug and accepts NULL, so the Data Model's `id TEXT PRIMARY KEY` transcribed literally is a unique index over a nullable column — two `document` rows with a NULL `id` were both accepted, on the parent key every other table joins to. Every single-column primary key is now `TEXT NOT NULL PRIMARY KEY`, and Stories 2–8 must declare it on each new table rather than assume the keyword implies it.  
+**Retro**: [Testing gap] A rejection is not evidence until you know which constraint produced it. The `observation.library_doc_id` kind-pin first appeared to pass while the row was actually being rejected by `observation_retro_position`, because the probe reused a `position` — the kind pin was never consulted. Every assertion in this story now matches the constraint by name, and the same trap is waiting wherever a table carries both a pinned reference and a unique index over the same rows.  
+**Retro**: [Criteria gap] A criterion that defers to a list held in another document is only as good as that list, and nothing checks the referent is complete. Story 1's kind-agnostic exceptions were "the three the Data Model names"; a `grep` for `REFERENCES document(id)` found seven, of which the paragraph accounted for five. One was FR27 cascade fallout and one — `number_sequence.parent_id` — was an original omission nobody had reported. The pivot replaced the count with an enumeration rather than correcting it, which is retro 35's recommendation applied for the first time; the mechanical sweep that found the second omission cost one command.  
+**Retro**: [Criteria gap] `retro_application` is named in no epic anywhere in the breakdown — a grep across `docs/epics/` returns nothing. Story 1 builds it under FR1 so nothing goes unbuilt, but the table reached the schema without any story claiming it, and a table that arrives that way is one nothing will test on purpose.  
+**Retro**: [Pattern worth reusing] The two schema-wide criteria are read out of `sqlite_schema` and the `PRAGMA`s rather than from a maintained list, so every table Stories 2–8 add is covered on the day it lands. The same shape closed three false passes the criteria did not ask for: the kind-pinned test also asserts that pinned references outnumber unpinned ones (a schema with no composite keys at all would otherwise pass it), the TEXT-key test also asserts every table *has* a primary key (the claim is vacuous without one), and the ULID test asserts the ids span fewer milliseconds than there are ids, so the sort is a statement about the counter rather than the clock.
 
 **Acceptance Criteria**:
 
 - Every column named `*_id` on every table appears in that table's `PRAGMA foreign_key_list`, with no exceptions list (AD7) [unit]
-- Every foreign key whose target is `document` names `(id, kind)`, except the three the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend [unit]
+- Every foreign key whose target is `document` names `(id, kind)`, except the ones the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend [unit]
 - must NOT — a `story` is accepted under a spec, a `requirement` under an epic, or a detail row on a document of another kind [unit]
 - Creating an epic with a non-existent `spec_id` fails, and no row is written [integration]
 - must NOT — a foreign-key violation is accepted because `foreign_keys` defaulted off on a fresh connection [integration]
@@ -81,35 +95,36 @@ is identity only.
 ### Write `document`, `document_kind` and `document_kind_parent`
 **Task**: 1.1  
 **Description**: Establishes the composite `(id, kind)` parent key that every other table joins to. Covers the parentage criteria; the allow-list table is what makes an illegal pairing unsatisfiable rather than merely unwritten.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write the nine per-kind detail tables and fourteen child tables with kind-pinned composite FKs
 **Task**: 1.2  
 **Description**: Covers the story-under-a-spec and requirement-under-an-epic rejections. Every reference whose target kind is fixed carries a `CHECK`-pinned kind column; the three deliberately unpinned ones are named in the Data Model and stay unpinned. The fourteenth child table is `milestone` (FR27), which brings `document_milestone` with it.  
-**Status**: Pending
+**Status**: Complete
 
 ### Implement ULID generation and apply TEXT keys throughout
 **Task**: 1.3  
 **Description**: Covers both AD9 criteria. The generator is the only source of ids in the system — nothing else may mint one.  
-**Status**: Pending
+**Status**: Complete
 
 ### Enforce `PRAGMA foreign_keys=ON` on every connection the server opens
 **Task**: 1.4  
 **Description**: Addresses the criterion that a fresh connection defaults it off. Scoped to connection setup, not to the tool layer.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Create the core schema with kind-pinned references
 **Task**: 1.5  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Seed and constrain every vocabulary [plan]
 **Story**: 2  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
-**Satisfies**: FR4, FR10, FR24
+**Satisfies**: FR4, FR10, FR24  
+**Inline change**: corrected "forking all ten" to nine in the spec's `agent` DDL comment — `cpm/agents/roster.yaml` carries nine personas (2026-08-08)
 
 **Acceptance Criteria**:
 
@@ -127,27 +142,37 @@ is identity only.
 ### Seed the thirteen `document_kind` rows and their `document_kind_parent` allow-list
 **Task**: 2.1  
 **Description**: Covers the parity-enumeration criterion in both directions, and the two parentage criteria. `adr` seeds with `dir IS NULL` and `numbering = 'child'`, so an AD written inside a spec keeps its `decision_status` and tradeoff axes instead of degrading to prose. The allow-list is what makes an unlisted pairing unwritable, so each criterion needs its accepted control as well as its refusal.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write the taxonomy tables with domain-scoped composite FKs
 **Task**: 2.2  
 **Description**: Covers the severity-in-a-category-slot rejections on `finding` and `audit_finding` alike. A plain `REFERENCES taxonomy(id)` would relocate the drift rather than remove it.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write and seed the `agent` table, and point `review_agent` and `finding` at it
 **Task**: 2.3  
 **Description**: The roster becomes a vocabulary under FR24 — its own table rather than a `taxonomy` domain, for the reason `test_approach` is one: it carries four columns no other vocabulary needs. Seed from CPM's `agents/roster.yaml`. Both referencing columns are declared several hundred lines before `agent` in the Data Model's DDL order; SQLite resolves a foreign key at write time rather than at `CREATE`, so the forward reference holds — asserted by the story's rejection criterion rather than assumed.  
-**Status**: Pending
+**Status**: Complete
 
 ### Implement retirement so it stops new rows arriving as well as preserving those that have
 **Task**: 2.4  
 **Description**: Covers cross-row register #10 — the half of the retirement promise that was previously enforced by nothing.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Seed and constrain every vocabulary
 **Task**: 2.5  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Codebase discovery] SQLite's `BEFORE UPDATE` and `BEFORE UPDATE OF` are not a style choice here. A bare update trigger fires on every column, so a row referencing a term retired after it was written becomes uneditable in *any* field — which turns FR24's "leaves rows referencing it intact and readable" into intact and frozen, and makes the two halves of the retirement promise contradict each other. Found by mutation rather than by design: the narrowed form was written first for tidiness, and only widening it back showed what it was load-bearing for.
+
+**Retro**: [Pattern worth reusing] Generate DDL from the schema and have the generator report what it produced. `createRetirementGuards` walks `PRAGMA foreign_key_list`, finds every parent carrying `retired_at`, and emits a trigger per referencing column — ten references, twenty triggers, and `dependency_kind` guarded on the day Story 4 creates it with no new code. The reporting is the half that matters for verification: a generator that generates nothing passes every behavioural test that has nothing to test, so it returns its trigger names and a test derives the same set independently and compares. That independence is the point — a test that asks the generator which references it found cannot notice the generator missing one.
+
+**Retro**: [Testing gap] A criterion of the form "X is rejected in a Y slot" hides that there are two distinct ways to attempt it, guarded by two different constraints. Filling a category slot with a severity id fails the composite foreign key; *relabelling* the slot as a severity slot and then filling it satisfies that foreign key perfectly and fails only the `CHECK` pinning the domain column. The first draft of the test exercised one route, passed, and would have kept passing with the `CHECK` deleted — confirmed by dropping it. Both routes are now asserted on both tables.
+
+**Retro**: [Criteria gap] Story 2's retirement criterion names three vocabularies and Story 4 creates one of them, so no gate can verify it whole. Coverage row 12 is left unmarked with the reason recorded rather than marked on the strength of a guard that will certainly cover it — a criterion spanning two stories needs its verification split at authoring time, not adjudicated at the gate.
+
+**Retro**: [Codebase discovery] A test fixture that seeds its own copy of a vocabulary diverges from the shipped one silently and in a direction no test can see. Story 1's fixture declared `retro` as child-numbered; the real seed makes it root-numbered, because `docs/retros/` numbers globally while still hanging off an epic. Every Story 1 test passed against the wrong numbering because nothing in Story 1 asserted the seed. The fixture's vocabulary was deleted rather than corrected: once a real seed exists, a test bed with its own is testing a corpus that does not ship.
 
 ---
 
