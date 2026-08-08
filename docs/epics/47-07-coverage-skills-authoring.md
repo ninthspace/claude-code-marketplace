@@ -35,6 +35,10 @@
 | 25 | FR24 | A severity row is rejected in a category slot, and an audit dimension in a severity slot, on `finding` and `audit_finding` alike | A review of an epic and an audit of the same epic write findings into two different tables with independently scoped vocabularies, and neither accepts the other's severity rows | Story 8 | `[integration]` | |
 | 26 | FR25 (must NOT) | no markdown parsing | must NOT — a skill writes a `retired`, `waived` or `superseded` marker as prose rather than as a column | Story 8 | `[integration]` | |
 | 27 | FR25 | no filename construction, no glob, no number allocation | An ADR is created as a child document of a spec, brief or discussion and renders inside its parent, with no number allocated and no path under `docs/architecture/` | Story 3 | `[feature]` | |
+| 28 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the run still works one phase at a time, still explores trade-offs across options before choosing, and still gates each decision before writing it | Story 3 | `[feature]` | |
+| 29 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: agent selection still includes one reviewer challenging business value and one challenging technical approach, and the finding stage still reports comprehensively before the ranking stage curates | Story 4 | `[feature]` | |
+| 30 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the four modes stay mutually exclusive, a `learn` still previews both the library entry and the retirement before either is written, and promotion still retires at the source in the same operation | Story 5 | `[feature]` | |
+| 31 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: a fix still has its root cause investigated and its diagnosis confirmed before any change is proposed, and implementation still refuses to begin without the written change description | Story 7 | `[feature]` | |
 
 **Mapping notes.**
 
@@ -63,6 +67,15 @@ It is appended rather than placed beside rows 7–9 so that rows 1–26, which C
 keep their numbers; the `Covered by` column carries the grouping, not the row order. It is
 the one criterion in this matrix that deletes two of FR25's five subtractions in a single
 skill, which is why it is bound to the subtraction clause rather than to FR10.
+
+**Rows 28–31 were added on 2026-08-08 and complete this epic's retention coverage.** Three
+of its seven conversion stories already carried a facilitation criterion — `discover`,
+`brief` and `audit`, rows 2, 5 and 17 — and the other four did not, which is the whole of the
+distinction: nothing about `architect`, `review`, `retro` or `quick` made them exempt. `retro`
+is the one worth naming, because Story 5 was not criterion-less: it had two criteria that
+both concern where the *data* goes. What neither asserts is that the four modes stay mutually
+exclusive and that `learn` still previews before it writes, and a conversion that collapsed
+them into one mode would have passed this matrix unchanged.
 
 **Partial coverage to flag.** FR25 is covered here for seven of twenty-two skills, FR3 for
 seven of twenty-two files. Both complete only in Epic 47-09. FR24's rows here are the

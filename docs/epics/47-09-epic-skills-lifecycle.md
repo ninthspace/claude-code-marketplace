@@ -24,6 +24,7 @@ them is mostly deletion.
 
 - A pivot run amends artefacts through update tools, and cascades to downstream documents by traversing foreign keys rather than by discovering chains from back-reference prose [feature]
 - Coverage verification is cleared by FR21's triggers when a criterion's text changes, so the skill no longer edits `| ✓ |` to `| |` and no longer needs to derive a matrix path from an epic path [integration]
+- The facilitation survives: every downstream change is still gated individually rather than applied as a batch, and a status change still edits the token while leaving the human note tail intact [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Rewrite amendment as update-tool calls, and cascade discovery as foreign-key traversal
@@ -53,6 +54,7 @@ them is mostly deletion.
 
 - An archive run sets `archived_at` and leaves `status` untouched, so a document is archived *and* complete rather than forced to choose [feature]
 - Numbers allocated before archival are never reissued after it, with no mirrored `docs/archive/{type}/` tree and no glob over one [integration]
+- The facilitation survives: a coverage matrix is still never archived apart from its epic, and a retired epic sitting in a chain whose other members are live is still archived alone rather than taking the chain with it [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Set `archived_at` without touching `status`
@@ -81,6 +83,7 @@ them is mostly deletion.
 **Acceptance Criteria**:
 
 - A clean run selects stale `session` rows by age and removes them, with no filename stem to glob and no session-suffix convention to match [integration]
+- The facilitation survives: every candidate is still listed before anything is asked, only what was named and confirmed is deleted, and the skill is still unreachable from an autonomous loop [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Select stale `session` rows by age and remove them
@@ -104,6 +107,7 @@ them is mostly deletion.
 **Acceptance Criteria**:
 
 - A ralph run carries its loop state in `session` rows, and a resume under a new session id adopts the prior row rather than reading a progress file [feature]
+- The facilitation survives: pre-flight still probes the stop hook and branches on what it finds, and a detected previous run is still offered as a resume rather than restarted over [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Carry loop state in `session` rows, with resume-adoption as an `UPDATE`
@@ -132,6 +136,7 @@ them is mostly deletion.
 - No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — swept across all twenty-two [unit]
 - Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation — swept across all twenty-two [unit]
 - must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool, swept across all twenty-two [unit]
+- Every one of the twenty-two carries a passing facilitation criterion on its own story, checked here as a roll-up: the five sweeps above are all negative, and a corpus of twenty-two files each holding a title and a single tool call satisfies every one of them [integration]
 
 ### Enumerate the twenty-two skills against FR25's list in both directions
 **Task**: 5.1  
@@ -153,8 +158,13 @@ them is mostly deletion.
 **Description**: FR28's write side. Epic 47-04 resolves markers at render time and forbids a projected body holding a number no row produced; nothing before this asserts that the skills *emit* markers. The failure is deferred and asymmetric — a skill that writes `spec 47` into a prose column ships clean and fails at someone else's render, months later, in a file it did not write. Every authoring skill is a candidate, so the check belongs to the corpus rather than to any one of them.  
 **Status**: Pending
 
-### Write tests for Close the corpus
+### Roll up the per-skill facilitation criteria across the corpus
 **Task**: 5.5  
+**Description**: Every other check this story runs is a sweep for something that must be **absent**, and absence is exactly what a gutted skill has most of. Twenty-two files each carrying a title and one tool call pass all five. The retention criteria live on the individual stories because facilitation differs per skill and cannot be asserted corpus-wide; what belongs here is the roll-up that fails if any of the twenty-two has no such criterion, or has one that does not pass. The failure this guards against is not a skill breaking — it is a conversion that succeeds at the subtraction and quietly discards the part FR25 says is the whole point of keeping.  
+**Status**: Pending
+
+### Write tests for Close the corpus
+**Task**: 5.6  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
 **Status**: Pending
 

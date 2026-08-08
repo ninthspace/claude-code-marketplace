@@ -28,6 +28,11 @@
 | 18 | FR10 | The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree. | Every entry in the self-hosting register is closed, or explicitly waived with a recorded reason; no entry remains OPEN | Story 6 | `[integration]` | |
 | 19 | NFR6 (must NOT) | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. This spec's subject applied to itself: the failure being designed against is one that looks like success. | must NOT — a corpus artefact loads with content dropped because no column held it, and the load reports success | Story 6 | `[integration]` | |
 | 20 | FR28 (must NOT) | A stored number would go stale the moment a merge renumbered its target, and no tool could find it to repair (FR8). | No skill writes a literal artefact number into a prose column; a reference to another artefact is written `{{ref:<id>}}` — swept across all twenty-two | Story 5 | `[unit]` | |
+| 21 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: every downstream change is still gated individually rather than applied as a batch, and a status change still edits the token while leaving the human note tail intact | Story 1 | `[feature]` | |
+| 22 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: a coverage matrix is still never archived apart from its epic, and a retired epic sitting in a chain whose other members are live is still archived alone rather than taking the chain with it | Story 2 | `[feature]` | |
+| 23 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: every candidate is still listed before anything is asked, only what was named and confirmed is deleted, and the skill is still unreachable from an autonomous loop | Story 3 | `[feature]` | |
+| 24 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: pre-flight still probes the stop hook and branches on what it finds, and a detected previous run is still offered as a resume rather than restarted over | Story 4 | `[feature]` | |
+| 25 | FR25 (must NOT) | must NOT — a skill satisfies every subtraction sweep while retaining none of its counterpart's facilitation, so a corpus of twenty-two files each carrying a title and a single tool call passes | Every one of the twenty-two carries a passing facilitation criterion on its own story, checked here as a roll-up: the five sweeps above are all negative, and a corpus of twenty-two files each holding a title and a single tool call satisfies every one of them | Story 5 | `[unit]` | |
 
 **Mapping notes.**
 
@@ -85,8 +90,26 @@ twenty-two and survives a sixth being added later.
 spec's subject applied to itself"; row 19 is that sentence made into a test, and it is the
 single criterion in the breakdown that most directly asks whether the exercise worked.
 
+**Rows 21–24 were added on 2026-08-08, one per conversion story, and row 25 is the roll-up
+that makes the other eighteen across the four skills matrices load-bearing.** Row 25 is the
+sharpest row in this matrix and the reason the whole sweep was worth running. Every other
+check Story 5 performs is a search for something that must be **absent** — no glob, no
+filename pattern, no number allocation, no progress-file lifecycle, no SQL. Absence is what a
+gutted skill has most of. Twenty-two files each containing a title and one tool call pass all
+five sweeps, pass FR25's existence check, pass the pipeline-stage comparison, and ship a
+corpus that does nothing. Nothing in this breakdown caught that before row 25 existed.
+
+**Row 25 does not re-assert the per-skill criteria; it asserts they are all present and all
+passing.** The distinction matters because facilitation cannot be checked corpus-wide —
+what `clean` must still refuse and what `templates` must still not gate have no common shape,
+which is why the retention criteria live on the individual stories. What a corpus check *can*
+do is fail when one of the twenty-two has no such criterion at all. That is the failure this
+row exists for, and it is the one the breakdown actually had: at the time it was written,
+eighteen of the twenty-two conversion stories carried no retention criterion, and all eight
+of Epic 47-08's read skills were among them.
+
 **Coverage completes here.** FR25 and FR3 have been partially covered since Epic 47-06 and
-are satisfied by rows 11–15. This is the only matrix in the breakdown that closes a
+are satisfied by rows 11–15 and 25. This is the only matrix in the breakdown that closes a
 requirement rather than contributing to one — which is itself the observation behind
 self-hosting register entry 1. FR28 is the exception among the pivot's three new
 requirements: its two halves sit in Epic 47-04 and in row 20 here, so it closes in this

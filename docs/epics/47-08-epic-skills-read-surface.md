@@ -24,6 +24,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 
 - A status run reports across specs, epics, stories and tasks from queries, with no directory walk and no file read [feature]
 - Retro-waived and archived items are excluded by `WHERE` clauses over columns, not by grepping for markers [integration]
+- The facilitation survives: an unrecognised status is still flagged rather than guessed and still counts as not-done, and the optional artifact is still never produced unless asked for and separately confirmed [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Rewrite the roll-up as queries over specs, epics, stories and tasks
@@ -52,6 +53,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Acceptance Criteria**:
 
 - An inspect run characterises a change against the planning graph through read tools, and its every list-returning call carries the tool's default `limit` [feature]
+- The facilitation survives: the run still derives its axis before using it, still refuses to describe a suite as passing without having run it, and still reports what it did not read [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Rewrite characterisation against read tools, supplying the declared `limit` at every list call
@@ -75,6 +77,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Acceptance Criteria**:
 
 - A present run resolves its sources through the artifact join rather than by reading an index file, and a source that does not exist is a foreign-key failure rather than a broken link [feature]
+- The facilitation survives: the run still gates audience, then format, then draft in turn, and a regeneration over an existing artifact still offers update-in-place rather than silently minting a second one [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Resolve sources through the artifact join
@@ -98,6 +101,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Acceptance Criteria**:
 
 - A library run reads `library_document` and `library_scope` rows, so the Library Check's scope filter is a `WHERE` clause rather than a front-matter parse [integration]
+- The facilitation survives: a suggested scope is still presented for adjustment rather than applied, and the derived front-matter is still confirmed before the document is written [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Read `library_document` and `library_scope` rows
@@ -122,6 +126,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 
 - An artifact run writes one `artifact_document` row per link; the index file and the in-document backlinks are both projections of it, so the two cannot disagree [integration]
 - Publishing updates the artifact row's URL in place, and a republish to the same file path resolves to the same row [feature]
+- The facilitation survives: the run still refuses to invent any of an entry's facts, and a proposed name is still confirmed rather than assigned [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Write one `artifact_document` row per link
@@ -155,6 +160,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Acceptance Criteria**:
 
 - A templates run renders its previews from 47-04's projection templates, so a template and its preview cannot drift [integration]
+- The facilitation survives: both `list` and `preview` still complete in a single response with no gate, which is the one skill here whose facilitation is the absence of one [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Render previews from the projection templates rather than from a second copy
@@ -178,6 +184,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Acceptance Criteria**:
 
 - A consult run retrieves prior context through the search tool rather than by reading files, and a term held only on a child row is reachable [feature]
+- The facilitation survives: an inferred agent is still confirmed before the consultation begins, the voice is still rendered from that agent's stored traits without inventing beyond them, and the exit is still offered rather than assumed [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Retrieve prior context through the search tool, covering both indexes
@@ -201,6 +208,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 **Acceptance Criteria**:
 
 - A party run loads its roster from the `agent` table and reads the artifact under discussion through read tools, with no YAML parse and no roster file on disk [feature]
+- The facilitation survives: agents are still selected from the topic rather than fixed, each voice is still rendered from that agent's stored traits alone, and the run still ends in a direction of travel rather than a transcript [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Load the roster from the `agent` table and the artifact through read tools

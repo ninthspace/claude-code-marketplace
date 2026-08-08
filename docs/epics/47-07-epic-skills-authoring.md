@@ -82,6 +82,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 - An architect run writes `adr` rows with `decision_status`, plus `adr_option` and `adr_option_tradeoff` rows — the options and their axes are columns, not prose the skill formats [feature]
 - Exactly one option per accepted ADR carries `chosen`, enforced at write time rather than by the integrity check finding it later [integration]
 - An ADR is created as a child document of a spec, brief or discussion and renders inside its parent, with no number allocated and no path under `docs/architecture/` [feature]
+- The facilitation survives: the run still works one phase at a time, still explores trade-offs across options before choosing, and still gates each decision before writing it [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Write `adr_option` and `adr_option_tradeoff` rows
@@ -121,6 +122,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 
 - A review run writes `review` with its `scope` and `scope_story_id`, `review_agent` rows referencing `agent` rows rather than carrying persona names as text, and `finding` rows with severity and category as taxonomy references [feature]
 - A story-scoped review parents onto the epic and narrows by `scope_story_id`, rather than appending `-s2` to a filename [integration]
+- The facilitation survives: agent selection still includes one reviewer challenging business value and one challenging technical approach, and the finding stage still reports comprehensively before the ranking stage curates [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Write `review`, `review_agent` and `finding` rows with domain-scoped taxonomy references
@@ -150,6 +152,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 
 - A retro run gathers `observation` rows already written against stories by setting `retro_id`, leaving `story_id` intact, so an observation's origin survives promotion [feature]
 - `learn` and `retire` set the retirement columns on the observation rather than editing a marker into prose; a retired observation is excluded from candidate gathering by a `WHERE` clause [integration]
+- The facilitation survives: the four modes stay mutually exclusive, a `learn` still previews both the library entry and the retirement before either is written, and promotion still retires at the source in the same operation [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Gather observations by setting `retro_id` without clearing `story_id`
@@ -213,6 +216,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 
 - A quick run writes a `quick` row with its `quick_criterion` rows and its single-category retro observation, all typed [feature]
 - Promotion to a completion record is a status update, not a rewrite of the file [feature]
+- The facilitation survives: a fix still has its root cause investigated and its diagnosis confirmed before any change is proposed, and implementation still refuses to begin without the written change description [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Write the `quick` row, its `quick_criterion` rows and its single-category observation

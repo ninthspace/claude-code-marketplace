@@ -54,6 +54,7 @@ by skill.
 
 - An epics run allocates every epic number through the allocation tool, and writes stories, tasks, criteria and coverage rows through create tools [feature]
 - The coverage matrix is a projection of `coverage` rows, not a file the skill writes — the skill emits no markdown table [integration]
+- The facilitation survives: the run still gates on the epic grouping before writing any story, still carries every must-NOT the source spec states into a story criterion, and still refuses to attach a criterion it cannot trace to spec text [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Rewrite epic, story, task, criterion and coverage writes as tool calls
@@ -88,6 +89,7 @@ by skill.
 
 - A do run updates story and task status through update tools, and records verification by writing `coverage.verified_at`, so FR21's triggers govern it rather than the skill's own prose rule [feature]
 - Story readiness comes from the dependency query, not from reading `**Blocked by**` lines [integration]
+- The facilitation survives: the retro-consumption gate still requires a disposition per observation rather than one blanket acknowledgement, and a story's verification gate still fires only once every implementation task under it is complete [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Rewrite status and verification updates as tool calls

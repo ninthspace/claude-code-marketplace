@@ -31,6 +31,14 @@
 | 21 | FR13 | The bound is a default that costs nothing to override, not a limit. | Every list-returning call any of the eight skills makes supplies or inherits a `limit`, asserted over the call sites | Story 9 | `[unit]` | |
 | 22 | FR25 (must NOT) | no markdown parsing | Deleting the entire `docs/` tree and regenerating it leaves all eight skills producing identical output, since none of them reads it | Story 9 | `[feature]` | |
 | 23 | NFR7 (must NOT) | Every piece of state is reachable through a read tool without SQL | must NOT — a read skill reports an empty result where the data exists, because it queried one index or one table where the state spans two | Story 9 | `[integration]` | |
+| 24 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: an unrecognised status is still flagged rather than guessed and still counts as not-done, and the optional artifact is still never produced unless asked for and separately confirmed | Story 1 | `[feature]` | |
+| 25 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the run still derives its axis before using it, still refuses to describe a suite as passing without having run it, and still reports what it did not read | Story 2 | `[feature]` | |
+| 26 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the run still gates audience, then format, then draft in turn, and a regeneration over an existing artifact still offers update-in-place rather than silently minting a second one | Story 3 | `[feature]` | |
+| 27 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: a suggested scope is still presented for adjustment rather than applied, and the derived front-matter is still confirmed before the document is written | Story 4 | `[feature]` | |
+| 28 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the run still refuses to invent any of an entry's facts, and a proposed name is still confirmed rather than assigned | Story 5 | `[feature]` | |
+| 29 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: both `list` and `preview` still complete in a single response with no gate, which is the one skill here whose facilitation is the absence of one | Story 6 | `[feature]` | |
+| 30 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: an inferred agent is still confirmed before the consultation begins, the voice is still rendered from that agent's stored traits without inventing beyond them, and the exit is still offered rather than assumed | Story 7 | `[feature]` | |
+| 31 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: agents are still selected from the topic rather than fixed, each voice is still rendered from that agent's stored traits alone, and the run still ends in a direction of travel rather than a transcript | Story 8 | `[feature]` | |
 
 **Mapping notes.**
 
@@ -53,6 +61,26 @@ can pass every grep and still hold a path it constructs at runtime.
 read as "nothing to report", raising no error — is the false-pass shape NFR6 forbids
 generally and NFR7 forbids for read reachability specifically. It is bound to NFR7 because
 the fix is that the state be reachable, not merely that the failure be loud.
+
+**Rows 24–31 were added on 2026-08-08 and are one per conversion story — this matrix had
+none.** That is the largest single gap the retention sweep found, and it was concentrated
+here for a reason worth recording: these eight skills mostly *read*, so a conversion that
+rewrites the query and drops the judgement produces output that still looks right. `status`
+that guesses at an unrecognised token still renders a board. `inspect` that calls a suite
+passing without running it still writes a characterisation. Rows 1–23 would pass in both
+cases, because every one of them asserts where the data came from.
+
+**Row 29 is the odd one and is not a filler row.** `templates` facilitates by *not* gating —
+`list` and `preview` complete in a single response — so its retention criterion asserts an
+absence where the other seven assert presences. It is worth its place precisely because the
+conversion pressure runs the other way: a skill being rewritten alongside seven that gate
+acquires a gate by symmetry, and nothing else here would catch it.
+
+**Rows 30 and 31 depend on the `agent` table from the second pivot of 2026-08-08.** Both say
+a voice is rendered from that agent's *stored traits* and not invented beyond them, which was
+unassertable while personas lived in `agents/roster.yaml` as text a skill could paraphrase.
+The traits are now columns — `personality` and `communication_style` — so "rendered from the
+row" is a comparison rather than a judgement.
 
 **Partial coverage to flag.** FR25 is covered here for eight of twenty-two skills, FR3 for
 eight of twenty-two files; both complete in Epic 47-09. FR13's rows here are the call-site

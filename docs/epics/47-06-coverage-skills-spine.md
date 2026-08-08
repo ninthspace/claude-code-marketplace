@@ -21,6 +21,8 @@
 | 11 | FR3 | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation | None of the three skill files contains a SQL keyword or a `sqlite3` invocation | Story 4 | `[unit]` | |
 | 12 | FR25 | What makes a dpm skill different from its CPM counterpart is subtraction, and it is the same subtraction in every file | A spec written by `spec`, broken down by `epics`, and executed by `do` produces one connected graph — requirements to criteria to coverage to stories — with no step reading what the previous one wrote from disk | Story 4 | `[feature]` | |
 | 13 | FR11 (must NOT) | The progress-file subsystem — session-suffixed filenames, hook injection, adoption on `--resume`, compact-summary companions — is replaced by a session table. | must NOT — a skill's progress state is a file rather than a `session` row | Story 4 | `[integration]` | |
+| 14 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the run still gates on the epic grouping before writing any story, still carries every must-NOT the source spec states into a story criterion, and still refuses to attach a criterion it cannot trace to spec text | Story 2 | `[feature]` | |
+| 15 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the retro-consumption gate still requires a disposition per observation rather than one blanket acknowledgement, and a story's verification gate still fires only once every implementation task under it is complete | Story 3 | `[feature]` | |
 
 **Mapping notes.**
 
@@ -41,6 +43,14 @@ twenty-two files; Epic 47-09 covers the corpus.
 **Row 13 maps to FR11 as a must-NOT the spec does not state in that form.** FR11's own
 criterion (Epic 47-03 row 17) asserts the session row works; this asserts no skill kept a
 file alongside it. Proposed during breakdown and accepted by Chris on 2026-08-08.
+
+**Rows 14 and 15 were added on 2026-08-08, and are appended rather than placed beside rows
+4–9 so the numbers Chris approved keep their positions** — the `Covered by` column carries
+the grouping, not the row order. Only Story 1 carried a retention criterion when this matrix
+was written, which made `spec` look like the exception rather than the pattern; four of the
+breakdown's twenty-two conversion stories had one. They bind to a new FR25 criterion added
+the same day, because FR25's requirement text stated the retention clause while none of its
+four criteria asserted it — the shape review 05 caught at FR26.
 
 **Partial coverage to flag.** FR25 is covered here for three of twenty-two skills. Its
 corpus-wide criteria are Epic 47-09's, and FR25 will read as partially covered in four

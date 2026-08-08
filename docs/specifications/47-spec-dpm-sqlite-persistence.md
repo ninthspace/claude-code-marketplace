@@ -1290,6 +1290,8 @@ Every count in this document that describes a table in this document is checked 
 | FR25 | No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — each is a tool call | `[unit]` |
 | FR25 | Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory | `[integration]` |
 | FR25 | must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool | `[integration]` |
+| FR25 | Each converted skill still performs its counterpart's gates, questions and refusals, asserted **per skill** against the behaviours that skill's CPM `SKILL.md` defines — subtraction is what changes, and the facilitation is what does not | `[feature]` |
+| FR25 | must NOT — a skill satisfies every subtraction sweep while retaining none of its counterpart's facilitation, so a corpus of twenty-two files each carrying a title and a single tool call passes | `[unit]` |
 | FR4 | A status value outside its enum is rejected by `CHECK`, not coerced | `[unit]` |
 | FR4 | Loading a corpus whose labels are all replaced with opaque identifiers leaves every class, MoSCoW band and exclusion value unchanged | `[integration]` |
 | FR4 | must NOT — the `requirement` create tool accepts a class inferred from `label`, rather than requiring `class` as an argument | `[unit]` |
