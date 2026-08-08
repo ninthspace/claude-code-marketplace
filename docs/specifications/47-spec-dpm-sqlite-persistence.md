@@ -49,7 +49,7 @@ None of this is bad engineering. It is the necessary consequence of choosing a s
 
 - **FR12 — Schema migrations are versioned and forward-only.** A `schema_version` row and an ordered migration set, applied automatically on server start, so a plugin update never requires the user to intervene.
 - **FR13 — Reads are bounded by default.** Query tools accept limits and return summaries rather than whole bodies unless a body is explicitly requested, so a skill reading an epic no longer pulls 20 KB into context to answer a question about its status.
-- **FR14 — Referential integrity is checkable on demand.** A verification tool reports orphans, dangling links, and constraint drift across the whole database, so a corrupted state is diagnosable without SQL.
+- **FR14 — The invariants SQLite cannot hold are enumerated, and a tool checks every one.** A verification tool reports orphans, dangling links, and each entry in the cross-row invariant register (Data Model), so a corrupted state is diagnosable without SQL. The register is the contract: an invariant that cannot be a constraint is not thereby excused from being checked, and "constraint drift" as a phrase covers nothing a test can fail on.
 
 ### Could Have
 
@@ -178,28 +178,47 @@ CREATE TABLE document_kind (
   kind        TEXT PRIMARY KEY,          -- 'spec','epic','retro','review','runbook',…
   dir         TEXT NOT NULL,             -- projection directory under docs/
   numbering   TEXT NOT NULL DEFAULT 'root'
-                CHECK (numbering IN ('root','child','none'))
+                CHECK (numbering IN ('root','child','none')),
+  UNIQUE (kind, numbering)               -- parent key for document's composite FK
+);
+
+-- Which kinds may parent which. A kind may legally have more than one parent
+-- kind — a review hangs off a spec or an epic — so this is a table and not a
+-- column on `document_kind`.
+CREATE TABLE document_kind_parent (
+  kind        TEXT NOT NULL REFERENCES document_kind(kind),
+  parent_kind TEXT NOT NULL REFERENCES document_kind(kind),
+  PRIMARY KEY (kind, parent_kind)
 );
 
 CREATE TABLE document (
   id          INTEGER PRIMARY KEY,
-  kind        TEXT    NOT NULL REFERENCES document_kind(kind),
-  number      INTEGER,          -- root-numbered kinds: spec 47. NULL for child-numbered
-  sequence    INTEGER,          -- child-numbered kinds: epic 03 within spec 101
+  kind        TEXT    NOT NULL,
+  numbering   TEXT    NOT NULL,  -- denormalised from document_kind, pinned by FK
+  number      INTEGER,           -- root-numbered kinds: spec 47
+  sequence    INTEGER,           -- child-numbered kinds: epic 03 within spec 101
   slug        TEXT    NOT NULL,
   title       TEXT    NOT NULL,
   status      TEXT    NOT NULL DEFAULT 'pending'
                 CHECK (status IN ('pending','complete')),
   status_note TEXT,             -- the free-text qualifier real epics append to a status
-  parent_id   INTEGER REFERENCES document(id),   -- epic→spec, retro→epic, review→epic
+  parent_id   INTEGER,          -- epic→spec, retro→epic, review→spec or epic
+  parent_kind TEXT,             -- denormalised from the parent, pinned by FK
   archived_at TEXT,             -- orthogonal to status; NULL means live
   commit_sha  TEXT,             -- audit and inspect pin to a commit
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
-  CHECK ((number IS NULL) <> (sequence IS NULL)),
-  CHECK (sequence IS NULL OR parent_id IS NOT NULL)
+  FOREIGN KEY (kind, numbering)        REFERENCES document_kind(kind, numbering),
+  FOREIGN KEY (kind, parent_kind)      REFERENCES document_kind_parent(kind, parent_kind),
+  FOREIGN KEY (parent_id, parent_kind) REFERENCES document(id, kind),
+  CHECK ((numbering = 'root'  AND number   IS NOT NULL AND sequence IS NULL)
+      OR (numbering = 'child' AND sequence IS NOT NULL AND number   IS NULL)
+      OR (numbering = 'none'  AND number   IS NULL     AND sequence IS NULL)),
+  CHECK ((parent_kind IS NULL) = (parent_id IS NULL)),
+  CHECK (numbering <> 'child' OR parent_id IS NOT NULL)
 );
 
+CREATE UNIQUE INDEX document_id_kind      ON document (id, kind);
 CREATE UNIQUE INDEX document_root_number
   ON document (kind, number)              WHERE number IS NOT NULL;
 CREATE UNIQUE INDEX document_child_number
@@ -217,7 +236,11 @@ CREATE UNIQUE INDEX number_sequence_child
   ON number_sequence (kind, parent_id) WHERE parent_id IS NOT NULL;
 ```
 
-**Numbering is two-level, because real projects number two ways.** A spec is numbered globally (`47-spec-…`); an epic is numbered *within* its spec (`101-03-epic-cpm-markers.md` is sequence 3 under spec 101, and every spec restarts at 1). A single `number` column with `UNIQUE (kind, number)` cannot hold the second, so `number` and `sequence` are exclusive alternatives enforced by `CHECK`, and a child sequence requires a parent to be counted within.
+**Numbering is two-level, because real projects number two ways.** A spec is numbered globally (`47-spec-…`); an epic is numbered *within* its spec (`101-03-epic-cpm-markers.md` is sequence 3 under spec 101, and every spec restarts at 1). A single `number` column with `UNIQUE (kind, number)` cannot hold the second, so `number` and `sequence` are exclusive alternatives, and a child sequence requires a parent to be counted within.
+
+**The numbering `CHECK` is keyed to the kind's declared scheme, not merely to exclusivity.** An earlier form said `CHECK ((number IS NULL) <> (sequence IS NULL))` — exactly one of the two, always. That is wrong in both directions. It permitted a kind declared `numbering = 'root'` to store a `sequence` instead, so the declaration on `document_kind` constrained nothing; and it made `numbering = 'none'` **unusable**, since a kind that should carry no number at all could satisfy neither branch and no row of that kind could be inserted. A value the vocabulary offers and the schema forbids is a defect however it is discovered. Denormalising `numbering` onto `document` and pinning it with `FOREIGN KEY (kind, numbering)` makes the kind's scheme available to a row-local `CHECK`, which then enumerates all three cases.
+
+**Parentage is constrained by kind, which is the last mile of the `**Source spec**` fix.** A plain `parent_id REFERENCES document(id)` guarantees the parent *exists* — the Problem Summary's first complaint — but not that it is the right sort of thing. An epic could hang off a review, a retro off a runbook, and every foreign key would be satisfied. `document_kind_parent` is the allow-list, `parent_kind` is denormalised alongside `parent_id`, and two further composite foreign keys close both halves: `(kind, parent_kind)` against the allow-list rejects an illegal pairing, and `(parent_id, parent_kind)` against `document(id, kind)` rejects a row whose `parent_kind` misdescribes the parent it actually points at. Neither can be satisfied by lying, because the second checks the claim against the parent's own row.
 
 `number_sequence` satisfies FR5 for both levels — one row per root kind, one row per (child kind, parent). Allocation is an **upsert**, one statement per level, targeting the partial index that governs it:
 
@@ -317,9 +340,9 @@ CREATE TABLE adr_option_tradeoff (
   PRIMARY KEY (option_id, axis)
 );
 
+-- What was reviewed is `document.parent_id`; only the narrowing lives here.
 CREATE TABLE review (
   document_id    INTEGER PRIMARY KEY REFERENCES document(id) ON DELETE CASCADE,
-  reviewed_id    INTEGER NOT NULL REFERENCES document(id),
   scope          TEXT NOT NULL DEFAULT 'whole'
                    CHECK (scope IN ('whole','story')),
   scope_story_id INTEGER REFERENCES story(id) ON DELETE CASCADE,
@@ -352,7 +375,7 @@ CREATE TABLE quick_criterion (
 
 **The detail table's primary key is the document's, which is what makes AD7 work.** `library_document.document_id` is both primary key and foreign key, so a detail row cannot exist without its document, cannot outlive it, and cannot be duplicated — the one-to-one is structural rather than a rule to maintain. That is also why the polymorphic alternative AD7 rejected fails: a `(kind, id)` pair has no such key to point at.
 
-**`review.reviewed_id` is a plain reference and `review.scope_story_id` narrows it.** A review of an epic and a review of one story within it are the same kind of document with a different scope, which CPM distinguishes by appending `-s2` to a filename. Here it is two columns and a `CHECK`.
+**What a review reviewed is its `parent_id`, and the detail table only narrows it.** A review of an epic and a review of one story within it are the same kind of document with a different scope, which CPM distinguishes by appending `-s2` to a filename. Here it is `scope` plus `scope_story_id` and a `CHECK`. An earlier form of this table also carried `reviewed_id` — which is `document.parent_id` under another name, and so the same relationship recorded twice in two places with nothing keeping them equal. That is the artifact-index-and-backlinks defect this spec was written to remove, reintroduced one section after removing it.
 
 **Supersession is an edge, not a column.** An earlier shape gave `adr` its own `superseded_by`, which would have been a second mechanism for the thing `dependency` already does — the criticism this spec makes of `test_approach` applied to itself. `supersedes` joins `blocks`, `builds_on` and `constrains` as a `dependency_kind` row with `gates_work = 0`. What the schema cannot enforce is that `decision_status = 'superseded'` implies such an edge exists; that pairing is cross-row, so it belongs to FR14's integrity check alongside cycle detection.
 
@@ -628,9 +651,12 @@ CREATE TABLE observation (
   text            TEXT NOT NULL,
   synthesis       TEXT,            -- written when grouped into a retro
   note            TEXT,            -- escape hatch: qualifiers, caveats, scope
-  library_doc_id  INTEGER REFERENCES document(id),   -- set on promotion
+  library_doc_id  INTEGER,         -- set on promotion
+  library_doc_kind TEXT CHECK (library_doc_kind = 'library'),
   retired_at      TEXT,
   retired_reason  TEXT,
+  FOREIGN KEY (library_doc_id, library_doc_kind) REFERENCES document(id, kind),
+  CHECK ((library_doc_id IS NULL) = (library_doc_kind IS NULL)),
   CHECK (retro_id IS NOT NULL OR story_id IS NOT NULL),
   CHECK ((retired_at IS NULL) = (retired_reason IS NULL))
 );
@@ -769,6 +795,27 @@ The FTS index is maintained by the three triggers above, not by a reindex step. 
 
 **The indexed columns are `heading` and `body`, not `title`.** An external-content FTS5 table resolves its column names against the content table at query time, so naming a column the content table does not have produces a table that accepts `CREATE` and then fails on every `rebuild` and every `MATCH` with `no such column`. A `title` column here is precisely that error: titles live on `document`, sections have `heading`. Document titles are therefore not in this index — `document` is small and ordered, and a title query is an ordinary `WHERE`, so FR9's "artefact bodies are indexed" is satisfied without a second virtual table.
 
+### The cross-row invariant register
+
+The table below is the complement of the one that follows it. That one lists drift the schema ends; this one lists the rules the schema **cannot** express, because each spans rows the way a foreign key cannot — reachability across a graph, the existence of a row conditional on a column elsewhere, or agreement between two ends of a four-table join.
+
+Enumerating them is the point. An invariant with no constraint and no register entry is not enforced by anything, and it is invisible: nothing fails, nothing warns, and the rule survives only as long as whoever knew it is still reading the code. That is the same failure the Problem Summary describes for prose-held relationships, one level up.
+
+Every entry is closed twice — refused at the write path so it cannot arrive, and reported by FR14 so it can be found if it arrives another way, chiefly by restoring a dump.
+
+| # | Invariant | Why it cannot be a constraint | Refused at write by | Reported by |
+|---|---|---|---|---|
+| 1 | No cycle among `gates_work` edges | Reachability is not row-local | link tool | FR14 |
+| 2 | `adr.decision_status = 'superseded'` implies a `supersedes` edge out of it | Existence of a row in another table, conditional on a column value | ADR status tool, which sets both or neither | FR14 |
+| 3 | A `coverage` row's requirement and its story criterion belong to the same spec | A four-table join: requirement → spec, criterion → story → epic → spec | coverage create tool | FR14 |
+| 4 | A `coverage_story` row's story is in the same epic as the coverage row it extends | Same shape as #3 | coverage link tool | FR14 |
+| 5 | `number_sequence.next_value` is greater than every number allocated for that kind | An aggregate over another table | upsert allocation holds it by construction | FR14, and it is repairable |
+| 6 | A `dependency`'s ends are kinds that edge admits — `builds_on` spec→spec, `constrains` ADR→ADR | Needs both ends' kinds, and the legal set varies by `dependency_kind` | link tool | FR14 |
+
+**#3 is the one that matters most.** It is the only entry whose violation produces a *plausible* result rather than an obviously broken one: a coverage matrix joining spec A's requirement to spec B's criterion renders perfectly, rolls up to a percentage, and is wrong. It belongs in the false-pass register too, and is listed there.
+
+**#6 is deliberately a register entry and not an allow-list table.** The machinery exists — a `dependency_kind_endpoint(kind, source_kind, target_kind)` table with composite foreign keys would close it structurally, exactly as `document_kind_parent` closes parentage. It is not built because the legal set is not yet known: `blocks` alone spans epic→epic and story→story, and inventing the rest of the matrix before dpm's own pipeline exists would fix guesses in a constraint. When the pipeline settles, this entry converts from a check to a table, and that is the intended direction of travel for anything here that can make the trip.
+
 ### Constraint-to-drift mapping
 
 | Drift in CPM today | Constraint that ends it |
@@ -800,8 +847,11 @@ The FTS index is maintained by the three triggers above, not by a reindex step. 
 | A search index lagging the write that filled it | FTS5 triggers on `document_section` |
 | An observation losing its story when promoted to a retro | inclusive parentage, `story_id` survives |
 | The first number for a kind allocated against no row | upsert allocation, no seeding step |
+| `**Source spec**` naming a document of the wrong kind | `document_kind_parent` + composite FKs |
+| A kind's declared numbering scheme constraining nothing | `numbering` denormalised, pinned, and `CHECK`ed |
+| An invariant too cross-row to be a constraint going unchecked | the cross-row invariant register + FR14 |
 
-Twenty-seven rows. The four shell helpers doing this work in CPM — `coverage-parse.sh`, `coverage-rollup.sh`, `progress-classify.sh`, `cleancheck-guard.sh` — are 1,686 of the 2,305 lines in `cpm/hooks/lib/`.
+Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.sh`, `coverage-rollup.sh`, `progress-classify.sh`, `cleancheck-guard.sh` — are 1,686 of the 2,305 lines in `cpm/hooks/lib/`.
 
 **That figure is evidence, not a saving.** Those helpers stay shipped and working in CPM, which this spec does not touch; nothing here deletes a line of them. What 1,686 lines measures is the price of reconstructing entities from prose *when you do it as carefully as CPM does* — and even paid in full it buys a roll-up that can still silently match nothing and report full coverage. The benefit dpm delivers is not the shell it makes unnecessary but the failures it makes unavailable: the twenty-seven rows above are each a question a user currently has to answer by reading, and afterwards answers by asking. The claim is not that the schema is clever; it is entirely ordinary. It is that ordinary constraints are unavailable in the current substrate at any price.
 
@@ -891,9 +941,23 @@ Twenty-seven rows. The four shell helpers doing this work in CPM — `coverage-p
 | FR24 | must NOT — any vocabulary is seeded and extensible but cannot be retired | `[unit]` |
 | FR23 | Two epics under different specs may both hold sequence 1; two under the same spec may not | `[unit]` |
 | FR23 | Child sequences restart at 1 per parent and never reuse a value after deletion | `[unit]` |
-| FR23 | must NOT — a row carries both `number` and `sequence`, or neither | `[unit]` |
+| FR23 | must NOT — a row carries both `number` and `sequence`, or neither, unless its kind is declared `numbering = 'none'` | `[unit]` |
+| FR23 | A kind declared `numbering = 'none'` accepts a document carrying neither `number` nor `sequence` | `[unit]` |
+| FR23 | must NOT — a kind declared `numbering = 'root'` accepts a row carrying `sequence`, or the reverse | `[unit]` |
+| FR2 | An epic whose `parent_id` names a review is rejected, and one naming a spec is accepted | `[unit]` |
+| FR2 | must NOT — a document's `parent_kind` can misdescribe the kind of the parent it points at | `[unit]` |
+| FR2 | A review parents onto either a spec or an epic, both being allow-listed, and onto a runbook not at all | `[unit]` |
+| FR2 | must NOT — `observation.library_doc_id` accepts a document that is not of kind `library` | `[unit]` |
 | FR12 | A database at schema version *n* is migrated to *n+1* on server start with no user action | `[integration]` |
 | FR14 | The integrity tool reports a deliberately orphaned row | `[integration]` |
+| FR14 | Every numbered entry in the cross-row invariant register has a check in the integrity tool, and the tool has no check absent from the register | `[integration]` |
+| FR14 | A restored dump violating each register entry in turn is reported, one entry at a time, naming the rows | `[integration]` |
+| FR14 | An ADR at `decision_status = 'superseded'` with no outgoing `supersedes` edge is reported (register #2) | `[unit]` |
+| FR14 | A coverage row joining one spec's requirement to another spec's story criterion is reported (register #3) | `[unit]` |
+| FR14 | A `coverage_story` row naming a story outside the coverage row's epic is reported (register #4) | `[unit]` |
+| FR14 | A `number_sequence` row behind the highest number already allocated for its kind is reported and repairable (register #5) | `[unit]` |
+| FR14 | A `builds_on` edge between two epics is reported (register #6) | `[unit]` |
+| FR14 | must NOT — the integrity tool reports a violation it cannot locate, or passes a database holding one | `[integration]` |
 | AD8 | No source file outside the projection renderer imports a markdown parser, and the renderer's only filesystem calls under `docs/` are writes — asserted over the module list, not over behaviour | `[integration]` |
 | AD8 | must NOT — the pre-commit divergence guard (FR7) compares by parsing a generated file rather than by regenerating and diffing bytes | `[integration]` |
 | NFR1 | A clean clone starts the server with no compilation step | `[target]` |
@@ -930,8 +994,10 @@ NFR6 requires that every condition capable of producing a false pass blocks rath
 | 8 | A wrong-domain taxonomy reference | A severity renders as a category and looks merely odd | domain-scoped composite FKs |
 | 9 | A non-deterministic dump | Conflicts on every commit, masking the real ones | NFR4 byte-stability |
 | 10 | A class inferred from a label | Correct until the first label that does not fit the pattern | `requirement.class`, required at the tool boundary |
+| 11 | Coverage joining one spec's requirement to another spec's criterion | The matrix renders, rolls up, and reports a percentage — all of it wrong | cross-row register #3 |
+| 12 | A document parented onto the wrong kind of document | Lineage queries return a plausible tree that is not the real one | `document_kind_parent` composite FKs |
 
-Ten conditions, each with a criterion above. The register is itself the thing under test: a condition discovered later is added here first, and NFR6's second criterion fails until it has a test. Nine of the ten are closed at the schema; only #6 cannot be, which is why it carries two mechanisms instead of one.
+Twelve conditions, each with a criterion above. The register is itself the thing under test: a condition discovered later is added here first, and NFR6's second criterion fails until it has a test. Ten of the twelve are closed at the schema. The two that are not — #6 and #11 — are cross-row, and both appear in the cross-row invariant register with a write-path refusal and an FR14 check rather than a constraint.
 
 ### Integration Boundaries
 
