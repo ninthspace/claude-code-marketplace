@@ -16,6 +16,7 @@ const KEY = {
   taxonomy: 'id',
   agent: 'name',
   test_approach: 'tag',
+  dependency_kind: 'kind',
   observation: 'id',
 };
 

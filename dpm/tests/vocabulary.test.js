@@ -357,8 +357,12 @@ test('every reference into a retirable table carries a guard, and there are guar
   }
 
   assert.ok(expected.length >= 18, `the walk found references to guard — ${expected.length / 2}`);
+  // Scoped to guard-shaped names, because the schema also carries the FR21 and FR26 decay
+  // triggers, which are not guards and never were. Both directions survive the narrowing: a
+  // guard named wrongly drops out of the filter and goes missing from the actual side, and a
+  // guard-shaped trigger nothing derived appears on it with no expectation to match.
   assert.deepEqual(
-    triggerNames(db),
+    triggerNames(db).filter((name) => /_not_retired_on_(insert|update)$/.test(name)),
     [...expected].sort(),
     'and a guard exists for each, on insert and on update',
   );

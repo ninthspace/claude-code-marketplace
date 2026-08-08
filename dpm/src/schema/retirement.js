@@ -101,6 +101,9 @@ function describe(reference) {
   return reference.from.map((column) => `${reference.table}.${column}`).join(', ');
 }
 
+/** The suffix every generated guard's name ends in — how the set is recognised to be dropped. */
+const GUARD_SUFFIX = /_not_retired_on_(insert|update)$/;
+
 export function guardName(reference, event) {
   return `${reference.table}_${reference.from.join('_')}_not_retired_on_${event}`;
 }
@@ -134,11 +137,28 @@ function guard(reference, event) {
 /**
  * Create a guard per referencing column, for inserts and for updates of that column.
  *
+ * **The existing set is dropped first, and that is what makes this callable more than once.**
+ * A migration adds tables and columns after the guards were last derived, so the set has to be
+ * re-derived on every run rather than appended to — and the drop is by name pattern read out
+ * of `sqlite_schema`, not by the names about to be created, so a guard whose reference a
+ * migration *removed* goes with it. Recreating an identical trigger is the ordinary case and
+ * costs nothing; leaving a stale one behind would refuse writes against a table that no longer
+ * has the reference the guard was protecting.
+ *
  * @param {import('node:sqlite').DatabaseSync} db
  * @returns {string[]} The trigger names created — so a caller and a test can distinguish a
  *   generator that ran from one that produced nothing, which a green suite cannot.
  */
 export function createRetirementGuards(db) {
+  const stale = db
+    .prepare("SELECT name FROM sqlite_schema WHERE type = 'trigger'")
+    .all()
+    .filter((trigger) => GUARD_SUFFIX.test(trigger.name));
+
+  for (const trigger of stale) {
+    db.exec(`DROP TRIGGER ${trigger.name}`);
+  }
+
   const created = [];
 
   for (const reference of vocabularyReferences(db)) {

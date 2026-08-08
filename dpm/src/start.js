@@ -1,0 +1,38 @@
+/**
+ * Server start.
+ *
+ * FR12's requirement is that a plugin update "never requires the user to intervene", and every
+ * one of Story 5's criteria is phrased as *on the next server start*. That phrase needs
+ * somewhere to be true: three steps in a fixed order, in one function, so that "start" is a
+ * thing the tests can call rather than a sequence each caller assembles for itself. Epic 47-03's
+ * MCP server calls this and does nothing else to the database before serving.
+ *
+ * The order is not interchangeable. Migrations create the tables the vocabulary is inserted
+ * into, so a release that adds both a table and a term for it works only this way round; and
+ * the connection has to enforce foreign keys before either, or the whole schema is advisory
+ * for the duration of the upgrade.
+ */
+
+import { openConnection } from './db/connection.js';
+import { migrate } from './schema/migrate.js';
+import { applyVocabulary } from './schema/seeds/index.js';
+
+/**
+ * Open a database, bring it up to date, and hand it back ready to serve.
+ *
+ * @param {string} location A file path, or `:memory:`.
+ * @param {object} [options] Passed through to the two update steps, which is how a test drives
+ *   an upgrade carrying a release's worth of change without having a second release to hand.
+ * @returns {{db: import('node:sqlite').DatabaseSync, migrated: object, vocabulary: object}}
+ *   The steps report what they did, because "started" and "started and did nothing" are the
+ *   same observation otherwise (NFR6).
+ */
+export function start(location, options = {}) {
+  const db = openConnection(location);
+
+  return {
+    db,
+    migrated: migrate(db, options),
+    vocabulary: applyVocabulary(db, options),
+  };
+}

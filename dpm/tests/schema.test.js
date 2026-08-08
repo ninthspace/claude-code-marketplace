@@ -76,26 +76,84 @@ test('every foreign key into document is kind-pinned, except the ones the Data M
   );
 });
 
-test('every primary key is TEXT, and every table has one', (t) => {
+test('every primary key is TEXT, and every table has an identity something enforces', (t) => {
   const db = applySchema(openDatabase(t));
-  const missing = [];
+  const unidentified = [];
   const wrongType = [];
 
   for (const table of authoredTables(db)) {
     const key = db.prepare(`PRAGMA table_info(${table})`).all().filter((c) => c.pk > 0);
 
-    // "Every primary key is TEXT" is vacuously true of a table with no primary key, which is
-    // the false pass this half is here to close.
-    if (key.length === 0) missing.push(table);
+    // "Every primary key is TEXT" is vacuously true of a table with no primary key, so the
+    // second half of the claim is what stops the first passing by absence. A primary key is
+    // the usual way to satisfy it and not the only one — the two others in this schema are
+    // read out of `sqlite_schema` rather than excused by name, so a table that merely *lacks*
+    // an identity still fails.
+    if (key.length === 0 && !identifiedByIndex(db, table)) unidentified.push(table);
 
     for (const column of key) {
       if (column.type.toUpperCase() !== 'TEXT') wrongType.push(`${table}.${column.name} ${column.type}`);
     }
   }
 
-  assert.deepEqual(missing, [], 'a table with no primary key satisfies any claim about its primary key');
+  assert.deepEqual(unidentified, [], 'a table nothing keys satisfies any claim about its key');
   assert.deepEqual(wrongType, [], 'AD9: every surrogate key is a ULID stored as TEXT');
 });
+
+/**
+ * True when a unique index identifies every row of a table that declares no primary key.
+ *
+ * Two shapes count, and the distinction between them is what stops this becoming an excuse
+ * rather than a check:
+ *
+ * - A **whole-table** unique index over columns that cannot be NULL. `schema_version` is this
+ *   — `UNIQUE (version)` on a `NOT NULL` column, which is exactly as strong as a key. The
+ *   NOT-NULL half is not a detail: SQLite treats NULLs as distinct in a unique index, so the
+ *   same index over a nullable column identifies nothing on the rows that are NULL there,
+ *   which is the trap `no UNIQUE constraint rests on a column that can be NULL` covers below.
+ * - A **complementary partial pair** — `WHERE c IS NULL` and `WHERE c IS NOT NULL` — which is
+ *   exhaustive, so no row escapes both. `number_sequence` needs this and cannot use the first
+ *   shape: it is keyed on `(kind, parent_id)` where `parent_id` is NULL for every root-numbered
+ *   kind, so a whole-table index over that pair would enforce nothing on exactly the rows that
+ *   need it. A partial index is deliberately not enough on its own, for the same reason.
+ */
+function identifiedByIndex(db, table) {
+  // `PRAGMA index_list` and not `sqlite_schema`, because a table-level `UNIQUE (…)` is an
+  // *auto-index* whose `sql` is NULL — so reading the DDL text finds only the indexes written
+  // as `CREATE UNIQUE INDEX` and reports `schema_version` as having no identity at all.
+  const indexes = db
+    .prepare(`PRAGMA index_list(${table})`)
+    .all()
+    .filter((index) => index.unique === 1);
+
+  const notNull = new Set(
+    db.prepare(`PRAGMA table_info(${table})`).all().filter((c) => c.notnull === 1).map((c) => c.name),
+  );
+
+  const columnsOf = (index) =>
+    db.prepare(`PRAGMA index_info(${index.name})`).all().map((column) => column.name);
+
+  const whole = indexes
+    .filter((index) => index.partial === 0)
+    .map(columnsOf)
+    .some((columns) => columns.length > 0 && columns.every((column) => notNull.has(column)));
+
+  // A partial index's condition is only in its DDL text, and a partial index is always written
+  // rather than derived, so this half does read `sqlite_schema`.
+  const clauses = db
+    .prepare("SELECT sql FROM sqlite_schema WHERE type = 'index' AND tbl_name = ? AND sql IS NOT NULL")
+    .all(table)
+    .filter((index) => /CREATE\s+UNIQUE\s+INDEX/i.test(index.sql))
+    .map((index) => /\sWHERE\s+(.+)$/is.exec(index.sql)?.[1]?.trim())
+    .filter(Boolean);
+
+  const partitioned = clauses.some((clause) => {
+    const column = /^(\w+)\s+IS\s+NULL$/i.exec(clause)?.[1];
+    return column && clauses.some((other) => new RegExp(`^${column}\\s+IS\\s+NOT\\s+NULL$`, 'i').test(other));
+  });
+
+  return whole || partitioned;
+}
 
 test('no UNIQUE constraint rests on a column that can be NULL', (t) => {
   const db = applySchema(openDatabase(t));

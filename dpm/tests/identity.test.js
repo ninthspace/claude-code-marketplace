@@ -20,7 +20,7 @@ import { openConnection } from '../src/db/connection.js';
 import { ulid } from '../src/id/ulid.js';
 import { registerCreators } from './support/creators.js';
 import { create } from './fixtures/index.js';
-import { applySeeds } from '../src/schema/seeds/index.js';
+import { applyVocabulary } from '../src/schema/seeds/index.js';
 import { childDocument, retroDocument, rootDocument, specWithEpic } from './fixtures/planning.js';
 
 test('an epic parents onto a spec and not onto a review', (t) => {
@@ -161,7 +161,7 @@ test('a connection dpm opens enforces foreign keys, whatever the default was', (
   const setup = openConnection(file.path);
   t.after(() => setup.close());
   applySchema(setup);
-  applySeeds(setup);
+  applyVocabulary(setup);
   const spec = rootDocument(setup, 'spec', { number: 47 });
 
   const dangling = {

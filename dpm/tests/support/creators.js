@@ -78,6 +78,13 @@ const CREATORS = {
   story: writes('story', () => ({ id: ulid(), number: 1, title: 'Story', position: 1 })),
   story_criterion: writes('story_criterion', () => ({ id: ulid(), text: 'Criterion', position: 1 })),
   coverage: writes('coverage', () => ({ id: ulid(), position: 1 })),
+  coverage_story: writes('coverage_story'),
+
+  adr_option: writes('adr_option', () => ({ id: ulid(), name: 'Option', chosen: 0, position: 1 })),
+
+  session: writes('session', () => ({
+    id: ulid(), superseded_by: null, created_at: EPOCH, updated_at: EPOCH,
+  })),
 
   milestone: writes('milestone', () => ({ id: ulid(), label: 'M1', title: 'Milestone', position: 1 })),
   document_milestone: writes('document_milestone'),
@@ -94,6 +101,17 @@ const CREATORS = {
   story_criterion_approach: writes('story_criterion_approach'),
 
   review_agent: writes('review_agent'),
+
+  // Every end defaults to NULL so a test can name exactly the two it means, including the
+  // combinations the CHECKs are there to refuse.
+  dependency: writes('dependency', () => ({
+    id: ulid(),
+    kind: 'blocks',
+    source_document_id: null,
+    source_story_id: null,
+    target_document_id: null,
+    target_story_id: null,
+  })),
 
   // `category_domain`, `severity_domain` and `dimension_domain` are left to their schema
   // defaults, so a test that puts a severity in a category slot writes only the id — which is

@@ -8,8 +8,8 @@
 -- but written into an output template as literal headings — held almost perfectly. The
 -- difference is form, not discipline.
 --
--- These tables are created here and seeded by `applySeeds`. Story 1's tables reference all
--- three as forward references, which SQLite resolves at write time rather than at CREATE.
+-- These tables are created here and filled by `applyVocabulary`. Story 1's tables reference
+-- all three as forward references, which SQLite resolves at write time rather than at CREATE.
 --
 -- **`retired_at` is the only retirement column.** A retired term stays readable and stays
 -- referenced; what retirement stops is *new* rows arriving. SQLite has no way to say that in

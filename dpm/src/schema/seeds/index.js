@@ -1,5 +1,5 @@
 /**
- * Vocabulary seeding.
+ * The controlled vocabularies, and the only two ways they ever change (FR24, FR12).
  *
  * AD8 says a project starts from an empty database, and this is the one thing that is not
  * empty in it. The distinction is between *data* and *terms*: a spec, an epic and a finding
@@ -7,60 +7,163 @@
  * `Findings` is not has to be true before the first row is written, or the constraints that
  * depend on it hold vacuously.
  *
- * Kept separate from `applySchema` rather than folded into it, because the two answer to
- * different stories: DDL is created once and migrated forward (Story 5), while a vocabulary
- * is appended to and retired from. Story 5's vocabulary migrations are insert-if-absent for
- * that reason, and this is the initial insert they build on.
+ * **Seeding and upgrading are the same operation, run on every server start.** A plugin-side
+ * vocabulary change reaches an existing project through FR12's migration channel and never
+ * through a re-seed, and exactly two operations are legal:
+ *
+ * 1. **Insert a term that is absent**, guarded on the **primary key**.
+ * 2. **Retire a term that is live**, `SET retired_at WHERE retired_at IS NULL`.
+ *
+ * Both are idempotent and neither reads project state, which together are why the schema
+ * needs no record of which rows a project has touched — no provenance column, no content
+ * hash, no reconcile step. A fresh database is simply one where every term is absent, so the
+ * first run inserts all of them and every later run inserts what the release added.
+ *
+ * **Guarding on the key and not on live terms is what stops resurrection.** Retirement sets a
+ * column; the row stays. An insert guarded on "no live term of this name" would find none,
+ * insert a second row — or overwrite the first — and hand back a term the project had
+ * deliberately retired, on the next upgrade, every upgrade. Guarding on the key sees the row
+ * that is there and does nothing.
+ *
+ * **Rewriting a term's text is not one of the operations, deliberately.** A row's `name` or
+ * `display_name` is what every row referencing it is recorded as meaning, and changing it
+ * changes the meaning of history silently — no row moves, no constraint fires, and the
+ * finding filed last year now says something else. It is also how a project's own edit would
+ * be destroyed, since nothing distinguishes an edited default from a shipped one. The ban is
+ * kept by there being no statement here that could do it.
  */
 
 import { AGENTS } from './agents.js';
+import { DEPENDENCY_KINDS } from './dependency-kinds.js';
 import { DOCUMENT_KINDS, KIND_PARENTS } from './document-kinds.js';
+import { RETIREMENTS } from './retirements.js';
 import { TAXONOMY } from './taxonomy.js';
 import { TEST_APPROACHES } from './test-approaches.js';
 
 /**
- * Insert `rows` into `table`, keyed off the first row's columns.
+ * Every vocabulary, in application order — parents before the tables that reference them.
  *
- * A plain `INSERT`, not an upsert: `applySeeds` runs once against a database that has just
- * been created, so a conflict here is a duplicated term in the seed data rather than a
- * re-run, and `ON CONFLICT DO NOTHING` would swallow exactly the bug this catches.
+ * @type {{table: string, rows: object[]}[]}
  */
-function insertRows(db, table, rows) {
-  const columns = Object.keys(rows[0]);
-  const statement = db.prepare(
-    `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
-  );
+export const VOCABULARIES = [
+  { table: 'document_kind', rows: DOCUMENT_KINDS },
+  {
+    table: 'document_kind_parent',
+    rows: KIND_PARENTS.map(([kind, parent_kind]) => ({ kind, parent_kind })),
+  },
+  { table: 'taxonomy', rows: TAXONOMY },
+  { table: 'agent', rows: AGENTS },
+  { table: 'test_approach', rows: TEST_APPROACHES },
+  { table: 'dependency_kind', rows: DEPENDENCY_KINDS },
+];
 
-  for (const row of rows) {
-    statement.run(...columns.map((column) => row[column]));
+/** A table's primary key columns, in declaration order — the conflict target. */
+function primaryKeyOf(db, table) {
+  const columns = db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all()
+    .filter((column) => column.pk > 0)
+    .sort((a, b) => a.pk - b.pk)
+    .map((column) => column.name);
+
+  // A vocabulary with no primary key has no absence to guard on, so every run would insert
+  // its terms again. Refusing is the only honest answer: `ON CONFLICT DO NOTHING` without a
+  // target would appear to work and would quietly key off whichever other constraint fired.
+  if (columns.length === 0) {
+    throw new Error(`${table} has no primary key — an insert-if-absent has nothing to guard on`);
   }
 
-  return rows.length;
+  return columns;
 }
 
 /**
- * Seed every controlled vocabulary, in one transaction.
+ * Operation 1 — insert each row that is not already present, by primary key.
+ *
+ * @returns {{inserted: number, present: number}} Distinguishing the two is the point: a run
+ *   that found everything present and one that could not write are otherwise identical.
+ */
+function insertIfAbsent(db, table, rows) {
+  const columns = Object.keys(rows[0]);
+  const statement = db.prepare(`
+    INSERT INTO ${table} (${columns.join(', ')})
+    VALUES (${columns.map(() => '?').join(', ')})
+    ON CONFLICT (${primaryKeyOf(db, table).join(', ')}) DO NOTHING
+  `);
+
+  let inserted = 0;
+
+  for (const row of rows) {
+    inserted += statement.run(...columns.map((column) => row[column])).changes;
+  }
+
+  return { inserted, present: rows.length - inserted };
+}
+
+/**
+ * Operation 2 — retire each named term that is still live.
+ *
+ * `WHERE retired_at IS NULL` is what makes this idempotent *and* what stops it overwriting a
+ * date. A project that retired the same term earlier keeps its own date, which is the one that
+ * describes what actually happened in that project.
+ *
+ * @returns {{retired: number, alreadyRetired: number, absent: number}}
+ */
+function retireIfLive(db, retirements) {
+  const summary = { retired: 0, alreadyRetired: 0, absent: 0 };
+
+  for (const { table, key, at } of retirements) {
+    const column = primaryKeyOf(db, table);
+
+    if (column.length !== 1) {
+      throw new Error(`cannot retire ${table} by key: its primary key is ${column.join(', ')}`);
+    }
+
+    const changes = db
+      .prepare(`UPDATE ${table} SET retired_at = ? WHERE ${column[0]} = ? AND retired_at IS NULL`)
+      .run(at, key).changes;
+
+    if (changes === 1) {
+      summary.retired += 1;
+      continue;
+    }
+
+    // Nothing changed, and the two reasons are not the same event. A term already retired is
+    // the ordinary second run; a term that is not there at all is a project that deleted it,
+    // which is legal and is worth being able to see in the return value rather than reading
+    // as a retirement that happened.
+    const present = db.prepare(`SELECT 1 FROM ${table} WHERE ${column[0]} = ?`).get(key);
+    if (present) summary.alreadyRetired += 1;
+    else summary.absent += 1;
+  }
+
+  return summary;
+}
+
+/**
+ * Bring `db`'s vocabularies up to what this release ships. Safe on a fresh database and on one
+ * that has been through every upgrade since.
  *
  * @param {import('node:sqlite').DatabaseSync} db
- * @returns {Record<string, number>} Rows written per table — so a caller and a test can tell
- *   a seed that ran from one that found nothing to do, which are otherwise indistinguishable.
+ * @param {object} [options]
+ * @param {{table: string, rows: object[]}[]} [options.vocabularies] What this release ships;
+ *   injected so a test can run an upgrade carrying a term the current release does not.
+ * @param {{table: string, key: string, at: string}[]} [options.retirements]
+ * @returns {{inserted: Record<string, {inserted: number, present: number}>, retired: object}}
  */
-export function applySeeds(db) {
+export function applyVocabulary(
+  db,
+  { vocabularies = VOCABULARIES, retirements = RETIREMENTS } = {},
+) {
   db.exec('BEGIN');
 
-  let written;
+  let result;
 
   try {
-    written = {
-      document_kind: insertRows(db, 'document_kind', DOCUMENT_KINDS),
-      document_kind_parent: insertRows(
-        db,
-        'document_kind_parent',
-        KIND_PARENTS.map(([kind, parent_kind]) => ({ kind, parent_kind })),
+    result = {
+      inserted: Object.fromEntries(
+        vocabularies.map(({ table, rows }) => [table, insertIfAbsent(db, table, rows)]),
       ),
-      taxonomy: insertRows(db, 'taxonomy', TAXONOMY),
-      agent: insertRows(db, 'agent', AGENTS),
-      test_approach: insertRows(db, 'test_approach', TEST_APPROACHES),
+      retired: retireIfLive(db, retirements),
     };
   } catch (error) {
     db.exec('ROLLBACK');
@@ -68,5 +171,5 @@ export function applySeeds(db) {
   }
 
   db.exec('COMMIT');
-  return written;
+  return result;
 }

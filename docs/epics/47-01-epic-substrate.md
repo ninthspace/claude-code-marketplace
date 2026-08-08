@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: —  
 **Retro applied**: 33 · Codebase discovery · Applied — every DDL batch is executed against a real SQLite database as it is written; each kind-pinning and rejection criterion is asserted by a failed INSERT rather than by reading the constraint  
 **Retro applied**: 33 · Codebase discovery · Applied — no probe or test counts unless `PRAGMA foreign_keys=ON` was set on that same connection; Story 1's fresh-connection criterion asserts against a reopened temp-file database, not a shared handle  
@@ -178,7 +178,7 @@ is identity only.
 
 ## Allocate numbers two-level and never reuse them
 **Story**: 3  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
 **Satisfies**: FR5, FR23
 
@@ -196,25 +196,39 @@ is identity only.
 ### Write `number_sequence` with partial unique indexes for root and child allocation
 **Task**: 3.1  
 **Description**: The two schemes are exclusive alternatives, so they are two partial indexes rather than one nullable column.  
-**Status**: Pending
+**Status**: Complete
 
 ### Implement the upsert allocation that holds register #5 by construction
 **Task**: 3.2  
 **Description**: Scoped to the allocation statement only — the MCP tool wrapping it belongs to Epic 47-03.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Allocate numbers two-level and never reuse them
 **Task**: 3.3  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
-**Status**: Pending
+**Status**: Complete
+
+**Retro**: [Codebase discovery] `number_sequence` cannot have a primary key, and the reason generalises. Its natural key is `(kind, parent_id)`, `parent_id` is NULL for every root-numbered kind, and a unique index treats NULLs as distinct — so a key over that pair would enforce nothing on exactly the rows that most need it. Two partial indexes splitting the table on `parent_id IS NULL` do enforce it, on both sides. This collided with an assertion added in Story 1 as a false-pass closure — "every table has a primary key" — which is a proxy for the property that actually matters, that every table has an identity something enforces. The assertion was rewritten to read the partition out of `sqlite_schema` rather than to excuse the table by name, so a table that merely *lacks* a key still fails; breaking the complementary pair was checked to confirm it does.
+
+**Retro**: [Testing gap] Run the rejected design inside the test when the criterion is about a silent failure. "An allocation never reports success without a number" is unfalsifiable as written — a passing allocation satisfies it, and so does one that would fail differently. The test executes the bare `UPDATE … RETURNING` against an unallocated kind first and asserts it returns `undefined` with no error, then asserts the upsert returns 1 in the same state. Without the first half the second is a test that a working thing works.
+
+**Retro**: [Codebase discovery] No seeded kind uses `numbering = 'none'`, so nothing built from realistic fixtures ever reaches that branch of the numbering CHECK — and an earlier form of the CHECK made the value unusable outright, since a kind carrying no number could satisfy neither branch and no row of it could be inserted at all. A vocabulary value with no seeded user needs a test that declares one; otherwise the schema can forbid what the vocabulary offers and every test still passes.
 
 ---
 
 ## Model relationships as typed edges
 **Story**: 4  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
 **Satisfies**: FR22, FR27
+
+**Retro**: [Testing gaps] The criterion "a `builds_on` edge does not gate readiness; a `blocks` edge does" is satisfied identically by reading `gates_work` and by hardcoding `WHERE kind = 'blocks'` — a mutation to the latter survived all 67 tests. `blocks` is the only seeded kind with the flag set, so every criterion phrased in kind names is blind to the difference. Closed by a test that moves the flag and leaves the kinds alone; the general shape is that a criterion naming a seeded value cannot test the indirection that value is reached through.
+
+**Retro**: [Codebase discoveries] Three of `dependency`'s four end columns are NULL in every row, and SQLite treats NULLs as distinct in a `UNIQUE` index — so the obvious constraint over those four columns forbids nothing at all and the same edge stores any number of times. One expression index over `coalesce(col, -1)` collapses each absent end to a sentinel; the sentinel is safe because SQLite never compares an INTEGER equal to a TEXT ULID.
+
+**Retro**: [Complexity underestimates] Three test failures in Task 4.4 read as readiness bugs and were one fixture default: `childDocument` titles every row `'Title'`, so title-keyed assertions matched whichever epic came back first and one negative assertion was true regardless of the result. Fixture defaults that collide are invisible in the passing direction — assertions key on `id` now, and `specWithEpics` titles each epic distinctly.
+
+**Retro**: [Patterns worth reusing] Story 2's derived retirement guards covered `dependency_kind` the day Task 4.1 created it — two triggers generated from `PRAGMA foreign_key_list`, no new code, nothing to remember. Deriving DDL from the schema rather than writing it per table is what let a Story 2 criterion be closed by a Story 4 task without either story reaching into the other.
 
 **Acceptance Criteria**:
 
@@ -229,30 +243,38 @@ is identity only.
 ### Write `dependency` and `dependency_kind` with the coalesce dedup index
 **Task**: 4.1  
 **Description**: Covers the duplicate-edge rejection across every NULL combination. One expression index rather than four partial ones.  
-**Status**: Pending
+**Status**: Complete
 
 ### Implement readiness traversal so only `gates_work` kinds gate
 **Task**: 4.2  
 **Description**: Covers the `builds_on`-does-not-gate pair and the two-blockers case. A `builds_on` cycle is legal precisely because no readiness query traverses it.  
-**Status**: Pending
+**Status**: Complete
 
 ### Project `document_milestone` into the readiness result
 **Task**: 4.3  
 **Description**: FR27's query half — "which epics are in M2" is answered here, and an epic joined to two milestones reports both rather than being filed under one. The join is many-to-many for exactly that case; a readiness result that returns a single milestone re-imposes the column FR27 removed.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Model relationships as typed edges
 **Task**: 4.4  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Version the schema and migrate forward-only
 **Story**: 5  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
 **Satisfies**: FR12, FR24
+
+**Retro**: [Pattern worth reusing] The numbered `.sql` files *are* the migrations, so creating a schema and upgrading one are one loop over one list and a fresh database is just one recorded at version 0. Story 8's "migrations and DDL produce an identical `sqlite_schema`" becomes structural rather than something two paths have to be tested into agreeing on. What it does not buy is worth stating in the same breath: editing an already-released file still produces two schemas, and no in-process comparison can see it, because both sides read the same working tree.
+
+**Retro**: [Codebase discovery] `PRAGMA index_list` and `sqlite_schema` disagree about what a unique index is. A table-level `UNIQUE (…)` becomes an *auto-index* whose `sql` is NULL, so a check reading index DDL out of `sqlite_schema` sees no index at all — Story 1's identity check reported `schema_version` as having nothing keying it while `UNIQUE (version)` was sitting in its `CREATE TABLE`. The pragma reports both kinds; the DDL text is needed only for a partial index's `WHERE`, which is the one thing the pragma reduces to a flag.
+
+**Retro**: [Testing gap] Four of Story 5's five criteria are about what an *upgrade* does, and a test that builds the new state and checks the new state passes against an implementation that does nothing. Every test here builds a database from before the change, closes it, and starts it again — which needed a `support/` helper that applies DDL by hand, because `migrate` always brings a database to the current version and so cannot produce a state to upgrade *from*.
+
+**Retro**: [Complexity underestimate] Three of the seven Story 5 mutations landed on the wrong thing before landing on the right one: one edited a comment that named the banned operation, one broke every test in the suite because `document_kind` lacks the column it set, and one was absorbed by a second line of defence and proved only that the two guards are genuinely independent. A mutation is a hypothesis about which line carries a behaviour, and a mutation that fails everything or fails the wrong test has not tested the guard — it has to be re-aimed rather than counted.
 
 **Acceptance Criteria**:
 
@@ -265,25 +287,33 @@ is identity only.
 ### Write `schema_version` and the ordered migration runner applied on server start
 **Task**: 5.1  
 **Description**: Forward-only, no user intervention. The runner is a second path to the same schema as the DDL, which is what Story 8's first criterion exists to catch.  
-**Status**: Pending
+**Status**: Complete
 
 ### Restrict vocabulary migrations to insert-if-absent and retire-if-live
 **Task**: 5.2  
 **Description**: FR24's evolution clause. A plugin-side vocabulary change is a migration, never a re-seed, and only two operations are legal: `INSERT` guarded on absence **by primary key**, and `UPDATE … SET retired_at WHERE retired_at IS NULL`. Guarding on the key rather than on live terms is what stops the resurrection case — retirement sets a column, so a retired row is still present. Rewriting a vocabulary row's text is not an operation, and that ban is what makes both permitted ones idempotent without the schema recording which rows a project has touched: no provenance column, no content hash, no reconcile.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Version the schema and migrate forward-only
 **Task**: 5.3  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`. The four vocabulary-evolution criteria each need a database created *before* the change and migrated into it — a test that seeds the new state directly asserts nothing about the upgrade path.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Check the invariants SQLite cannot hold
 **Story**: 6  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1, Story 2, Story 3, Story 4  
 **Satisfies**: FR14, NFR6
+
+**Retro**: [Criteria gap] Two of Story 6's coverage rows cannot be marked by this epic, and the reasons are worth separating. Row 27 asks every false-pass condition to have a test, over a register spanning the whole product — six of the twenty close in epics this one does not touch. Row 52 asks for a check the schema cannot support: no detail table carries a timestamp, so a row written before a term was retired is indistinguishable from one written after, and reporting "rows referencing a retired term" would flag the legal rows FR24 exists to protect. A criterion whose scope exceeds its story, and one that names an undecidable predicate, both fail at a gate rather than at authoring — which is where they were writable.
+
+**Retro**: [Testing gap] A helper that scans the suite for test names was reading capture group 1 (the quote character) instead of group 2, so every citation in the false-pass register resolved against a two-element set and the register looked complete. Nothing about the citations said so — what said so was a guard asserting the scan had found more than fifty tests. Any check that resolves names against a set it built itself needs an assertion that the set is populated, because an empty set makes every lookup fail in the same direction and a full one makes them all pass.
+
+**Retro**: [Codebase discovery] `PRAGMA foreign_key_check` reports `table`, `rowid` and the foreign key's *index*, not its columns — so an orphan arrives as "table story, row 41, key 0", which is precisely the "reports a violation it cannot locate" half of this story's must-NOT. Resolving the index through `PRAGMA foreign_key_list` is what turns it into `epic_id, epic_kind`, and it names a composite key whole rather than reporting one of its columns.
+
+**Retro**: [Pattern worth reusing] The marker sweep for register #13 derives its columns from `PRAGMA table_info` and scans every TEXT column, rather than working from a list of the prose ones. The entry's whole difficulty is that a marker lives where no foreign key reaches, so a declared list fails in exactly the way the entry exists to prevent — a column added later holds markers nothing sweeps and the report still reads clean. Same reasoning as Story 2's derived retirement guards, and mutating the sweep to a three-name list was caught immediately.
 
 **Acceptance Criteria**:
 
@@ -296,30 +326,38 @@ is identity only.
 ### Implement the thirteen cross-row register checks
 **Task**: 6.1  
 **Description**: One check per numbered entry, each naming the offending rows. Entry #3 matters most — it is the only one whose violation renders plausibly.  
-**Status**: Pending
+**Status**: Complete
 
 ### Implement orphan and dangling-reference detection
 **Task**: 6.2  
 **Description**: Covers the deliberately-orphaned-row criterion, and the restore path's `PRAGMA foreign_key_check` consumes the same detection.  
-**Status**: Pending
+**Status**: Complete
 
 ### Assert register-to-check parity in both directions
 **Task**: 6.3  
 **Description**: An entry with no check, and a register-derived check with no entry, both fail. Scoped to register-derived checks — the tool may hold others.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Check the invariants SQLite cannot hold
 **Task**: 6.4  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Decay verification and completeness when the text they were bound to changes
 **Story**: 7  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
 **Satisfies**: FR21, FR26, NFR6
+
+**Retro**: [Testing gap] `coverage_claim_hash` looked like a column nothing reads: a mutation emptying the hash of all content — digesting nothing at all — passed the whole 108-test suite. The triggers clear the claim on every event that changes the bound set, so the hash's *content* only matters once a trigger is gone, and no test reached that state. Closed by dropping `requirement_unclaim_on_coverage_insert`, changing the set, and asserting the claim reads claimed-but-stale. A second line of defence is untested by construction while the first works, and the only way to test it is to remove the first.
+
+**Retro**: [Codebase discovery] The seven triggers went in verbatim from the spec's DDL and all thirteen criteria passed on the first run — the only story in this epic where that happened. The spec had already executed them: the `spec_fragment` trigger exists because a draft carrying only two was run and the row kept a `binding_hash` over replaced text. Trigger DDL that has been executed against a real database transcribes without adjustment in a way prose about triggers never does.
+
+**Retro**: [Pattern worth reusing] Every decay assertion has a byte-identical control beside it — `UPDATE … SET text = text` on all three watched columns, and an unrelated-column write on each of the three tables. Removing `WHEN OLD.text <> NEW.text` from one trigger fails only the control, which is the whole point: a trigger clearing on any write passes every decay test and makes the mark worthless. False-pass #18 is that observation written down, and it earned its place.
+
+**Retro**: [Codebase discovery] A source file acquired two raw NUL bytes where an escape was intended — a hash separator written as a literal rather than as ` `. It ran correctly, so nothing failed; what found it was a byte-level sweep of `dpm/` after a string-replace refused to match text that looked identical on screen. A separator chosen precisely because no fragment can contain it is the kind of value that has to be written as an escape, or it is invisible in every diff it appears in.
 
 **Acceptance Criteria**:
 
@@ -340,40 +378,46 @@ is identity only.
 ### Write the three `AFTER UPDATE OF` triggers, one per column the binding is computed from
 **Task**: 7.1  
 **Description**: Three, not two. The binding is computed from two texts held in three places — `requirement.text`, `acceptance_criterion.text` and `coverage.spec_fragment` — and a draft carrying only the first two left the fragment editable with the ✓ intact, verified by execution.  
-**Status**: Pending
+**Status**: Complete
 
 ### Constrain `verified_at` and `binding_hash` to be set and cleared together
 **Task**: 7.2  
 **Description**: A row holding one without the other is a verification state nothing can re-derive. The `CHECK` makes the pair atomic rather than leaving it to whichever trigger fired.  
-**Status**: Pending
+**Status**: Complete
 
 ### Enumerate the watched columns and assert a trigger exists for each
 **Task**: 7.3  
 **Description**: Closes the final clause. The set of columns the binding hashes is declared and compared against `sqlite_schema`, so adding a fourth input to the hash fails until it has a trigger — the same shape as Story 6's register-to-check parity.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write the four unclaim triggers on `requirement.coverage_claimed_at`
 **Task**: 7.4  
 **Description**: FR26. Four events change the set a claim was made against — a coverage row arrives, one leaves, a fragment is rewritten, and the text being accounted for is edited — so four triggers. `requirement_unclaim_on_text_edit` updates the table it fires on; that was verified safe with `recursive_triggers` both off and on, because it watches `text` and writes only the two claim columns.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write the claim tool and the `CHECK` binding the claim pair together
 **Task**: 7.5  
 **Description**: Claiming is a deliberate act with no derived alternative — the Data Model records why a computed version was rejected. The `CHECK` keeps `coverage_claimed_at` and `coverage_claim_hash` set and cleared together, as `verified_at`/`binding_hash` are one level down.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Decay verification and completeness when the text they were bound to changes
 **Task**: 7.6  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`. Both byte-identical controls matter as much as the decay cases — a trigger that clears on every write passes every decay criterion and makes the claim worthless. That is false-pass register entry #18.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Verify cross-story integration for Substrate
 **Story**: 8  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1, Story 2, Story 3, Story 4, Story 5, Story 6, Story 7  
 **Satisfies**: FR12, FR14
+
+**Retro**: [Scope surprise] This story's headline criterion — that a migrated schema and a directly created one are identical — was satisfied by a Story 5 design decision rather than by anything written here. Making the numbered `.sql` files *be* the migrations left one code path where the epic assumed two, so the comparison could not fail structurally. It was still worth writing: mutating the migration path to derive retirement guards only on a fresh database made the two schemas differ, and five tests caught it, four of them here. A criterion made structurally true is not a criterion that stopped being worth testing — the derived DDL is exactly the part that lives outside the files.
+
+**Retro**: [Testing gap] The recurring shape across five of these seven tests is *data survives, behaviour does not*: a ✓, a completeness claim, a milestone assignment and a number counter all persist across an upgrade while the triggers that decay them can vanish with a recreated table. Each half passes its own story's criteria, and a database that is structurally correct and behaviourally hollow reads as healthy until the first edit that should have cleared something. Testing that a value survived a migration asserts almost nothing; testing that the mechanism which invalidates it survived is the assertion worth making.
+
+**Retro**: [Codebase discovery] Comparing two schemas by object *count* reports "41 versus 40" on the only failure the comparison exists to catch. Comparing them as a sorted list of `type name on table` plus DDL text names the missing object, and a guard on list length stops a shape function that read nothing from passing as agreement — the same emptiness trap as Story 6's test-name scan, two files apart.
 
 **Acceptance Criteria**:
 
@@ -389,7 +433,7 @@ is identity only.
 ### Write integration tests for Substrate
 **Task**: 8.1  
 **Description**: Covers the cross-story criteria above. The first criterion is the one that earns this story — Stories 1–5 produce two independent paths to the same schema and no per-story criterion compares them.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
