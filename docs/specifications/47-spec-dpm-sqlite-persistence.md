@@ -6,9 +6,13 @@
 
 ## Problem Summary
 
-**Who this is for.** dpm is for projects running CPM at a volume where prose reconstruction stops holding. The evidence that such a volume exists is a single real project carrying **393 CPM artefacts**, and what it shows is not untidiness but degradation with scale: seven retro categories written as eleven different headings, a `**Builds on**:` field invented independently in three specs because none was provided, coverage matrices whose verification marks outlive the criteria they attest to. None of that appears in a project with nine artefacts. All of it compounds, because every artefact is read by parsing what an earlier one wrote.
+**Who this is for.** dpm is for the *next* project — started empty, by someone who has already run CPM at volume and knows what accumulates. A single real project carrying **393 CPM artefacts** is the evidence that the accumulation is real: seven retro categories written as twelve different headings, a `**Builds on**:` field invented independently in three specs because none was provided, coverage matrices whose verification marks outlive the criteria they attest to. None of that appears in a project with nine artefacts, and all of it compounds, because every artefact is read by parsing what an earlier one wrote.
 
-The person this helps is the one who can no longer trust a status query — who has to open the files to find out what is blocked, whether a requirement is covered, or whether a ✓ still means anything. What dpm offers them is that those questions have answers that are looked up rather than reconstructed. That is the outcome; everything below is how.
+**That project is the evidence, not the customer.** AD8 rules out an importer, so its 393 artefacts stay in CPM and dpm does not offer to repair them. Reading this spec as a remediation plan for an existing corpus is reading it for a benefit it does not deliver.
+
+**The payoff lands on artefact one.** The drift above is not a debt that dpm pays off; it is a class of failure that never starts. On the first spec written through dpm, a requirement's class is a column rather than a spelling, so nothing later has to infer it from `ENVX2`. On the first retro, a category is a foreign key into `taxonomy`, so a seventh heading spelling cannot be introduced. On the first coverage row, the verification mark is invalidated by a trigger when the criterion it attests to changes. None of that waits for volume — volume is only what makes its *absence* expensive enough to notice.
+
+So the person this helps is the one starting work they expect to run long enough for the difference to matter, and what dpm offers them is that "what is blocked", "is this requirement covered", and "does this ✓ still mean anything" are looked up rather than reconstructed — from the first artefact, not from the hundredth. That is the outcome; everything below is how.
 
 CPM's entity model is real but implicit. A spec has requirements; an epic belongs to a spec; a coverage row joins a requirement to a story; an artifact points at the documents that produced it. None of those relationships is stored — each is spelled into markdown prose and reconstructed, on demand, by a parser.
 
@@ -36,20 +40,24 @@ None of this is bad engineering. It is the necessary consequence of choosing a s
 - **FR4 — Entity type is a column, never a spelling.** Requirement class, MoSCoW band, status, test-approach tag, and coverage verification state are typed columns constrained by `CHECK`. Nothing infers a type by parsing an identifier.
 - **FR5 — Numbering is a database concern.** Human-facing artefact numbers are allocated monotonically and are never reused, including after archival. No glob, no filename parse, no archive-mirror contract.
 - **FR6 — A markdown projection is generated and committed.** Every artefact renders to markdown under `docs/`, regenerated from the database and committed, so that pull requests show a readable prose diff of what changed. The projection is a render, not a store (AD3).
-- **FR7 — Hand-edits to the projection are detected and refused.** Because the projection is one-way, an edit made to a generated file is lost at the next regeneration. A pre-commit guard regenerates and fails on divergence, naming the diverged file. Silent loss of a user's edit is the failure this requirement exists to prevent.
-- **FR8 — The committed database representation is text.** A deterministic, sorted `.sql` dump is committed; the binary `.db` is generated and ignored. Two branches that both add artefacts produce an ordinary text conflict (AD4).
-- **FR9 — Search is a query, not a grep.** Artefact bodies are indexed with FTS5 and exposed as a typed search tool returning ranked, bounded results.
-- **FR10 — Full CPM artefact parity, derived from real output.** Every artefact type CPM produces is modelled from the outset: brief (problem and product), ADR, spec, requirement, epic, story, task, story criterion, coverage, review, finding, retro, lesson, quick record, discussion, artifact, library document, audit, runbook, verification record, and session state. The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree.
+- **FR7 — Hand-edits to the projection are detected and refused, and the committed dump is regenerated by the same guard.** Because the projection is one-way, an edit made to a generated file is lost at the next regeneration. A pre-commit guard regenerates both generated artefacts — the markdown projection and `.dpm/dpm.sql` — and fails on divergence in either, naming what diverged. Silent loss of a user's edit is one failure this prevents; a commit carrying a fresh projection and a stale dump is the other.
+- **FR8 — The committed database representation is text.** A deterministic, sorted `.sql` dump is committed; the binary `.db` is generated and ignored. Two branches that both add artefacts produce an ordinary text conflict (AD4). Surrogate keys are ULIDs and never collide, so the conflict is confined to the human numbers: dpm ships a **merge tool** that restores the merged dump, detects the rows rejected by `document_root_number` and `document_child_number`, re-allocates the loser's number from `number_sequence`, renames its projection file, and re-renders the artefacts that referenced it (AD9). **Nothing is rewritten, because no reference ever stored a number**: a reference between artefacts is either a foreign key, which renumbering does not touch, or a `{{ref:<id>}}` marker in prose, which the renderer resolves to the target's current identifier (FR28).
+- **FR9 — Search is a query, not a grep.** Artefact bodies *and* the hand-written text on their child rows — requirements, story criteria, retro observations, review findings — are indexed with FTS5 and exposed as a typed search tool returning ranked results, each hit naming the entity and row it came from. A search can be scoped to one entity type or left open across all of them.
+- **FR10 — Full CPM artefact parity, derived from real output.** Every artefact type CPM produces is modelled from the outset: brief (problem and product), ADR, spec, requirement, epic, story, task, story criterion, coverage, review, finding, retro, lesson, quick record, discussion, artifact, library document, audit, runbook, milestone, verification record, and session state. The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree.
 - **FR11 — Session state is a row.** The progress-file subsystem — session-suffixed filenames, hook injection, adoption on `--resume`, compact-summary companions — is replaced by a session table. Adoption is an `UPDATE`; staleness is a `WHERE` clause.
 - **FR21 — Verification is bound to the text it verified, and decays when that text changes.** A coverage row records what it was verified against; editing either the requirement fragment or the story criterion resets it to unverified automatically. Every coverage matrix CPM writes states this rule in prose and relies on an agent to honour it; here the database enforces it.
+- **FR26 — Whether a requirement's bindings *account for* it is recorded, and decays like a verification.** FR21 makes each coverage row's ✓ decay; nothing makes the *set* of rows decay, so a requirement with one of five obligations bound reads exactly like one fully covered — a roll-up that matches something reports full coverage, which is the Problem Summary's defect with the sign flipped. Completeness is therefore a separate, deliberate claim on the requirement, cleared automatically whenever a coverage row for it is added or removed, its fragment is edited, or the requirement's own text changes.
+- **FR27 — The build order is data.** A specification's milestones are rows scoped to it, ordered, and joined to the artefacts that deliver them — so "which epics are in M2" is a query, and an epic that spans two milestones says so rather than being filed under one. Without this, a build order stated in prose is unreachable to every tool that would sequence work by it.
+- **FR28 — A reference from one artefact's prose to another is a marker, never a number.** Cross-artefact references that are structural are foreign keys (FR2). The rest — a sentence in an epic's notes naming another epic, a retro observation citing the spec it came from — are written `{{ref:<id>}}` and resolved by the renderer to the target's current human identifier. A stored number would go stale the moment a merge renumbered its target, and no tool could find it to repair (FR8).
 - **FR22 — Relationships between artefacts are typed edges, not status values.** Blocking, spec-to-spec lineage, and ADR constraint are rows in one edge table with a kind, so "which epics are ready" is a query, a blocker's completion is visible to everything downstream, and a new relationship kind is data rather than a migration. Source and target may each be a document or a story.
 - **FR24 — Every controlled vocabulary is a table, and projects may edit it.** Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable without invalidating rows that already use them. An item may carry more than one category where the work genuinely spans two.
 - **FR23 — Two-level numbering.** Root-numbered kinds (a spec) and child-numbered kinds (an epic, numbered within its spec and restarting at 1 per parent) are both allocated monotonically and never reused.
+- **FR25 — The skill corpus is twenty-two files, enumerated here, each rewritten against the tool surface.** Naming them is what makes AD6's largest line item plannable and testable. The corpus mirrors CPM's, one for one: `architect`, `archive`, `artifact`, `audit`, `brief`, `clean`, `consult`, `discover`, `do`, `epics`, `inspect`, `library`, `party`, `pivot`, `present`, `quick`, `ralph`, `retro`, `review`, `spec`, `status`, `templates`. **What makes a dpm skill different from its CPM counterpart is subtraction, and it is the same subtraction in every file**: no filename construction, no glob, no number allocation, no markdown parsing, no progress-file lifecycle, and no procedure that recovers an entity by reading what an earlier skill wrote. Each of those is a tool call. What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business.
 
 ### Should Have
 
 - **FR12 — Schema migrations are versioned and forward-only.** A `schema_version` row and an ordered migration set, applied automatically on server start, so a plugin update never requires the user to intervene.
-- **FR13 — Reads are bounded by default.** Query tools accept limits and return summaries rather than whole bodies unless a body is explicitly requested, so a skill reading an epic no longer pulls 20 KB into context to answer a question about its status.
+- **FR13 — Reads are bounded by default, and the default is always raisable.** Query tools return summaries rather than whole bodies unless a body is explicitly requested, and every list-returning tool takes a `limit` with a default, so a skill reading an epic no longer pulls 20 KB into context to answer a question about its status. **There is deliberately no ceiling.** A cap the caller cannot lift is a boundary on what dpm can be asked for, and a planning store that cannot return a large artefact when a large artefact is what was asked for has traded usefulness for a number. The bound is a default that costs nothing to override, not a limit.
 - **FR14 — The invariants SQLite cannot hold are enumerated, and a tool checks every one.** A verification tool reports orphans, dangling links, and each entry in the cross-row invariant register (Data Model), so a corrupted state is diagnosable without SQL. The register is the contract: an invariant that cannot be a constraint is not thereby excused from being checked, and "constraint drift" as a phrase covers nothing a test can fail on.
 
 ### Could Have
@@ -69,7 +77,7 @@ None of this is bad engineering. It is the necessary consequence of choosing a s
 - **NFR2 — Node floor stated and enforced.** The server refuses to start with a clear message below its minimum Node version rather than failing on a missing module. `node:sqlite` is experimental and its API may change between minors; the floor is `>=22.5.0` and CI tests against 22 and 24.
 - **NFR3 — Standard output is reserved for JSON-RPC.** The MCP stdio transport owns stdout. All logging, including Node's `ExperimentalWarning` for `node:sqlite`, goes to stderr or is suppressed (`NODE_NO_WARNINGS=1`). Verified on Node v22.18.0, where `node:sqlite` loads with no flag and emits the warning on stderr only.
 - **NFR4 — The dump is byte-stable.** The same database state produces the same `.sql` bytes on any machine, on any run — ordered rows, no timestamps, no locale dependence. Without this, FR8 delivers a text file that conflicts on every commit.
-- **NFR5 — Tool names are discoverable.** This harness defers MCP tool schemas, listing tools by name and loading schemas on demand, so a large tool surface costs a name list rather than a wall of JSON Schema. Names must therefore be searchable words (`dpm_create_epic`, not `dpm_ce`); brevity is not a virtue here.
+- **NFR5 — Tool names are discoverable.** This harness defers MCP tool schemas, listing tools by name and loading schemas on demand, so a large tool surface costs a name list rather than a wall of JSON Schema. Names must therefore be searchable words (`dpm_create_epic`, not `dpm_ce`); brevity is not a virtue here. The rule is that every underscore-separated part is a whole word, which a test can check without maintaining a list of permitted abbreviations — a list being one more hand-kept vocabulary of exactly the kind this spec exists to remove.
 - **NFR6 — Failure is loud.** Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. This spec's subject applied to itself: the failure being designed against is one that looks like success.
 - **NFR7 — The database is never a black box to its owner.** Every piece of state is reachable through a read tool without SQL, so a user whose server will not start is not locked out of their own planning history.
 
@@ -97,7 +105,7 @@ No ADRs exist for this project; these were facilitated from scratch during the d
 
 **Decision**: Generated markdown is committed for review, and is never an input.
 
-**Rejected**: a lossless, reimportable projection. It is genuinely attractive — merge conflicts would resolve in readable markdown, hand-edits would become legal, and the binary database need never be committed at all. It was rejected because it constrains every column to have a stable textual form that survives `db → md → db` identity, and that constraint is paid on every schema decision forever. FR10's parity scope makes that price too high: thirteen-plus entity types is tractable precisely because they do not each need to round-trip.
+**Rejected**: a lossless, reimportable projection. It is genuinely attractive — merge conflicts would resolve in readable markdown, hand-edits would become legal, and the binary database need never be committed at all. It was rejected because it constrains every column to have a stable textual form that survives `db → md → db` identity, and that constraint is paid on every schema decision forever. FR10's parity scope makes that price too high: twenty-three entity types is tractable precisely because they do not each need to round-trip.
 
 **Consequence**: two obligations follow directly. The database must itself be committed (AD4), and hand-edits to generated files must be actively refused (FR7) rather than merely discouraged.
 
@@ -131,7 +139,18 @@ It loads with no flag and needs no native module. `better-sqlite3` was rejected 
 
 **Consequence**: the schema is large before anything ships. AD3 is what makes this affordable — one-way projection is the decision that removes the per-entity round-trip burden that would otherwise make parity the expensive path.
 
-**The size, stated rather than implied.** Parity is 36 tables, roughly 45–55 MCP tools (thirteen kinds across create, read and update, plus link, search, integrity and migrate), thirteen projection templates, a pre-commit guard, a dump-and-restore path, and about twenty rewritten skill files. AD6 asserts this is affordable; a decision that expensive should carry its own number, and the number is not small.
+**The size, stated rather than implied — and sized against entity types, not document kinds.** An earlier form of this paragraph derived the tool count from "thirteen kinds", which is the number of things that produce a *file*. It is the wrong denominator: FR10 names **twenty-three entity types**, and the ten that never produce a file of their own — requirement, story, task, story criterion, coverage, finding, lesson, milestone, verification record, session state — each still need typed create, read and update tools, because FR3 makes the tool surface the only write path. Undercounting them halved the estimate for the largest line item in the decision. An eleventh, the ADR, produces no file either but is a document kind rather than a child table (`dir IS NULL`), so it is counted among the thirteen.
+
+| Line item | Count | Derived from |
+|---|---|---|
+| Tables | 38 real, plus 2 FTS5 virtual | The Data Model, counted from the executed DDL |
+| Typed entity tools | ~69 | 23 entity types × create, read, update |
+| Cross-cutting tools | ~9 | link, search, integrity, migrate, dump, restore, merge-renumber, allocate-number, claim-coverage |
+| Projection templates | 13 | One per document kind — the ten child entity types render inside their parent's template, as does the ADR, which is why 13 is right here and wrong above |
+| Triggers | 22 | 3 FTS on `document_section`, 12 FTS on the four indexed child tables, 3 coverage unverify, 4 coverage-claim unclaim. Thirteen are written out in the Data Model; the other nine are the same three-trigger pattern on the remaining indexed tables, and FR9's completeness criterion is what asserts they exist |
+| Skill files | 22 | The corpus enumerated in FR25 |
+
+Roughly **78 tools** rather than 45–55, against 40 tables and 22 skills. AD6 asserts this is affordable; a decision that expensive should carry its own number, and the number is larger than the first draft of this paragraph claimed.
 
 **Build order, which is not a release plan.** AD6 is unchanged — nothing releases until all of it works — but the order in which it is built is a real constraint and leaving it unstated hands the decision to whoever decomposes the spec:
 
@@ -139,8 +158,15 @@ It loads with no flag and needs no native module. `better-sqlite3` was rejected 
 |---|---|---|
 | M1 | Substrate | Schema, migrations, dump and restore, integrity check. Nothing user-facing. |
 | M2 | Core spine | spec → requirement → epic → story → task → coverage: tools and projection. The first point at which a project could actually be planned. |
-| M3 | Parity | The remaining nine kinds, the four detail tables, taxonomy seeds, FTS5 search. |
-| M4 | Pipeline | The ~20 skill files, and the pre-commit divergence guard. |
+| M3 | Parity | The remaining ten kinds, the four detail tables, taxonomy seeds, both FTS5 indexes. |
+| M4 | Pipeline | The 22 skill files (FR25), and the pre-commit divergence guard. |
+
+**This table is seeded data, not prose.** FR27 makes a spec's build order rows, and this
+spec's four milestones are the first four. The distinction matters because the table above
+is what a breakdown sequences against: stated only here, it is unreachable to any tool that
+would ask which epics deliver M2, and an epic spanning M2 and M4 has nowhere to say so. That
+is not hypothetical — this spec's own breakdown produced exactly such an epic, and the
+absence of a milestone table is what made it unrecordable.
 
 M2 is deliberately the spine AD6 rejected as a *release*, kept as a *checkpoint*: it is the earliest point where the design can be judged against real use, and reaching it without releasing costs nothing. If M2 turns out to invalidate a decision here, that is the moment to find out — which is the one benefit the rejected spine-first alternative had, obtained without reversing AD6.
 
@@ -168,6 +194,41 @@ M2 is deliberately the spine AD6 rejected as a *release*, kept as a *checkpoint*
 
 The two systems coexist by not touching. A project runs CPM or dpm, and the choice is made once at the start.
 
+### AD9 — Surrogate keys are ULIDs; human numbers are re-allocated on merge
+
+**Decision**: every surrogate primary key in the schema is a ULID stored as `TEXT`. Human-facing numbers stay integers allocated by `number_sequence`, and a merge step re-allocates the ones that collide, renaming the projection files that carry them.
+
+**Why this is an AD and not a column type.** AD4 stakes the entire branching story on the `.sql` dump merging — it is that decision's whole justification, since AD3 removed markdown as a merge surface. Executed, it does not merge: two branches from a common base each adding an epic both allocate `document.id = 2`, and the merged dump fails to restore with `UNIQUE constraint failed: document.id`. The collision is not specific to documents. Two branches each adding a requirement, a story or a coverage row allocate the same integer for different rows, because `INTEGER PRIMARY KEY` is a per-database counter and a per-database counter cannot be unique across databases edited independently. The property AD4 needs is therefore **collision-free identity allocated without coordination**, which is what a ULID is for, and it is needed on every table rather than on `document` alone.
+
+**Rejected**: keeping integer surrogates and resolving collisions during the merge. It turns every concurrent insert into a hand-resolution — the failure AD4 rejected the binary `.db` for, relocated into a text file.
+
+**Rejected**: numbers derived at render time rather than stored. It removes the number collision at the cost of FR5's stability guarantee: a document's number would change when an earlier one was added on another branch, and its filename with it, so every cross-reference in the projection becomes a moving target.
+
+**Rejected**: declaring dpm single-writer and retracting AD4's merge claim. Honest, much cheaper, and it was close. It gives up the one workflow — plan on a branch, review the diff, merge — that AD3's committed projection exists to serve.
+
+**Consequence**, in three parts.
+
+- **Ids sort by creation time and carry no meaning.** A ULID is lexicographically sortable by its timestamp prefix, which gives every table a stable default order for free — the tiebreak FR6's determinism criterion needs. Nothing renders a ULID; the human-facing identifier is the number, which is why making ids opaque costs the reader nothing.
+- **The number collision survives, and is resolved deliberately.** ULIDs fix the surrogate; `document_root_number`'s `UNIQUE (kind, number)` and `document_child_number`'s `(kind, parent_id, sequence)` still reject two branches that each allocated 48. That rejection is correct — both are real artefacts and one must be renumbered — so the merge tool re-allocates the loser from `number_sequence`, renames its projection file, and rewrites references to it. That is a tool in scope, not a convention to remember.
+- **`number_sequence` merges by taking the maximum.** Two branches that each advanced a counter produce two `next_value` rows; the resolution is `max`, and register entry #5 catches a merge that got it wrong — which is why that entry is the one marked repairable.
+
+### AD10 — Seam 1 is closed by a conformance test, not by codegen
+
+**Decision**: the MCP tool schemas and the DDL stay two hand-written definitions, and a test asserts their correspondence against the live database. It runs in the suite, not at build time.
+
+**What the test asserts**, derived from the schema rather than from a copy of it:
+
+- Every tool argument that names a column exists on that table, with a compatible type — read from `PRAGMA table_info`.
+- Every enum a tool declares matches the `CHECK` on its column exactly, in both directions. A tool offering a value the `CHECK` rejects is validation in the wrong layer; a `CHECK` admitting a value no tool offers is a column the pipeline cannot reach.
+- Every `NOT NULL` column without a default is a required argument on its create tool.
+- Every foreign key on the table has a corresponding argument — read from `PRAGMA foreign_key_list`, which is also FR2's third criterion, so the two checks share a source.
+
+**Rejected**: generating the tool schemas from one definition. It closes the seam structurally rather than testing for it, which is the stronger property, and it was rejected on cost rather than on merit — it needs a definition format designed, a generator built and a build step added to a plugin that currently has none, all before the first tool works. The test needs none of that and fails just as loudly. **It is the intended direction of travel**: a generator can be introduced later with the conformance test as its acceptance criterion, which is a better position to build one from than a blank page.
+
+**Rejected**: doing both from the outset — the generator plus the test that guards it. Correct and unaffordable at the same time as AD6's parity commitment.
+
+**Consequence**: the correspondence is checked, not enforced, so it can be broken between test runs. That is acceptable because the window is a test run rather than a release, and unacceptable to leave unstated: this is the one seam in the system where two descriptions of the same rule are maintained by hand, which is the shape of exactly the drift the rest of the spec removes structurally.
+
 ## Data Model
 
 Abridged to the load-bearing definitions. Full DDL is an implementation artefact; what belongs here is the shape and the constraint behind each drift class named in the Problem Summary.
@@ -177,7 +238,8 @@ Abridged to the load-bearing definitions. Full DDL is an implementation artefact
 ```sql
 CREATE TABLE document_kind (
   kind        TEXT PRIMARY KEY,          -- 'spec','epic','retro','review','runbook',…
-  dir         TEXT NOT NULL,             -- projection directory under docs/
+  dir         TEXT,                      -- projection dir under docs/; NULL = this kind
+                                         -- produces no file and renders inside its parent
   numbering   TEXT NOT NULL DEFAULT 'root'
                 CHECK (numbering IN ('root','child','none')),
   UNIQUE (kind, numbering)               -- parent key for document's composite FK
@@ -193,7 +255,7 @@ CREATE TABLE document_kind_parent (
 );
 
 CREATE TABLE document (
-  id          INTEGER PRIMARY KEY,
+  id          TEXT PRIMARY KEY,
   kind        TEXT    NOT NULL,
   numbering   TEXT    NOT NULL,  -- denormalised from document_kind, pinned by FK
   number      INTEGER,           -- root-numbered kinds: spec 47
@@ -203,7 +265,8 @@ CREATE TABLE document (
   status      TEXT    NOT NULL DEFAULT 'pending'
                 CHECK (status IN ('pending','complete')),
   status_note TEXT,             -- the free-text qualifier real epics append to a status
-  parent_id   INTEGER,          -- epic→spec, retro→epic, review→spec or epic
+  parent_id   TEXT,             -- epic→spec; adr→spec, brief or discussion;
+                                -- retro→epic, spec or quick; review→spec or epic
   parent_kind TEXT,             -- denormalised from the parent, pinned by FK
   archived_at TEXT,             -- orthogonal to status; NULL means live
   commit_sha  TEXT,             -- audit and inspect pin to a commit
@@ -227,7 +290,7 @@ CREATE UNIQUE INDEX document_child_number
 
 CREATE TABLE number_sequence (
   kind        TEXT    NOT NULL REFERENCES document_kind(kind),
-  parent_id   INTEGER REFERENCES document(id) ON DELETE CASCADE,  -- NULL for root-numbered
+  parent_id   TEXT REFERENCES document(id) ON DELETE CASCADE,  -- NULL for root-numbered
   next_value  INTEGER NOT NULL DEFAULT 1
 );
 
@@ -242,6 +305,12 @@ CREATE UNIQUE INDEX number_sequence_child
 **The numbering `CHECK` is keyed to the kind's declared scheme, not merely to exclusivity.** An earlier form said `CHECK ((number IS NULL) <> (sequence IS NULL))` — exactly one of the two, always. That is wrong in both directions. It permitted a kind declared `numbering = 'root'` to store a `sequence` instead, so the declaration on `document_kind` constrained nothing; and it made `numbering = 'none'` **unusable**, since a kind that should carry no number at all could satisfy neither branch and no row of that kind could be inserted. A value the vocabulary offers and the schema forbids is a defect however it is discovered. Denormalising `numbering` onto `document` and pinning it with `FOREIGN KEY (kind, numbering)` makes the kind's scheme available to a row-local `CHECK`, which then enumerates all three cases.
 
 **Parentage is constrained by kind, which is the last mile of the `**Source spec**` fix.** A plain `parent_id REFERENCES document(id)` guarantees the parent *exists* — the Problem Summary's first complaint — but not that it is the right sort of thing. An epic could hang off a review, a retro off a runbook, and every foreign key would be satisfied. `document_kind_parent` is the allow-list, `parent_kind` is denormalised alongside `parent_id`, and two further composite foreign keys close both halves: `(kind, parent_kind)` against the allow-list rejects an illegal pairing, and `(parent_id, parent_kind)` against `document(id, kind)` rejects a row whose `parent_kind` misdescribes the parent it actually points at. Neither can be satisfied by lying, because the second checks the claim against the parent's own row.
+
+**And the same pinning applies to every other reference into `document`, because the argument does not stop at parentage.** A first version of this schema applied the pattern to `parent_id` and `observation.library_doc_id` and to nothing else, which left sixteen references guaranteeing only that *a* document existed: `story.epic_id` accepted a spec, `requirement.spec_id` accepted an epic, and a `library_document` detail row attached to a spec — each verified by execution, each rendering a plausible tree that is not the real one. So every reference whose target kind is fixed carries a `CHECK`-pinned kind column and a composite foreign key to `document(id, kind)`: `requirement.spec_id`, `story.epic_id`, `finding.review_id`, `observation.retro_id`, `audit_finding.audit_id`, `retro_application.retro_id`, and all four detail tables. Three references stay unpinned deliberately and for stated reasons — `document_section.document_id` and `artifact_document.document_id` legitimately admit any kind, `retro_application.applied_to_id` likewise, and `dependency`'s two ends vary by edge kind, which is register entry #6.
+
+The composite foreign key carries `ON DELETE CASCADE` and replaces the single-column one rather than sitting beside it. Two foreign keys to the same parent with different delete actions is how a schema acquires a delete whose outcome depends on which children happen to exist.
+
+The general rule, which is the one worth carrying to a table added later: **a foreign key that names `document(id)` alone is only correct where every kind is a legal target.** Anywhere else it is the `**Source spec**` string again, in a column instead of a line of prose — the exact criticism this spec opens with, relocated rather than answered.
 
 `number_sequence` satisfies FR5 for both levels — one row per root kind, one row per (child kind, parent). Allocation is an **upsert**, one statement per level, targeting the partial index that governs it:
 
@@ -263,16 +332,36 @@ INSERT INTO number_sequence (kind, parent_id, next_value) VALUES (:kind, :parent
 
 The **Numbering** procedure's glob-the-active-directory, glob-the-archive-mirror, union, parse-as-integer-not-string, and its standing `99 → 100` warning all reduce to those two statements — and `cpm:archive`'s obligation to preserve `docs/archive/{type}/` as a mirrored tree stops being a contract at all, because retirement sets `archived_at` on a row that never moves.
 
-**The kinds are seeded data, and the list is the parity contract.** FR10 names twenty-one artefact types; without an enumeration its acceptance criterion has nothing to check and passes by construction. They land in three places:
+**The kinds are seeded data, and the list is the parity contract.** FR10 names twenty-two artefact types; without an enumeration its acceptance criterion has nothing to check and passes by construction. They land in five places:
 
 | Where it lives | Types |
 |---|---|
-| `document_kind` rows — numbered, file-producing | problem brief, product brief, ADR, spec, epic *(child)*, coverage matrix *(child)*, review, retro, quick record, discussion, audit, runbook, library document |
+| `document_kind` rows — numbered, file-producing | problem brief, product brief, spec, epic *(child)*, coverage matrix *(child)*, review, retro, quick record, discussion, audit, runbook, library document |
+| `document_kind` rows — numbered, rendered inside a parent (`dir IS NULL`) | ADR *(child)* |
 | Detail tables — the four kinds with structure to hold (AD7) | `library_document` + `library_scope`, `adr` + `adr_option` + `adr_option_tradeoff`, `review` + `review_agent`, `quick` + `quick_criterion` |
-| Child tables — sub-entities that produce no file of their own | requirement, story, task, story criterion, coverage row, finding, observation *(the lesson)* |
+| Child tables — sub-entities that produce no file of their own | requirement, story, task, story criterion, coverage row, finding, observation *(the lesson)*, milestone |
 | Standalone tables | artifact, session state |
 
-That is thirteen document kinds, seven child tables, two standalone — and it accounts for twenty of the twenty-one. The twenty-first, **the verification record, is deliberately not a table**: verification is not an artefact in dpm but a pair of columns, `coverage.verified_at` and `binding_hash`, on the row being verified. CPM writes it as a separate record because a markdown table cannot carry state that decays; here the decay is triggers (FR21), so the record has nowhere to be and nothing to hold.
+That is thirteen document kinds, eight child tables and two standalone tables — twenty-three tables, accounting for twenty-one of FR10's twenty-two types. The arithmetic does not reduce to a subtraction, so it is worth stating rather than leaving a reader to check it: two of FR10's types are carried by more than one table. **Brief** is two document kinds (problem and product), and **coverage** is both a document kind (the matrix, which is a file) and a child table (its rows, which are not). The twenty-second, **the verification record, is deliberately not a table**: verification is not an artefact in dpm but a pair of columns, `coverage.verified_at` and `binding_hash`, on the row being verified. CPM writes it as a separate record because a markdown table cannot carry state that decays; here the decay is triggers (FR21), so the record has nowhere to be and nothing to hold.
+
+**An ADR is a child document, not a root-numbered one, and that is a real restriction.** CPM
+writes ADRs as their own files under `docs/architecture/`; this spec writes ten of them
+*inside itself*, as AD1–AD10, and a schema that cannot hold its own ADs is not one to build
+on. Making `adr` a child kind with `dir IS NULL` gives every AD the full `adr` +
+`adr_option` + `adr_option_tradeoff` structure — `decision_status`, the rejected
+alternatives, the tradeoff axes — with `document_kind_parent` allow-listing `spec`, both
+briefs, and `discussion` as parents. What it costs is the free-floating ADR: every
+architecture decision in dpm belongs to something that prompted it. That matches how
+`cpm:architect` actually works, which produces ADRs from a brief, but it is a constraint and
+not merely a modelling choice.
+
+**The alternative was to let `numbering` vary by parent pairing**, so `adr` could be
+root-numbered standalone and child-numbered inside a spec. It is the more general answer and
+it was rejected on cost: `document`'s numbering `CHECK` reads one denormalised `numbering`
+column pinned by one composite foreign key, and making the applicable scheme depend on
+whether `parent_id` is NULL is not expressible as a row-local constraint against two
+different parent keys. Buying the free-floating ADR means restructuring the identity section
+around a case this corpus does not contain.
 
 **Status carries a note, and archival is not a status.** A status frequently needs a qualifier — *complete, but folded into another story*; *pending, but waiting on a third party*. In a markdown store that qualifier has nowhere to go but the same line as the status word, which is why CPM parses a lead token and preserves the tail. dpm has a typed write path and no such constraint, so the qualifier is simply its own column: `status` is always exactly one enum value, and `status_note` carries the rest.
 
@@ -284,8 +373,8 @@ Undecomposed prose keeps a home rather than being over-modelled:
 
 ```sql
 CREATE TABLE document_section (
-  id           INTEGER PRIMARY KEY,
-  document_id  INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  id           TEXT PRIMARY KEY,
+  document_id  TEXT NOT NULL REFERENCES document(id) ON DELETE CASCADE,
   heading      TEXT    NOT NULL,
   body         TEXT    NOT NULL,
   position     INTEGER NOT NULL,
@@ -302,12 +391,14 @@ Four of the thirteen document kinds carry structure that `document_section` woul
 -- documents by it before deciding what to load. Held as prose it is not
 -- queryable, and being queryable is the entire feature.
 CREATE TABLE library_document (
-  document_id  INTEGER PRIMARY KEY REFERENCES document(id) ON DELETE CASCADE,
-  doc_type     TEXT NOT NULL      -- 'architecture','coding-standards','domain',…
+  document_id   TEXT PRIMARY KEY,
+  document_kind TEXT NOT NULL DEFAULT 'library' CHECK (document_kind = 'library'),
+  doc_type      TEXT NOT NULL,     -- 'architecture','coding-standards','domain',…
+  FOREIGN KEY (document_id, document_kind) REFERENCES document(id, kind) ON DELETE CASCADE
 );
 
 CREATE TABLE library_scope (
-  document_id  INTEGER NOT NULL REFERENCES library_document(document_id) ON DELETE CASCADE,
+  document_id  TEXT NOT NULL REFERENCES library_document(document_id) ON DELETE CASCADE,
   scope        TEXT    NOT NULL,  -- a skill name, or 'all'
   PRIMARY KEY (document_id, scope)
 );
@@ -315,18 +406,20 @@ CREATE TABLE library_scope (
 -- An ADR's lifecycle is not `document.status`. Supersession is the edge
 -- (`dependency_kind = 'supersedes'`); what lives here is the state.
 CREATE TABLE adr (
-  document_id     INTEGER PRIMARY KEY REFERENCES document(id) ON DELETE CASCADE,
+  document_id     TEXT PRIMARY KEY,
+  document_kind   TEXT NOT NULL DEFAULT 'adr' CHECK (document_kind = 'adr'),
   decision_status TEXT NOT NULL DEFAULT 'proposed'
                     CHECK (decision_status IN
                       ('proposed','accepted','rejected','superseded','deprecated')),
-  decision        TEXT NOT NULL
+  decision        TEXT NOT NULL,
+  FOREIGN KEY (document_id, document_kind) REFERENCES document(id, kind) ON DELETE CASCADE
 );
 
 -- Options Considered repeats per option, against the same axes each time —
 -- which is a table, and is unreadable as a paragraph per option.
 CREATE TABLE adr_option (
-  id           INTEGER PRIMARY KEY,
-  adr_id       INTEGER NOT NULL REFERENCES adr(document_id) ON DELETE CASCADE,
+  id           TEXT PRIMARY KEY,
+  adr_id       TEXT NOT NULL REFERENCES adr(document_id) ON DELETE CASCADE,
   name         TEXT    NOT NULL,
   chosen       INTEGER NOT NULL DEFAULT 0,
   rationale    TEXT,
@@ -335,7 +428,7 @@ CREATE TABLE adr_option (
 );
 
 CREATE TABLE adr_option_tradeoff (
-  option_id    INTEGER NOT NULL REFERENCES adr_option(id) ON DELETE CASCADE,
+  option_id    TEXT NOT NULL REFERENCES adr_option(id) ON DELETE CASCADE,
   axis         TEXT    NOT NULL,   -- 'cost','complexity','reversibility',…
   assessment   TEXT    NOT NULL,
   PRIMARY KEY (option_id, axis)
@@ -343,15 +436,17 @@ CREATE TABLE adr_option_tradeoff (
 
 -- What was reviewed is `document.parent_id`; only the narrowing lives here.
 CREATE TABLE review (
-  document_id    INTEGER PRIMARY KEY REFERENCES document(id) ON DELETE CASCADE,
+  document_id    TEXT PRIMARY KEY,
+  document_kind  TEXT NOT NULL DEFAULT 'review' CHECK (document_kind = 'review'),
   scope          TEXT NOT NULL DEFAULT 'whole'
                    CHECK (scope IN ('whole','story')),
-  scope_story_id INTEGER REFERENCES story(id) ON DELETE CASCADE,
-  CHECK ((scope = 'story') = (scope_story_id IS NOT NULL))
+  scope_story_id TEXT REFERENCES story(id) ON DELETE CASCADE,
+  CHECK ((scope = 'story') = (scope_story_id IS NOT NULL)),
+  FOREIGN KEY (document_id, document_kind) REFERENCES document(id, kind) ON DELETE CASCADE
 );
 
 CREATE TABLE review_agent (
-  document_id  INTEGER NOT NULL REFERENCES review(document_id) ON DELETE CASCADE,
+  document_id  TEXT NOT NULL REFERENCES review(document_id) ON DELETE CASCADE,
   agent        TEXT    NOT NULL,
   PRIMARY KEY (document_id, agent)
 );
@@ -359,13 +454,15 @@ CREATE TABLE review_agent (
 -- A quick record's criteria are decided met or not met at close, which is a
 -- tri-state (NULL while open) and not a status word.
 CREATE TABLE quick (
-  document_id  INTEGER PRIMARY KEY REFERENCES document(id) ON DELETE CASCADE,
-  closed_at    TEXT
+  document_id   TEXT PRIMARY KEY,
+  document_kind TEXT NOT NULL DEFAULT 'quick' CHECK (document_kind = 'quick'),
+  closed_at     TEXT,
+  FOREIGN KEY (document_id, document_kind) REFERENCES document(id, kind) ON DELETE CASCADE
 );
 
 CREATE TABLE quick_criterion (
-  id           INTEGER PRIMARY KEY,
-  quick_id     INTEGER NOT NULL REFERENCES quick(document_id) ON DELETE CASCADE,
+  id           TEXT PRIMARY KEY,
+  quick_id     TEXT NOT NULL REFERENCES quick(document_id) ON DELETE CASCADE,
   text         TEXT    NOT NULL,
   met          INTEGER,           -- NULL until closed
   note         TEXT,
@@ -384,18 +481,25 @@ CREATE TABLE quick_criterion (
 
 ```sql
 CREATE TABLE requirement (
-  id            INTEGER PRIMARY KEY,
-  spec_id       INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  id            TEXT PRIMARY KEY,
+  spec_id       TEXT    NOT NULL,
+  spec_kind     TEXT    NOT NULL DEFAULT 'spec' CHECK (spec_kind = 'spec'),
   label         TEXT    NOT NULL,                  -- display only: 'FR1','NFR3','ENVX2'
   class         TEXT    NOT NULL CHECK (class IN (
                   'functional','non_functional',
                   'environmental_requirement','environmental_restriction')),
   moscow        TEXT    CHECK (moscow IN ('must','should','could','wont')),
   exclusion     TEXT    CHECK (exclusion IN ('deferred','out_of_scope')),
-  parent_id     INTEGER REFERENCES requirement(id),  -- FR1a's parent is FR1
+  parent_id     TEXT REFERENCES requirement(id),  -- FR1a's parent is FR1
   text          TEXT    NOT NULL,
   position      INTEGER NOT NULL,
-  UNIQUE (spec_id, label)
+  -- FR26. NULL = nobody has claimed the bindings account for this requirement.
+  -- Set together, cleared together, by the four triggers below.
+  coverage_claimed_at TEXT,
+  coverage_claim_hash TEXT,   -- hash of the bound fragment set at claim time
+  FOREIGN KEY (spec_id, spec_kind) REFERENCES document(id, kind) ON DELETE CASCADE,
+  UNIQUE (spec_id, label),
+  CHECK ((coverage_claimed_at IS NULL) = (coverage_claim_hash IS NULL))
 );
 ```
 
@@ -412,20 +516,22 @@ Four parsers die here, and it is worth being explicit about which:
 
 ```sql
 CREATE TABLE story (
-  id          INTEGER PRIMARY KEY,
-  epic_id     INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  id          TEXT PRIMARY KEY,
+  epic_id     TEXT    NOT NULL,
+  epic_kind   TEXT    NOT NULL DEFAULT 'epic' CHECK (epic_kind = 'epic'),
   number      INTEGER NOT NULL,
   title       TEXT    NOT NULL,
   status      TEXT    NOT NULL DEFAULT 'pending'
                 CHECK (status IN ('pending','complete')),
   status_note TEXT,
   position    INTEGER NOT NULL,
+  FOREIGN KEY (epic_id, epic_kind) REFERENCES document(id, kind) ON DELETE CASCADE,
   UNIQUE (epic_id, number)
 );
 
 CREATE TABLE task (
-  id          INTEGER PRIMARY KEY,
-  story_id    INTEGER NOT NULL REFERENCES story(id) ON DELETE CASCADE,
+  id          TEXT PRIMARY KEY,
+  story_id    TEXT NOT NULL REFERENCES story(id) ON DELETE CASCADE,
   number      INTEGER NOT NULL,
   title       TEXT    NOT NULL,
   description TEXT,
@@ -450,8 +556,8 @@ CREATE TABLE test_approach (
 -- Spec-side criteria: the spec's own Testing Strategy table,
 -- `| Requirement | Acceptance Criterion | Test Approach |`.
 CREATE TABLE acceptance_criterion (
-  id              INTEGER PRIMARY KEY,
-  requirement_id  INTEGER NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
+  id              TEXT PRIMARY KEY,
+  requirement_id  TEXT NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
   text            TEXT    NOT NULL,
   polarity        TEXT    NOT NULL DEFAULT 'must'
                     CHECK (polarity IN ('must','must_not','control')),
@@ -460,7 +566,7 @@ CREATE TABLE acceptance_criterion (
 );
 
 CREATE TABLE criterion_approach (
-  criterion_id  INTEGER NOT NULL REFERENCES acceptance_criterion(id) ON DELETE CASCADE,
+  criterion_id  TEXT NOT NULL REFERENCES acceptance_criterion(id) ON DELETE CASCADE,
   tag           TEXT    NOT NULL REFERENCES test_approach(tag),
   PRIMARY KEY (criterion_id, tag)
 );
@@ -468,8 +574,8 @@ CREATE TABLE criterion_approach (
 -- Story-side criteria: the epic's `**Acceptance Criteria**:` bullets,
 -- a DIFFERENT set from the spec's. The coverage matrix joins the two.
 CREATE TABLE story_criterion (
-  id          INTEGER PRIMARY KEY,
-  story_id    INTEGER NOT NULL REFERENCES story(id) ON DELETE CASCADE,
+  id          TEXT PRIMARY KEY,
+  story_id    TEXT NOT NULL REFERENCES story(id) ON DELETE CASCADE,
   text        TEXT    NOT NULL,
   polarity    TEXT    NOT NULL DEFAULT 'must'
                 CHECK (polarity IN ('must','must_not','control')),
@@ -478,7 +584,7 @@ CREATE TABLE story_criterion (
 );
 
 CREATE TABLE story_criterion_approach (
-  story_criterion_id INTEGER NOT NULL REFERENCES story_criterion(id) ON DELETE CASCADE,
+  story_criterion_id TEXT NOT NULL REFERENCES story_criterion(id) ON DELETE CASCADE,
   tag                TEXT    NOT NULL REFERENCES test_approach(tag),
   PRIMARY KEY (story_criterion_id, tag)
 );
@@ -487,10 +593,10 @@ CREATE TABLE story_criterion_approach (
 -- story criterion. A single requirement yields several rows — FR4 of spec 101
 -- produces three, each independently verified.
 CREATE TABLE coverage (
-  id                 INTEGER PRIMARY KEY,
-  requirement_id     INTEGER NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
+  id                 TEXT PRIMARY KEY,
+  requirement_id     TEXT NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
   spec_fragment      TEXT    NOT NULL,
-  story_criterion_id INTEGER NOT NULL REFERENCES story_criterion(id) ON DELETE CASCADE,
+  story_criterion_id TEXT NOT NULL REFERENCES story_criterion(id) ON DELETE CASCADE,
   position           INTEGER NOT NULL,   -- display order only; NOT part of identity
   verified_at        TEXT,            -- NULL = unverified; the ✓ column
   binding_hash       TEXT,            -- hash of (spec_fragment ‖ criterion text) at verification
@@ -501,8 +607,8 @@ CREATE TABLE coverage (
 -- "Covered by: Story 2, Story 4" — a criterion may be delivered by more than
 -- the story that declares it. Rare (3 rows in a 393-artefact corpus) but real.
 CREATE TABLE coverage_story (
-  coverage_id  INTEGER NOT NULL REFERENCES coverage(id) ON DELETE CASCADE,
-  story_id     INTEGER NOT NULL REFERENCES story(id)    ON DELETE CASCADE,
+  coverage_id  TEXT NOT NULL REFERENCES coverage(id) ON DELETE CASCADE,
+  story_id     TEXT NOT NULL REFERENCES story(id)    ON DELETE CASCADE,
   PRIMARY KEY (coverage_id, story_id)
 );
 
@@ -523,7 +629,69 @@ BEGIN
   UPDATE coverage SET verified_at = NULL, binding_hash = NULL
    WHERE requirement_id = NEW.id;
 END;
+
+-- The third edit path, and the one an earlier draft missed: the fragment is a
+-- stored copy, so rewriting it changes what was verified without touching
+-- either table the two triggers above watch.
+CREATE TRIGGER coverage_unverify_on_fragment_edit
+AFTER UPDATE OF spec_fragment ON coverage
+WHEN OLD.spec_fragment <> NEW.spec_fragment
+BEGIN
+  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
+   WHERE id = NEW.id;
+END;
+
+-- FR26. The three triggers above decay one row's ✓; these four decay the claim
+-- that the rows, as a set, account for the requirement. The set changes when a
+-- row arrives, when one leaves, when a fragment is rewritten, and when the text
+-- being accounted for is itself edited — four events, four triggers.
+CREATE TRIGGER requirement_unclaim_on_coverage_insert
+AFTER INSERT ON coverage
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = NEW.requirement_id;
+END;
+
+CREATE TRIGGER requirement_unclaim_on_coverage_delete
+AFTER DELETE ON coverage
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = OLD.requirement_id;
+END;
+
+CREATE TRIGGER requirement_unclaim_on_fragment_edit
+AFTER UPDATE OF spec_fragment ON coverage
+WHEN OLD.spec_fragment <> NEW.spec_fragment
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = NEW.requirement_id;
+END;
+
+CREATE TRIGGER requirement_unclaim_on_text_edit
+AFTER UPDATE OF text ON requirement
+WHEN OLD.text <> NEW.text
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = NEW.id;
+END;
 ```
+
+**Completeness is a claim and not a computation, and the alternative is worth stating
+because it looks better than it is.** Deriving it — storing each fragment's offset and
+requiring the fragments to tile the requirement's text — needs no human act and cannot be
+forgotten. It was rejected because the derivation is wrong in both directions at once:
+connective prose carries no obligation and would have to be bound to satisfy it, while two
+obligations inside one sentence are discharged by a fragment covering either. A derived
+signal that is confidently wrong is worse than a claim a person made, because nothing
+prompts anyone to look at it. What the schema can guarantee is not that the judgement was
+right but that it is **current**, which is what the four triggers deliver — and it is the
+same guarantee, and the same mechanism, FR21 already provides one level down.
+
+**`requirement_unclaim_on_text_edit` updates the table it fires on**, which is safe here and
+was verified with `recursive_triggers` both off and on: the trigger watches `text` and
+writes only the two claim columns, so the inner statement cannot re-enter it. The three
+`coverage` triggers are likewise disjoint from `coverage_unverify_*`, which write
+`verified_at` and `binding_hash` and match no `UPDATE OF spec_fragment`.
 
 `polarity` is the sleeper. A negative criterion is currently written `must NOT — …` and recognised by that prefix; a control case by the word `control`. Both are types carried in prose, in the one artefact whose whole purpose is deciding whether the work is done.
 
@@ -539,7 +707,59 @@ The coverage matrix — a markdown table, parsed row by row by `coverage_matrix_
 
 > **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
 
-A plain `state` column cannot honour it: edit a criterion and the ✓ survives, now attesting to text that no longer exists. That is a false pass inside the coverage subsystem — the precise failure class this spec exists to eliminate, reproduced by this spec's own first draft. `binding_hash` records what was verified, the `CHECK` keeps it in lockstep with `verified_at`, and the two triggers make the reset automatic rather than remembered.
+A plain `state` column cannot honour it: edit a criterion and the ✓ survives, now attesting to text that no longer exists. That is a false pass inside the coverage subsystem — the precise failure class this spec exists to eliminate, reproduced by this spec's own first draft. `binding_hash` records what was verified, the `CHECK` keeps it in lockstep with `verified_at`, and the three triggers make the reset automatic rather than remembered.
+
+**There are three edit paths, not two, and counting them wrong is how this table stayed broken across drafts.** FR21 names "the requirement fragment or the story criterion", and the fragment is not `requirement.text` — it is `coverage.spec_fragment`, a stored verbatim slice, which is also half of what `binding_hash` hashes. A draft carrying only the two triggers on `requirement.text` and `story_criterion.text` left the fragment editable with the ✓ intact, verified by execution: the row kept `verified_at` and a `binding_hash` computed over text that had been replaced. The rule to hold on to is that **a trigger must watch every column the binding is computed from**, and the binding is computed from two texts held in three places.
+
+**And one level up, the same argument applies to the set.** Each of those triggers keeps one
+row's ✓ honest about the text it names. None of them says the rows, together, account for
+the requirement — so a requirement carrying five obligations with one fragment bound has one
+correct, current, verified row and reads as covered. `coverage_claimed_at` is the claim that
+they do account for it, and its four triggers are the same decay applied to membership of the
+set rather than to the content of a row (FR26).
+
+### Milestones — the build order as rows
+
+```sql
+-- A specification's build order. Scoped to the spec, ordered within it, and
+-- joined to the artefacts that deliver it — an epic may span more than one.
+CREATE TABLE milestone (
+  id          TEXT    PRIMARY KEY,
+  spec_id     TEXT    NOT NULL,
+  spec_kind   TEXT    NOT NULL DEFAULT 'spec' CHECK (spec_kind = 'spec'),
+  label       TEXT    NOT NULL,      -- 'M1'
+  title       TEXT    NOT NULL,      -- 'Substrate'
+  summary     TEXT,
+  position    INTEGER NOT NULL,
+  FOREIGN KEY (spec_id, spec_kind) REFERENCES document(id, kind) ON DELETE CASCADE,
+  UNIQUE (spec_id, label),
+  UNIQUE (spec_id, position)
+);
+
+CREATE TABLE document_milestone (
+  document_id  TEXT NOT NULL REFERENCES document(id)  ON DELETE CASCADE,
+  milestone_id TEXT NOT NULL REFERENCES milestone(id) ON DELETE CASCADE,
+  PRIMARY KEY (document_id, milestone_id)
+);
+```
+
+**A join table and not a column, because an epic really does span two.** AD6 lists four
+milestones and this spec's own breakdown has an epic delivering part of M2 and part of M4.
+A `document.milestone_id` column forces that epic into one of them, and the choice is
+unrecoverable — nothing afterwards can tell "delivers M2" from "delivers M2 and M4 but was
+filed under M2".
+
+**Scoped to a spec rather than global, and not a `taxonomy` row.** Milestones are one
+specification's build order, so two specs may both have an `M1` meaning different things —
+`UNIQUE (spec_id, label)` permits that and `UNIQUE (spec_id, position)` keeps the order
+total within each. A `taxonomy` row is the wrong shape twice over: the vocabulary is not
+project-wide, and `taxonomy` carries no owner to scope it to.
+
+**What the schema cannot hold here is the pairing's coherence.** `document_milestone`
+accepts an epic under spec A joined to a milestone of spec B — verified by execution, since
+both foreign keys are satisfied and neither knows about the other. Establishing that they
+share a spec means walking `document.parent_id` up to the root, which is not row-local, so
+it is register entry #12 rather than a constraint.
 
 ### Dependencies and retro feed-forward
 
@@ -554,12 +774,12 @@ CREATE TABLE dependency_kind (
 );
 
 CREATE TABLE dependency (
-  id                  INTEGER PRIMARY KEY,
+  id                  TEXT PRIMARY KEY,
   kind                TEXT NOT NULL REFERENCES dependency_kind(kind),
-  source_document_id  INTEGER REFERENCES document(id) ON DELETE CASCADE,
-  source_story_id     INTEGER REFERENCES story(id)    ON DELETE CASCADE,
-  target_document_id  INTEGER REFERENCES document(id) ON DELETE CASCADE,
-  target_story_id     INTEGER REFERENCES story(id)    ON DELETE CASCADE,
+  source_document_id  TEXT REFERENCES document(id) ON DELETE CASCADE,
+  source_story_id     TEXT REFERENCES story(id)    ON DELETE CASCADE,
+  target_document_id  TEXT REFERENCES document(id) ON DELETE CASCADE,
+  target_story_id     TEXT REFERENCES story(id)    ON DELETE CASCADE,
   CHECK ((source_document_id IS NULL) <> (source_story_id IS NULL)),
   CHECK ((target_document_id IS NULL) <> (target_story_id IS NULL)),
   CHECK (source_document_id IS NULL OR target_document_id IS NULL
@@ -579,13 +799,17 @@ CREATE UNIQUE INDEX dependency_edge ON dependency (
 -- `**Retro applied**: 12 · Codebase discovery · Applied — <text>`
 -- Four fields in one prose line, on 29 epics.
 CREATE TABLE retro_application (
-  id            INTEGER PRIMARY KEY,
-  retro_id      INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
-  applied_to_id INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  id            TEXT PRIMARY KEY,
+  retro_id      TEXT NOT NULL,
+  retro_kind    TEXT NOT NULL DEFAULT 'retro' CHECK (retro_kind = 'retro'),
+  -- `applied_to_id` is deliberately NOT kind-pinned: a retro's lesson may be
+  -- applied to a document of any kind, so there is no single legal target kind.
+  applied_to_id TEXT NOT NULL REFERENCES document(id) ON DELETE CASCADE,
   theme         TEXT NOT NULL DEFAULT '',
   disposition   TEXT NOT NULL
                   CHECK (disposition IN ('applied','not_applicable','deferred')),
   note          TEXT NOT NULL DEFAULT '',
+  FOREIGN KEY (retro_id, retro_kind) REFERENCES document(id, kind) ON DELETE CASCADE,
   UNIQUE (retro_id, applied_to_id, theme, note)
 );
 ```
@@ -611,7 +835,7 @@ Blocking is a **relationship**, and an earlier draft of this spec made it a `sta
 -- `retired_at` lets a project stop offering a category without deleting the
 -- rows that already use it.
 CREATE TABLE taxonomy (
-  id          INTEGER PRIMARY KEY,
+  id          TEXT PRIMARY KEY,
   domain      TEXT    NOT NULL,   -- 'observation','finding','audit_dimension','severity'
   name        TEXT    NOT NULL,   -- canonical form, e.g. 'Patterns Worth Reusing'
   singular    TEXT,               -- per-item display form, e.g. 'Pattern worth reusing'
@@ -626,46 +850,60 @@ CREATE TABLE taxonomy (
 -- parent key. A plain `REFERENCES taxonomy(id)` would let a severity row sit in
 -- a category slot — which is the drift, relocated rather than removed.
 CREATE TABLE finding (
-  id              INTEGER PRIMARY KEY,
-  review_id       INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  id              TEXT PRIMARY KEY,
+  review_id       TEXT NOT NULL,
+  review_kind     TEXT NOT NULL DEFAULT 'review' CHECK (review_kind = 'review'),
+  position        INTEGER NOT NULL,   -- projection order; without it a review's findings render unordered
   agent           TEXT,
-  category_id     INTEGER NOT NULL,
+  category_id     TEXT NOT NULL,
   category_domain TEXT NOT NULL DEFAULT 'finding'
                     CHECK (category_domain = 'finding'),
-  severity_id     INTEGER NOT NULL,
+  severity_id     TEXT NOT NULL,
   severity_domain TEXT NOT NULL DEFAULT 'severity'
                     CHECK (severity_domain = 'severity'),
   summary         TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'open'
                     CHECK (status IN ('open','accepted','rejected','remediated')),
-  remediation_task_id INTEGER REFERENCES task(id),
+  remediation_task_id TEXT REFERENCES task(id),
+  FOREIGN KEY (review_id, review_kind)      REFERENCES document(id, kind) ON DELETE CASCADE,
   FOREIGN KEY (category_id, category_domain) REFERENCES taxonomy(id, domain),
-  FOREIGN KEY (severity_id, severity_domain) REFERENCES taxonomy(id, domain)
+  FOREIGN KEY (severity_id, severity_domain) REFERENCES taxonomy(id, domain),
+  UNIQUE (review_id, position)
 );
 
 -- A retro observation. Also the story-level `**Retro**:` field, which is the
 -- same thing recorded earlier — hence the exclusive parentage.
 CREATE TABLE observation (
-  id              INTEGER PRIMARY KEY,
-  retro_id        INTEGER REFERENCES document(id) ON DELETE CASCADE,
-  story_id        INTEGER REFERENCES story(id)    ON DELETE CASCADE,
+  id              TEXT PRIMARY KEY,
+  retro_id        TEXT,
+  retro_kind      TEXT CHECK (retro_kind = 'retro'),
+  story_id        TEXT REFERENCES story(id)    ON DELETE CASCADE,
+  position        INTEGER NOT NULL DEFAULT 0,  -- projection order within a retro
   text            TEXT NOT NULL,
   synthesis       TEXT,            -- written when grouped into a retro
   note            TEXT,            -- escape hatch: qualifiers, caveats, scope
-  library_doc_id  INTEGER,         -- set on promotion
+  library_doc_id  TEXT,            -- set on promotion
   library_doc_kind TEXT CHECK (library_doc_kind = 'library'),
   retired_at      TEXT,
   retired_reason  TEXT,
   FOREIGN KEY (library_doc_id, library_doc_kind) REFERENCES document(id, kind),
+  FOREIGN KEY (retro_id, retro_kind) REFERENCES document(id, kind) ON DELETE CASCADE,
   CHECK ((library_doc_id IS NULL) = (library_doc_kind IS NULL)),
+  CHECK ((retro_id IS NULL) = (retro_kind IS NULL)),
   CHECK (retro_id IS NOT NULL OR story_id IS NOT NULL),
   CHECK ((retired_at IS NULL) = (retired_reason IS NULL))
 );
 
+-- Nullable `retro_id` makes a plain UNIQUE useless here, for the reason already
+-- documented against `coverage`. The partial index constrains only rows that
+-- have a retro to order within.
+CREATE UNIQUE INDEX observation_retro_position
+  ON observation (retro_id, position) WHERE retro_id IS NOT NULL;
+
 -- Many-to-many: an observation genuinely spans categories.
 CREATE TABLE observation_category (
-  observation_id   INTEGER NOT NULL REFERENCES observation(id) ON DELETE CASCADE,
-  taxonomy_id      INTEGER NOT NULL,
+  observation_id   TEXT NOT NULL REFERENCES observation(id) ON DELETE CASCADE,
+  taxonomy_id      TEXT NOT NULL,
   taxonomy_domain  TEXT NOT NULL DEFAULT 'observation'
                      CHECK (taxonomy_domain = 'observation'),
   PRIMARY KEY (observation_id, taxonomy_id),
@@ -673,19 +911,23 @@ CREATE TABLE observation_category (
 );
 
 CREATE TABLE audit_finding (
-  id               INTEGER PRIMARY KEY,
-  audit_id         INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
-  dimension_id     INTEGER NOT NULL,
+  id               TEXT PRIMARY KEY,
+  audit_id         TEXT NOT NULL,
+  audit_kind       TEXT NOT NULL DEFAULT 'audit' CHECK (audit_kind = 'audit'),
+  position         INTEGER NOT NULL,   -- projection order, as on `finding`
+  dimension_id     TEXT NOT NULL,
   dimension_domain TEXT NOT NULL DEFAULT 'audit_dimension'
                      CHECK (dimension_domain = 'audit_dimension'),
   file             TEXT NOT NULL,
   line             INTEGER,
   symbol           TEXT,
-  severity_id      INTEGER NOT NULL,
+  severity_id      TEXT NOT NULL,
   severity_domain  TEXT NOT NULL DEFAULT 'severity'
                      CHECK (severity_domain = 'severity'),
+  FOREIGN KEY (audit_id, audit_kind)           REFERENCES document(id, kind) ON DELETE CASCADE,
   FOREIGN KEY (dimension_id, dimension_domain) REFERENCES taxonomy(id, domain),
-  FOREIGN KEY (severity_id,  severity_domain)  REFERENCES taxonomy(id, domain)
+  FOREIGN KEY (severity_id,  severity_domain)  REFERENCES taxonomy(id, domain),
+  UNIQUE (audit_id, position)
 );
 ```
 
@@ -693,7 +935,7 @@ CREATE TABLE audit_finding (
 
 **Why every taxonomy is a table.** This is the design decision in this spec with the strongest empirical backing, and the evidence is worth stating exactly.
 
-CPM fixes seven retro observation categories, named in a prose sentence inside a shared procedure. Across 22 real retro files in one project they appear as **eleven distinct headings**:
+CPM fixes seven retro observation categories, named in a prose sentence inside a shared procedure. Across 22 real retro files in one project they appear as **twelve distinct headings**:
 
 | Intended category | What was actually written |
 |---|---|
@@ -711,7 +953,7 @@ The control case is in the same project, by the same author, in the same period:
 
 Three consequences are built into the schema above:
 
-- **`taxonomy` rows, referenced by a domain-scoped FK.** Eleven spellings of seven categories cannot occur when the category is an id. The scoping is the other half and is easy to leave out: a bare `REFERENCES taxonomy(id)` stops the misspellings but still admits a severity where a category belongs, so the vocabulary is enforced and the *vocabularies* are not. `UNIQUE (id, domain)` on the parent plus a `CHECK`-pinned domain column on each child makes the wrong-domain reference a foreign-key failure at write time.
+- **`taxonomy` rows, referenced by a domain-scoped FK.** Twelve spellings of seven categories cannot occur when the category is an id. The scoping is the other half and is easy to leave out: a bare `REFERENCES taxonomy(id)` stops the misspellings but still admits a severity where a category belongs, so the vocabulary is enforced and the *vocabularies* are not. `UNIQUE (id, domain)` on the parent plus a `CHECK`-pinned domain column on each child makes the wrong-domain reference a foreign-key failure at write time.
 - **`observation_category` is many-to-many.** Real observations were forced into invented compounds — `Testing gap → guard friction`, `Testing gap / pattern`, `Pattern reuse + testing` — because the format allowed one category and the work spanned two.
 - **`taxonomy.retired_at`, not deletion.** One of the seven categories was never used once. A project should be able to stop offering a category without invalidating rows that already reference it, which means the vocabulary is data and not an enum.
 
@@ -725,7 +967,7 @@ Three consequences are built into the schema above:
 
 ```sql
 CREATE TABLE artifact (
-  id            INTEGER PRIMARY KEY,
+  id            TEXT PRIMARY KEY,
   url           TEXT NOT NULL UNIQUE,
   title         TEXT NOT NULL,
   description   TEXT,
@@ -733,13 +975,50 @@ CREATE TABLE artifact (
 );
 
 CREATE TABLE artifact_document (
-  artifact_id   INTEGER NOT NULL REFERENCES artifact(id)  ON DELETE CASCADE,
-  document_id   INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  artifact_id   TEXT NOT NULL REFERENCES artifact(id)  ON DELETE CASCADE,
+  document_id   TEXT NOT NULL REFERENCES document(id) ON DELETE CASCADE,
   PRIMARY KEY (artifact_id, document_id)
 );
 ```
 
 `cpm:artifact` today maintains `docs/artifacts/index.md` **and** backlinks written into each source document — the same relationship recorded twice, in two files, by hand, with no diagnostic when one side is updated and the other is not. One join table cannot hold a disagreement, because there is only one place for the fact to live. Both the index and the in-document backlinks become projections of the same rows.
+
+### References in prose — a marker, not a number
+
+FR2 makes every *structural* reference a foreign key: an epic's spec, a coverage row's
+requirement, an artifact's document. Those need no further thought here — a ULID does not
+change when a merge renumbers its target, so a renumber is a re-render and there is nothing
+to repair.
+
+The references FR28 exists for are the other kind: **a sentence naming another artefact**.
+This spec's own corpus is full of them — an epic's notes saying "the merge half is Epic
+47-04", a retro observation citing the spec it came from. They are prose, they name a human
+number, and that number moves.
+
+The rule is that a body never stores the number. It stores `{{ref:<id>}}`, and the renderer
+resolves the marker to the target's current identifier at projection time.
+
+**No `document_reference` table, and the reason is the corpus.** A table with
+`section_id REFERENCES document_section(id)` was the first design, and it buys write-time
+enforcement — FR2's own argument. It was rejected because it reaches only section bodies,
+and the references that actually matter are not all in sections: a retro observation citing
+a spec lives in `observation.text`, a child row. Reaching those from one table means a
+polymorphic source across five prose columns, which is precisely the unchecked-integer
+shape AD1 rejected. A marker embedded in the text works in every column without caring
+which table it is.
+
+**The cost is that resolution is checked rather than constrained**, and that is register
+entry #13. Deleting a document leaves markers naming it, and they render as broken
+references instead of failing at write time. This is the same trade the register already
+makes for `dependency` endpoints (#6) and for the same reason: the guarantee that can be
+had cheaply is worth less than the one that cannot be had at all, but it is not nothing —
+the check is a sweep over every prose column, and it was verified to work:
+
+```
+document_section.SEC1 | A1   | ok -> adr
+document_section.SEC1 | S2   | ok -> spec
+document_section.SEC2 | NOPE | *** DANGLING ***
+```
 
 ### Session state
 
@@ -760,31 +1039,60 @@ Adoption on `--resume` is `UPDATE session SET superseded_by = ?`. Classification
 ### Search and schema management
 
 ```sql
--- An external-content FTS5 table reads its indexed columns from the content
--- table BY NAME, so these must be the columns `document_section` actually has.
+-- A standalone FTS5 table carrying the section's ULID as an UNINDEXED column.
+-- It is NOT external-content: an external-content table addresses its rows by
+-- `content_rowid`, which must be an integer, and AD9 made every id a ULID.
 CREATE VIRTUAL TABLE document_fts USING fts5(
-  heading, body, content='document_section', content_rowid='id'
+  section_id UNINDEXED, heading, body
 );
 
 -- Written out rather than described, because the index is not self-maintaining
 -- and the failure of an absent trigger is a search that misses what was just
 -- written and reports success.
 CREATE TRIGGER document_fts_insert AFTER INSERT ON document_section BEGIN
-  INSERT INTO document_fts(rowid, heading, body)
+  INSERT INTO document_fts(section_id, heading, body)
     VALUES (new.id, new.heading, new.body);
 END;
 
 CREATE TRIGGER document_fts_delete AFTER DELETE ON document_section BEGIN
-  INSERT INTO document_fts(document_fts, rowid, heading, body)
-    VALUES ('delete', old.id, old.heading, old.body);
+  DELETE FROM document_fts WHERE section_id = old.id;
 END;
 
 CREATE TRIGGER document_fts_update AFTER UPDATE ON document_section BEGIN
-  INSERT INTO document_fts(document_fts, rowid, heading, body)
-    VALUES ('delete', old.id, old.heading, old.body);
-  INSERT INTO document_fts(rowid, heading, body)
+  DELETE FROM document_fts WHERE section_id = old.id;
+  INSERT INTO document_fts(section_id, heading, body)
     VALUES (new.id, new.heading, new.body);
 END;
+
+-- Narrative bodies live in `document_section`; most of the prose a user would
+-- search for does not. A second standalone index covers the child tables that
+-- hold hand-written text, tagged with the entity it came from so a search can
+-- be scoped or left open.
+CREATE VIRTUAL TABLE entry_fts USING fts5(
+  entity, entity_id UNINDEXED, text
+);
+
+CREATE TRIGGER requirement_fts_insert AFTER INSERT ON requirement BEGIN
+  INSERT INTO entry_fts(entity, entity_id, text)
+    VALUES ('requirement', new.id, new.text);
+END;
+
+CREATE TRIGGER requirement_fts_update AFTER UPDATE OF text ON requirement BEGIN
+  DELETE FROM entry_fts WHERE entity = 'requirement' AND entity_id = old.id;
+  INSERT INTO entry_fts(entity, entity_id, text)
+    VALUES ('requirement', new.id, new.text);
+END;
+
+CREATE TRIGGER requirement_fts_delete AFTER DELETE ON requirement BEGIN
+  DELETE FROM entry_fts WHERE entity = 'requirement' AND entity_id = old.id;
+END;
+
+-- The same three triggers exist for `acceptance_criterion.text`,
+-- `observation.text` and `finding.summary`, differing only in the entity tag,
+-- the table and the column. They are not written out here; the coverage
+-- criterion below asserts that all three exist for every indexed table, which
+-- closes the absent-trigger risk with a test rather than with twelve near
+-- copies a reader would have to diff by eye.
 
 CREATE TABLE schema_version (
   version     INTEGER NOT NULL,
@@ -794,7 +1102,11 @@ CREATE TABLE schema_version (
 
 The FTS index is maintained by the three triggers above, not by a reindex step. A search index that lags a write returns a result set missing the thing just written, and reports success — an instance of NFR6's false-pass class, so it is closed at the schema rather than left to a caller to remember.
 
-**The indexed columns are `heading` and `body`, not `title`.** An external-content FTS5 table resolves its column names against the content table at query time, so naming a column the content table does not have produces a table that accepts `CREATE` and then fails on every `rebuild` and every `MATCH` with `no such column`. A `title` column here is precisely that error: titles live on `document`, sections have `heading`. Document titles are therefore not in this index — `document` is small and ordered, and a title query is an ordinary `WHERE`, so FR9's "artefact bodies are indexed" is satisfied without a second virtual table.
+**The index is standalone, and that is a consequence of AD9 rather than a preference.** An external-content FTS5 table addresses its rows through `content_rowid`, and a rowid is an integer: with `document_section.id` a ULID, `INSERT INTO document_fts(rowid, …) VALUES (new.id, …)` fails at runtime with `datatype mismatch` on the first section written. The table is therefore standalone, storing `heading` and `body` itself and carrying the section's ULID in an `UNINDEXED` column that the delete and update triggers key on. The cost is the section text held twice; the corpus is a project's docs directory, so it is not a cost worth a per-database integer that AD9 exists to remove. Because the table owns its content, there is no `rebuild` to run and none to test — the triggers are the whole maintenance story.
+
+**The indexed columns are `heading` and `body`, not `title`.** Titles live on `document`, sections have `heading`, and a column named for the wrong table is an error the standalone form no longer catches at `MATCH` time — it silently indexes nothing. Document titles are therefore deliberately outside this index: `document` is small and ordered, and a title query is an ordinary `WHERE`.
+
+**Two indexes, because most of the searchable prose is not in a section.** `document_section` holds narrative bodies, but a requirement's text, a story criterion's text, a retro observation and a review finding are all rows in child tables, and a search that covers only sections misses the majority of what a user would look for — "which requirement mentioned the coverage helpers" returns nothing while the answer sits in `requirement.text`. `entry_fts` covers those, tagged by entity, so `entity:requirement AND helpers` scopes a search and an untagged query spans everything. A column earns a place in it by holding prose a person wrote that no other column can find the row by: `requirement.text`, `acceptance_criterion.text`, `observation.text`, `finding.summary`. Labels, statuses and enums are not indexed — they are `WHERE` clauses, and putting them in a full-text index would make ranking meaningless.
 
 ### The cross-row invariant register
 
@@ -812,10 +1124,46 @@ Every entry is closed twice — refused at the write path so it cannot arrive, a
 | 4 | A `coverage_story` row's story is in the same epic as the coverage row it extends | Same shape as #3 | coverage link tool | FR14 |
 | 5 | `number_sequence.next_value` is greater than every number allocated for that kind | An aggregate over another table | upsert allocation holds it by construction | FR14, and it is repairable |
 | 6 | A `dependency`'s ends are kinds that edge admits — `builds_on` spec→spec, `constrains` ADR→ADR | Needs both ends' kinds, and the legal set varies by `dependency_kind` | link tool | FR14 |
+| 7 | A `review`'s `scope_story_id` names a story inside the epic it reviews | The same four-table join as #3 | review create tool | FR14 |
+| 8 | An `adr` at `decision_status = 'accepted'` has exactly one `adr_option` with `chosen = 1` | An aggregate over a child table, conditional on a column here | ADR status tool | FR14 |
+| 9 | `coverage.spec_fragment` is a substring of its requirement's `text` | Spans two tables, and the predicate is textual rather than referential | coverage create tool | FR14 |
+| 10 | No row is written referencing a vocabulary row already retired | Depends on the parent's `retired_at` at the moment of writing | every create tool | FR14 |
+| 11 | `session.superseded_by` forms no cycle | Reachability, as #1 | session adoption tool | FR14 |
+| 12 | A `document_milestone` row's document and milestone belong to the same spec | Needs `document.parent_id` walked to the root; not row-local | milestone link tool | FR14, FR27 |
+| 13 | Every `{{ref:<id>}}` marker in every prose column resolves to a live `document` | The reference is inside text, so no foreign key can reach it | link and delete tools | FR14, FR28 |
 
 **#3 is the one that matters most.** It is the only entry whose violation produces a *plausible* result rather than an obviously broken one: a coverage matrix joining spec A's requirement to spec B's criterion renders perfectly, rolls up to a percentage, and is wrong. It belongs in the false-pass register too, and is listed there.
 
+**#10 is the entry that makes FR24's retirement mean something.** Retirement was previously enforced against nothing: `retired_at` kept existing rows valid, which is half the promise, while nothing stopped a *new* row referencing a retired category. A project could retire a vocabulary item and find it still on offer and still accepted, with no failure anywhere — the drift class the taxonomy tables exist to end, surviving as a soft convention in the one place FR24 promised it would not.
+
+**Restore is the one connection where FR2 cannot hold, so it ends with an explicit check.** A `.sql` dump opens with `PRAGMA foreign_keys=OFF`, and it has to: any dump sorted by natural key, as NFR4 requires, is not in topological order, and `document.parent_id` is self-referential so no fixed table order avoids it. That makes restore precisely the path on which every foreign key in the schema is advisory — false-pass entry #7 arriving as a designed step rather than an accident, on the path the register already names as how violations arrive. Restore therefore ends with `PRAGMA foreign_key_check`, failing loudly and naming the rows, followed by the FR14 register sweep. Neither is optional and neither is the caller's to remember.
+
+**#12 and #13 are new, and both arrived the same way.** Neither was reasoned into existence:
+each was found by executing the schema the change proposed. `document_milestone` accepted a
+cross-spec pairing on the first probe, and the marker sweep was written to prove markers
+were checkable at all. An invariant discovered by running the thing is the only kind this
+register has ever gained.
+
 **#6 is deliberately a register entry and not an allow-list table.** The machinery exists — a `dependency_kind_endpoint(kind, source_kind, target_kind)` table with composite foreign keys would close it structurally, exactly as `document_kind_parent` closes parentage. It is not built because the legal set is not yet known: `blocks` alone spans epic→epic and story→story, and inventing the rest of the matrix before dpm's own pipeline exists would fix guesses in a constraint. When the pipeline settles, this entry converts from a check to a table, and that is the intended direction of travel for anything here that can make the trip.
+
+### The dumper is dpm's own component
+
+NFR4 asks for byte-stability and AD4 stakes branching on it, but neither says what produces the bytes. `sqlite3 .dump` does not, for three reasons, each of which was executed rather than reasoned about:
+
+- **It emits the FTS5 shadow tables.** `document_fts` expands to five real tables in `sqlite_schema` — `_data`, `_idx`, `_content`, `_docsize`, `_config` — and `.dump` writes their contents as hex blobs. Those blobs are FTS5's internal representation of an index that is *derived*, so committing them commits a second copy of every section body in a form no reviewer can read and no merge can resolve.
+- **It emits rows in storage order.** For every table without a rowid alias the order is insertion order, so two machines that reached the same logical state by different routes produce different files. That is the exact failure NFR4 names, arriving from the tool chosen to prevent it.
+- **`node:sqlite` does not have it.** `.dump` is a feature of the `sqlite3` CLI, not of the library. Depending on it would put a per-platform binary back into the runtime that AD5 chose Node specifically to avoid.
+
+**dpm therefore writes its own dumper, and its output is defined here rather than left to a library.**
+
+1. **Schema first, in `sqlite_schema` order**, filtered to exclude `sqlite_%` and every object whose name begins with an FTS5 virtual table's name followed by `_`. The `CREATE VIRTUAL TABLE` for `document_fts` itself is kept; its five shadow tables are not.
+2. **Triggers are part of the schema and are created before any data.** This is what makes the FTS index reproducible without dumping it: restoring `document_section` fires `document_fts_insert` row by row, and the index is rebuilt as a consequence of the data arriving. Verified by round trip — a restore from a schema-then-data file yields a populated index and a clean `PRAGMA foreign_key_check`.
+3. **One `INSERT` per row, one row per line, columns named explicitly.** Naming the columns means a later migration that adds one does not invalidate every historic dump.
+4. **Rows ordered by primary key.** AD9 is what makes this a *total* order on every table without a declared tiebreak: a ULID is unique and lexicographically comparable, so "order by the primary key" is well-defined everywhere, including the association tables whose key is composite.
+5. **Values rendered by a fixed literal formatter** — SQL string quoting with doubled single quotes, integers in base ten, `NULL` unquoted, no float shortening, no locale collation anywhere in the pipeline. Text is written as-is; dpm stores no floats and no blobs, which is a constraint on the schema rather than a property of the data.
+6. **LF endings and a trailing newline**, so the file is stable across platforms and git adds no diff of its own.
+
+**The `.sql` is written by the same pre-commit hook that regenerates the projection** (FR7), and for the same reason: both are generated artefacts committed alongside a source of truth that is not in the commit, so both are stale the moment a write lands and nothing regenerates them. The hook regenerates the projection, regenerates the dump, and fails on divergence in either — one guard, because a commit carrying a fresh projection and a stale dump is the worse of the two failures and would otherwise pass.
 
 ### Constraint-to-drift mapping
 
@@ -833,7 +1181,7 @@ Every entry is closed twice — refused at the write path so it cannot arrive, a
 | One requirement's several obligations collapsed to one row | `coverage.spec_fragment`, one row each |
 | Story criteria readable only as epic prose | `story_criterion` rows |
 | `**Blocked by**` as a prose list of epic filenames | `dependency` edges |
-| Seven retro categories written as eleven headings | `taxonomy` rows, referenced by FK |
+| Seven retro categories written as twelve headings | `taxonomy` rows, referenced by FK |
 | An observation forced into one category when it spans two | `observation_category` many-to-many |
 | `**Builds on**` hand-invented in three specs, unspecified | `dependency_kind = 'builds_on'` |
 | Retirement collapsing date and reason into a state | `retired_at` + `retired_reason`, reversible |
@@ -849,12 +1197,19 @@ Every entry is closed twice — refused at the write path so it cannot arrive, a
 | An observation losing its story when promoted to a retro | inclusive parentage, `story_id` survives |
 | The first number for a kind allocated against no row | upsert allocation, no seeding step |
 | `**Source spec**` naming a document of the wrong kind | `document_kind_parent` + composite FKs |
+| A story, requirement or finding hung off a document of the wrong kind | composite `(id, kind)` FK on every kind-specific reference |
+| A ✓ surviving a rewrite of the coverage fragment it verified | `coverage_unverify_on_fragment_edit` |
+| A retired vocabulary item still accepted on new rows | cross-row register #10, refused at the tool boundary |
+| A restore silently admitting what foreign keys would have caught | `PRAGMA foreign_key_check` after restore, then the FR14 sweep |
+| A review's findings rendering in whatever order the query returned | `position` on `finding`, `audit_finding` and `observation` |
 | A kind's declared numbering scheme constraining nothing | `numbering` denormalised, pinned, and `CHECK`ed |
 | An invariant too cross-row to be a constraint going unchecked | the cross-row invariant register + FR14 |
 
-Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.sh`, `coverage-rollup.sh`, `progress-classify.sh`, `cleancheck-guard.sh` — are 1,686 of the 2,305 lines in `cpm/hooks/lib/`.
+Thirty-five rows. The four shell helpers doing this work in CPM — `coverage-parse.sh`, `coverage-rollup.sh`, `progress-classify.sh`, `cleancheck-guard.sh` — are 1,686 of the 2,305 lines in `cpm/hooks/lib/`.
 
-**That figure is evidence, not a saving.** Those helpers stay shipped and working in CPM, which this spec does not touch; nothing here deletes a line of them. What 1,686 lines measures is the price of reconstructing entities from prose *when you do it as carefully as CPM does* — and even paid in full it buys a roll-up that can still silently match nothing and report full coverage. The benefit dpm delivers is not the shell it makes unnecessary but the failures it makes unavailable: the twenty-seven rows above are each a question a user currently has to answer by reading, and afterwards answers by asking. The claim is not that the schema is clever; it is entirely ordinary. It is that ordinary constraints are unavailable in the current substrate at any price.
+**That figure is evidence, not a saving.** Those helpers stay shipped and working in CPM, which this spec does not touch; nothing here deletes a line of them. What 1,686 lines measures is the price of reconstructing entities from prose *when you do it as carefully as CPM does* — and even paid in full it buys a roll-up that can still silently match nothing and report full coverage. The benefit dpm delivers is not the shell it makes unnecessary but the failures it makes unavailable: the thirty-five rows above are each a question a user currently has to answer by reading, and afterwards answers by asking. The claim is not that the schema is clever; it is entirely ordinary. It is that ordinary constraints are unavailable in the current substrate at any price.
+
+Every count in this document that describes a table in this document is checked by the FR14 integrity criterion below, because a hand-maintained count drifting from what it counts is the defect this spec is about, and this spec has committed it twice.
 
 ## Scope
 
@@ -863,8 +1218,8 @@ Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.s
 - The SQLite schema for all CPM artefact types, with foreign keys, `CHECK`-constrained enums, and FTS5.
 - The MCP server: typed create, read, update, link, and search tools; migrations; integrity verification.
 - The markdown projection renderer and the pre-commit divergence guard.
-- The deterministic dump-and-restore path.
-- dpm skill files mirroring CPM's pipeline, rewritten against the tool surface.
+- The deterministic dump-and-restore path, and the merge tool that renumbers colliding human numbers after a branch merge (AD9).
+- The twenty-two dpm skill files enumerated in FR25, mirroring CPM's pipeline one for one, rewritten against the tool surface.
 
 ### Out of Scope
 
@@ -900,9 +1255,15 @@ Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.s
 | FR1 | Creating each artefact type produces a row readable by its typed read tool | `[integration]` |
 | FR2 | Creating an epic with a non-existent `spec_id` fails, and no row is written | `[integration]` |
 | FR2 | must NOT — a foreign-key violation is accepted because `foreign_keys` defaulted off on a fresh connection | `[integration]` |
-| FR2 | Every column named `*_id` on every table appears in that table's `PRAGMA foreign_key_list`, with no exceptions list (AD7) | `[integration]` |
+| FR2 | Every column named `*_id` on every table appears in that table's `PRAGMA foreign_key_list`, with no exceptions list (AD7) | `[unit]` |
+| FR2 | Every foreign key whose target is `document` names `(id, kind)`, except the three the Data Model names as legitimately kind-agnostic — and that exceptions list is the one in the Data Model, not one the test may extend | `[unit]` |
+| FR2 | must NOT — a `story` is accepted under a spec, a `requirement` under an epic, or a detail row on a document of another kind | `[unit]` |
 | FR4 | Every `requirement` and `acceptance_criterion` type distinction is readable from a column with `label` and `text` withheld | `[integration]` |
 | FR3 | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation | `[integration]` |
+| FR25 | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | `[unit]` |
+| FR25 | No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — each is a tool call | `[unit]` |
+| FR25 | Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory | `[integration]` |
+| FR25 | must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool | `[integration]` |
 | FR4 | A status value outside its enum is rejected by `CHECK`, not coerced | `[unit]` |
 | FR4 | Loading a corpus whose labels are all replaced with opaque identifiers leaves every class, MoSCoW band and exclusion value unchanged | `[integration]` |
 | FR4 | must NOT — the `requirement` create tool accepts a class inferred from `label`, rather than requiring `class` as an argument | `[unit]` |
@@ -910,20 +1271,50 @@ Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.s
 | FR5 | The first allocation for a kind with no `number_sequence` row returns 1, and the first child allocation under a new parent does the same | `[unit]` |
 | FR5 | must NOT — an allocation returns no row, or returns success without a number | `[unit]` |
 | FR6 | Regenerating the projection twice from one database state yields byte-identical output | `[integration]` |
+| FR6 | A value written through a create tool appears in the rendered markdown for its document — determinism without this is satisfied by a renderer that emits nothing | `[integration]` |
+| FR6 | Two databases holding identical logical content, with child rows inserted in different orders, render byte-identical markdown | `[integration]` |
+| FR6 | must NOT — a projected collection has no ordering column and no declared tiebreak, so its render order is whatever the query returns | `[unit]` |
 | FR7 | A hand-edited generated file causes the pre-commit guard to exit non-zero, naming the file | `[feature]` |
 | FR7 | must NOT — a hand-edit is silently overwritten with no diagnostic | `[feature]` |
+| FR7 | A write made since the last commit leaves `.dpm/dpm.sql` stale, and the guard regenerates it and fails, naming it | `[feature]` |
+| FR7 | must NOT — a commit is accepted carrying a regenerated projection and an unregenerated dump | `[feature]` |
+| FR8 | The dump contains no FTS5 shadow table and no hex blob, and restoring it yields a populated `document_fts` — the index is rebuilt by the insert trigger, not carried in the file | `[integration]` |
+| FR8 | Every `INSERT` in the dump names its columns, and every table's rows are emitted in primary-key order | `[unit]` |
 | FR8 | Dumping the same database on two machines yields byte-identical `.sql` | `[integration]` |
 | FR8 | Two branches each adding an epic produce a resolvable text conflict, and the merged dump restores | `[feature]` |
+| FR8 | Two branches each adding a spec allocate distinct ULIDs for every row, so the merged dump has no primary-key collision on any table | `[integration]` |
+| FR8 | When both branches allocated the same human number, the merge tool renumbers one, renames its projection file, and rewrites every reference to it; the restored database then passes `PRAGMA foreign_key_check` and the register's checks | `[feature]` |
+| FR8 | must NOT — a number collision is resolved by silently overwriting one side, or left for the user to find when the projection renders two artefacts with the same number | `[feature]` |
 | FR9 | A search returns ranked results, and the index reflects a write made in the same session | `[integration]` |
-| FR9 | `INSERT INTO document_fts(document_fts) VALUES('rebuild')` succeeds against a populated database, and every FTS column names a real `document_section` column | `[unit]` |
+| FR9 | A section written with a ULID id is retrievable by `MATCH`, and `document_fts` declares no `content=` option — the external-content form rejects a non-integer rowid at write time | `[unit]` |
 | FR9 | Updating and deleting a section both leave the index consistent with the table, asserted by comparing a `MATCH` against a `LIKE` scan | `[unit]` |
-| FR10 | The thirteen seeded `document_kind` rows, seven child tables and two standalone tables enumerated in the Data Model each have a create tool and a projection template, and the enumeration has no member without one | `[integration]` |
+| FR9 | A term appearing only in a `requirement.text` is found by an unscoped search, and the hit names the entity and row id | `[integration]` |
+| FR9 | Every table `entry_fts` indexes has all three triggers — insert, update-of-the-indexed-column, delete — enumerated from `sqlite_schema`, with no table indexed by fewer than three | `[unit]` |
+| FR9 | Updating and deleting a row of each indexed child table leaves `entry_fts` consistent with that table, asserted by the same `MATCH`-versus-`LIKE` comparison | `[unit]` |
+| FR9 | must NOT — a search covers `document_section` only, so text held on a child row is unreachable while the tool reports success | `[integration]` |
+| FR10 | All twenty-three entity types — thirteen seeded `document_kind` rows, eight child tables and two standalone tables — have a create tool, and the enumeration has no member without one | `[integration]` |
+| FR10 | Each of the thirteen `document_kind` rows has a projection template; the ten non-document types and the ADR render inside a parent's template and are asserted to appear in one | `[integration]` |
 | FR10 | must NOT — a `document_kind` row exists that the parity enumeration does not name, or the reverse | `[unit]` |
 | FR11 | A session row survives simulated resume under a new session id, and stale rows are selected by age | `[integration]` |
 | FR21 | Editing a story criterion's text clears `verified_at` and `binding_hash` on every coverage row bound to it | `[unit]` |
 | FR21 | Editing a requirement's text clears verification on its coverage rows | `[unit]` |
 | FR21 | must NOT — a coverage row holds `verified_at` while `binding_hash` is NULL, or the reverse | `[unit]` |
-| FR21 | control — an edit that leaves the text byte-identical does not clear verification | `[unit]` |
+| FR21 | Editing `coverage.spec_fragment` clears `verified_at` and `binding_hash` on that row | `[unit]` |
+| FR21 | control — an edit that leaves the text byte-identical does not clear verification, on all three watched columns | `[unit]` |
+| FR21 | must NOT — any column the binding is computed from can be edited without clearing verification | `[unit]` |
+| FR26 | Claiming completeness on a requirement, then inserting a coverage row for it, leaves the claim cleared | `[unit]` |
+| FR26 | Deleting a coverage row, and editing a bound fragment, each clear the claim on that row's requirement | `[unit]` |
+| FR26 | Editing a requirement's text clears its own completeness claim, not only its coverage rows' verification | `[unit]` |
+| FR26 | control — an edit leaving the requirement's text byte-identical does not clear the claim, and neither does an update to an unrelated column | `[unit]` |
+| FR26 | A requirement with fragments bound and no claim is distinguishable by query from one with the same fragments and a current claim | `[integration]` |
+| FR26 | must NOT — `coverage_claimed_at` is set while `coverage_claim_hash` is NULL, or the reverse | `[unit]` |
+| FR26 | must NOT — completeness is derived from fragment offsets rather than claimed, so connective prose must be bound to satisfy it | `[unit]` |
+| FR27 | An epic joined to two milestones is returned by a readiness query for either, and reports both | `[integration]` |
+| FR27 | Two specs may each hold a milestone labelled `M1`; one spec may not hold two, and positions are unique within a spec | `[unit]` |
+| FR27 | must NOT — an artefact's milestone is a column, so an epic spanning two must be filed under one | `[unit]` |
+| FR28 | A `{{ref:<id>}}` marker in a section body and in a `requirement.text` both render as the target's current human identifier | `[integration]` |
+| FR28 | Renumbering a document through the merge tool changes no stored text, and the next render resolves every marker naming it to the new number | `[feature]` |
+| FR28 | must NOT — a projected body contains a literal artefact number that no row produced | `[unit]` |
 | FR22 | An epic blocked by two epics yields two `dependency` rows, and completing both makes it selectable as ready | `[integration]` |
 | FR22 | A story-to-story `blocks` edge and a spec-to-spec `builds_on` edge both round-trip through one table | `[unit]` |
 | FR22 | A `builds_on` edge does not gate readiness; a `blocks` edge does | `[unit]` |
@@ -940,6 +1331,7 @@ Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.s
 | FR24 | A severity row is rejected in a category slot, and an audit dimension in a severity slot, on `finding` and `audit_finding` alike | `[unit]` |
 | FR24 | Retiring a test approach and a dependency kind leaves rows using them intact, as it does for a taxonomy row | `[unit]` |
 | FR24 | must NOT — any vocabulary is seeded and extensible but cannot be retired | `[unit]` |
+| FR24 | must NOT — a new row is accepted referencing a taxonomy row, test approach or dependency kind already retired, so that retirement stops rows arriving as well as preserving those that have | `[unit]` |
 | FR23 | Two epics under different specs may both hold sequence 1; two under the same spec may not | `[unit]` |
 | FR23 | Child sequences restart at 1 per parent and never reuse a value after deletion | `[unit]` |
 | FR23 | must NOT — a row carries both `number` and `sequence`, or neither, unless its kind is declared `numbering = 'none'` | `[unit]` |
@@ -949,18 +1341,33 @@ Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.s
 | FR2 | must NOT — a document's `parent_kind` can misdescribe the kind of the parent it points at | `[unit]` |
 | FR2 | A review parents onto either a spec or an epic, both being allow-listed, and onto a runbook not at all | `[unit]` |
 | FR2 | must NOT — `observation.library_doc_id` accepts a document that is not of kind `library` | `[unit]` |
+| FR2 | An `adr` parents onto a spec, a brief or a discussion, and onto an epic not at all | `[unit]` |
+| FR2 | A `retro` parents onto an epic, a spec or a quick record — the three sources `cpm:retro` actually accepts | `[unit]` |
 | FR12 | A database at schema version *n* is migrated to *n+1* on server start with no user action | `[integration]` |
 | FR14 | The integrity tool reports a deliberately orphaned row | `[integration]` |
-| FR14 | Every numbered entry in the cross-row invariant register has a check in the integrity tool, and the tool has no check absent from the register | `[integration]` |
+| FR14 | Every numbered entry in the cross-row invariant register has a check in the integrity tool, and the tool has no *register-derived* check absent from the register | `[integration]` |
+| FR14 | A restore ending in `PRAGMA foreign_key_check` fails loudly on a dump carrying a dangling reference, naming the row | `[integration]` |
 | FR14 | A restored dump violating each register entry in turn is reported, one entry at a time, naming the rows | `[integration]` |
 | FR14 | An ADR at `decision_status = 'superseded'` with no outgoing `supersedes` edge is reported (register #2) | `[unit]` |
 | FR14 | A coverage row joining one spec's requirement to another spec's story criterion is reported (register #3) | `[unit]` |
 | FR14 | A `coverage_story` row naming a story outside the coverage row's epic is reported (register #4) | `[unit]` |
 | FR14 | A `number_sequence` row behind the highest number already allocated for its kind is reported and repairable (register #5) | `[unit]` |
 | FR14 | A `builds_on` edge between two epics is reported (register #6) | `[unit]` |
+| FR14 | A review scoped to a story outside the epic it reviews is reported (register #7) | `[unit]` |
+| FR14 | An accepted ADR carrying zero or two `chosen` options is reported (register #8) | `[unit]` |
+| FR14 | A `spec_fragment` that is not a substring of its requirement's text is reported (register #9) | `[unit]` |
+| FR14 | A row referencing a vocabulary item retired before that row was written is reported (register #10) | `[unit]` |
+| FR14 | A `session.superseded_by` cycle is reported (register #11) | `[unit]` |
+| FR14 | A `document_milestone` row whose document and milestone belong to different specs is reported (register #12) | `[unit]` |
+| FR14 | A `{{ref:}}` marker naming a deleted document is reported, naming the column and row it sits in, and a marker naming a live document is not (register #13) | `[unit]` |
 | FR14 | must NOT — the integrity tool reports a violation it cannot locate, or passes a database holding one | `[integration]` |
 | AD8 | No source file outside the projection renderer imports a markdown parser, and the renderer's only filesystem calls under `docs/` are writes — asserted over the module list, not over behaviour | `[integration]` |
 | AD8 | must NOT — the pre-commit divergence guard (FR7) compares by parsing a generated file rather than by regenerating and diffing bytes | `[integration]` |
+| AD9 | Every primary key in `sqlite_schema` is declared `TEXT`, excluding the FTS5 shadow tables, which SQLite creates with `INTEGER PRIMARY KEY` and dpm does not author | `[unit]` |
+| AD9 | Ten thousand ids generated in one process are unique and sort in generation order | `[unit]` |
+| AD10 | Every enum a tool declares is equal to the `CHECK` set on its column, in both directions, read from the live schema | `[unit]` |
+| AD10 | Every `NOT NULL` column without a default is a required argument on its create tool, and every foreign key on the table has a corresponding argument | `[unit]` |
+| AD10 | must NOT — the conformance test compares tool schemas against a second copy of the DDL rather than against `PRAGMA` output | `[unit]` |
 | NFR1 | A clean clone starts the server with no compilation step | `[target]` |
 | NFR2 | The server refuses to start below the Node floor with a message naming the required version | `[integration]` |
 | NFR3 | A full session's stdout parses as well-formed JSON-RPC with no stray output | `[integration]` |
@@ -969,9 +1376,10 @@ Thirty rows. The four shell helpers doing this work in CPM — `coverage-parse.s
 | NFR6 | Binding the same `(requirement_id, spec_fragment, story_criterion_id)` twice is rejected, and two different fragments against one criterion are both accepted | `[unit]` |
 | NFR6 | must NOT — any `UNIQUE` constraint over a nullable column is relied on to reject duplicates, given SQLite's distinct-NULL semantics | `[unit]` |
 | NFR6 | must NOT — `coverage` identity depends on `position`, so that display order can admit or reject a binding | `[unit]` |
-| FR13 | A read tool called without an explicit body request returns a summary, and the response for a 20 KB epic stays under the stated ceiling | `[integration]` |
-| FR13 | must NOT — any query tool returns an unbounded row set when no limit is supplied | `[unit]` |
-| NFR5 | Every exported tool name matches `dpm_[a-z_]{6,}` and contains no abbreviation absent from the project glossary | `[unit]` |
+| FR13 | For the same artefact, a read without an explicit body request returns strictly fewer bytes than one with it — asserted as a comparison between two responses, not against a fixed number | `[integration]` |
+| FR13 | Every list-returning tool declares a `limit` with a default, and a caller that raises it receives the larger result | `[unit]` |
+| FR13 | must NOT — a query tool returns an unbounded row set when no limit is supplied, or refuses a limit the caller raised | `[unit]` |
+| NFR5 | Every exported tool name matches `dpm_[a-z_]{6,}`, and every part after the verb is a table name, a column name, or a seeded `document_kind.kind` value — checked against the live schema, not against a hand-kept word list | `[unit]` |
 | NFR7 | Every table in `sqlite_master` is reachable through at least one read tool, asserted by comparing the table list against the tools' declared coverage | `[integration]` |
 | NFR7 | A database whose schema version is ahead of the server still answers read tools rather than refusing to start | `[integration]` |
 
@@ -996,20 +1404,32 @@ NFR6 requires that every condition capable of producing a false pass blocks rath
 | 9 | A non-deterministic dump | Conflicts on every commit, masking the real ones | NFR4 byte-stability |
 | 10 | A class inferred from a label | Correct until the first label that does not fit the pattern | `requirement.class`, required at the tool boundary |
 | 11 | Coverage joining one spec's requirement to another spec's criterion | The matrix renders, rolls up, and reports a percentage — all of it wrong | cross-row register #3 |
-| 12 | A document parented onto the wrong kind of document | Lineage queries return a plausible tree that is not the real one | `document_kind_parent` composite FKs |
+| 12 | A document referenced as the wrong kind of document — as a parent, or as a spec, epic, review, retro or audit | Lineage and roll-up queries return a plausible tree that is not the real one | `document_kind_parent` plus composite `(id, kind)` FKs on every kind-specific reference |
+| 13 | A ✓ surviving an edit to `coverage.spec_fragment` | A criterion is rewritten and stays green, exactly as #2 but through the third edit path | `coverage_unverify_on_fragment_edit` |
+| 14 | A row referencing a retired vocabulary item | Retirement appears to work because existing rows survive, while new ones keep arriving | cross-row register #10 |
+| 15 | A search covering `document_section` only | Text held on a child row is unreachable, and the tool reports success with an empty result — indistinguishable from "not present" | `entry_fts` over the four indexed child tables, plus FR9's trigger-completeness criterion |
+| 16 | An FTS trigger absent for one indexed table | That table's rows silently never enter the index; every other table searches correctly, so the gap looks like absence of matches | FR9's criterion enumerating all three triggers per indexed table from `sqlite_schema` |
+| 17 | A requirement with one of five obligations bound | Every coverage row is current and correct, and the roll-up reports the requirement covered — #1 with the sign flipped, and the reason a matching roll-up is not a complete one | `requirement.coverage_claimed_at` + its four unclaim triggers (FR26) |
+| 18 | A completeness claim outliving the binding set it was made against | A fragment is added or rewritten and the requirement stays claimed, attesting to a set that no longer exists — #2 one level up | the four unclaim triggers, and the byte-identical control that proves they do not simply clear on every write |
+| 19 | A `{{ref:}}` marker naming a deleted document | The projection renders a broken reference rather than failing, and no foreign key can reach inside prose to catch it | cross-row register #13, swept over every prose column |
+| 20 | A `document_milestone` row pairing across specs | "Which epics are in M2" silently returns an epic from another specification | cross-row register #12 |
 
-Twelve conditions, each with a criterion above. The register is itself the thing under test: a condition discovered later is added here first, and NFR6's second criterion fails until it has a test. Ten of the twelve are closed at the schema. The two that are not — #6 and #11 — are cross-row, and both appear in the cross-row invariant register with a write-path refusal and an FR14 check rather than a constraint.
+Twenty conditions, each with a criterion above. The register is itself the thing under test: a condition discovered later is added here first, and NFR6's second criterion fails until it has a test.
+
+**#17 and #18 are the pair worth reading together**, because the second is what stops the first being closed on paper. A completeness claim removes the false pass only while it is current; a claim that survives its binding set changing is a green mark attesting to something that no longer exists, which is exactly #2 at the level of the set rather than the row. That is why FR26 spends four triggers rather than one column, and why its control case — an edit leaving the text byte-identical must *not* clear the claim — is a criterion and not a nicety: a trigger that clears on every write satisfies all four decay tests and makes the claim worthless.
+
+**Where each is closed matters for where its test lives, and an earlier draft got this wrong by claiming ten of twelve were closed at the schema.** Reading the "Blocked by" column: eight are genuinely schema-level and unit-testable against a bare database (#1, #2, #3, #8, #12, #13, #15, #16 — the last two because a trigger and a virtual table are schema objects, assertable from `sqlite_schema` with no server running). The rest are not — #4 is a git hook, #5 an application statement, #7 a `PRAGMA` on a connection, #9 the dump code, #10 the tool boundary (the register's own column says so), and #6, #11 and #14 are cross-row entries closed by a write-path refusal plus an FR14 check. Eight of the sixteen therefore need the server, the hook, or the dump path in the loop, and a suite that files them all as `[unit]` is testing something else.
 
 ### Integration Boundaries
 
-Four seams:
+Three seams, and a fourth deliberately absent:
 
 1. **MCP tool schemas → database constraints.** A tool that accepts an argument the schema will reject has moved validation to the wrong layer. The two definitions must correspond, not merely coexist.
 2. **Database state → markdown projection.** Determinism (FR6) and the divergence guard (FR7) both live here.
 3. **Database state → `.sql` dump.** Byte-stability (NFR4) is the whole contract.
 There is deliberately **no fourth seam**. An earlier draft listed "CPM `docs/` tree → importer" as the one place dpm parses prose by necessity. AD8 removes it: nothing in dpm reads markdown, so the component that would have inherited CPM's parsing failures — retro 21's `awk -v` collapse among them — has no counterpart here.
 
-Seam 1 is where drift would re-enter the system if it re-entered anywhere: two descriptions of the same constraint, in two languages, maintained separately. One definition, generated into both, or a test asserting correspondence.
+Seam 1 is where drift would re-enter the system if it re-entered anywhere: two descriptions of the same constraint, in two languages, maintained separately. **AD10 closes it with a conformance test** that reads the correspondence out of `PRAGMA table_info` and `PRAGMA foreign_key_list` rather than out of a second copy of the schema, and records codegen as the intended direction of travel once the tool surface is stable.
 
 ### Test Infrastructure
 

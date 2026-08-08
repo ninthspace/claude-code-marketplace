@@ -386,16 +386,16 @@
     <p class="eyebrow">Spec 47 · Data model</p>
     <h1>dpm <span class="dim">/</span> schema map</h1>
     <p class="standfirst">
-      Thirty-seven tables that hold CPM's planning artefacts as rows instead of prose. Every
+      Thirty-eight tables that hold CPM's planning artefacts as rows instead of prose. Every
       relationship a markdown file records in a sentence is a foreign key here; every vocabulary
-      it names in a paragraph is a table. The six rules that <em>cannot</em> be constraints are
+      it names in a paragraph is a table. The thirteen rules that <em>cannot</em> be constraints are
       written down too, because an unenforceable invariant nobody listed is one nobody checks.
     </p>
     <div class="figures">
-      <div class="figure"><b>37</b><span>tables</span></div>
-      <div class="figure"><b>63</b><span>foreign keys</span></div>
-      <div class="figure"><b>33</b><span>CHECK clauses</span></div>
-      <div class="figure"><b>5</b><span>triggers</span></div>
+      <div class="figure"><b>38</b><span>tables</span></div>
+      <div class="figure"><b>77</b><span>foreign keys</span></div>
+      <div class="figure"><b>45</b><span>CHECK clauses</span></div>
+      <div class="figure"><b>13</b><span>triggers</span></div>
       <div class="figure"><b>6</b><span>vocabularies</span></div>
     </div>
   </header>
@@ -408,6 +408,7 @@
       <div class="cluster-head">
         <h3>document + numbering + parentage</h3>
         <p>Numbering is two-level: a spec is numbered globally, an epic within its spec, restarting at 1 per parent — and a third scheme, <code>none</code>, for kinds that carry no number at all. Which scheme applies is the kind's business, so <code>numbering</code> is carried on the row and pinned by a composite key, letting one <code>CHECK</code> enumerate all three.</p>
+        <p><code>dir</code> is nullable, and the null case is load-bearing: a kind with no directory produces no file and renders <em>inside its parent</em>. The ADR is the one member — an architecture decision written inside a spec keeps <code>decision_status</code>, its options and their tradeoff axes, instead of degrading into prose the way it would if a document had to mean a file.</p>
       </div>
       <div class="plate">
 <pre class="mermaid">
@@ -426,6 +427,18 @@ erDiagram
         <span class="tt">document_kind</span><span class="tt v">document_kind_parent</span><span class="tt">document</span><span class="tt">number_sequence</span><span class="tt">document_section</span>
       </div>
       <p class="impossible"><b>Cannot happen</b>An epic hanging off a review, or any document parented onto a kind its own kind does not allow — the allow-list is a table and the claim is checked against the parent's own row, so it cannot be satisfied by lying about it. A kind declared root-numbered storing a sequence instead. A retired number returning to circulation.</p>
+    </div>
+
+    <div class="callout">
+      <p><strong>Two kinds of identity, and only one of them is a number.</strong> Every primary key in the schema is a ULID held as text. The human-facing number — <code>47</code> in <code>47-spec-dpm</code> — is a separate column, allocated by <code>number_sequence</code>, and it is the only one anybody ever reads.</p>
+      <p>The split exists because the committed form of this database is a text dump that two branches are expected to merge. An auto-incrementing integer is a <em>per-database counter</em>, and a per-database counter cannot be unique across databases edited independently: two branches from a common base each adding an epic both allocate <code>id = 2</code>, and the merged dump fails to restore. Executed, that is what happened — which is how the property turned out to be needed on every table rather than on documents alone.</p>
+      <p class="note">The number still collides, and that rejection is correct: both artefacts are real and one must be renumbered. So the merge tool re-allocates the loser, renames its projection file, and re-renders whatever referenced it — <em>nothing is rewritten, because no reference ever stored a number</em>. A ULID sorts by its timestamp prefix, which also hands every table a stable default order — the tiebreak a byte-stable dump needs, obtained for free.</p>
+    </div>
+
+    <div class="callout">
+      <p><strong>A reference in prose is a marker, never a number.</strong> A reference between artefacts is a foreign key, which renumbering does not touch. But a <em>sentence</em> naming another artefact — an epic's notes citing another epic, a retro observation citing the spec it came from — is not a foreign key and never was. It is written <code>{{ref:&lt;ulid&gt;}}</code> and resolved by the renderer to the target's current human identifier.</p>
+      <p>The alternative was a reference table, and it was designed and then rejected on the corpus it had to hold: this project's retro 33 cites spec 47 from inside <code>observation.text</code> — a child row, not a section. A section-scoped table cannot reach it. A marker lives in any text column, so the question of which columns may hold a reference stops being a schema decision.</p>
+      <p class="note">This is why the merge tool re-renders rather than rewrites, and why it writes no text into any row. It is also the only mechanism here that a foreign key cannot police, which is why register entry 13 exists: a marker naming a deleted document is a dangling reference no <code>foreign_key_check</code> will ever see.</p>
     </div>
   </section>
 
@@ -461,7 +474,7 @@ erDiagram
   </section>
 
   <section>
-    <h2>The spine <span class="count">10 tables</span></h2>
+    <h2>The spine <span class="count">12 tables</span></h2>
     <p>Spec to requirement to epic to story to task, joined back by coverage. This is where drift costs the most, and where 1,479 lines of CPM shell parsing become a query.</p>
 
     <div class="cluster">
@@ -487,12 +500,26 @@ erDiagram
   acceptance_criterion ||--o{ criterion_approach   : tagged
   test_approach        ||--o{ story_criterion_approach : tags
   story_criterion      ||--o{ story_criterion_approach : tagged
+  document             ||--o{ milestone            : "spec orders"
+  milestone            ||--o{ document_milestone   : "delivered by"
+  document             ||--o{ document_milestone   : delivers
 </pre>
       </div>
       <div class="holds">
-        <span class="tt">requirement</span><span class="tt">acceptance_criterion</span><span class="tt">story</span><span class="tt">task</span><span class="tt">story_criterion</span><span class="tt">coverage</span><span class="tt">coverage_story</span><span class="tt">test_approach</span><span class="tt">criterion_approach</span><span class="tt">story_criterion_approach</span>
+        <span class="tt">requirement</span><span class="tt">acceptance_criterion</span><span class="tt">story</span><span class="tt">task</span><span class="tt">story_criterion</span><span class="tt">coverage</span><span class="tt">coverage_story</span><span class="tt">milestone</span><span class="tt v">document_milestone</span><span class="tt">test_approach</span><span class="tt">criterion_approach</span><span class="tt">story_criterion_approach</span>
       </div>
-      <p class="impossible"><b>Cannot happen</b>A verified coverage row surviving an edit to the text it verified — two triggers clear <code>verified_at</code> and <code>binding_hash</code> the moment either the requirement or the criterion changes. The same fragment bound to the same criterion twice, inflating the covered count: identity is <code>(requirement, fragment, criterion)</code>, and display order is no part of it.</p>
+      <p class="impossible"><b>Cannot happen</b>A verified coverage row surviving an edit to the text it verified — three triggers clear <code>verified_at</code> and <code>binding_hash</code> the moment the requirement, the criterion, or the stored fragment changes. The same fragment bound to the same criterion twice, inflating the covered count: identity is <code>(requirement, fragment, criterion)</code>, and display order is no part of it. Two milestones in one spec sharing a label, or a position.</p>
+    </div>
+
+    <div class="callout">
+      <p><strong>Completeness is claimed, not counted.</strong> Each coverage row's ✓ decays when the text it was bound to changes. Nothing made the <em>set</em> of rows decay — so a requirement with one of five obligations bound read exactly like one fully covered. Every row current, every row correct, and the roll-up wrong.</p>
+      <p>That is the failure this whole schema exists to remove, with the sign flipped: the stated problem was a roll-up matching <em>nothing</em> and reporting success, and a roll-up matching <em>something</em> does the same thing less visibly. So <code>coverage_claimed_at</code> is a deliberate assertion on the requirement — somebody says these fragments account for it — paired with a hash of the set claimed, and four triggers clear it the moment a coverage row arrives or leaves, a bound fragment is edited, or the requirement's own text moves.</p>
+      <p class="note">Four triggers rather than one column, because a claim that outlives its binding set is a green mark attesting to something that no longer exists. The control case is a criterion in its own right: an edit leaving the text byte-identical must <em>not</em> clear the claim. A trigger that fires on every write passes all four decay tests and makes the claim worthless.</p>
+    </div>
+
+    <div class="callout">
+      <p><strong>The build order is data.</strong> A milestone is a row scoped to its spec and ordered by <code>position</code>, and <code>document_milestone</code> is many-to-many on purpose: an epic that spans two milestones says so instead of being filed under one. This spec's own breakdown produced exactly such an epic — the projection and its guard are M2, the merge tool is M4 — and with the build order stated only in a prose table there was nowhere to record it.</p>
+      <p class="note">Two specs may each hold an <code>M1</code>; one spec may not hold two. The pairing rule that a document and its milestone belong to the same spec is <em>not</em> a constraint — it needs <code>parent_id</code> walked to the root — so it is register entry 12.</p>
     </div>
   </section>
 
@@ -555,7 +582,7 @@ erDiagram
   </section>
 
   <section>
-    <h2>Register &amp; state <span class="count">5 tables</span></h2>
+    <h2>Register &amp; state <span class="count">4 tables + 2 indexes</span></h2>
     <p>Published artifacts, session state, search, and schema version.</p>
 
     <div class="cluster">
@@ -567,16 +594,25 @@ erDiagram
 <pre class="mermaid">
 %%{init:{'theme':'base','themeVariables':{'primaryColor':'#FFFFFF','primaryTextColor':'#171A21','primaryBorderColor':'#8A93A6','lineColor':'#2B44C7','fontSize':'13px','fontFamily':'ui-monospace, Menlo, monospace'}}}%%
 erDiagram
-  artifact         ||--o{ artifact_document : "published from"
-  document         ||--o{ artifact_document : "produced"
-  document_section ||--|| document_fts      : indexes
-  session          ||--o{ session           : "superseded by"
+  artifact             ||--o{ artifact_document : "published from"
+  document             ||--o{ artifact_document : "produced"
+  document_section     ||--|| document_fts      : "narrative bodies"
+  requirement          ||--|| entry_fts         : "requirement text"
+  acceptance_criterion ||--|| entry_fts         : "criterion text"
+  observation          ||--|| entry_fts         : "observation text"
+  finding              ||--|| entry_fts         : "finding summary"
+  session              ||--o{ session           : "superseded by"
 </pre>
       </div>
       <div class="holds">
-        <span class="tt">artifact</span><span class="tt">artifact_document</span><span class="tt">session</span><span class="tt">document_fts</span><span class="tt">schema_version</span>
+        <span class="tt">artifact</span><span class="tt">artifact_document</span><span class="tt">session</span><span class="tt">schema_version</span><span class="tt">document_fts</span><span class="tt">entry_fts</span>
       </div>
-      <p class="impossible"><b>Cannot happen</b>An artifact register and a document backlink disagreeing about the same association. A search index lagging a write — triggers maintain it, so a result set is never quietly incomplete.</p>
+      <p class="impossible"><b>Cannot happen</b>An artifact register and a document backlink disagreeing about the same association. A search index lagging a write — triggers maintain both, so a result set is never quietly incomplete.</p>
+    </div>
+
+    <div class="callout">
+      <p><strong>Two indexes, because most of the searchable prose is not in a section.</strong> <code>document_section</code> holds narrative bodies, but a requirement's text, a story criterion, a retro observation and a review finding are all rows in child tables. A search covering only sections misses the majority of what anyone would look for — "which requirement mentioned the coverage helpers" returns nothing while the answer sits in <code>requirement.text</code>, and an empty result is indistinguishable from an absent one.</p>
+      <p class="note">Neither index is external-content. An external-content FTS5 table addresses rows by <code>content_rowid</code>, which must be an integer — and every id here is a ULID. The tables therefore hold their own copy of the text and carry the row's id in an unindexed column. The cost is the text stored twice; the alternative was a per-database integer of exactly the kind that makes two branches collide.</p>
     </div>
   </section>
 
@@ -671,7 +707,7 @@ erDiagram
 
   <section>
     <h2>Why the vocabularies are tables</h2>
-    <p class="wide">CPM fixes seven retro categories, named in a prose sentence inside a shared procedure. Across 22 real retro files in one project they were written eleven different ways.</p>
+    <p class="wide">CPM fixes seven retro categories, named in a prose sentence inside a shared procedure. Across 22 real retro files in one project they were written twelve different ways.</p>
 
     <div class="scroll">
       <table>
@@ -698,12 +734,12 @@ erDiagram
     <div class="callout">
       <p><strong>The control case sits in the same project, by the same author, in the same period.</strong> Review finding categories held almost perfectly — all ten used, roughly seven strays across a hundred headings.</p>
       <p>The difference is not discipline, it is form. Review categories appear as <em>literal headings in an output template</em> and get copied. Retro categories appear as <em>prose inside a shared procedure</em> and get restated in the author's own words.</p>
-      <p class="note">Eleven spellings of seven categories cannot occur when the category is an id.</p>
+      <p class="note">Twelve spellings of seven categories cannot occur when the category is an id.</p>
     </div>
   </section>
 
   <section>
-    <h2>The rules a constraint cannot hold <span class="count">6 invariants</span></h2>
+    <h2>The rules a constraint cannot hold <span class="count">13 invariants</span></h2>
     <p class="wide">Some rules span rows the way a foreign key cannot — reachability across a graph, a row's existence conditional on a column elsewhere, agreement between two ends of a four-table join. Writing them down is the whole point: an invariant with no constraint <em>and</em> no register entry is enforced by nothing and is invisible, because nothing fails and nothing warns.</p>
 
     <div class="scroll">
@@ -718,6 +754,13 @@ erDiagram
           <tr><td class="n">4</td><td>A <code>coverage_story</code> names a story in the right epic</td><td>Same shape as #3</td><td class="m">coverage link tool</td></tr>
           <tr><td class="n">5</td><td>A sequence leads every number already allocated</td><td>An aggregate over another table</td><td class="m">upsert holds it by construction</td></tr>
           <tr><td class="n">6</td><td>An edge's ends are kinds that edge admits</td><td>Needs both ends' kinds, and the legal set varies by edge</td><td class="m">link tool</td></tr>
+          <tr><td class="n">7</td><td>A review's scoped story sits inside the epic it reviews</td><td>The same four-table join as #3</td><td class="m">review create tool</td></tr>
+          <tr><td class="n">8</td><td>An accepted ADR has exactly one chosen option</td><td>An aggregate over a child table, conditional on a column here</td><td class="m">ADR status tool</td></tr>
+          <tr><td class="n">9</td><td>A coverage fragment is a substring of its requirement</td><td>Spans two tables, and the predicate is textual not referential</td><td class="m">coverage create tool</td></tr>
+          <tr><td class="n">10</td><td>Nothing new references an already-retired vocabulary row</td><td>Depends on the parent's <code>retired_at</code> at the moment of writing</td><td class="m">every create tool</td></tr>
+          <tr><td class="n">11</td><td>Session supersession forms no cycle</td><td>Reachability, as #1</td><td class="m">session adoption tool</td></tr>
+          <tr><td class="n">12</td><td>A document and the milestone it is assigned to belong to the same spec</td><td>Needs <code>parent_id</code> walked to the root; not row-local</td><td class="m">milestone link tool</td></tr>
+          <tr><td class="n">13</td><td>Every <code>{{ref:&lt;id&gt;}}</code> marker in every prose column resolves to a live document</td><td>The reference is inside text, so no foreign key can reach it</td><td class="m">link and delete tools</td></tr>
         </tbody>
       </table>
     </div>
@@ -726,12 +769,14 @@ erDiagram
       <p><strong>Every entry is closed twice</strong> — refused at the write path so it cannot arrive, and reported by the integrity tool so it can be found if it arrives another way, chiefly by restoring a dump. Each has an acceptance criterion; the register itself is under test, so a check the tool performs that no entry names is a failure as much as the reverse.</p>
       <p><strong>#3 is the one that matters.</strong> It is the only entry whose violation produces a <em>plausible</em> result rather than an obviously broken one — a matrix joining one spec's requirement to another spec's criterion renders perfectly, rolls up to a percentage, and is wrong.</p>
       <p class="note">Three more started here and left. Parentage by kind, numbering scheme, and library promotion all turned out to be row-local given one denormalised column, and became real constraints — which is the intended direction of travel for anything on this list that can make the trip.</p>
+      <p class="note"><strong>#12 and #13 were found by executing the amended schema, not by designing it.</strong> Both arrived with the same batch of changes that added milestones and prose markers, and neither was predicted — the probes refused something that should have been allowed, or allowed something that should not. Two entries out of thirteen exist because the schema was run rather than read.</p>
+      <p class="note"><strong>#10 is the entry that makes retirement mean something.</strong> It was previously enforced against nothing: <code>retired_at</code> kept existing rows valid, which is half the promise, while nothing stopped a <em>new</em> row citing a retired category. A project could retire a term and find it still on offer and still accepted, with no failure anywhere.</p>
     </div>
   </section>
 
   <section>
     <h2>What the constraints reject <span class="count">verified</span></h2>
-    <p class="wide">Each row was attempted against the live schema. All were refused.</p>
+    <p class="wide">Each row was attempted against the live schema. All were refused — and every one was re-attempted after the identity and search changes, against the schema as it now stands, rather than carried forward on the strength of having passed once.</p>
 
     <div class="scroll">
       <table>
@@ -754,23 +799,33 @@ erDiagram
           <tr><td>Artefact depending on itself</td><td class="m never">CHECK</td></tr>
           <tr><td>Observation retired with no reason</td><td class="m never">CHECK (retired_at IS NULL) = (retired_reason IS NULL)</td></tr>
           <tr><td>Verification surviving an edit to its criterion</td><td class="m never">AFTER UPDATE trigger</td></tr>
+          <tr><td>Verification surviving an edit to its <em>requirement</em></td><td class="m never">AFTER UPDATE trigger</td></tr>
+          <tr><td>Verification surviving an edit to the <em>fragment itself</em></td><td class="m never">AFTER UPDATE trigger — the third edit path</td></tr>
           <tr><td>Status word outside its enum</td><td class="m never">CHECK status IN (…)</td></tr>
+          <tr><td>A story hung under a spec</td><td class="m never">FK (epic_id, epic_kind) → document (id, kind)</td></tr>
+          <tr><td>A requirement hung under an epic</td><td class="m never">FK (spec_id, spec_kind) → document (id, kind)</td></tr>
+          <tr><td>An ADR parented onto an epic</td><td class="m never">FK → document_kind_parent</td></tr>
+          <tr><td>Two milestones in one spec sharing a label</td><td class="m never">UNIQUE (spec_id, label)</td></tr>
+          <tr><td>Two milestones in one spec sharing a position</td><td class="m never">UNIQUE (spec_id, position)</td></tr>
+          <tr><td>A completeness claim recorded without the set it claims</td><td class="m never">CHECK (claimed_at IS NULL) = (claim_hash IS NULL)</td></tr>
+          <tr><td>A completeness claim surviving an edit to its requirement</td><td class="m never">AFTER UPDATE trigger — one of four</td></tr>
         </tbody>
       </table>
     </div>
 
-    <p class="note">Running the schema is what found most of these. Three of the four defects in the last review were invisible on the page and appeared only when SQLite resolved the column names — the search index in particular declared a column its content table did not have, so it accepted <code>CREATE</code> and failed on every query. A schema review that does not execute the schema is proofreading.</p>
+    <p class="note">Running the schema is what found most of these, and running it again is what found the rest. A second review of an already-remediated schema turned up eight further criticals, every one of them invisible on the page: sixteen of eighteen references to a document accepted the wrong <em>kind</em> of document, so a story could hang under a spec. Then applying the fixes broke something no fix had named — moving to ULIDs invalidated the search index outright, because an external-content FTS5 table addresses rows by an integer and a ULID is not one. It surfaced on the first row inserted afterwards. A schema review that does not execute the schema is proofreading; one that executes it once and then edits it is proofreading again.</p>
 
     <div class="callout">
-      <p><strong>Two things the schema now accepts that it used to refuse</strong>, which is the same work in the other direction. A kind declared to carry no number was previously impossible to insert at all — the vocabulary offered the value and the constraint forbade it. And an observation gathered into a retro had to surrender the story it came from, so promotion destroyed its own provenance.</p>
-      <p class="note">Two different fragments of one requirement, cited against the same criterion, were also rejected — because identity had been keyed to display order rather than to the fragment.</p>
+      <p><strong>Five things the schema now accepts that it used to refuse</strong>, which is the same work in the other direction. A kind declared to carry no number was previously impossible to insert at all — the vocabulary offered the value and the constraint forbade it. An observation gathered into a retro had to surrender the story it came from, so promotion destroyed its own provenance. And three more arrived with the amendment above.</p>
+      <p><strong>A retro whose source is a spec</strong> — the parentage allow-list seeded <code>retro→epic</code> only, which made this project's own retro 33 unstorable. <strong>An architecture decision written inside a spec</strong>, now that a document kind may produce no file. <strong>An epic that spans two milestones</strong>, because the join is many-to-many rather than a column.</p>
+      <p class="note">All three were found the same way, and it is worth saying how: by attempting to load this project's real planning corpus into the schema designed to hold it. Each was something the corpus already contained and the model could not represent. Two different fragments of one requirement, cited against the same criterion, were also rejected once — because identity had been keyed to display order rather than to the fragment.</p>
     </div>
   </section>
 
   <footer class="colophon">
     <span>docs/specifications/47-spec-dpm-sqlite-persistence.md</span>
-    <span>37 tables · 63 FKs · 33 CHECKs · 5 triggers · 6 registered invariants</span>
-    <span>DDL executed and probed, not asserted</span>
+    <span>38 tables + 2 indexes · 77 FKs · 45 CHECKs · 13 triggers written of 22 · 13 registered invariants</span>
+    <span>DDL executed and probed, not asserted — re-probed after every amendment</span>
   </footer>
 
 </div>

@@ -1,0 +1,47 @@
+# Coverage Matrix: Skills — Spine
+
+**Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
+**Epic**: docs/epics/47-06-epic-skills-spine.md  
+**Date**: 2026-08-08
+
+> **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
+
+| # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
+|---|------------------|----------------------|----------------------------|------------|--------------------|----------|
+| 1 | FR25 | each rewritten against the tool surface | A spec run writes the document, its requirements with `class` and MoSCoW band, and its acceptance-criteria coverage rows, all through create tools | Story 1 | `[feature]` | |
+| 2 | FR25 | What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business. | The facilitation survives: the run still gates on scope, still produces a testing strategy, and still refuses an untestable criterion | Story 1 | `[feature]` | |
+| 3 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 1 | `[unit]` | |
+| 4 | FR25 | no number allocation | An epics run allocates every epic number through the allocation tool, and writes stories, tasks, criteria and coverage rows through create tools | Story 2 | `[feature]` | |
+| 5 | FR25 | no markdown parsing | The coverage matrix is a projection of `coverage` rows, not a file the skill writes — the skill emits no markdown table | Story 2 | `[integration]` | |
+| 6 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 2 | `[unit]` | |
+| 7 | FR25 | Each of those is a tool call. | A do run updates story and task status through update tools, and records verification by writing `coverage.verified_at`, so FR21's triggers govern it rather than the skill's own prose rule | Story 3 | `[feature]` | |
+| 8 | FR22 | so "which epics are ready" is a query, a blocker's completion is visible to everything downstream | Story readiness comes from the dependency query, not from reading `**Blocked by**` lines | Story 3 | `[integration]` | |
+| 9 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 3 | `[unit]` | |
+| 10 | FR25 | no filename construction, no glob, no number allocation, no markdown parsing, no progress-file lifecycle | None of the three skill files contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle | Story 4 | `[unit]` | |
+| 11 | FR3 | Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation | None of the three skill files contains a SQL keyword or a `sqlite3` invocation | Story 4 | `[unit]` | |
+| 12 | FR25 | What makes a dpm skill different from its CPM counterpart is subtraction, and it is the same subtraction in every file | A spec written by `spec`, broken down by `epics`, and executed by `do` produces one connected graph — requirements to criteria to coverage to stories — with no step reading what the previous one wrote from disk | Story 4 | `[feature]` | |
+| 13 | FR11 (must NOT) | The progress-file subsystem — session-suffixed filenames, hook injection, adoption on `--resume`, compact-summary companions — is replaced by a session table. | must NOT — a skill's progress state is a file rather than a `session` row | Story 4 | `[integration]` | |
+
+**Mapping notes.**
+
+**Rows 3, 6 and 9 are the same spec clause asserted against three different files.** That is
+deliberate rather than redundant: FR25's recovery clause is per-file, and what each skill
+would wrongly read back differs — `spec` would re-read a requirement list, `epics` a
+coverage matrix, `do` a `**Blocked by**` line. One test over three files would pass while a
+fourth skill added later reintroduced the pattern.
+
+**Row 8 maps to FR22, not FR25.** The criterion is the readiness query being the source of
+truth, which is FR22's own subject. FR25 requires the skill not to parse; FR22 requires
+there to be something better to do instead, and this row asserts the second.
+
+**Row 11 is FR3's skill-corpus half, and it is the one place a grep is the requirement
+rather than a proxy for it** — the spec says so directly. This epic covers three of the
+twenty-two files; Epic 47-09 covers the corpus.
+
+**Row 13 maps to FR11 as a must-NOT the spec does not state in that form.** FR11's own
+criterion (Epic 47-03 row 17) asserts the session row works; this asserts no skill kept a
+file alongside it. Proposed during breakdown and accepted by Chris on 2026-08-08.
+
+**Partial coverage to flag.** FR25 is covered here for three of twenty-two skills. Its
+corpus-wide criteria are Epic 47-09's, and FR25 will read as partially covered in four
+matrices — the largest instance of self-hosting register entry 1 in this breakdown.
