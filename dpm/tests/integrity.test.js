@@ -19,7 +19,7 @@ import { openPlanningDatabase as planning } from './support/planning-database.js
 import { checkIntegrity, orphans } from '../src/integrity/check.js';
 import { REGISTER } from '../src/integrity/register.js';
 import { create } from './fixtures/index.js';
-import { childDocument, rootDocument } from './fixtures/planning.js';
+import { corpus, violation } from './support/violations.js';
 import { ulid } from '../src/id/ulid.js';
 
 /**
@@ -45,14 +45,11 @@ const REGISTER_ENTRIES = new Map([
   [13, '{{ref:}} markers resolve to live documents'],
 ]);
 
-/** A spec with epics and stories — the shape most of these invariants span. */
-function corpus(db) {
-  const spec = rootDocument(db, 'spec', { number: 47, slug: 'substrate' });
-  const epic = childDocument(db, 'epic', spec, { sequence: 1, slug: 'epic-1', title: 'Epic 1' });
-  const story = create(db, 'story', { epic_id: epic.id, number: 1 });
-
-  return { spec, epic, story };
-}
+/**
+ * The corpus and the thirteen injections come from `support/violations.js`, because Epic 47-02
+ * Story 2 needs the same violating states on the restore path. What stays here is every
+ * per-entry assertion — the shared module builds the violation and makes no claim about it.
+ */
 
 /** The violations the tool found for one register entry, or `undefined` when it found none. */
 const forEntry = (report, entry) => report.violations.find((violation) => violation.entry === entry);
@@ -75,7 +72,7 @@ function reportsOnly(t, entry, inject) {
     `entry ${entry}: the database passes before the violation is injected`,
   );
 
-  inject(db, context);
+  const detail = inject(db, context);
 
   const report = checkIntegrity(db);
   const found = forEntry(report, entry);
@@ -89,8 +86,11 @@ function reportsOnly(t, entry, inject) {
     `entry ${entry}: and nothing else fires, so the injection is what this check saw`,
   );
 
-  return { db, report, rows: found.rows };
+  return { db, report, rows: found.rows, detail };
 }
+
+/** Inject register entry `n`'s violation from the shared fixtures, and assert it is reported. */
+const reportsEntry = (t, n) => reportsOnly(t, n, violation(n).inject);
 
 test('the register and the checks name each other, in both directions', () => {
   assert.deepEqual(
@@ -123,38 +123,17 @@ test('a freshly seeded database passes, and the pass is a real sweep', (t) => {
 });
 
 test('entry 1 — a cycle among gates_work edges', (t) => {
-  const { rows } = reportsOnly(t, 1, (db, { spec }) => {
-    const second = rootDocument(db, 'spec', { number: 48, slug: 'successor' });
-    const a = childDocument(db, 'epic', spec, { sequence: 2, slug: 'a', title: 'A' });
-    const b = childDocument(db, 'epic', second, { sequence: 1, slug: 'b', title: 'B' });
-
-    create(db, 'dependency', { source_document_id: a.id, target_document_id: b.id });
-    create(db, 'dependency', { source_document_id: b.id, target_document_id: a.id });
-  });
+  const { rows } = reportsEntry(t, 1);
 
   assert.equal(rows.length, 2, 'both ends of the cycle are named, since either is a place to break it');
 });
 
 test('entry 2 — a superseded ADR with no supersedes edge out of it', (t) => {
-  reportsOnly(t, 2, (db, { spec }) => {
-    const adr = childDocument(db, 'adr', spec, { sequence: 1, slug: 'adr-1', title: 'ADR 1' });
-    create(db, 'adr', { document_id: adr.id, decision_status: 'superseded' });
-  });
+  reportsEntry(t, 2);
 });
 
 test('entry 3 — coverage joining one spec\'s requirement to another spec\'s criterion', (t) => {
-  const { rows } = reportsOnly(t, 3, (db, { spec, story }) => {
-    const other = rootDocument(db, 'spec', { number: 48, slug: 'other' });
-    const requirement = create(db, 'requirement', { spec_id: other.id, text: 'A fragment lives here.' });
-    const criterion = create(db, 'story_criterion', { story_id: story.id });
-
-    create(db, 'coverage', {
-      requirement_id: requirement.id, story_criterion_id: criterion.id,
-      spec_fragment: 'A fragment lives here.',
-    });
-
-    assert.notEqual(other.id, spec.id);
-  });
+  const { rows } = reportsEntry(t, 3);
 
   assert.notEqual(
     rows[0].requirement_spec,
@@ -164,113 +143,51 @@ test('entry 3 — coverage joining one spec\'s requirement to another spec\'s cr
 });
 
 test('entry 4 — a coverage_story naming a story from another epic', (t) => {
-  reportsOnly(t, 4, (db, { spec, story }) => {
-    const requirement = create(db, 'requirement', { spec_id: spec.id, text: 'Fragment.' });
-    const criterion = create(db, 'story_criterion', { story_id: story.id });
-    const coverage = create(db, 'coverage', {
-      requirement_id: requirement.id, story_criterion_id: criterion.id, spec_fragment: 'Fragment.',
-    });
-
-    const elsewhere = childDocument(db, 'epic', spec, { sequence: 2, slug: 'epic-2', title: 'Epic 2' });
-    const stray = create(db, 'story', { epic_id: elsewhere.id, number: 1 });
-
-    create(db, 'coverage_story', { coverage_id: coverage.id, story_id: stray.id });
-  });
+  reportsEntry(t, 4);
 });
 
 test('entry 5 — a sequence that would reissue a number already allocated', (t) => {
-  reportsOnly(t, 5, (db) => {
-    // The counter is written directly rather than rewound, because the fixtures number their
-    // documents explicitly and so leave no `number_sequence` row to rewind — which is the
-    // state a restore produces too, and is the reason the register calls this one repairable.
-    db.prepare("INSERT INTO number_sequence (kind, parent_id, next_value) VALUES ('spec', NULL, 1)").run();
-  });
+  reportsEntry(t, 5);
 });
 
 test('entry 6 — a builds_on edge between two epics', (t) => {
-  reportsOnly(t, 6, (db, { spec }) => {
-    const a = childDocument(db, 'epic', spec, { sequence: 2, slug: 'a', title: 'A' });
-    const b = childDocument(db, 'epic', spec, { sequence: 3, slug: 'b', title: 'B' });
-
-    create(db, 'dependency', { kind: 'builds_on', source_document_id: a.id, target_document_id: b.id });
-  });
+  reportsEntry(t, 6);
 });
 
 test('entry 7 — a review scoped to a story in an epic it does not review', (t) => {
-  reportsOnly(t, 7, (db, { spec, epic }) => {
-    const elsewhere = childDocument(db, 'epic', spec, { sequence: 2, slug: 'epic-2', title: 'Epic 2' });
-    const stray = create(db, 'story', { epic_id: elsewhere.id, number: 1 });
-
-    // A review is root-numbered but parented, so it is a `rootDocument` with a parent rather
-    // than a `childDocument` — the numbering CHECK refuses the other combination.
-    const review = rootDocument(db, 'review', {
-      number: 1, slug: 'review-1', parent_id: epic.id, parent_kind: 'epic',
-    });
-    create(db, 'review', { document_id: review.id, scope: 'story', scope_story_id: stray.id });
-  });
+  reportsEntry(t, 7);
 });
 
 test('entry 8 — an accepted ADR with no chosen option', (t) => {
-  const { rows } = reportsOnly(t, 8, (db, { spec }) => {
-    const document = childDocument(db, 'adr', spec, { sequence: 1, slug: 'adr-1', title: 'ADR 1' });
-    create(db, 'adr', { document_id: document.id, decision_status: 'accepted' });
-    create(db, 'adr_option', { adr_id: document.id, name: 'Rejected option', chosen: 0 });
-  });
+  const { rows } = reportsEntry(t, 8);
 
   assert.equal(rows[0].chosen, 0, 'the count is reported, since "not exactly one" is two failures');
 });
 
 test('entry 9 — a spec_fragment that appears nowhere in its requirement', (t) => {
-  reportsOnly(t, 9, (db, { spec, story }) => {
-    const requirement = create(db, 'requirement', { spec_id: spec.id, text: 'The system shall persist.' });
-    const criterion = create(db, 'story_criterion', { story_id: story.id });
-
-    create(db, 'coverage', {
-      requirement_id: requirement.id, story_criterion_id: criterion.id,
-      spec_fragment: 'a sentence the requirement does not contain',
-    });
-  });
+  reportsEntry(t, 9);
 });
 
 test('entry 10 — a vocabulary reference no guard covers', (t) => {
-  const { rows } = reportsOnly(t, 10, (db) => {
-    db.exec('DROP TRIGGER finding_category_id_category_domain_not_retired_on_insert');
-  });
+  const { rows, detail } = reportsEntry(t, 10);
 
   assert.deepEqual(
     rows.map((row) => row.missing),
-    ['finding_category_id_category_domain_not_retired_on_insert'],
+    [detail],
     'the guard is named, because "some reference is unguarded" is not something anyone can fix',
   );
 });
 
 test('entry 11 — a cycle in session.superseded_by', (t) => {
-  reportsOnly(t, 11, (db) => {
-    const first = create(db, 'session', {});
-    const second = create(db, 'session', { superseded_by: first.id });
-
-    db.prepare('UPDATE session SET superseded_by = ? WHERE id = ?').run(second.id, first.id);
-  });
+  reportsEntry(t, 11);
 });
 
 test('entry 12 — a document assigned to a milestone belonging to another spec', (t) => {
-  reportsOnly(t, 12, (db, { epic }) => {
-    const other = rootDocument(db, 'spec', { number: 48, slug: 'other' });
-    const milestone = create(db, 'milestone', { spec_id: other.id, label: 'M1', title: 'Elsewhere' });
-
-    create(db, 'document_milestone', { document_id: epic.id, milestone_id: milestone.id });
-  });
+  reportsEntry(t, 12);
 });
 
 test('entry 13 — a {{ref:}} marker naming a document that is not there', (t) => {
-  const missing = ulid();
-
-  const { rows } = reportsOnly(t, 13, (db, { epic }) => {
-    create(db, 'document_section', {
-      document_id: epic.id, heading: 'Context', position: 1,
-      body: `As decided in {{ref:${missing}}}, the substrate lands first.`,
-    });
-  });
+  const { rows, detail: missing } = reportsEntry(t, 13);
 
   assert.deepEqual(
     { table: rows[0].table, column: rows[0].column, reference: rows[0].reference },

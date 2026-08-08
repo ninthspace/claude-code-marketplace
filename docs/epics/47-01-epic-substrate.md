@@ -307,7 +307,7 @@ is identity only.
 **Blocked by**: Story 1, Story 2, Story 3, Story 4  
 **Satisfies**: FR14, NFR6
 
-**Retro**: [Criteria gap] Two of Story 6's coverage rows cannot be marked by this epic, and the reasons are worth separating. Row 27 asks every false-pass condition to have a test, over a register spanning the whole product — six of the twenty close in epics this one does not touch. Row 52 asks for a check the schema cannot support: no detail table carries a timestamp, so a row written before a term was retired is indistinguishable from one written after, and reporting "rows referencing a retired term" would flag the legal rows FR24 exists to protect. A criterion whose scope exceeds its story, and one that names an undecidable predicate, both fail at a gate rather than at authoring — which is where they were writable.
+**Retro**: [Criteria gap] Two of Story 6's coverage rows could not be marked as originally written, for two different reasons, and the pivot of 2026-08-08 resolved each in the way its own defect called for. Row 27 asked every false-pass condition to have a test, over a register spanning the whole product — six of the twenty close in epics this one does not touch — so the criterion was **narrowed to what this story delivers** (the register is complete, disposed and honest about its own coverage) and the whole-register claim was **declared forward to Epic 47-05 Story 6**, the first point at which all six deferrals are closed. Row 52 asked for a check the schema cannot support: no detail table carries a timestamp, so a row written before a term was retired is indistinguishable from one written after, and reporting "rows referencing a retired term" would flag the legal rows FR24 exists to protect. It was **repointed to the decidable check that shipped** — a vocabulary reference no retirement guard covers. The lesson is in the pair: a criterion whose scope exceeds its story is a *split*, and one that names an undecidable predicate is a *rewording*, but both are invisible until a gate tries to mark them and neither is a defect in the work. Both were writable at authoring, and what would have caught them is asking, of each criterion, which artefact supplies the value it cites.
 
 **Retro**: [Testing gap] A helper that scans the suite for test names was reading capture group 1 (the quote character) instead of group 2, so every citation in the false-pass register resolved against a two-element set and the register looked complete. Nothing about the citations said so — what said so was a guard asserting the scan had found more than fifty tests. Any check that resolves names against a set it built itself needs an assertion that the set is populated, because an empty set makes every lookup fail in the same direction and a full one makes them all pass.
 
@@ -320,7 +320,7 @@ is identity only.
 - Every numbered entry in the cross-row invariant register has a check in the integrity tool, and the tool has no *register-derived* check absent from the register [integration]
 - Each of the thirteen register entries is reported in turn, naming the rows [unit]
 - The integrity tool reports a deliberately orphaned row [integration]
-- Every condition in the false-pass register has a test asserting it blocks rather than warns, and the register has no unregistered entries [integration]
+- The false-pass register is enumerated in full with no unregistered entries, every condition this epic closes names a test that exists asserting it blocks rather than warns, and every condition it defers names the epic that closes it [integration]
 - must NOT — the integrity tool reports a violation it cannot locate, or passes a database holding one [integration]
 
 ### Implement the thirteen cross-row register checks
@@ -357,7 +357,7 @@ is identity only.
 
 **Retro**: [Pattern worth reusing] Every decay assertion has a byte-identical control beside it — `UPDATE … SET text = text` on all three watched columns, and an unrelated-column write on each of the three tables. Removing `WHEN OLD.text <> NEW.text` from one trigger fails only the control, which is the whole point: a trigger clearing on any write passes every decay test and makes the mark worthless. False-pass #18 is that observation written down, and it earned its place.
 
-**Retro**: [Codebase discovery] A source file acquired two raw NUL bytes where an escape was intended — a hash separator written as a literal rather than as ` `. It ran correctly, so nothing failed; what found it was a byte-level sweep of `dpm/` after a string-replace refused to match text that looked identical on screen. A separator chosen precisely because no fragment can contain it is the kind of value that has to be written as an escape, or it is invisible in every diff it appears in.
+**Retro**: [Codebase discovery] A source file acquired two raw NUL bytes where an escape was intended — a hash separator written as a literal rather than as the six-character escape. It ran correctly, so nothing failed; what found it was a byte-level sweep of `dpm/` after a string-replace refused to match text that looked identical on screen. A separator chosen precisely because no fragment can contain it is the kind of value that has to be written as an escape, or it is invisible in every diff it appears in.
 
 **Acceptance Criteria**:
 

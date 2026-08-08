@@ -195,7 +195,7 @@ a note has to carry.
 **Story**: 6  
 **Status**: Pending  
 **Blocked by**: Story 1, Story 2, Story 3, Story 4, Story 5  
-**Satisfies**: FR9, FR10, FR24, NFR7
+**Satisfies**: FR9, FR10, FR24, NFR7, NFR6
 
 **Acceptance Criteria**:
 
@@ -203,10 +203,17 @@ a note has to carry.
 - A create tool refuses a vocabulary row retired through Story 2's retire tool, and the refusal names the retired item [integration]
 - Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR [integration]
 - must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool [integration]
+- Every condition in the false-pass register has a test asserting it blocks rather than warns — including the six Epic 47-01 deferred, whose closing epics are all complete by the time this story runs [integration]
+- A restored database's `document_fts` and `entry_fts` both return the same `MATCH` results as the source database's, for a term present in a section body and a term present only in a `requirement.text` [integration]
 
 ### Write integration tests for Parity and search
 **Task**: 6.1  
 **Description**: The third criterion is the parity closure: FR10's enumeration (Story 1) and FR10's templates (Epic 47-04 Story 2) are the same requirement checked in two epics, and this is the only place both are true at once. The final clause guards the seam NFR7 cares about — a search index drifted from the tables returns hits nothing can open.  
+**Status**: Pending
+
+### Close the false-pass register
+**Task**: 6.2  
+**Description**: Epic 47-01 built the register as executable data in `dpm/tests/false-pass.test.js` and gave each of the twenty conditions exactly one disposition: a test that closes it, or the epic that will. Six carry the second kind — #9 to the dump path (47-02), #10 to the tool boundary (47-03), #4 to the projection guard (47-04), and #3, #15 and #16 to the search index built by this epic's Stories 3–5. This story is the first point in the build order where all four of those epics are complete, which is why the whole-register claim is declared here rather than at its author. Convert each of the six from a `closedIn` deferral to a `test` citation naming a test that exists, and the existing assertion that every deferral names where it closes then passes over an empty set — the register goes from complete and honest to satisfied. A condition converted without a test behind it is register entry #18's own shape applied to the register, so each conversion is mutation-checked the way 47-01 checked the other fourteen.  
 **Status**: Pending
 
 ---

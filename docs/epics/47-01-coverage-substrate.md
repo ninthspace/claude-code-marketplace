@@ -34,7 +34,7 @@
 | 24 | FR14 | A verification tool reports orphans, dangling links, and each entry in the cross-row invariant register (Data Model), so a corrupted state is diagnosable without SQL. | Every numbered entry in the cross-row invariant register has a check in the integrity tool, and the tool has no *register-derived* check absent from the register | Story 6 | `[integration]` | ✓ |
 | 25 | FR14 | reports orphans, dangling links | The integrity tool reports a deliberately orphaned row | Story 6 | `[integration]` | ✓ |
 | 26 | FR14 (must NOT) | so a corrupted state is diagnosable without SQL | must NOT — the integrity tool reports a violation it cannot locate, or passes a database holding one | Story 6 | `[integration]` | ✓ |
-| 27 | NFR6 | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. | Every condition in the false-pass register has a test asserting it blocks rather than warns, and the register has no unregistered entries | Story 6 | `[integration]` | |
+| 27 | NFR6 | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. | The false-pass register is enumerated in full with no unregistered entries, every condition this epic closes names a test that exists asserting it blocks rather than warns, and every condition it defers names the epic that closes it | Story 6 | `[integration]` | ✓ |
 | 28 | FR12 | applied automatically on server start | A database built by running the migration set from empty has a `sqlite_schema` identical to one built by executing the DDL directly — every table, index, trigger and constraint | Story 8 | `[integration]` | ✓ |
 | 29 | FR14 | each entry in the cross-row invariant register (Data Model) | The integrity tool passes on a freshly migrated and seeded database, and fails on each of the thirteen register violations injected into it in turn | Story 8 | `[integration]` | ✓ |
 | 30 | FR2 | An epic cannot name a spec that does not exist | An epic whose `parent_id` names a review is rejected, and one naming a spec is accepted | Story 1 | `[unit]` | ✓ |
@@ -59,7 +59,7 @@
 | 49 | FR14 | each entry in the cross-row invariant register (Data Model) | A review scoped to a story outside the epic it reviews is reported (register #7) | Story 6 | `[unit]` | ✓ |
 | 50 | FR14 | each entry in the cross-row invariant register (Data Model) | An accepted ADR carrying zero or two `chosen` options is reported (register #8) | Story 6 | `[unit]` | ✓ |
 | 51 | FR14 | each entry in the cross-row invariant register (Data Model) | A `spec_fragment` that is not a substring of its requirement's text is reported (register #9) | Story 6 | `[unit]` | ✓ |
-| 52 | FR14 | each entry in the cross-row invariant register (Data Model) | A row referencing a vocabulary item retired before that row was written is reported (register #10) | Story 6 | `[unit]` | |
+| 52 | FR14 | each entry in the cross-row invariant register (Data Model) | A reference into a retirable vocabulary that no retirement guard covers is reported (register #10) | Story 6 | `[unit]` | ✓ |
 | 53 | FR14 | each entry in the cross-row invariant register (Data Model) | A `session.superseded_by` cycle is reported (register #11) | Story 6 | `[unit]` | ✓ |
 | 54 | FR21 | editing either the requirement fragment or the story criterion resets it to unverified automatically | Editing a story criterion's text clears `verified_at` and `binding_hash` on every coverage row bound to it | Story 7 | `[unit]` | ✓ |
 | 55 | FR21 | editing either the requirement fragment or the story criterion resets it to unverified automatically | Editing a requirement's text clears verification on its coverage rows | Story 7 | `[unit]` | ✓ |
@@ -229,28 +229,33 @@ table, so it will cover `dependency_kind` on the day Task 4.1 lands with no new 
 nothing to remember. That is a good reason to expect the row to pass and not a reason to mark
 it, which is the distinction this cell is recording. Story 4's gate marks it.
 
-**Rows 27 and 52 are unmarked after Story 6's gate, and neither will be marked by this epic.**
-Both criteria ask for something this epic cannot deliver, and the two reasons are different.
+**Rows 27 and 52 were unmarked after Story 6's gate and were amended by the pivot of
+2026-08-08.** Both criteria asked for something this epic cannot deliver, the two reasons were
+different, and so were the two remedies — which is the part worth keeping.
 
-Row 27 — *"every condition in the false-pass register has a test asserting it blocks"* — is a
-claim over a register that spans the whole product. Ten of the twenty conditions are closed
-somewhere other than Story 6: four by **Story 7** in this epic, and six by the search index,
-the projection guard, the dump path and the tool boundary, none of which this epic builds.
-`dpm/tests/false-pass.test.js` enumerates all twenty, resolves every citation against a test
-that exists, and requires each of the ten to name where it closes — so the register is
-complete, auditable, and honest about its own coverage. What it is not is *satisfied*. The row
-stays blank because the criterion was written against a scope larger than the story carrying
-it; Story 7's gate closes four more, and the remaining six belong to their own epics' matrices.
+Row 27 as written — *"every condition in the false-pass register has a test asserting it
+blocks"* — is a claim over a register that spans the whole product. Six of the twenty
+conditions close by the search index, the projection guard, the dump path and the tool
+boundary, none of which this epic builds. `dpm/tests/false-pass.test.js` enumerates all
+twenty, gives each exactly one disposition, resolves every citation against a test that
+exists, and requires each of the six to name where it closes — so the register is complete,
+auditable, and honest about its own coverage. What it was not is *satisfied*. The criterion
+now asserts the property the story delivers, and **the whole-register claim is declared
+forward to Epic 47-05 Story 6** as that matrix's row 19, which is the first point in the build
+order where all six deferrals are closed: #9 in 47-02, #10 in 47-03, #4 in 47-04, and #3, #15
+and #16 in 47-05 itself, reached transitively because 47-05 waits on 47-04 and 47-04 waits on
+47-02. One requirement covered across two epics, declared in both — the same treatment rows 86
+and 87 get against Epic 47-03, and the ordinary case FR26 exists to make visible.
 
-Row 52 — *"a row referencing a vocabulary item retired **before that row was written** is
-reported"* — asks for a distinction the schema cannot make. No detail table carries a
-timestamp, so a row written before its term was retired and one written after are identical,
-and a check that reported "rows referencing a retired term" would flag the legal ones — the
-very rows FR24 promises stay intact. What register #10 actually describes is a reference with
-no guard on it, which is decidable and is what `entry 10 — a vocabulary reference no guard
-covers` asserts. That check ships and is mutation-tested; the row stays blank because the
-criterion as written names a different check, and marking it would record a claim the
-implementation does not make.
+Row 52 as written — *"a row referencing a vocabulary item retired **before that row was
+written** is reported"* — asked for a distinction the schema cannot make. No detail table
+carries a timestamp, so a row written before its term was retired and one written after are
+identical, and a check that reported "rows referencing a retired term" would flag the legal
+ones — the very rows FR24 promises stay intact. What register #10 actually describes is a
+reference with no guard on it, which is decidable and is what `entry 10 — a vocabulary
+reference no guard covers` asserts. That check ships and is mutation-tested, and the criterion
+now names it. **Nothing about the implementation changed for either row**; what changed is that
+the criteria now describe it, which is the only honest way a blank cell becomes a ✓.
 
 **Marked at Story 4's gate, and the inheritance held.** Task 4.1 created `dependency_kind`
 with a `retired_at` column and no retirement code of its own; the generator produced

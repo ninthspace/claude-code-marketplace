@@ -26,6 +26,8 @@
 | 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR | Story 6 | `[integration]` | |
 | 17 | NFR7 (must NOT) | Every piece of state is reachable through a read tool without SQL | must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool | Story 6 | `[integration]` | |
 | 18 | FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | Story 2 | `[integration]` | |
+| 19 | NFR6 | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. | Every condition in the false-pass register has a test asserting it blocks rather than warns — including the six Epic 47-01 deferred, whose closing epics are all complete by the time this story runs | Story 6 | `[integration]` | |
+| 20 | FR9 | Artefact bodies *and* the hand-written text on their child rows — requirements, story criteria, retro observations, review findings — are indexed with FTS5 | A restored database's `document_fts` and `entry_fts` both return the same `MATCH` results as the source database's, for a term present in a section body and a term present only in a `requirement.text` | Story 6 | `[integration]` | |
 
 **Mapping notes.**
 
@@ -72,7 +74,41 @@ both-directions set comparison should expect exactly those two as an unmatched r
 **Row 18 was added by the second pivot of 2026-08-08**, which made the agent roster an FR24
 vocabulary. It is the criterion that justifies the table: CPM's `agents/roster.yaml` can only
 be overridden by replacing the whole file, so a project wanting one extra persona must fork
-all ten and maintain the fork — which is why the override has never been used, while
+all nine and maintain the fork — which is why the override has never been used, while
 appending to the shipped roster has. FR24's seeded-extensible-retirable semantics express
 append directly. The row sits here rather than in 47-08 because it asserts the *tool* half;
 `party` reading the table is 47-08 row 17.
+
+**Inline change**: the count in the paragraph above read "all ten" and the roster holds nine.
+Corrected 2026-08-08, the same drift already fixed once in Epic 47-01's Story 2 — a count
+restated in prose in several places is a fact with several copies and no owner.
+
+**Row 19 was declared forward from Epic 47-01 by the third pivot of 2026-08-08, and it is the
+only row in the breakdown that asserts the false-pass register as a whole.** 47-01 built the
+register as executable data and gave each of the twenty conditions exactly one disposition,
+but six carry the second kind — a named epic rather than a test — so 47-01's own criterion was
+narrowed to what it could deliver (complete, disposed, honest about its coverage) and the
+whole-register claim was declared here. **This story and not another** because the six close
+across four epics — #9 in 47-02, #10 in 47-03, #4 in 47-04, and #3, #15 and #16 in this
+epic's own Stories 3–5 — and Story 6 is the first point at which all four are complete: this
+epic waits on 47-04, and 47-04 waits on 47-02, so the two it does not name directly are
+reached transitively. Anyone re-sequencing the build should check that property still holds
+before moving this row, because nothing else in the format records it.
+
+**Row 20 arrived from Epic 47-02 on 2026-08-08**, where it was that matrix's row 10. It asserts
+that search survives a restore, and 47-02 could not carry it: `document_fts` and `entry_fts` are
+built by this epic's Stories 3 and 4, and 47-02 is M1 while this is M3. The FTS placement here
+was a considered decision rather than an oversight — the note above on the tables arriving as a
+migration records it — so the criterion moved to the tables rather than the tables to the
+criterion. Story 6 is the only story that can hold it: it needs the dumper *and* both indexes,
+and this epic waits on 47-04, which waits on 47-02. What 47-02 kept is the half that is about
+the dumper rather than about FTS — that shadow tables are excluded and the
+`CREATE VIRTUAL TABLE` statement retained for **any** FTS5 table, asserted against one its own
+fixture creates.
+
+Everywhere else NFR6 appears in the breakdown it appears as a single false-pass *instance* —
+47-04's row 21 on a renderer that silently differs, 47-09's row 19 on a load that drops
+content — and an instance passing says nothing about the register being closed. That is the
+distinction this row exists to hold, and it is why narrowing 47-01's row without declaring
+this one would have left the register asserted nowhere. One requirement covered across two
+epics, declared in both, is the ordinary case FR26 exists to make visible.
