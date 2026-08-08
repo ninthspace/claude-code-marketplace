@@ -1,4 +1,5 @@
 {
+  "outputStyle": "Terse",
   "permissions": {
     "allow": [
       "Bash(git add:*)",
