@@ -34,15 +34,18 @@ None of this is bad engineering. It is the necessary consequence of choosing a s
 - **FR7 — Hand-edits to the projection are detected and refused.** Because the projection is one-way, an edit made to a generated file is lost at the next regeneration. A pre-commit guard regenerates and fails on divergence, naming the diverged file. Silent loss of a user's edit is the failure this requirement exists to prevent.
 - **FR8 — The committed database representation is text.** A deterministic, sorted `.sql` dump is committed; the binary `.db` is generated and ignored. Two branches that both add artefacts produce an ordinary text conflict (AD4).
 - **FR9 — Search is a query, not a grep.** Artefact bodies are indexed with FTS5 and exposed as a typed search tool returning ranked, bounded results.
-- **FR10 — Full CPM artefact parity.** Every artefact type CPM produces is modelled from the outset: brief (problem and product), ADR, spec, requirement, epic, story, task, coverage, review, finding, retro, lesson, quick record, discussion, artifact, library document, audit, and session state.
+- **FR10 — Full CPM artefact parity, derived from real output.** Every artefact type CPM produces is modelled from the outset: brief (problem and product), ADR, spec, requirement, epic, story, task, story criterion, coverage, review, finding, retro, lesson, quick record, discussion, artifact, library document, audit, runbook, verification record, and session state. The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree.
 - **FR11 — Session state is a row.** The progress-file subsystem — session-suffixed filenames, hook injection, adoption on `--resume`, compact-summary companions — is replaced by a session table. Adoption is an `UPDATE`; staleness is a `WHERE` clause.
+- **FR21 — Verification is bound to the text it verified, and decays when that text changes.** A coverage row records what it was verified against; editing either the requirement fragment or the story criterion resets it to unverified automatically. Every coverage matrix CPM writes states this rule in prose and relies on an agent to honour it; here the database enforces it.
+- **FR22 — Relationships between artefacts are typed edges, not status values.** Blocking, spec-to-spec lineage, and ADR constraint are rows in one edge table with a kind, so "which epics are ready" is a query, a blocker's completion is visible to everything downstream, and a new relationship kind is data rather than a migration. Source and target may each be a document or a story.
+- **FR24 — Every controlled vocabulary is a table, and projects may edit it.** Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable without invalidating rows that already use them. An item may carry more than one category where the work genuinely spans two.
+- **FR23 — Two-level numbering.** Root-numbered kinds (a spec) and child-numbered kinds (an epic, numbered within its spec and restarting at 1 per parent) are both allocated monotonically and never reused.
 
 ### Should Have
 
 - **FR12 — Schema migrations are versioned and forward-only.** A `schema_version` row and an ordered migration set, applied automatically on server start, so a plugin update never requires the user to intervene.
 - **FR13 — Reads are bounded by default.** Query tools accept limits and return summaries rather than whole bodies unless a body is explicitly requested, so a skill reading an epic no longer pulls 20 KB into context to answer a question about its status.
 - **FR14 — Referential integrity is checkable on demand.** A verification tool reports orphans, dangling links, and constraint drift across the whole database, so a corrupted state is diagnosable without SQL.
-- **FR15 — Import from existing CPM artefacts.** A one-time importer reads a project's `docs/` tree and populates the database, so an existing CPM project can adopt dpm without re-authoring its history.
 
 ### Could Have
 
@@ -131,6 +134,20 @@ It loads with no flag and needs no native module. `better-sqlite3` was rejected 
 
 **Consequence**: cross-kind relationships that CPM maintains by hand become real constraints. `artifact → document`, `retro → epic`, `review → epic`, `present → sources`, and `lesson → library doc` all reference one enforceable primary key.
 
+### AD8 — Every project starts with an empty database
+
+**Decision**: dpm never reads a CPM `docs/` tree. New and existing projects alike begin with a blank database; there is no importer and no migration path from CPM's markdown artefacts.
+
+**Rejected**: a one-time importer, so an existing CPM project could adopt dpm carrying its history. Attractive on its face, and it was in an earlier draft of this spec as FR15 — added on the author's initiative rather than requested. It was cut because it buys continuity at the price of making CPM's entire historical output a compatibility surface.
+
+**Consequence**: this is the decision that makes the rest of the schema free, and three things follow from it directly.
+
+- **dpm parses no prose anywhere.** Markdown is strictly write-only output with no reader in the system. The one component that would have had to re-solve CPM's parsing problems — and inherit its parsing failures — does not exist.
+- **CPM's vocabularies are not binding.** Status words, severity scales, retro categories and audit dimensions are dpm's to choose. What dpm must still *express* is whatever its own pipeline needs; what it calls things is unconstrained, because no artefact crosses between the systems.
+- **Constraints can be strict.** With the only write path a typed MCP tool, an unrecognised value cannot arrive, so `CHECK` constraints reject rather than lint. CPM must accept-and-flag a malformed status because it reads human-edited files; dpm reads none, so the conservative behaviour is unnecessary here.
+
+The two systems coexist by not touching. A project runs CPM or dpm, and the choice is made once at the start.
+
 ## Data Model
 
 Abridged to the load-bearing definitions. Full DDL is an implementation artefact; what belongs here is the shape and the constraint behind each drift class named in the Problem Summary.
@@ -139,33 +156,57 @@ Abridged to the load-bearing definitions. Full DDL is an implementation artefact
 
 ```sql
 CREATE TABLE document_kind (
-  kind        TEXT PRIMARY KEY,          -- 'spec','epic','retro','review','brief_problem',…
+  kind        TEXT PRIMARY KEY,          -- 'spec','epic','retro','review','runbook',…
   dir         TEXT NOT NULL,             -- projection directory under docs/
-  numbered    INTEGER NOT NULL DEFAULT 1
+  numbering   TEXT NOT NULL DEFAULT 'root'
+                CHECK (numbering IN ('root','child','none'))
 );
 
 CREATE TABLE document (
   id          INTEGER PRIMARY KEY,
   kind        TEXT    NOT NULL REFERENCES document_kind(kind),
-  number      INTEGER NOT NULL,
+  number      INTEGER,          -- root-numbered kinds: spec 47. NULL for child-numbered
+  sequence    INTEGER,          -- child-numbered kinds: epic 03 within spec 101
   slug        TEXT    NOT NULL,
   title       TEXT    NOT NULL,
-  status      TEXT    NOT NULL DEFAULT 'draft'
-                CHECK (status IN ('draft','active','delivered','archived')),
+  status      TEXT    NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending','complete')),
+  status_note TEXT,             -- the free-text qualifier real epics append to a status
   parent_id   INTEGER REFERENCES document(id),   -- epic→spec, retro→epic, review→epic
-  commit_sha  TEXT,                              -- audit and inspect pin to a commit
+  archived_at TEXT,             -- orthogonal to status; NULL means live
+  commit_sha  TEXT,             -- audit and inspect pin to a commit
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL,
-  UNIQUE (kind, number)
+  CHECK ((number IS NULL) <> (sequence IS NULL)),
+  CHECK (sequence IS NULL OR parent_id IS NOT NULL)
 );
+
+CREATE UNIQUE INDEX document_root_number
+  ON document (kind, number)              WHERE number IS NOT NULL;
+CREATE UNIQUE INDEX document_child_number
+  ON document (kind, parent_id, sequence) WHERE sequence IS NOT NULL;
 
 CREATE TABLE number_sequence (
-  kind         TEXT PRIMARY KEY REFERENCES document_kind(kind),
-  next_number  INTEGER NOT NULL DEFAULT 1
+  kind        TEXT    NOT NULL REFERENCES document_kind(kind),
+  parent_id   INTEGER REFERENCES document(id) ON DELETE CASCADE,  -- NULL for root-numbered
+  next_value  INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE UNIQUE INDEX number_sequence_root
+  ON number_sequence (kind)            WHERE parent_id IS NULL;
+CREATE UNIQUE INDEX number_sequence_child
+  ON number_sequence (kind, parent_id) WHERE parent_id IS NOT NULL;
 ```
 
-`number_sequence` satisfies FR5 outright. Allocation is `UPDATE number_sequence SET next_number = next_number + 1 WHERE kind = ? RETURNING next_number - 1`, which is monotonic irrespective of deletion, archival, or how many rows currently exist. The **Numbering** procedure's glob-the-active-directory, glob-the-archive-mirror, union, parse-as-integer-not-string, and its standing `99 → 100` warning all reduce to that statement — and `cpm:archive`'s obligation to preserve `docs/archive/{type}/` as a mirrored tree stops being a contract at all, because retirement is `status='archived'` on a row that never moves.
+**Numbering is two-level, because real projects number two ways.** A spec is numbered globally (`47-spec-…`); an epic is numbered *within* its spec (`101-03-epic-cpm-markers.md` is sequence 3 under spec 101, and every spec restarts at 1). A single `number` column with `UNIQUE (kind, number)` cannot hold the second, so `number` and `sequence` are exclusive alternatives enforced by `CHECK`, and a child sequence requires a parent to be counted within.
+
+`number_sequence` satisfies FR5 for both levels — one row per root kind, one row per (child kind, parent). Allocation is `UPDATE number_sequence SET next_value = next_value + 1 WHERE … RETURNING next_value - 1`, monotonic irrespective of deletion or archival. The **Numbering** procedure's glob-the-active-directory, glob-the-archive-mirror, union, parse-as-integer-not-string, and its standing `99 → 100` warning all reduce to that statement — and `cpm:archive`'s obligation to preserve `docs/archive/{type}/` as a mirrored tree stops being a contract at all, because retirement sets `archived_at` on a row that never moves.
+
+**Status carries a note, and archival is not a status.** A status frequently needs a qualifier — *complete, but folded into another story*; *pending, but waiting on a third party*. In a markdown store that qualifier has nowhere to go but the same line as the status word, which is why CPM parses a lead token and preserves the tail. dpm has a typed write path and no such constraint, so the qualifier is simply its own column: `status` is always exactly one enum value, and `status_note` carries the rest.
+
+`archived_at` is separate from `status` because the two are orthogonal — a document is archived *and* complete. Collapsing them into one enum forces a false choice and loses the completion state on archival.
+
+**Vocabularies here are dpm's own** (AD8). Studying a real 393-artefact CPM project was useful evidence about what planning data actually contains — statuses need qualifiers, blocking is a graph, coverage binds to text fragments — but dpm is not bound to CPM's spellings, because nothing ever crosses between the two.
 
 Undecomposed prose keeps a home rather than being over-modelled:
 
@@ -217,7 +258,8 @@ CREATE TABLE story (
   number      INTEGER NOT NULL,
   title       TEXT    NOT NULL,
   status      TEXT    NOT NULL DEFAULT 'pending'
-                CHECK (status IN ('pending','in_progress','done','blocked')),
+                CHECK (status IN ('pending','complete')),
+  status_note TEXT,
   position    INTEGER NOT NULL,
   UNIQUE (epic_id, number)
 );
@@ -227,24 +269,29 @@ CREATE TABLE task (
   story_id    INTEGER NOT NULL REFERENCES story(id) ON DELETE CASCADE,
   number      INTEGER NOT NULL,
   title       TEXT    NOT NULL,
+  description TEXT,
   status      TEXT    NOT NULL DEFAULT 'pending'
-                CHECK (status IN ('pending','in_progress','done','blocked')),
+                CHECK (status IN ('pending','complete')),
+  status_note TEXT,
   position    INTEGER NOT NULL,
   UNIQUE (story_id, number)
 );
 
+CREATE TABLE test_approach (
+  tag   TEXT PRIMARY KEY,                            -- unit, integration, feature, manual, target, tdd
+  kind  TEXT NOT NULL CHECK (kind IN ('level','mode'))
+);
+
+-- Spec-side criteria: the spec's own Testing Strategy table,
+-- `| Requirement | Acceptance Criterion | Test Approach |`.
 CREATE TABLE acceptance_criterion (
   id              INTEGER PRIMARY KEY,
   requirement_id  INTEGER NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
   text            TEXT    NOT NULL,
   polarity        TEXT    NOT NULL DEFAULT 'must'
                     CHECK (polarity IN ('must','must_not','control')),
-  position        INTEGER NOT NULL
-);
-
-CREATE TABLE test_approach (
-  tag   TEXT PRIMARY KEY,                            -- unit, integration, feature, manual, target, tdd
-  kind  TEXT NOT NULL CHECK (kind IN ('level','mode'))
+  position        INTEGER NOT NULL,
+  UNIQUE (requirement_id, position)
 );
 
 CREATE TABLE criterion_approach (
@@ -253,67 +300,230 @@ CREATE TABLE criterion_approach (
   PRIMARY KEY (criterion_id, tag)
 );
 
-CREATE TABLE coverage (
-  id              INTEGER PRIMARY KEY,
-  requirement_id  INTEGER NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
-  story_id        INTEGER REFERENCES story(id) ON DELETE CASCADE,
-  task_id         INTEGER REFERENCES task(id)  ON DELETE CASCADE,
-  state           TEXT NOT NULL DEFAULT 'planned'
-                    CHECK (state IN ('planned','implemented','verified','blocked')),
-  CHECK (story_id IS NOT NULL OR task_id IS NOT NULL)
+-- Story-side criteria: the epic's `**Acceptance Criteria**:` bullets,
+-- a DIFFERENT set from the spec's. The coverage matrix joins the two.
+CREATE TABLE story_criterion (
+  id          INTEGER PRIMARY KEY,
+  story_id    INTEGER NOT NULL REFERENCES story(id) ON DELETE CASCADE,
+  text        TEXT    NOT NULL,
+  polarity    TEXT    NOT NULL DEFAULT 'must'
+                CHECK (polarity IN ('must','must_not','control')),
+  position    INTEGER NOT NULL,
+  UNIQUE (story_id, position)
 );
 
--- NOT a composite UNIQUE: SQLite treats NULLs as distinct, so
--- UNIQUE(requirement_id, story_id, task_id) admits unlimited duplicates
--- whenever either column is NULL — which is the ordinary case. Verified
--- empirically; two identical (requirement_id, story_id) rows were accepted.
--- Duplicate coverage rows inflate the covered count, so this is an NFR6
--- false pass and must be closed at the schema.
-CREATE UNIQUE INDEX coverage_req_story
-  ON coverage (requirement_id, story_id) WHERE task_id IS NULL;
-CREATE UNIQUE INDEX coverage_req_task
-  ON coverage (requirement_id, task_id)  WHERE task_id IS NOT NULL;
+CREATE TABLE story_criterion_approach (
+  story_criterion_id INTEGER NOT NULL REFERENCES story_criterion(id) ON DELETE CASCADE,
+  tag                TEXT    NOT NULL REFERENCES test_approach(tag),
+  PRIMARY KEY (story_criterion_id, tag)
+);
+
+-- One row per matrix row: a VERBATIM FRAGMENT of a requirement bound to one
+-- story criterion. A single requirement yields several rows — FR4 of spec 101
+-- produces three, each independently verified.
+CREATE TABLE coverage (
+  id                 INTEGER PRIMARY KEY,
+  requirement_id     INTEGER NOT NULL REFERENCES requirement(id) ON DELETE CASCADE,
+  spec_fragment      TEXT    NOT NULL,
+  story_criterion_id INTEGER NOT NULL REFERENCES story_criterion(id) ON DELETE CASCADE,
+  position           INTEGER NOT NULL,
+  verified_at        TEXT,            -- NULL = unverified; the ✓ column
+  binding_hash       TEXT,            -- hash of (spec_fragment ‖ criterion text) at verification
+  UNIQUE (requirement_id, story_criterion_id, position),
+  CHECK ((verified_at IS NULL) = (binding_hash IS NULL))
+);
+
+-- "Covered by: Story 2, Story 4" — a criterion may be delivered by more than
+-- the story that declares it. Rare (3 rows in a 393-artefact corpus) but real.
+CREATE TABLE coverage_story (
+  coverage_id  INTEGER NOT NULL REFERENCES coverage(id) ON DELETE CASCADE,
+  story_id     INTEGER NOT NULL REFERENCES story(id)    ON DELETE CASCADE,
+  PRIMARY KEY (coverage_id, story_id)
+);
+
+-- Verification is bound to text, and text changes silently. These triggers are
+-- the schema-level statement of the rule every coverage matrix carries in prose.
+CREATE TRIGGER coverage_unverify_on_criterion_edit
+AFTER UPDATE OF text ON story_criterion
+WHEN OLD.text <> NEW.text
+BEGIN
+  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
+   WHERE story_criterion_id = NEW.id;
+END;
+
+CREATE TRIGGER coverage_unverify_on_requirement_edit
+AFTER UPDATE OF text ON requirement
+WHEN OLD.text <> NEW.text
+BEGIN
+  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
+   WHERE requirement_id = NEW.id;
+END;
 ```
 
 `polarity` is the sleeper. A negative criterion is currently written `must NOT — …` and recognised by that prefix; a control case by the word `control`. Both are types carried in prose, in the one artefact whose whole purpose is deciding whether the work is done.
 
 The coverage matrix — a markdown table, parsed row by row by `coverage_matrix_rows()` (`:585`) — becomes rows. The roll-up that `coverage-rollup.sh` performs in 802 lines becomes a join, and its `REQ = STATE ∪ EXCLUDED` partition property (spec 44 NFR4, restated as spec 46 NFR4) stops being a property to assert and becomes one that cannot fail: `exclusion IS NOT NULL` and `exclusion IS NULL` partition the table by construction.
 
+**Two criterion sets, not one.** A spec states its criteria in `## Testing Strategy`; an epic states different ones per story. The matrix's job is joining them, and its columns say so — `Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified`. Modelling only the spec side leaves the join with nothing on its right-hand side, which is what an earlier draft of this section did.
+
+**The grain is a fragment, not a requirement.** Rows 1–3 of a real matrix all cite `FR4`, each binding a different verbatim slice of FR4's text to a different story criterion, each carrying its own ✓. A `coverage(requirement_id, story_id)` row cannot represent three independent verification states for one requirement, so `spec_fragment` is stored per row and the requirement is referenced, not consumed.
+
+**Verification decays, and the schema has to know.** Every matrix carries this rule in prose:
+
+> **Verification rule**: Verification status (✓) is bound to criterion text. Any change to a story criterion or its spec mapping resets that row to unverified.
+
+A plain `state` column cannot honour it: edit a criterion and the ✓ survives, now attesting to text that no longer exists. That is a false pass inside the coverage subsystem — the precise failure class this spec exists to eliminate, reproduced by this spec's own first draft. `binding_hash` records what was verified, the `CHECK` keeps it in lockstep with `verified_at`, and the two triggers make the reset automatic rather than remembered.
+
+### Dependencies and retro feed-forward
+
+```sql
+-- Edge kinds are rows, so a new relationship is data rather than a migration.
+-- `blocks` gates readiness; `builds_on` and `constrains` are lineage only.
+CREATE TABLE dependency_kind (
+  kind         TEXT PRIMARY KEY,      -- 'blocks','builds_on','constrains'
+  gates_work   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE dependency (
+  id                  INTEGER PRIMARY KEY,
+  kind                TEXT NOT NULL REFERENCES dependency_kind(kind),
+  source_document_id  INTEGER REFERENCES document(id) ON DELETE CASCADE,
+  source_story_id     INTEGER REFERENCES story(id)    ON DELETE CASCADE,
+  target_document_id  INTEGER REFERENCES document(id) ON DELETE CASCADE,
+  target_story_id     INTEGER REFERENCES story(id)    ON DELETE CASCADE,
+  CHECK ((source_document_id IS NULL) <> (source_story_id IS NULL)),
+  CHECK ((target_document_id IS NULL) <> (target_story_id IS NULL)),
+  CHECK (source_document_id IS NULL OR target_document_id IS NULL
+         OR source_document_id <> target_document_id),
+  CHECK (source_story_id IS NULL OR target_story_id IS NULL
+         OR source_story_id <> target_story_id)
+);
+
+-- One expression index rather than four partial ones: coalesce removes the
+-- NULLs that would otherwise make every edge distinct from every other.
+CREATE UNIQUE INDEX dependency_edge ON dependency (
+  kind,
+  coalesce(source_document_id, -1), coalesce(source_story_id, -1),
+  coalesce(target_document_id, -1), coalesce(target_story_id, -1)
+);
+
+-- `**Retro applied**: 12 · Codebase discovery · Applied — <text>`
+-- Four fields in one prose line, on 29 epics.
+CREATE TABLE retro_application (
+  id            INTEGER PRIMARY KEY,
+  retro_id      INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  applied_to_id INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  theme         TEXT NOT NULL DEFAULT '',
+  disposition   TEXT NOT NULL
+                  CHECK (disposition IN ('applied','not_applicable','deferred')),
+  note          TEXT NOT NULL DEFAULT '',
+  UNIQUE (retro_id, applied_to_id, theme, note)
+);
+```
+
+Blocking is a **relationship**, and an earlier draft of this spec made it a `status` value — the same category error the Problem Summary accuses CPM of committing with `**Source spec**`. A status cannot say *what* blocks you, cannot be traversed to find a ready epic, and cannot be invalidated when the blocker completes.
+
+**Edges are typed, and their kinds are rows, because more relationships exist than any one skill defines.** Three are already in evidence:
+
+- **`blocks`** — an epic blocked by epics, or a story blocked by another story. Both directions occur in real epics, which is why source and target may each be either a document or a story.
+- **`builds_on`** — spec-to-spec lineage. CPM has no field for this, yet three real specifications carry a hand-written `**Builds on**:` header. A field invented independently in three documents is a missing feature, not a stylistic flourish.
+- **`constrains`** — ADR-to-ADR, which CPM *does* define ("Depends on ADR {nn}" / "Constrains ADR {nn}") and which is directional and distinct from blocking.
+
+`gates_work` separates the edge that stops work from the edges that merely record lineage, so readiness is a query over one flag rather than a hardcoded list of kinds.
+
+`theme` and `note` are `NOT NULL DEFAULT ''` rather than nullable, so the `UNIQUE` actually constrains. Nullable columns in a `UNIQUE` are the trap already documented against `coverage`, and the fix is cheaper here than a second pair of partial indexes.
+
 ### Review, retro, and the library
 
 ```sql
+-- Every controlled vocabulary is a table, seeded but project-editable.
+-- `retired_at` lets a project stop offering a category without deleting the
+-- rows that already use it.
+CREATE TABLE taxonomy (
+  id          INTEGER PRIMARY KEY,
+  domain      TEXT    NOT NULL,   -- 'observation','finding','audit_dimension','severity'
+  name        TEXT    NOT NULL,   -- canonical form, e.g. 'Patterns Worth Reusing'
+  singular    TEXT,               -- per-item display form, e.g. 'Pattern worth reusing'
+  position    INTEGER NOT NULL,
+  retired_at  TEXT,
+  UNIQUE (domain, name)
+);
+
 CREATE TABLE finding (
   id              INTEGER PRIMARY KEY,
   review_id       INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
   agent           TEXT,
-  severity        TEXT NOT NULL CHECK (severity IN ('critical','major','minor','note')),
+  category_id     INTEGER NOT NULL REFERENCES taxonomy(id),
+  severity_id     INTEGER NOT NULL REFERENCES taxonomy(id),
   summary         TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'open'
                     CHECK (status IN ('open','accepted','rejected','remediated')),
   remediation_task_id INTEGER REFERENCES task(id)
 );
 
-CREATE TABLE lesson (
+-- A retro observation. Also the story-level `**Retro**:` field, which is the
+-- same thing recorded earlier — hence the exclusive parentage.
+CREATE TABLE observation (
   id              INTEGER PRIMARY KEY,
-  retro_id        INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  retro_id        INTEGER REFERENCES document(id) ON DELETE CASCADE,
+  story_id        INTEGER REFERENCES story(id)    ON DELETE CASCADE,
   text            TEXT NOT NULL,
-  status          TEXT NOT NULL DEFAULT 'active'
-                    CHECK (status IN ('active','promoted','retired')),
-  library_doc_id  INTEGER REFERENCES document(id)
+  synthesis       TEXT,            -- written when grouped into a retro
+  note            TEXT,            -- escape hatch: qualifiers, caveats, scope
+  library_doc_id  INTEGER REFERENCES document(id),   -- set on promotion
+  retired_at      TEXT,
+  retired_reason  TEXT,
+  CHECK ((retro_id IS NULL) <> (story_id IS NULL)),
+  CHECK ((retired_at IS NULL) = (retired_reason IS NULL))
+);
+
+-- Many-to-many: an observation genuinely spans categories.
+CREATE TABLE observation_category (
+  observation_id INTEGER NOT NULL REFERENCES observation(id) ON DELETE CASCADE,
+  taxonomy_id    INTEGER NOT NULL REFERENCES taxonomy(id),
+  PRIMARY KEY (observation_id, taxonomy_id)
 );
 
 CREATE TABLE audit_finding (
-  id          INTEGER PRIMARY KEY,
-  audit_id    INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
-  dimension   TEXT NOT NULL,          -- the nine dimensions of code health
-  file        TEXT NOT NULL,
-  line        INTEGER,
-  symbol      TEXT,
-  severity    TEXT NOT NULL CHECK (severity IN ('critical','major','minor','note'))
+  id           INTEGER PRIMARY KEY,
+  audit_id     INTEGER NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+  dimension_id INTEGER NOT NULL REFERENCES taxonomy(id),
+  file         TEXT NOT NULL,
+  line         INTEGER,
+  symbol       TEXT,
+  severity_id  INTEGER NOT NULL REFERENCES taxonomy(id)
 );
 ```
 
-`finding.remediation_task_id` closes a loop CPM leaves open: a review finding that generated a remediation task is joined to it, so "which findings were actually acted on" is a query rather than a reading exercise. `lesson.status` makes **Retro Retirement** a transition rather than a procedure, and `library_doc_id` records where a promoted lesson landed.
+`finding.remediation_task_id` closes a loop CPM leaves open: a review finding that generated a remediation task is joined to it, so "which findings were actually acted on" is a query rather than a reading exercise.
+
+**Why every taxonomy is a table.** This is the design decision in this spec with the strongest empirical backing, and the evidence is worth stating exactly.
+
+CPM fixes seven retro observation categories, named in a prose sentence inside a shared procedure. Across 22 real retro files in one project they appear as **eleven distinct headings**:
+
+| Intended category | What was actually written |
+|---|---|
+| smooth deliveries | `Smooth Deliveries` (7), `What Went Smoothly` (5), `Smooth Delivery` (5) |
+| codebase discoveries | `Codebase Discoveries` (15), `Codebase Discovery` (2) |
+| testing gaps | `Testing Gaps` (11), `Testing Gap` (1), `Testing Notes` (1) |
+| scope surprises | `Scope Surprises` (1), `Scope Surprise` (1) |
+| criteria gaps | `Criteria Gaps` (2) |
+| patterns worth reusing | `Patterns Worth Reusing` (18) |
+| complexity underestimates | *never used, in any file* |
+
+`What Went Smoothly` is a paraphrase, `Testing Notes` an invention, and the canonical `Smooth Deliveries` is the minority spelling of its own category.
+
+The control case is in the same project, by the same author, in the same period: **review finding categories held almost perfectly** — all ten canonical categories used, roughly seven strays across a hundred headings. The difference is not discipline, it is form. Review categories appear as **literal headings in the skill's output template** and get copied; retro categories appear as **prose inside a shared procedure** and get restated in the author's own words.
+
+Three consequences are built into the schema above:
+
+- **`taxonomy` rows, referenced by FK.** Eleven spellings of seven categories cannot occur when the category is an id.
+- **`observation_category` is many-to-many.** Real observations were forced into invented compounds — `Testing gap → guard friction`, `Testing gap / pattern`, `Pattern reuse + testing` — because the format allowed one category and the work spanned two.
+- **`taxonomy.retired_at`, not deletion.** One of the seven categories was never used once. A project should be able to stop offering a category without invalidating rows that already reference it, which means the vocabulary is data and not an enum.
+
+`taxonomy.singular` exists because the canonical list is plural (it names categories) while a field carrying one observation wants the singular — `Pattern worth reusing` outnumbers `Patterns worth reusing` 31 to 4. Nobody specified which to use, so both were guessed. Storing both forms makes it a projection concern rather than an authoring decision.
+
+**Retirement keeps its date and reason and stays reversible.** `observation.retired_at` / `retired_reason` mirror CPM's in-place `**Retired {date}**: {reason}` marker rather than collapsing it to a status value. CPM's design note gives the reason — the marker "preserves category context and leaves a visible, greppable, reversible record" — and un-retiring is setting both columns back to NULL. `library_doc_id` records where an observation went when promoted, which is also what a promotion sets as its retirement reason.
 
 ### Artifacts — the bidirectional link, made unable to disagree
 
@@ -378,7 +588,18 @@ The FTS index is maintained by triggers on `document_section`, not by a reindex 
 | `must NOT —` recognised by prose prefix | `acceptance_criterion.polarity` CHECK |
 | Coverage matrix parsed as a markdown table | `coverage` rows |
 | `REQ = STATE ∪ EXCLUDED` asserted by test | partition holds by construction |
-| Numbers recovered by globbing two directories | `number_sequence` |
+| ✓ surviving an edit to the criterion it verified | `binding_hash` + unverify triggers |
+| One requirement's several obligations collapsed to one row | `coverage.spec_fragment`, one row each |
+| Story criteria readable only as epic prose | `story_criterion` rows |
+| `**Blocked by**` as a prose list of epic filenames | `dependency` edges |
+| Seven retro categories written as eleven headings | `taxonomy` rows, referenced by FK |
+| An observation forced into one category when it spans two | `observation_category` many-to-many |
+| `**Builds on**` hand-invented in three specs, unspecified | `dependency_kind = 'builds_on'` |
+| Retirement collapsing date and reason into a state | `retired_at` + `retired_reason`, reversible |
+| A test-approach tag appearing in a retro category slot | FK to `taxonomy`, domain-scoped |
+| `**Retro applied**: 12 · theme · Applied — …` in one line | `retro_application` columns |
+| Status carrying an unparseable free-text qualifier | `status` + `status_note` |
+| Numbers recovered by globbing two directories | `number_sequence`, root and child |
 | Archive mirror as a load-bearing directory contract | `document.status = 'archived'` |
 | Artifact index and in-document backlinks, kept in step by hand | `artifact_document` join table |
 | Progress files, session suffixes, adoption on resume | `session` rows |
@@ -394,11 +615,13 @@ Fourteen rows. The four shell helpers whose work they absorb — `coverage-parse
 - The MCP server: typed create, read, update, link, and search tools; migrations; integrity verification.
 - The markdown projection renderer and the pre-commit divergence guard.
 - The deterministic dump-and-restore path.
-- A one-time importer from an existing CPM `docs/` tree.
 - dpm skill files mirroring CPM's pipeline, rewritten against the tool surface.
 
 ### Out of Scope
 
+- **Any importer from CPM's markdown artefacts** (AD8). Every project starts with an empty database. This was briefly FR15 in an earlier draft; it was never requested and is now an explicit non-goal.
+- **Compatibility with CPM's existing output.** dpm does not read, parse, or reproduce historic artefacts, and therefore does not inherit their conventions — legacy filename shapes, read-only status synonyms, or free-text status tails are CPM's concerns, not dpm's.
+- **Reproducing CPM's vocabularies.** dpm defines its own enums (AD8). CPM's are useful prior art and no more.
 - Changes to CPM itself. dpm is a separate plugin; CPM is unmodified and remains installable alongside.
 - A web or TUI interface. Reads go through MCP tools or the generated markdown.
 - Any write path through markdown (FR18).
@@ -442,9 +665,25 @@ Fourteen rows. The four shell helpers whose work they absorb — `coverage-parse
 | FR9 | A search returns ranked results, and the index reflects a write made in the same session | `[integration]` |
 | FR10 | Every artefact type CPM produces has a table, a create tool, and a projection template | `[integration]` |
 | FR11 | A session row survives simulated resume under a new session id, and stale rows are selected by age | `[integration]` |
+| FR21 | Editing a story criterion's text clears `verified_at` and `binding_hash` on every coverage row bound to it | `[unit]` |
+| FR21 | Editing a requirement's text clears verification on its coverage rows | `[unit]` |
+| FR21 | must NOT — a coverage row holds `verified_at` while `binding_hash` is NULL, or the reverse | `[unit]` |
+| FR21 | control — an edit that leaves the text byte-identical does not clear verification | `[unit]` |
+| FR22 | An epic blocked by two epics yields two `dependency` rows, and completing both makes it selectable as ready | `[integration]` |
+| FR22 | A story-to-story `blocks` edge and a spec-to-spec `builds_on` edge both round-trip through one table | `[unit]` |
+| FR22 | A `builds_on` edge does not gate readiness; a `blocks` edge does | `[unit]` |
+| FR22 | must NOT — a document or story depends on itself | `[unit]` |
+| FR22 | must NOT — the same edge is storable twice, for any combination of NULL source/target columns | `[unit]` |
+| FR24 | An observation carrying two categories round-trips, and appears under both in the projection | `[integration]` |
+| FR24 | Retiring a taxonomy row leaves rows referencing it intact and readable | `[unit]` |
+| FR24 | A project-added category is usable without a schema migration | `[integration]` |
+| FR24 | must NOT — any category, severity, dimension or approach is stored as free text rather than a foreign key | `[integration]` |
+| FR23 | Two epics under different specs may both hold sequence 1; two under the same spec may not | `[unit]` |
+| FR23 | Child sequences restart at 1 per parent and never reuse a value after deletion | `[unit]` |
+| FR23 | must NOT — a row carries both `number` and `sequence`, or neither | `[unit]` |
 | FR12 | A database at schema version *n* is migrated to *n+1* on server start with no user action | `[integration]` |
 | FR14 | The integrity tool reports a deliberately orphaned row | `[integration]` |
-| FR15 | Importing this repository's own archived `docs/` tree populates every artefact type without loss | `[feature]` |
+| AD8 | must NOT — any component reads, globs, or parses a markdown file under `docs/` | `[integration]` |
 | NFR1 | A clean clone starts the server with no compilation step | `[target]` |
 | NFR2 | The server refuses to start below the Node floor with a message naming the required version | `[integration]` |
 | NFR3 | A full session's stdout parses as well-formed JSON-RPC with no stray output | `[integration]` |
@@ -464,13 +703,17 @@ Four seams:
 1. **MCP tool schemas → database constraints.** A tool that accepts an argument the schema will reject has moved validation to the wrong layer. The two definitions must correspond, not merely coexist.
 2. **Database state → markdown projection.** Determinism (FR6) and the divergence guard (FR7) both live here.
 3. **Database state → `.sql` dump.** Byte-stability (NFR4) is the whole contract.
-4. **CPM `docs/` tree → importer.** The one place dpm parses prose, by necessity — and the one component where CPM's parsing lessons, including retro 21's `awk -v` failure, apply directly.
+There is deliberately **no fourth seam**. An earlier draft listed "CPM `docs/` tree → importer" as the one place dpm parses prose by necessity. AD8 removes it: nothing in dpm reads markdown, so the component that would have inherited CPM's parsing failures — retro 21's `awk -v` collapse among them — has no counterpart here.
 
 Seam 1 is where drift would re-enter the system if it re-entered anywhere: two descriptions of the same constraint, in two languages, maintained separately. One definition, generated into both, or a test asserting correspondence.
 
 ### Test Infrastructure
 
-New. CPM's suites are bash against fixture markdown files; dpm needs a Node test setup with an in-memory or temp-file database per test, plus a fixture corpus of artefacts. The importer (FR15) has a free real-world corpus available: this repository's own `docs/archive/`, which holds 46 specs and their epics, retros, and reviews.
+New. CPM's suites are bash against fixture markdown files; dpm needs a Node test setup with an in-memory or temp-file database per test, plus a fixture corpus of artefacts.
+
+Fixtures are written against the tool surface, not parsed from markdown — AD8 means there is no import path to exercise. Each test creates entities through the MCP tools, so the fixtures and the production write path are the same code.
+
+A real 393-artefact CPM project remains valuable as **design evidence** rather than as a test input: it shows what planning data accumulates in practice once a pipeline has been run in anger, including structure the skills never specified. Every vocabulary in this schema was corrected against it, and the schema before that check contained eight defects — one of them a false pass in the coverage subsystem (FR21).
 
 ### Unit Testing
 
