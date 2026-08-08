@@ -93,6 +93,9 @@
 | 83 | FR24 | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | Story 5 | `[integration]` | |
 | 84 | FR24 (must NOT) | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | Story 5 | `[integration]` | |
 | 85 | FR24 (must NOT) | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | Story 5 | `[unit]` | |
+| 86 | NFR1 | The plugin installs by clone or marketplace fetch with no build step, no `node-gyp`, and no per-platform binary. | `dpm/` is installable from the marketplace manifest as a plugin alongside `cpm/`, with no build step | Story 0 | `[target]` | |
+| 87 | NFR1 (must NOT) | no `node-gyp`, and no per-platform binary | must NOT — a dependency is added whose install requires compilation | Story 0 | `[unit]` | |
+| 88 | AD8 (must NOT) | dpm parses no prose anywhere. Markdown is strictly write-only output with no reader in the system. | must NOT — a fixture is a markdown file parsed at load, rather than built by calling create tools | Story 0 | `[integration]` | |
 
 **Rows 30–60 were added on 2026-08-08**, when the cross-epic union check ran early against
 the spec's 113 tagged criteria and found FR21 uncovered in every epic. They are appended
@@ -159,13 +162,37 @@ a claim rather than a roll-up, which is what register entry 1 asked for.
 **The "Address review findings" story's two criteria have no rows here, and that is the
 second declared exception.** A remediation story records repairs to *this breakdown*, not
 obligations drawn from the spec, so there is no requirement for its criteria to bind to and a
-row would assert coverage of nothing. The both-directions set comparison should therefore
-expect exactly two unmatched epic criteria per amended epic — "Each critical and warning
-finding … has been addressed" and "Existing acceptance criteria on other stories continue to
-pass" — alongside the thirteen roll-up rows declared above. Declaring it is the point: retro
+row would assert coverage of nothing. "Each critical and warning finding … has been addressed"
+and "Existing acceptance criteria on other stories continue to pass" are the two. Declaring it is the point: retro
 34's recommendation is that an intended remainder be written down so the comparison has an
 expected result rather than an unexplained one, and an undeclared exception is
 indistinguishable from the defect this pivot just fixed.
+
+**Two of Story 0's criteria have no rows here, and that is the third declared exception.**
+*"A test creates its own
+database, exercises it, and leaves nothing behind; two tests running in one process do not
+share state"* and *"The whole suite runs from one command that needs no install step and no
+compiled dependency"* both draw on the spec's **Test Infrastructure** section, which sits under
+**Testing Strategy** rather than under Functional or Non-Functional Requirements. Nothing in
+this corpus binds Testing Strategy content to a matrix row — the roll-up pairs matrix labels
+against requirement bullets, so a row labelled for a strategy section would match no
+requirement and read as noise. The obligation is real and stated in the spec; it is simply not
+a numbered requirement, and inventing a label to make it look like one would trade a declared
+absence for a false match. Story 0's other three criteria do bind, which is why they are rows
+86–88 rather than part of this exception.
+
+**The expected remainder, stated once.** A both-directions set comparison between this epic's
+criteria and this matrix's `Story Criterion` column should report **five unmatched epic
+criteria and thirteen unmatched matrix rows**, and nothing else. The five are Story 9's two,
+Story 0's two, and Story 6's roll-up *"Each of the thirteen register entries is reported in
+turn, naming the rows"* — which is unmatched because rows 43–53, 67 and 68 carry its thirteen
+specialisations under different text, and is the same declaration as the thirteen seen from
+the other side. **The roll-up criterion was not counted before this pivot**: the second
+exception was written as "exactly two unmatched epic criteria", which was three, because the
+epic-side half of the first exception had no home in either note. That is why the figure lives
+here in one place now rather than inside each exception — three notes each holding a partial
+count is how the count drifted in the first place, and retro 33's "count in code, quote in
+prose" applies to this document as much as to the spec it covers.
 
 **Rows 81–85 were added by the second pivot of 2026-08-08**, which made the agent roster an
 FR24 vocabulary and settled what happens to a seeded vocabulary when the plugin ships a new
@@ -176,3 +203,16 @@ was written: `review_agent` and `finding` are declared several hundred lines bef
 in the Data Model's DDL order, and the forward reference holds because SQLite resolves a
 foreign key at write time rather than at `CREATE`. Executing it is also what confirmed the
 full DDL still runs clean at thirty-nine tables.
+
+**Rows 86–88 were added by the third pivot of 2026-08-08**, which added Story 0 — the plugin
+skeleton and test harness. The story was raised because every one of this epic's other stories
+writes DDL or a test and none of them creates somewhere for that to live or anything to run it:
+Story 1 Task 1.1 began at `CREATE TABLE`, and no story or task in any of the nine epics
+produced the `dpm/` directory, its manifest, its marketplace entry, or a test runner. Rows 86
+and 87 sit on NFR1 even though Epic 47-03's rows 1 and 2 also cite it, and the split is
+deliberate: 47-03 asserts that the **server** starts from a clean clone, while these assert
+that the **plugin** is installable and that nothing compiled has been added to make it so. One
+requirement covered across two epics is the ordinary case FR26 exists to make visible, and it
+is declared here for that reason. Row 88 binds to AD8 rather than to the Test Infrastructure
+passage that says the same thing, because AD8's *"dpm parses no prose anywhere"* is a
+requirement bullet and the passage is not.

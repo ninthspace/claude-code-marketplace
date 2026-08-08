@@ -5,14 +5,57 @@
 **Status**: Pending  
 **Blocked by**: —
 
-Milestone M1 (AD6). Nothing here is user-facing: the schema, its seeded vocabularies,
-number allocation, the edge table, migrations, and the integrity check that reports the
-invariants SQLite cannot hold.
+Milestone M1 (AD6). Nothing here is user-facing: the plugin skeleton and test harness, the
+schema, its seeded vocabularies, number allocation, the edge table, migrations, and the
+integrity check that reports the invariants SQLite cannot hold.
+
+**Story 0 runs first, and its number is not its position in the build order.** Every other
+story in this epic writes DDL or a test, and both need somewhere to live and something to run
+them. Stories 1–9 keep the numbers Chris approved because renumbering them churns roughly 79
+`Covered by` cells in the coverage matrix — the churn Task 9.4 decided against, and the cause
+of three of review 05's findings. The `Blocked by` graph is what orders execution; the number
+is identity only.
+
+## Stand up the plugin skeleton and the test harness
+**Story**: 0  
+**Status**: Pending  
+**Blocked by**: —  
+**Satisfies**: NFR1, and the spec's **Test Infrastructure** section
+
+**Acceptance Criteria**:
+
+- A test creates its own database, exercises it, and leaves nothing behind; two tests running in one process do not share state [unit]
+- The whole suite runs from one command that needs no install step and no compiled dependency [integration]
+- must NOT — a fixture is a markdown file parsed at load, rather than built by calling create tools [integration]
+- `dpm/` is installable from the marketplace manifest as a plugin alongside `cpm/`, with no build step [target]
+- must NOT — a dependency is added whose install requires compilation [unit]
+
+### Create the `dpm/` plugin directory, its manifest and its marketplace entry
+**Task**: 0.1  
+**Description**: `dpm/` sits beside `cpm/` in the same marketplace repository, which is not an incidental layout: the spec's **Testing Strategy** requires the suite to read CPM's `skills/` directory as a name oracle for FR25's twenty-two, and states that being a sibling in the same commit is what removes the version pin. Covers the marketplace-installability criterion, which is `[target]` for the same reason Epic 47-03's NFR1 criterion is — it needs a real install to assess.  
+**Status**: Pending
+
+### Stand up the test harness on `node --test` with a per-test database lifecycle
+**Task**: 0.2  
+**Description**: `node --test` is the runner, and the reason is AD5's reason one layer over: the spec asks for "a Node test setup", NFR1 bans any dependency requiring compilation at install, and every third-party runner is an `npm install` this plugin has no way to perform from a plugin cache directory. Node's built-in runner is already present wherever the Node floor is met, so the suite inherits the floor rather than adding a precondition. Covers the isolation and one-command criteria. Each test takes its own database — in-memory by default, temp-file where a test must reopen a connection, since `PRAGMA foreign_keys` is per-connection and Story 1's fresh-connection criterion cannot be asserted against a single shared handle.  
+**Status**: Pending
+
+### Build fixtures through the tool surface, not from markdown
+**Task**: 0.3  
+**Description**: Covers the must-NOT. AD8 means no import path exists to exercise, so a fixture parsed from a file would be testing a code path dpm does not have. Until Epic 47-03 ships the MCP tools, the builder calls the same statements those tools will wrap and exposes one seam — a single module the tools replace — so the substitution is one edit rather than a rewrite of every fixture. Name that seam explicitly; a fixture layer that reaches into the schema directly is the thing this task exists to prevent.  
+**Status**: Pending
+
+### Write tests for Stand up the plugin skeleton and the test harness
+**Task**: 0.4  
+**Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`. The isolation criterion needs two tests observed in one process — a single test that cleans up after itself asserts nothing about leakage between them.  
+**Status**: Pending
+
+---
 
 ## Create the core schema with kind-pinned references [plan]
 **Story**: 1  
 **Status**: Pending  
-**Blocked by**: —  
+**Blocked by**: Story 0  
 **Satisfies**: FR1, FR2, FR27, AD7, AD9, NFR6
 
 **Acceptance Criteria**:
