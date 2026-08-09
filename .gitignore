@@ -8,3 +8,9 @@
 docs/plans/.cpm-progress-*.md
 docs/plans/.cpm-compact-summary-*.md
 docs/plans/.cpm-cleancheck-*
+
+# dpm's generated database (AD4). `.dpm/dpm.sql` is the committed form and is NOT ignored;
+# `.dpm/dpm.db` is built from it and is machine-local. Added when Epic 47-03 Story 2 wired the
+# tool registry to the entry point, which is the point at which launching the server anywhere
+# in this tree started producing the file.
+.dpm/dpm.db

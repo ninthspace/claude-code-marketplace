@@ -1,0 +1,37 @@
+#!/bin/sh
+# dpm's pre-commit guard (FR7).
+#
+# Both generated artefacts — the markdown projection under docs/, and .dpm/dpm.sql — are
+# regenerated from .dpm/dpm.db and compared byte for byte with what is staged. Divergence in
+# either fails the commit and names what diverged.
+#
+# **This hook fixes nothing, and that is deliberate.** A hook that regenerated and staged the
+# result would silently overwrite a hand-edit — the failure FR7 exists to prevent, arriving
+# through the guard built to prevent it. The edit is left exactly where it is, for its author to
+# move into the database.
+#
+# Install with:
+#   ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+
+set -e
+
+# **The symlink has to be resolved before the path beside it means anything.** git invokes the hook
+# by the path it found — `.git/hooks/pre-commit` — so `$0` is the symlink and `dirname "$0"` is
+# `.git/hooks`, which puts `../bin/dpm-guard.js` at `.git/bin/dpm-guard.js`. Nothing is there, so
+# the hook exits 1 and every commit is refused with a Node stack trace about a missing module.
+# Every test of the guard invoked the executable directly, so all of them passed against a hook
+# that had never once run from a commit.
+#
+# A `while` rather than a single `readlink`, because an install may go through more than one link —
+# a plugin cache symlinked into place, then symlinked again into `.git/hooks`. `readlink -f` would
+# do this in one call and is not portable: BSD `readlink` on macOS has no `-f`.
+hook=$0
+while [ -L "$hook" ]; do
+  link=$(readlink "$hook")
+  case $link in
+    /*) hook=$link ;;
+    *)  hook=$(dirname "$hook")/$link ;;
+  esac
+done
+
+exec node "$(dirname "$hook")/../bin/dpm-guard.js" "$(git rev-parse --show-toplevel)"

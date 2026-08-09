@@ -249,9 +249,8 @@ files on Story 9, per the pattern approved on 2026-08-08.
 ### Self-hosting register — entries in this epic's scope
 
 The register lives in Epic 47-01's Notes. **Entry 5** is in scope: `present` and `artifact`
-both resolve references between documents, and body-prose references — the ones FR8's merge
-tool claims to rewrite — are exactly what neither can resolve, because they are text and not
-rows. This epic does not close it and is not blocked by it; it is where the consequence first
+both resolve references between documents, and body-prose references — the ones a stored number
+would strand — are exactly what neither can resolve, because they are text and not rows. This epic does not close it and is not blocked by it; it is where the consequence first
 becomes visible to a user.
 
 No other entry is actionable here.

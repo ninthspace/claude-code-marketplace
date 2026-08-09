@@ -29,10 +29,17 @@ import { applyVocabulary } from './schema/seeds/index.js';
  */
 export function start(location, options = {}) {
   const db = openConnection(location);
+  const migrated = migrate(db, options);
 
+  // A database this plugin is too old for gets neither of the two write steps. Seeding is an
+  // insert into vocabulary tables whose shape a later release may have changed, and the guards
+  // are derived from a schema this server can only see part of; both are how an older release
+  // would damage a newer database while believing it had done nothing. See `migrate.js`.
   return {
     db,
-    migrated: migrate(db, options),
-    vocabulary: applyVocabulary(db, options),
+    migrated,
+    ahead: migrated.ahead,
+    vocabulary: migrated.ahead ? { skipped: 'schema version is ahead of this server' }
+      : applyVocabulary(db, options),
   };
 }

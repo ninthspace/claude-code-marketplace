@@ -38,6 +38,11 @@
  */
 
 import { vocabularyReferences, guardName } from '../schema/retirement.js';
+// The marker form is defined where it is resolved, and imported here rather than restated. Two
+// copies would let this check and the renderer disagree about what a marker is — silently in the
+// direction that matters, since a narrower pattern here reports clean on something the renderer
+// then refuses to render.
+import { MARKER } from '../projection/markers.js';
 
 /** How far a reachability walk goes before giving up. A backstop, not a limit anyone reaches. */
 const MAX_DEPTH = 64;
@@ -150,7 +155,22 @@ export const REGISTER = [
   },
   {
     entry: 5,
-    invariant: 'number_sequence.next_value exceeds every number allocated for that kind',
+    // **Stated as "at least", because the register's own wording is only true for an instant.**
+    // The spec says `next_value` is *greater than* every number allocated, and it is — in the
+    // window between the allocation returning N and the document that consumes it being written.
+    // Once written, `next_value` and the highest number are equal, and they stay equal until the
+    // next allocation opens the window again. Both readings are correct; they measure at
+    // different moments. A register check runs at an arbitrary moment, so the only form it can
+    // assert is the one true at every one of them.
+    //
+    // Nothing is lost by the weaker form. What entry 5 exists to catch is a document numbered
+    // *above* the counter — a number that reached a row without going through `number_sequence`,
+    // which is FR5's guarantee broken rather than merely unconsumed. That is still caught.
+    //
+    // It passed vacuously until Epic 47-03 Story 2. The check joins `number_sequence` to
+    // `document`, and until create tools existed no test both allocated a number and wrote it
+    // onto a row, so the join was empty and the `HAVING` never ran.
+    invariant: 'number_sequence.next_value is at least the highest number allocated for that kind',
     check: (db) => db.prepare(`
       SELECT number_sequence.kind, number_sequence.parent_id, number_sequence.next_value,
              max(coalesce(document.number, document.sequence)) AS highest
@@ -158,7 +178,7 @@ export const REGISTER = [
         JOIN document ON document.kind = number_sequence.kind
          AND (number_sequence.parent_id IS NULL OR document.parent_id = number_sequence.parent_id)
        GROUP BY number_sequence.kind, number_sequence.parent_id, number_sequence.next_value
-      HAVING number_sequence.next_value <= max(coalesce(document.number, document.sequence))
+      HAVING number_sequence.next_value < max(coalesce(document.number, document.sequence))
        ORDER BY number_sequence.kind
     `).all().map((row) => ({ ...row })),
   },
@@ -258,9 +278,6 @@ export const REGISTER = [
     check: (db) => danglingMarkers(db),
   },
 ];
-
-/** `{{ref:01J…}}` — the marker form, and the capture that gets resolved. */
-const MARKER = /\{\{ref:([^}]+)\}\}/g;
 
 /**
  * Every marker in the database that names no `document` row.

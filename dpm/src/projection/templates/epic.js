@@ -1,0 +1,118 @@
+/**
+ * The `epic` template (FR10).
+ *
+ * Four of the parity list's nine projectable non-document types render here and nowhere else:
+ * `story`, `task`, `story_criterion`, and the story-scoped half of `observation` — the
+ * `**Retro**:` field CPM writes against a story, which is the same row a retro later gathers.
+ * That inclusive parentage is the schema's, not this template's: `observation.story_id` survives
+ * promotion to a retro, so a story's lesson renders on the epic whether or not a retro has
+ * collected it.
+ *
+ * A story's blocking edges come from `dependency` with `source_story_id` set, which is the other
+ * half of the pair `common.js` renders for documents. Both ends of that table are exclusive, so a
+ * story edge and a document edge are the same table read two ways rather than two kinds of row.
+ */
+
+import { resolve } from '../markers.js';
+import { storiesOf } from '../load.js';
+import { bullet, field, heading, paragraph } from '../text.js';
+import { approaches, polarity } from './spec.js';
+import { document, sections } from './common.js';
+
+/**
+ * `Story 3` — a story's human handle, which is its number within its epic and not an id.
+ *
+ * Stories have no `{{ref:<id>}}` identity of their own: FR28's markers resolve documents, and a
+ * story is not one. A dependency naming a story therefore renders the number, which is what a
+ * reader of the corpus already looks for.
+ */
+const storyLabel = (story) => `Story ${story.number}`;
+
+/**
+ * The far end of a dependency edge, named so a reader can find it.
+ *
+ * A story in another epic is qualified with that epic's identifier — `47-03 Story 2` — because
+ * `Story 2` alone is ambiguous the moment the edge leaves the epic, and cross-epic story blocking
+ * is one of the two directions `010-dependency.sql` says occurs in real epics.
+ */
+function edgeTarget(db, edge, identifiers, epicId) {
+  if (edge.target_document_id !== null) {
+    return identifiers.get(edge.target_document_id) ?? edge.target_document_id;
+  }
+
+  const target = db.prepare('SELECT number, epic_id FROM story WHERE id = ?')
+    .get(edge.target_story_id);
+
+  if (!target) return edge.target_story_id;
+
+  const label = `Story ${target.number}`;
+
+  if (target.epic_id === epicId) return label;
+
+  return `${identifiers.get(target.epic_id) ?? target.epic_id} ${label}`;
+}
+
+/**
+ * One story: its metadata, its acceptance criteria, its tasks and its recorded lessons.
+ */
+function story(db, row, ref, identifiers, epicId) {
+  const blockedBy = row.dependencies
+    .filter((edge) => edge.kind === 'blocks')
+    .map((edge) => edgeTarget(db, edge, identifiers, epicId));
+
+  return [
+    heading(2, `${storyLabel(row)} — ${ref(row.title)}`),
+
+    [
+      field('Status', row.status_note ? `${row.status} — ${ref(row.status_note)}` : row.status),
+      field('Blocked by', blockedBy.length > 0 ? blockedBy.join(', ') : '—'),
+    ].join('\n'),
+
+    ...(row.criteria.length > 0 ? [
+      heading(3, 'Acceptance Criteria'),
+      row.criteria.map((criterion) => bullet(
+        `${polarity(criterion)}${ref(criterion.text)}${approaches(criterion)}`,
+      )).join('\n'),
+    ] : []),
+
+    ...row.tasks.flatMap((task) => [
+      heading(3, `Task ${task.number} — ${ref(task.title)}`),
+      field('Status', task.status_note
+        ? `${task.status} — ${ref(task.status_note)}`
+        : task.status),
+      task.description === null ? null : paragraph(ref(task.description)),
+    ]),
+
+    // **Under a heading of their own, and not as a bare `**Retro**:` field.** CPM writes the bare
+    // field, and reproducing it here put the story's lesson directly beneath `### Task 1`, where
+    // it reads as that task's. The tasks are headed sections in this projection and the corpus's
+    // are not, so the shape that works there does not work here — and nothing in dpm reads these
+    // files back, so the corpus's spelling is a courtesy rather than a contract.
+    ...(row.observations.length > 0 ? [
+      heading(3, 'Retro'),
+      ...row.observations.flatMap((observation) => [
+        bullet(ref(observation.text)),
+        observation.note === null ? null : paragraph(ref(observation.note)),
+      ]),
+    ] : []),
+  ];
+}
+
+/**
+ * Render one epic to markdown.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {object} tree From `loadDocument`.
+ * @param {Map<string, string>} identifiers
+ * @param {string} where
+ * @returns {string}
+ */
+export function renderEpic(db, tree, identifiers, where) {
+  const ref = (text) => resolve(text, identifiers, where);
+  const epicId = tree.document.id;
+
+  return document(tree, ref, identifiers, [
+    ...sections(tree.sections, ref),
+    ...storiesOf(db, epicId).flatMap((row) => story(db, row, ref, identifiers, epicId)),
+  ]);
+}

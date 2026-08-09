@@ -77,6 +77,17 @@ export function migrate(db, { now = new Date().toISOString() } = {}) {
   db.exec(readMigration(files.find((name) => versionOf(name) === BOOTSTRAP)));
 
   const from = currentVersion(db);
+  const target = targetVersion();
+
+  // **A database from a newer plugin is left exactly as it is.** Forward-only migration says
+  // nothing about the backward case, and the tempting reading — there is nothing pending, so
+  // carry on — is the damaging one: `createRetirementGuards` below regenerates triggers *derived
+  // from the schema*, so an older server would rewrite a newer database's guards to match an
+  // understanding of it that is missing tables. Seeding is the same hazard one table over. NFR7
+  // asks that the user still reach their planning history, and reaching it read-only is what
+  // makes that possible without an older release quietly editing a newer one.
+  if (from > target) return { from, to: from, target, applied: [], guards: [], ahead: true };
+
   const pending = files.filter((name) => versionOf(name) > from);
   const applied = [];
 
@@ -104,5 +115,5 @@ export function migrate(db, { now = new Date().toISOString() } = {}) {
   // a migration dropped.
   const guards = createRetirementGuards(db);
 
-  return { from, to: currentVersion(db), applied, guards };
+  return { from, to: currentVersion(db), target, applied, guards, ahead: false };
 }
