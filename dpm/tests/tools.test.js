@@ -32,8 +32,8 @@ const STAMP = '2026-08-08T12:00:00.000Z';
 const SPINE = ['spec', 'requirement', 'story_criterion', 'epic', 'story', 'task', 'coverage'];
 const ALSO = 'acceptance_criterion';
 
-/** The eight this story owns. Longest first, so `story_criterion` is matched before `criterion`. */
-const TYPES = [...SPINE, ALSO].sort((a, b) => b.length - a.length);
+/** The eight this story owns. Every use below matches a whole tool name, so the order is display. */
+const TYPES = [...SPINE, ALSO];
 
 /** A whole chain, so every type has something real to hang off. */
 function chain(call) {
@@ -107,10 +107,14 @@ test('every spine type has create, read and update, and the count is derived', (
   // the cross-cutting three, which are one tool each and would make `× 3` false. Filtering by
   // what this story is about is the fix; raising the number would have made the next story's
   // additions break it again.
+  // **Matched whole rather than by suffix.** A suffix test was correct while `story` was the only
+  // table ending in `story`; Epic 47-05 added `coverage_story`, whose create and read tools then
+  // counted as the spine's own and made this equality fail against a registry that was right.
+  // Building the names from the two lists cannot alias.
   const spineNames = tools
     .map((tool) => tool.name)
-    .filter((name) => TYPES.some((type) => name.endsWith(`_${type}`)))
-    .filter((name) => /^dpm_(create|read|update)_/.test(name));
+    .filter((name) => TYPES.some((type) =>
+      ['create', 'read', 'update'].some((verb) => name === `dpm_${verb}_${type}`)));
 
   assert.equal(spineNames.length, TYPES.length * 3);
   assert.equal(TYPES.length, SPINE.length + 1, 'seven spine types plus acceptance_criterion');
@@ -415,7 +419,7 @@ test('every create tool enforces every argument it declares required', (t) => {
   // Scoped to the spine's own create tools. `dpm_create_dependency` is Story 3's and is swept by
   // that story's suite, where a valid edge needs two documents to hang off.
   const creates = tools.filter((tool) =>
-    tool.name.startsWith('dpm_create_') && TYPES.some((type) => tool.name.endsWith(`_${type}`)));
+    TYPES.some((type) => tool.name === `dpm_create_${type}`));
 
   assert.deepEqual(
     Object.keys(valid).sort(),

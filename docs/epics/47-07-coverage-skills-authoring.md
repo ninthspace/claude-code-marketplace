@@ -39,8 +39,19 @@
 | 29 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: agent selection still includes one reviewer challenging business value and one challenging technical approach, and the finding stage still reports comprehensively before the ranking stage curates | Story 4 | `[feature]` | |
 | 30 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: the four modes stay mutually exclusive, a `learn` still previews both the library entry and the retirement before either is written, and promotion still retires at the source in the same operation | Story 5 | `[feature]` | |
 | 31 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: a fix still has its root cause investigated and its diagnosis confirmed before any change is proposed, and implementation still refuses to begin without the written change description | Story 7 | `[feature]` | |
+| 32 | FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | A review run loads its roster from the `agent` table with no YAML parse, so a persona a project added and the plugin never shipped is offered to agent selection with no plugin change and no file edit | Story 4 | `[feature]` | |
 
 **Mapping notes.**
+
+**Row 32 arrived on 2026-08-09 from Epic 47-05's row 18, which could not verify it.** FR24's
+persona sentence names `party`, `review` and `consult` — three skills converting in **two** epics —
+so no single row anywhere could ever carry the whole of it. 47-05 built and verified the tool half
+(a persona added to the `agent` table joins the roster in position, with no plugin change, no file
+edit and no schema migration) and kept its row for that; `review` is this epic's, and this row is
+its share. `consult` is Epic 47-08's row 32; `party` is that epic's row 17, which already said the
+roster loads from the table with no YAML parse. Splitting rather than narrowing was deliberate:
+rewriting the criterion until the built thing satisfied it would have deleted the skill-facing
+promise instead of rehoming it.
 
 **Rows 3, 6, 9, 12, 15, 18 and 21 are the same clause against seven files.** Same reasoning
 as Epic 47-06's rows 3/6/9: FR25's recovery clause is per-file, and one sweep would pass

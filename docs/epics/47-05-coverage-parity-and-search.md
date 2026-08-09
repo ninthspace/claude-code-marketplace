@@ -8,26 +8,26 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR10 | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | Story 1 | `[integration]` | |
-| 2 | FR10 | The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree. | An observation written against a story and later gathered into a retro retains its `story_id`, so its origin is still queryable | Story 1 | `[unit]` | |
-| 3 | FR24 | seeded with defaults, extensible per project | A project-added category is usable without a schema migration | Story 2 | `[integration]` | |
-| 4 | FR24 | An item may carry more than one category where the work genuinely spans two. | An observation carrying two categories round-trips, and appears under both in the projection | Story 2 | `[integration]` | |
-| 5 | FR24 | retirable without invalidating rows that already use them | Retiring a test approach and a dependency kind leaves rows using them intact, as it does for a taxonomy row | Story 2 | `[unit]` | |
-| 6 | FR24 (must NOT) | Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable | must NOT — any vocabulary is seeded and extensible but cannot be retired | Story 2 | `[unit]` | |
-| 7 | FR9 | Artefact bodies *and* the hand-written text on their child rows — requirements, story criteria, retro observations, review findings — are indexed with FTS5 | A section written with a ULID id is retrievable by `MATCH`, and `document_fts` declares no `content=` option — the external-content form rejects a non-integer rowid at write time | Story 3 | `[unit]` | |
-| 8 | FR9 | The FTS index is maintained by the three triggers above, not by a reindex step. | Updating and deleting a section both leave the index consistent with the table, asserted by comparing a `MATCH` against a `LIKE` scan | Story 3 | `[unit]` | |
-| 9 | FR9 | a search that covers only sections misses the majority of what a user would look for | Every table `entry_fts` indexes has all three triggers — insert, update-of-the-indexed-column, delete — enumerated from `sqlite_schema`, with no table indexed by fewer than three | Story 4 | `[unit]` | |
-| 10 | FR9 | A search index that lags a write returns a result set missing the thing just written, and reports success | Updating and deleting a row of each indexed child table leaves `entry_fts` consistent with that table, asserted by the same `MATCH`-versus-`LIKE` comparison | Story 4 | `[unit]` | |
-| 11 | FR9 | are indexed with FTS5 | A search returns ranked results, and the index reflects a write made in the same session | Story 5 | `[integration]` | |
-| 12 | FR9 | "which requirement mentioned the coverage helpers" returns nothing while the answer sits in `requirement.text` | A term appearing only in a `requirement.text` is found by an unscoped search, and the hit names the entity and row id | Story 5 | `[integration]` | |
-| 13 | FR9 (must NOT) | Artefact bodies *and* the hand-written text on their child rows | must NOT — a search covers `document_section` only, so text held on a child row is unreachable while the tool reports success | Story 5 | `[integration]` | |
-| 14 | FR9 | `entry_fts` covers those, tagged by entity, so `entity:requirement AND helpers` scopes a search and an untagged query spans everything | Creating one row of every indexed entity type through its own tool, then searching a term common to all of them, returns a hit from every one — the tools and the triggers are built by different stories and nothing else runs them together | Story 6 | `[integration]` | |
-| 15 | FR24 | retirement stops rows arriving as well as preserving those that have | A create tool refuses a vocabulary row retired through Story 2's retire tool, and the refusal names the retired item | Story 6 | `[integration]` | |
-| 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR | Story 6 | `[integration]` | |
-| 17 | NFR7 (must NOT) | Every piece of state is reachable through a read tool without SQL | must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool | Story 6 | `[integration]` | |
-| 18 | FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | Story 2 | `[integration]` | |
-| 19 | NFR6 | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. | Every condition in the false-pass register has a test asserting it blocks rather than warns — including the six Epic 47-01 deferred, whose closing epics are all complete by the time this story runs | Story 6 | `[integration]` | |
-| 20 | FR9 | Artefact bodies *and* the hand-written text on their child rows — requirements, story criteria, retro observations, review findings — are indexed with FTS5 | A restored database's `document_fts` and `entry_fts` both return the same `MATCH` results as the source database's, for a term present in a section body and a term present only in a `requirement.text` | Story 6 | `[integration]` | |
+| 1 | FR10 | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | Every table in `sqlite_master` has a create tool, asserted by comparing the live table list against the registered tool list — neither side is a hand-kept enumeration | Story 1 | `[integration]` | ✓ |
+| 2 | FR10 | The list and every vocabulary in it are taken from a real CPM project's `docs/` tree, not from CPM's documentation — the two disagree. | An observation written against a story and later gathered into a retro retains its `story_id`, so its origin is still queryable | Story 1 | `[unit]` | ✓ |
+| 3 | FR24 | seeded with defaults, extensible per project | A project-added category is usable without a schema migration | Story 2 | `[integration]` | ✓ |
+| 4 | FR24 | An item may carry more than one category where the work genuinely spans two. | An observation carrying two categories round-trips, and appears under both in the projection | Story 2 | `[integration]` | ✓ |
+| 5 | FR24 | retirable without invalidating rows that already use them | Retiring a test approach and a dependency kind leaves rows using them intact, as it does for a taxonomy row | Story 2 | `[unit]` | ✓ |
+| 6 | FR24 (must NOT) | Observation categories, finding categories, audit dimensions, severities and test approaches are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable | must NOT — any vocabulary is seeded and extensible but cannot be retired | Story 2 | `[unit]` | ✓ |
+| 7 | FR9 | Artefact bodies *and* the hand-written text on their child rows — requirements, story criteria, retro observations, review findings — are indexed with FTS5 | A section written with a ULID id is retrievable by `MATCH`, and `document_fts` declares no `content=` option — the external-content form rejects a non-integer rowid at write time | Story 3 | `[unit]` | ✓ |
+| 8 | FR9 | The FTS index is maintained by the three triggers above, not by a reindex step. | Updating and deleting a section both leave the index consistent with the table, asserted by comparing a `MATCH` against a `LIKE` scan | Story 3 | `[unit]` | ✓ |
+| 9 | FR9 | a search that covers only sections misses the majority of what a user would look for | Every table `entry_fts` indexes has all three triggers — insert, update-of-the-indexed-column, delete — enumerated from `sqlite_schema`, with no table indexed by fewer than three | Story 4 | `[unit]` | ✓ |
+| 10 | FR9 | A search index that lags a write returns a result set missing the thing just written, and reports success | Updating and deleting a row of each indexed child table leaves `entry_fts` consistent with that table, asserted by the same `MATCH`-versus-`LIKE` comparison | Story 4 | `[unit]` | ✓ |
+| 11 | FR9 | are indexed with FTS5 | A search returns ranked results, and the index reflects a write made in the same session | Story 5 | `[integration]` | ✓ |
+| 12 | FR9 | "which requirement mentioned the coverage helpers" returns nothing while the answer sits in `requirement.text` | A term appearing only in a `requirement.text` is found by an unscoped search, and the hit names the entity and row id | Story 5 | `[integration]` | ✓ |
+| 13 | FR9 (must NOT) | Artefact bodies *and* the hand-written text on their child rows | must NOT — a search covers `document_section` only, so text held on a child row is unreachable while the tool reports success | Story 5 | `[integration]` | ✓ |
+| 14 | FR9 | `entry_fts` covers those, tagged by entity, so `entity:requirement AND helpers` scopes a search and an untagged query spans everything | Creating one row of every indexed entity type through its own tool, then searching a term common to all of them, returns a hit from every one — the tools and the triggers are built by different stories and nothing else runs them together | Story 6 | `[integration]` | ✓ |
+| 15 | FR24 | retirement stops rows arriving as well as preserving those that have | A create tool refuses a vocabulary row retired through Story 2's retire tool, and the refusal names the retired item | Story 6 | `[integration]` | ✓ |
+| 16 | FR10 | Every artefact type CPM produces is modelled from the outset | Every table, enumerated from `sqlite_master` and populated through its own tool, appears in the projection its kind renders into — or inside its parent's, for the ten that produce no file and for the ADR | Story 6 | `[integration]` | ✓ |
+| 17 | NFR7 (must NOT) | Every piece of state is reachable through a read tool without SQL | must NOT — a search returns a hit whose entity and row id do not resolve to a live row through that entity's read tool | Story 6 | `[integration]` | ✓ |
+| 18 | FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | A persona added to a project's `agent` table joins the roster in position among the seeded personas, with no plugin change, no file edit and no schema migration | Story 2 | `[integration]` | ✓ |
+| 19 | NFR6 | Any condition that could produce a false pass — a constraint violation swallowed, a projection silently stale, a search index behind the data — reports and blocks. | Every condition in the false-pass register has a test asserting it blocks rather than warns — including the six Epic 47-01 deferred, whose closing epics are all complete by the time this story runs | Story 6 | `[integration]` | ✓ |
+| 20 | FR9 | Artefact bodies *and* the hand-written text on their child rows — requirements, story criteria, retro observations, review findings — are indexed with FTS5 | A restored database's `document_fts` and `entry_fts` both return the same `MATCH` results as the source database's, for a term present in a section body and a term present only in a `requirement.text` | Story 6 | `[integration]` | ✓ |
 
 **Mapping notes.**
 
@@ -82,6 +82,52 @@ append directly. The row sits here rather than in 47-08 because it asserts the *
 **Inline change**: the count in the paragraph above read "all ten" and the roster holds nine.
 Corrected 2026-08-08, the same drift already fixed once in Epic 47-01's Story 2 — a count
 restated in prose in several places is a fact with several copies and no owner.
+
+**And it came back, in the two copies that correction did not reach.** On 2026-08-09 the epic doc
+still said "forking all ten" in Task 2.1 and "the seeded ten" in the Notes, both written before the
+matrix was corrected and neither touched by it. Correcting the number a third time would have set
+up a fourth: **the count is now gone from all three**, replaced by "the whole roster" and "the
+seeded personas". Retro 35's lesson is applied here rather than merely cited — a fact with no
+owner is not fixed by giving it a better value.
+
+**Row 18's criterion reached further than this row could verify, and was split on 2026-08-09
+rather than narrowed.** As written it claimed the persona "is offered by `party`, `review` and
+`consult`" — a behaviour of three skills that still read `agents/roster.yaml`, converting across
+**two** later epics (`review` in 47-07; `party` and `consult` in 47-08). The mapping note above
+scopes this row to "the *tool* half", the criterion text did not, and the verification rule binds
+✓ to criterion text rather than to a note's intent, so the row sat unmarked while everything it was
+meant to assert was built and verified.
+
+Both of the obvious repairs were rejected. Narrowing the criterion until the built thing satisfies
+it is the failure mode this document exists to prevent, and it would have deleted the skill-facing
+promise rather than rehoming it. Moving the row wholesale to 47-08 fails on the arithmetic: three
+skills, two epics — 47-08's matrix would hold a row it could not mark until 47-07 landed, beside
+row 17 which already covers `party` on its own.
+
+**So the spec sentence is now asserted by four rows across three matrices, and this one holds the
+half dpm can run.** The Spec Text column is unchanged — the sentence is what it is — and only the
+Story Criterion narrowed to the claim this epic owns. The rest:
+
+| Where | Skill | Row |
+|-------|-------|-----|
+| `docs/epics/47-07-coverage-skills-authoring.md` | `review` | added 2026-08-09, Story 4 |
+| `docs/epics/47-08-coverage-skills-read-surface.md` | `consult` | added 2026-08-09, Story 7 |
+| `docs/epics/47-08-coverage-skills-read-surface.md` | `party` | row 17, already present |
+
+`party` needed no new row: its criterion already says the roster loads from the `agent` table with
+no YAML parse and no roster file on disk, and a roster read from the table offers an added row by
+construction. A fourth row would have asserted the same thing twice, which is the drift a matrix is
+supposed to catch rather than create.
+
+FR24's persona clause is therefore covered across three matrices and complete in none — self-hosting
+register entry 1's shape, arriving for the second requirement in this epic after FR10.
+
+**Rows 3, 4, 5 and 6 were verified by Story 2** — `dpm/tests/vocabulary-tools.test.js`, with the
+schema compared byte-for-byte before and after so "without a schema migration" is a measurement
+rather than a claim. **Row 1 was verified at the same moment**: it was held back through Story 1
+because seven tables still had no create tool, the exemption entries carrying that deferral were
+spent-checked, and Story 2 registering the vocabulary tools failed that check until they were
+deleted.
 
 **Row 19 was declared forward from Epic 47-01 by the third pivot of 2026-08-08, and it is the
 only row in the breakdown that asserts the false-pass register as a whole.** 47-01 built the

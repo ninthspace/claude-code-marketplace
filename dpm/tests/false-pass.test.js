@@ -13,8 +13,22 @@
  *   a condition uncovered. That is the entire mechanism: a citation nobody resolves is how a
  *   register goes stale without anyone noticing.
  * - `closedIn` — the epic that closes it, for the conditions whose blocking mechanism this
- *   epic does not build. Six of the twenty are like that, and pretending otherwise would make
- *   this file the thing it exists to prevent.
+ *   epic does not build. Six of the twenty were like that, and pretending otherwise would have
+ *   made this file the thing it exists to prevent.
+ *
+ * **As of Epic 47-05 Story 6 the second disposition is unused, and that is the register being
+ * satisfied rather than the mechanism being retired.** The six deferrals named four epics —
+ * 47-02's dump path, 47-03's tool boundary, 47-04's projection guard, and this epic's search
+ * index — and this story is the first point in the build order at which all four are complete.
+ * The `closedIn` branch stays because the register outlives this epic: a twenty-first condition
+ * whose mechanism nobody has built yet needs somewhere honest to sit, and the assertion below
+ * now passes over an empty set precisely because nothing is deferred, not because nothing checks.
+ *
+ * **A citation resolves a name and cannot read what the test asserts.** That gap is entry #18's
+ * own shape turned on the register — a claim outliving what makes it true — and no assertion in
+ * this file can close it. Each of the six conversions was therefore mutation-checked at its
+ * source: the guard the condition names was broken, the cited test was confirmed to fail, and the
+ * source reverted. The record is in Epic 47-05's Notes.
  *
  * **The register is itself under test.** The count, the numbering and the condition summaries
  * are transcribed from the spec's table rather than derived from anything here, so a condition
@@ -40,8 +54,10 @@ const FALSE_PASSES = [
     test: 'coverage identity is the fragment, and position is no part of it' },
   { entry: 2, condition: 'A ✓ outliving the text it verified',
     test: 'editing a story criterion clears the ✓ on every coverage row bound to it' },
-  { entry: 3, condition: 'Search index behind the data', closedIn: 'the FR9 search epic' },
-  { entry: 4, condition: 'A hand-edit to a generated file', closedIn: 'the FR7 projection epic' },
+  { entry: 3, condition: 'Search index behind the data',
+    test: 'a row written in the same call sequence is searchable immediately' },
+  { entry: 4, condition: 'A hand-edit to a generated file',
+    test: 'a hand-edited generated file fails the guard, naming the file' },
   { entry: 5, condition: 'Number allocation matching no row',
     test: 'an allocation never reports success without a number' },
   { entry: 6, condition: 'A cycle among gates_work edges',
@@ -50,8 +66,16 @@ const FALSE_PASSES = [
     test: 'a connection dpm opens enforces foreign keys, whatever the default was' },
   { entry: 8, condition: 'A wrong-domain taxonomy reference',
     test: 'a term from the wrong domain is rejected in every slot that draws from taxonomy' },
-  { entry: 9, condition: 'A non-deterministic dump', closedIn: 'the NFR4 dump epic' },
-  { entry: 10, condition: 'A class inferred from a label', closedIn: 'the MCP tool epic' },
+  // **Not `dumping the same state twice from independent databases is byte-stable`**, which is
+  // the obvious citation and is the *claim* rather than the guard. Dropping the `ORDER BY` from
+  // the row select leaves it green — two databases built by the same statements in the same order
+  // hand back the same unordered scan — while the ordering test below fails at once. Determinism
+  // is only observable where the inputs differ, so the citation has to be the test that varies
+  // them. Found by driving the mutation; nothing about the two names says which is which.
+  { entry: 9, condition: 'A non-deterministic dump',
+    test: 'rows are emitted in primary-key order regardless of the order they were written' },
+  { entry: 10, condition: 'A class inferred from a label',
+    test: 'a label of any shape is stored against the class it was given, never one read off it' },
   { entry: 11, condition: "Coverage joining one spec's requirement to another spec's criterion",
     test: "entry 3 — coverage joining one spec's requirement to another spec's criterion" },
   { entry: 12, condition: 'A document referenced as the wrong kind of document',
@@ -60,8 +84,10 @@ const FALSE_PASSES = [
     test: 'editing the coverage fragment clears the ✓ on that row' },
   { entry: 14, condition: 'A row referencing a retired vocabulary item',
     test: 'retiring a term leaves the rows that reference it intact and stops new ones arriving' },
-  { entry: 15, condition: 'A search covering document_section only', closedIn: 'the FR9 search epic' },
-  { entry: 16, condition: 'An FTS trigger absent for one indexed table', closedIn: 'the FR9 search epic' },
+  { entry: 15, condition: 'A search covering document_section only',
+    test: 'a search covering sections alone misses five of the six, and says nothing about it' },
+  { entry: 16, condition: 'An FTS trigger absent for one indexed table',
+    test: 'every table entry_fts indexes has all three triggers, and none has fewer' },
   { entry: 17, condition: 'A requirement with one of five obligations bound',
     test: 'a claimed requirement is distinguishable by query from an identically bound unclaimed one' },
   { entry: 18, condition: 'A completeness claim outliving its binding set',
@@ -118,20 +144,24 @@ test('every condition this epic closes names a test that exists', () => {
   assert.deepEqual(unresolved, [], 'a citation nobody resolves is how a register goes stale unnoticed');
 });
 
-test('the conditions this epic does not close say which one does', () => {
+test('nothing is deferred any longer — every condition is closed by a test', () => {
   const deferred = FALSE_PASSES.filter((condition) => condition.closedIn);
 
-  // Six of twenty. Four more were deferred to Story 7 when this file was written and became
-  // citations at its gate, which is the deferral working rather than a list going stale.
-  assert.deepEqual(
-    deferred.map((condition) => condition.entry),
-    [3, 4, 9, 10, 15, 16],
-    'and naming them is what stops the register reading as complete',
-  );
+  // Six of twenty were deferred when Epic 47-01 wrote this file: #9 to the dump path, #10 to the
+  // tool boundary, #4 to the projection guard, and #3, #15 and #16 to the search index. Four more
+  // had been deferred to that epic's own Story 7 and became citations at its gate. The claim
+  // "every condition capable of producing a false pass blocks rather than warns" is now made over
+  // the whole register rather than over fourteen twentieths of it.
+  assert.deepEqual(deferred.map((condition) => condition.entry), [],
+    'a condition is back to naming an epic instead of a test');
 
-  // Each needs the search index, the projection guard, the dump path or the tool boundary —
-  // none of which this epic builds, and none of which a test here could assert without
-  // inventing them. The register is complete and honest; it is not satisfied.
+  assert.equal(FALSE_PASSES.filter((condition) => condition.test).length, 20,
+    'NFR6\'s criterion is over the register entire, so twenty of twenty is the only passing count');
+
+  // The rule the empty set above is measured against, kept for the register's next entry rather
+  // than deleted with its last user: a deferral is a disposition only while it names where it
+  // closes. This passes vacuously today and would not the moment a twenty-first arrives with
+  // `closedIn: ''` — which is the shape "we'll get to it" takes when it is written down.
   assert.ok(
     deferred.every((condition) => condition.closedIn.length > 0),
     'every deferral names where, since "later" is not a disposition',

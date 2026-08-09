@@ -18,6 +18,7 @@
 
 import { defineTool, SUPPLIED } from '../convention.js';
 import { insert, readById, update } from '../crud.js';
+import { entityTools } from '../entity.js';
 
 const BINDING = {
   requirement_id: { type: 'string', minLength: 1 },
@@ -96,6 +97,19 @@ export function coverageTools({ db, newId }) {
         required: ['id'],
       },
       handler: ({ id, ...changes }) => update(db, 'coverage', id, changes, 'dpm_update_coverage'),
+    }),
+
+    // "Covered by: Story 2, Story 4" — a criterion may be delivered by more than the story that
+    // declares it. Rare (three rows in a 393-artefact corpus) and real, and the reason it is a
+    // join rather than a second `story_id` column on `coverage`.
+    ...entityTools({ db, newId }, {
+      table: 'coverage_story',
+      noun: 'the record that a story also delivers a coverage row',
+      key: ['coverage_id', 'story_id'],
+      fields: {
+        coverage_id: { type: 'string', minLength: 1 },
+        story_id: { type: 'string', minLength: 1 },
+      },
     }),
   ];
 }

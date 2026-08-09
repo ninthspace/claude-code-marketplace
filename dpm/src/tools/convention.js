@@ -222,6 +222,20 @@ export function validate(schema, args, where) {
  * @param {object} tool
  * @param {string} tool.name Matches NFR5's `dpm_[a-z_]{6,}`; Story 5 asserts the word rule.
  * @param {string} tool.table The table the tool writes, or the primary one it reads.
+ * @param {string[]} [tool.writes] Every table this tool inserts into or updates, where that is
+ *   more than `table` alone. Four document kinds carry a detail table whose primary key **is**
+ *   their document's (AD7), and their create tool writes both rows in one transaction — so
+ *   `table` names one of the two and `writes` names both. It exists because the two checks that
+ *   read a tool's tables would otherwise see half of what it writes: AD10's conformance seam
+ *   would leave `adr.decision` unaccounted for, and the parity enumeration would report a detail
+ *   table as having no create tool while a tool was creating its rows.
+ *
+ *   **On a tool that writes nothing it defaults to empty, and must stay empty.** Read, list and
+ *   search tools declare `mutates: false`, and a `writes` naming their `table` would be a claim
+ *   no call could make true — read by the parity enumeration as coverage a create tool has to
+ *   supply. It went unnoticed while every non-mutating tool happened to declare a table that some
+ *   create tool also wrote; `dpm_search` is the first that does not, since nothing may ever
+ *   insert into an FTS index by hand.
  * @param {string} tool.description Shown by `tools/list`.
  * @param {object} tool.inputSchema Hand-written. See the note at the head of this file.
  * @param {string[]} tool.reads Tables this tool can return rows from — Story 5's reachability.
@@ -238,6 +252,7 @@ export function validate(schema, args, where) {
  */
 export function defineTool(tool) {
   const { name, table, description, reads, handler, body = [], paged = false, mutates } = tool;
+  const writes = tool.writes ?? (tool.mutates ? [table] : []);
 
   if (!/^dpm_[a-z_]+$/.test(name ?? '')) throw new Error(`not a dpm tool name: ${name}`);
   if (!table) throw new Error(`${name}: no table declared`);
@@ -246,6 +261,16 @@ export function defineTool(tool) {
     throw new Error(`${name}: 'reads' is empty — Story 5 asserts reachability from it`);
   }
   if (typeof handler !== 'function') throw new Error(`${name}: no handler`);
+  if (!Array.isArray(writes)) throw new Error(`${name}: 'writes' must be an array of table names`);
+  // On a mutating tool `table` has to be among them, so the two declarations cannot describe
+  // different tools. On a non-mutating one the list has to be empty, because anything in it is a
+  // write the tool cannot perform and the parity enumeration will read as coverage.
+  if (mutates && !writes.includes(table)) {
+    throw new Error(`${name}: 'writes' must be an array of tables including '${table}'`);
+  }
+  if (!mutates && writes.length > 0) {
+    throw new Error(`${name}: declares mutates: false and writes ${writes.join(', ')}`);
+  }
   if (!Array.isArray(body)) throw new Error(`${name}: 'body' must be an array of column names`);
   if (typeof mutates !== 'boolean') {
     throw new Error(`${name}: 'mutates' must be declared — NFR7 serves reads to a database this `
@@ -292,6 +317,7 @@ export function defineTool(tool) {
     ...tool,
     body,
     paged,
+    writes,
     // The augmented schema, not the declared one: `tools/list` publishes this, and a caller
     // checked against a schema they were never shown is the drift the wrapping exists to prevent.
     inputSchema,

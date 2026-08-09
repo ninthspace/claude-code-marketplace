@@ -25,16 +25,24 @@ import { DEFAULT_LIMIT } from './convention.js';
  * @param {Record<string, unknown>} query.filters Columns to match. An `undefined` or `null` value
  *   is not a filter matching NULL — it is the caller declining to scope, so the column is dropped.
  * @param {{column: string, value: unknown}} [query.before] A strict `<` bound, dropped when the
- *   value is absent. The one comparison any tool needs: FR11's staleness is an age, and an age is
- *   `updated_at < ?` rather than an equality. Deliberately not a general operator parameter —
- *   there is one caller, and a filter language would be a query builder in a file that exists to
- *   avoid having one.
+ *   value is absent. FR11's staleness is an age, and an age is `updated_at < ?` rather than an
+ *   equality.
+ * @param {string} [query.live] A column whose non-NULL value means the row is retired. Rows with
+ *   it set are left out unless the caller passes `include_retired`. FR24's guarantee is that a
+ *   retired term keeps its rows and refuses new ones — so a list that went on offering one would
+ *   be handing the caller a choice the database will reject, and the rejection would arrive at
+ *   the write rather than at the choice.
  * @param {string[]} query.order Columns, in precedence order.
  * @param {string} query.where The tool name, for messages.
  * @param {object} args Already validated: `limit` and `offset` may be absent, never malformed.
  * @returns {{items: object[], limit: number, offset: number, returned: number, more: boolean}}
+ *
+ * The three clause forms above are named and closed, not a filter language. Each is here because
+ * a requirement asks for that shape and no equality can express it; a fourth needs the same
+ * justification, because a general operator parameter would be a query builder in the file that
+ * exists to avoid having one.
  */
-export function selectPage(db, { table, filters = {}, before, order, where }, args) {
+export function selectPage(db, { table, filters = {}, before, live, order, where }, args) {
   if (!Array.isArray(order) || order.length === 0) {
     throw new Error(`${where}: a page with no order is a page that can repeat and skip rows`);
   }
@@ -42,20 +50,33 @@ export function selectPage(db, { table, filters = {}, before, order, where }, ar
   const limit = args.limit ?? DEFAULT_LIMIT;
   const offset = args.offset ?? 0;
 
-  const matched = Object.entries(filters)
-    .filter(([, value]) => value !== undefined && value !== null)
-    .map(([column, value]) => [`${column} = ?`, value]);
+  const clauses = [];
+  const values = [];
+
+  for (const [column, value] of Object.entries(filters)) {
+    // An `undefined` or `null` value is not a filter matching NULL — it is the caller declining
+    // to scope, so the column is dropped.
+    if (value === undefined || value === null) continue;
+
+    clauses.push(`${column} = ?`);
+    values.push(value);
+  }
 
   if (before && before.value !== undefined && before.value !== null) {
-    matched.push([`${before.column} < ?`, before.value]);
+    clauses.push(`${before.column} < ?`);
+    values.push(before.value);
+  }
+
+  if (live && args.include_retired !== true) {
+    clauses.push(`${live} IS NULL`);
   }
 
   const sql = `SELECT * FROM ${table}`
-    + (matched.length > 0 ? ` WHERE ${matched.map(([clause]) => clause).join(' AND ')}` : '')
+    + (clauses.length > 0 ? ` WHERE ${clauses.join(' AND ')}` : '')
     + ` ORDER BY ${order.join(', ')} LIMIT ? OFFSET ?`;
 
   // One row past the bound, so `more` is answered by whether it arrived.
-  const rows = db.prepare(sql).all(...matched.map(([, value]) => value), limit + 1, offset);
+  const rows = db.prepare(sql).all(...values, limit + 1, offset);
   const more = rows.length > limit;
   const items = more ? rows.slice(0, limit) : rows;
 

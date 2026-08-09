@@ -13,22 +13,36 @@
  * The duplication is the independence.
  */
 
-/** Tables dpm authored — excluding everything SQLite maintains for itself or a virtual table. */
+/**
+ * Tables dpm authored — excluding everything SQLite maintains for itself, every virtual table,
+ * and every virtual table's shadow storage.
+ *
+ * FTS5 creates `x_data`, `x_idx`, `x_docsize`… beside every virtual table `x`, and the exclusion
+ * is derived from the virtual tables actually present rather than from a list of suffixes, so it
+ * follows whatever FTS5 does in a given release.
+ *
+ * **The virtual table itself is excluded, and it was not until Epic 47-05 Story 3 created one.**
+ * This function was written in Epic 47-01 in anticipation of `document_fts`, and its shadow-table
+ * filter carried a `t.name !== v` guard that kept the owner — so the docblock said virtual tables
+ * were excluded while the code returned them. Nothing caught it because no virtual table existed
+ * to exclude; the moment one did, four separate "every table has X" sweeps failed at once.
+ *
+ * The owner belongs out for the same reason its shadows do: a virtual table has no primary key,
+ * no foreign keys and no columns dpm declared, so *every* claim of the form "every table has Y"
+ * is vacuous for it — and a sweep that includes it does not report that, it reports a violation.
+ * What `document_fts` does have to satisfy is asserted directly, in `search-index.test.js`.
+ */
 export function authoredTables(db) {
   const all = db
     .prepare("SELECT name, sql FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
     .all();
 
-  // FTS5 creates `x_data`, `x_idx`, `x_docsize`… beside every virtual table `x`. Epic 47-05
-  // brings the first of those; the exclusion is derived from the virtual tables actually
-  // present rather than from a list of suffixes, so it excludes nothing today and the right
-  // things later.
   const virtual = all
     .filter((t) => /^\s*CREATE\s+VIRTUAL\s+TABLE/i.test(t.sql ?? ''))
     .map((t) => t.name);
 
   return all
-    .filter((t) => !virtual.some((v) => t.name !== v && t.name.startsWith(`${v}_`)))
+    .filter((t) => !virtual.some((v) => t.name === v || t.name.startsWith(`${v}_`)))
     .map((t) => t.name);
 }
 

@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openPlanningDatabase } from './support/planning-database.js';
 import { openDatabaseFile } from './support/database.js';
+import { authoredTables } from './support/introspection.js';
 import { readOnlyTools, spineTools } from '../src/tools/index.js';
 import { start } from '../src/start.js';
 import { targetVersion } from '../src/schema/migrate.js';
@@ -49,8 +50,11 @@ function refused(run, message) {
  * document kinds. Read here rather than declared, which is the criterion's own requirement.
  */
 function vocabulary(db) {
-  const tables = db.prepare("SELECT name FROM sqlite_schema WHERE type = 'table'").all()
-    .map((row) => row.name);
+  // `authoredTables` and not every row of `sqlite_schema`: an FTS5 index and its shadow storage
+  // are not tables a tool is *named for*. A tool declaring one is spanning the schema rather than
+  // acting on an entity type, which is the exemption below, and its columns — `rank`, `rowid` —
+  // are not words anything should be called after.
+  const tables = authoredTables(db);
   const columns = tables.flatMap((table) =>
     db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
   const kinds = db.prepare('SELECT kind FROM document_kind').all().map((row) => row.kind);
@@ -87,11 +91,14 @@ test('every tool name is a searchable word built from the live schema', (t) => {
 
   assert.deepEqual(unmatched, [], 'a tool is named for something the schema does not hold');
 
-  // Exactly one tool takes the exemption, and it is named. A second one appearing here is a
-  // decision, not a detail — the exemption is meant to cover the tool that sweeps everything.
+  // The tools taking the exemption are named, one line each. A third one appearing here is a
+  // decision, not a detail — the exemption is meant to cover tools that sweep everything, and
+  // both of these do: `dpm_check_integrity` reads `sqlite_schema`, and `dpm_search` reads two FTS
+  // indexes covering six tables between them. Neither is named for an entity type because neither
+  // has one.
   assert.deepEqual(
-    tools.filter((tool) => !tables.has(tool.table)).map((tool) => tool.name),
-    ['dpm_check_integrity'],
+    tools.filter((tool) => !tables.has(tool.table)).map((tool) => tool.name).sort(),
+    ['dpm_check_integrity', 'dpm_search'],
   );
 
   // The control: the vocabulary is not so wide that any name passes. Three plausible names built

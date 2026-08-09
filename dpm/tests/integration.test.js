@@ -78,7 +78,7 @@ test('a migrated schema and a freshly created one are identical, object for obje
   assert.deepEqual(before, after, 'and the same DDL for each — constraints included');
 
   assert.ok(before.length > 40, `only ${before.length} objects compared — the shape read nothing`);
-  assert.equal(targetVersion(), 11, 'and both are at the version the files describe');
+  assert.equal(targetVersion(), 13, 'and both are at the version the files describe');
 });
 
 test('a retirement made before a migration is still in force after it', (t) => {

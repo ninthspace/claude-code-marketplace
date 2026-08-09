@@ -25,7 +25,24 @@
  * a freshly created database to hold.
  */
 
-/** Tables dpm authored, excluding the shadow tables FTS5 creates beside a virtual one. */
+/**
+ * Tables dpm authored — excluding every virtual table and the shadow storage FTS5 creates beside
+ * one.
+ *
+ * **The virtual table itself belongs out, and it was not until Epic 47-05 Story 6.** The filter
+ * read `table.name !== v && …`, which is a guard against a table excluding itself and is exactly
+ * wrong here: it kept `document_fts` and `entry_fts` in the walk. The same character-level mistake
+ * lived in `tests/support/introspection.js` until Story 3, where it broke four sweeps the day the
+ * first virtual table appeared. Here it broke nothing — a virtual table cannot declare a foreign
+ * key, so `foreign_key_list` returns nothing and no guard was ever derived either way — which is
+ * why it survived to be found by reading rather than by failing.
+ *
+ * It is corrected rather than left inert because the two copies are meant to be independent, not
+ * divergent, and because the consequence of the divergence going live is silent: a guard the
+ * generator emits and the checker does not expect. That case is held by
+ * `tests/vocabulary.test.js`, which derives the guard set from the *other* copy of this walk and
+ * compares it against the triggers actually in the schema.
+ */
 function authoredTables(db) {
   const all = db
     .prepare("SELECT name, sql FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
@@ -36,7 +53,7 @@ function authoredTables(db) {
     .map((table) => table.name);
 
   return all
-    .filter((table) => !virtual.some((v) => table.name !== v && table.name.startsWith(`${v}_`)))
+    .filter((table) => !virtual.some((v) => table.name === v || table.name.startsWith(`${v}_`)))
     .map((table) => table.name);
 }
 

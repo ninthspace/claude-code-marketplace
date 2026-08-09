@@ -11,6 +11,13 @@
  * A story's blocking edges come from `dependency` with `source_story_id` set, which is the other
  * half of the pair `common.js` renders for documents. Both ends of that table are exclusive, so a
  * story edge and a document edge are the same table read two ways rather than two kinds of row.
+ *
+ * **Which of those edges block is read from `dependency_kind.gates_work`, never from the name of
+ * a kind.** This filtered on `kind === 'blocks'` until Epic 47-05 Story 6, which is the same
+ * mistake `readiness.js`'s own docblock exists to warn against — and the two disagreed in the way
+ * that is hardest to see: a project adding a gating kind under FR24 got a readiness query that
+ * held work back and an epic file that rendered `**Blocked by**: —`. Neither is wrong on its own
+ * terms, both report success, and the reader believes the file.
  */
 
 import { resolve } from '../markers.js';
@@ -53,11 +60,25 @@ function edgeTarget(db, edge, identifiers, epicId) {
 }
 
 /**
+ * The kinds of edge that hold work back, as the vocabulary currently says.
+ *
+ * Read once per epic rather than per story: it is a three-row table and a per-story query would
+ * be the same answer several times over, but the reason it is a query at all is FR24 — a kind
+ * added tomorrow gates or does not according to its own column, with nothing here to edit.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {Set<string>}
+ */
+const gatingKinds = (db) => new Set(
+  db.prepare('SELECT kind FROM dependency_kind WHERE gates_work = 1').all().map((row) => row.kind),
+);
+
+/**
  * One story: its metadata, its acceptance criteria, its tasks and its recorded lessons.
  */
-function story(db, row, ref, identifiers, epicId) {
+function story(db, row, ref, identifiers, epicId, gating) {
   const blockedBy = row.dependencies
-    .filter((edge) => edge.kind === 'blocks')
+    .filter((edge) => gating.has(edge.kind))
     .map((edge) => edgeTarget(db, edge, identifiers, epicId));
 
   return [
@@ -110,9 +131,10 @@ function story(db, row, ref, identifiers, epicId) {
 export function renderEpic(db, tree, identifiers, where) {
   const ref = (text) => resolve(text, identifiers, where);
   const epicId = tree.document.id;
+  const gating = gatingKinds(db);
 
   return document(tree, ref, identifiers, [
     ...sections(tree.sections, ref),
-    ...storiesOf(db, epicId).flatMap((row) => story(db, row, ref, identifiers, epicId)),
+    ...storiesOf(db, epicId).flatMap((row) => story(db, row, ref, identifiers, epicId, gating)),
   ]);
 }

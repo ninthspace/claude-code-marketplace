@@ -85,11 +85,21 @@ export function conformance(db, tools) {
   for (const tool of tools) {
     if (!live.has(tool.table)) continue;
 
-    tables.add(tool.table);
+    // **Every table the tool writes, not only the one it is filed under.** A create tool for one
+    // of AD7's four structured kinds writes its `document` row and its detail row in a single
+    // transaction, and `writes` is where it says so. Read against `table` alone this check would
+    // pass over `adr.decision` — `NOT NULL` with no default, filled by a tool the check had
+    // decided writes only `document`. Tools that write one table declare `writes: [table]` by
+    // default, so nothing below behaves differently for them.
+    const written = (tool.writes ?? [tool.table]).filter((name) => live.has(name));
+
+    for (const name of written) tables.add(name);
 
     const properties = tool.inputSchema.properties ?? {};
-    const columns = new Map(columnsOf(db, tool.table).map((column) => [column.name, column]));
-    const sets = checkSets(db, tool.table);
+    const columns = new Map(written.flatMap((name) =>
+      columnsOf(db, name).map((column) => [column.name, { ...column, table: name }])));
+    const sets = new Map(written.flatMap((name) =>
+      [...checkSets(db, name)].map(([column, values]) => [column, { values, table: name }])));
 
     // **Every argument that names a column must name one that exists.** A typo here is otherwise
     // invisible: the argument is accepted, `validate` passes it through, and the insert fails on a
@@ -101,7 +111,7 @@ export function conformance(db, tools) {
       // document create — so an unknown name is only a problem when it carries an enum, which
       // is a claim about a column's `CHECK` set.
       if (rule.enum && !columns.has(name)) {
-        problems.push(`${tool.name}: '${name}' declares an enum but is not a column of ${tool.table}`);
+        problems.push(`${tool.name}: '${name}' declares an enum but is not a column of ${written.join(', ')}`);
         continue;
       }
 
@@ -109,17 +119,18 @@ export function conformance(db, tools) {
 
       enums += 1;
 
+      const owner = columns.get(name).table;
       const declared = sorted(rule.enum);
-      const constrained = sorted(sets.get(name) ?? []);
+      const constrained = sorted(sets.get(name)?.values ?? []);
 
       if (constrained.length === 0) {
-        problems.push(`${tool.name}: '${name}' declares an enum but ${tool.table}.${name} has no CHECK set`);
+        problems.push(`${tool.name}: '${name}' declares an enum but ${owner}.${name} has no CHECK set`);
       } else if (declared.join('|') !== constrained.join('|')) {
         // Both directions in one comparison: a value the tool offers and the `CHECK` rejects is
         // validation in the wrong layer, and a value the `CHECK` admits and no tool offers is a
         // column the pipeline cannot reach. Neither is acceptable, so it is equality.
         problems.push(`${tool.name}: '${name}' declares [${declared}] but `
-          + `${tool.table}.${name} admits [${constrained}]`);
+          + `${owner}.${name} admits [${constrained}]`);
       }
     }
 
@@ -128,26 +139,28 @@ export function conformance(db, tools) {
     const required = new Set(tool.inputSchema.required ?? []);
     const supplied = new Set(Object.keys(tool.serverSupplied ?? {}));
 
-    // AD10's rule, with `serverSupplied` as the declared other half. A column that is `NOT NULL`
-    // with no default has to come from somewhere, and there are exactly two somewheres: the
-    // caller, or this server. What it may not be is neither, silently — which is what a column
-    // added to a table by a later migration would be.
-    for (const column of notNullNoDefault(db, tool.table)) {
-      if (!required.has(column) && !supplied.has(column)) {
-        problems.push(`${tool.name}: ${tool.table}.${column} is NOT NULL with no default and is `
-          + 'neither a required argument nor declared serverSupplied');
+    for (const name of written) {
+      // AD10's rule, with `serverSupplied` as the declared other half. A column that is `NOT NULL`
+      // with no default has to come from somewhere, and there are exactly two somewheres: the
+      // caller, or this server. What it may not be is neither, silently — which is what a column
+      // added to a table by a later migration would be.
+      for (const column of notNullNoDefault(db, name)) {
+        if (!required.has(column) && !supplied.has(column)) {
+          problems.push(`${tool.name}: ${name}.${column} is NOT NULL with no default and is `
+            + 'neither a required argument nor declared serverSupplied');
+        }
       }
-    }
 
-    // Every reference reachable. A foreign key nothing can set is a row that can only ever point
-    // at whatever its default happens to be — and where that default is the only legal value, the
-    // column is pinned rather than unreachable, which is why a default counts as an answer here.
-    for (const column of foreignKeyColumns(db, tool.table)) {
-      const defaulted = columns.get(column)?.dflt_value !== null;
+      // Every reference reachable. A foreign key nothing can set is a row that can only ever point
+      // at whatever its default happens to be — and where that default is the only legal value, the
+      // column is pinned rather than unreachable, which is why a default counts as an answer here.
+      for (const column of foreignKeyColumns(db, name)) {
+        const defaulted = columns.get(column)?.dflt_value !== null;
 
-      if (!Object.hasOwn(properties, column) && !supplied.has(column) && !defaulted) {
-        problems.push(`${tool.name}: ${tool.table}.${column} is a foreign key with no argument, `
-          + 'no serverSupplied declaration and no default');
+        if (!Object.hasOwn(properties, column) && !supplied.has(column) && !defaulted) {
+          problems.push(`${tool.name}: ${name}.${column} is a foreign key with no argument, `
+            + 'no serverSupplied declaration and no default');
+        }
       }
     }
   }

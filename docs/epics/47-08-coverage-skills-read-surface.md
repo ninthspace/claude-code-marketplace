@@ -39,8 +39,17 @@
 | 29 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: both `list` and `preview` still complete in a single response with no gate, which is the one skill here whose facilitation is the absence of one | Story 6 | `[feature]` | |
 | 30 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: an inferred agent is still confirmed before the consultation begins, the voice is still rendered from that agent's stored traits without inventing beyond them, and the exit is still offered rather than assumed | Story 7 | `[feature]` | |
 | 31 | FR25 | What remains is the facilitation — the questions, the gates, the judgement | The facilitation survives: agents are still selected from the topic rather than fixed, each voice is still rendered from that agent's stored traits alone, and the run still ends in a direction of travel rather than a transcript | Story 8 | `[feature]` | |
+| 32 | FR24 | A persona added to a project's `agent` table is offered by `party`, `review` and `consult` with no plugin change and no file edit | A consult run loads its roster from the `agent` table with no YAML parse, so a persona a project added and the plugin never shipped can be consulted by name with no plugin change and no file edit | Story 7 | `[feature]` | |
 
 **Mapping notes.**
+
+**Row 32 arrived on 2026-08-09 from Epic 47-05's row 18, and `party` deliberately did not get one.**
+FR24's persona sentence names `party`, `review` and `consult`, converting across two epics, so no
+single row could carry it. 47-05 kept the tool half it verified; `review` became Epic 47-07's row
+32; `consult` is this row. **`party` needed nothing new** — row 17 already asserts that a party run
+loads its roster from the `agent` table with no YAML parse and no roster file on disk, and a roster
+read from the table offers a project-added row by construction. A separate row would have asserted
+the same behaviour twice, which is the drift this document exists to catch rather than to create.
 
 **Rows 3, 5, 7, 9, 12, 14, 16 and 18 are the same clause against eight files**, for the
 reason given in Epics 47-06 and 47-07: FR25's recovery clause is per-file.

@@ -185,6 +185,7 @@ files on Story 9, per the pattern approved on 2026-08-08.
 
 - A consult run retrieves prior context through the search tool rather than by reading files, and a term held only on a child row is reachable [feature]
 - The facilitation survives: an inferred agent is still confirmed before the consultation begins, the voice is still rendered from that agent's stored traits without inventing beyond them, and the exit is still offered rather than assumed [feature]
+- A consult run loads its roster from the `agent` table with no YAML parse, so a persona a project added and the plugin never shipped can be consulted by name with no plugin change and no file edit [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Retrieve prior context through the search tool, covering both indexes

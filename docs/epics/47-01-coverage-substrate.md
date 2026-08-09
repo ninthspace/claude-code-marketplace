@@ -93,7 +93,7 @@
 | 83 | FR24 | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | A vocabulary default the plugin retires is retired in an existing database, and rows already referencing it stay readable | Story 5 | `[integration]` | ✓ |
 | 84 | FR24 (must NOT) | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | must NOT — an upgrade resurrects a term the project retired, because the seed comparison was made against live terms rather than against every row present | Story 5 | `[integration]` | ✓ |
 | 85 | FR24 (must NOT) | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | must NOT — a migration rewrites the `name` or `display_name` of a vocabulary row that existing rows reference, silently changing what those rows are recorded as meaning | Story 5 | `[unit]` | ✓ |
-| 86 | NFR1 | The plugin installs by clone or marketplace fetch with no build step, no `node-gyp`, and no per-platform binary. | `dpm/` is installable from the marketplace manifest as a plugin alongside `cpm/`, with no build step | Story 0 | `[target]` | |
+| 86 | NFR1 | The plugin installs by clone or marketplace fetch with no build step, no `node-gyp`, and no per-platform binary. | `dpm/` is installable from the marketplace manifest as a plugin alongside `cpm/`, with no build step | Story 0 | `[target]` | ✓ |
 | 87 | NFR1 (must NOT) | no `node-gyp`, and no per-platform binary | must NOT — a dependency is added whose install requires compilation | Story 0 | `[unit]` | ✓ |
 | 88 | AD8 (must NOT) | dpm parses no prose anywhere. Markdown is strictly write-only output with no reader in the system. | must NOT — a fixture is a markdown file parsed at load, rather than built by calling create tools | Story 0 | `[integration]` | ✓ |
 
@@ -211,7 +211,10 @@ Story 1 Task 1.1 began at `CREATE TABLE`, and no story or task in any of the nin
 produced the `dpm/` directory, its manifest, its marketplace entry, or a test runner. Rows 86
 and 87 sit on NFR1 even though Epic 47-03's rows 1 and 2 also cite it, and the split is
 deliberate: 47-03 asserts that the **server** starts from a clean clone, while these assert
-that the **plugin** is installable and that nothing compiled has been added to make it so. One
+that the **plugin** is installable and that nothing compiled has been added to make it so. **Row
+86 was run on 2026-08-09** — a clone into an empty directory, no install, no `node_modules`, no
+lockfile, the server answering `initialize` and writing a real row — and is recorded against
+47-03's row 1, where the evidence sits. One
 requirement covered across two epics is the ordinary case FR26 exists to make visible, and it
 is declared here for that reason. Row 88 binds to AD8 rather than to the Test Infrastructure
 passage that says the same thing, because AD8's *"dpm parses no prose anywhere"* is a

@@ -88,8 +88,81 @@ function chain(call) {
     state: JSON.stringify({ epic: '47-03', story: 4, note: 'the blob a progress file used to be' }),
   });
 
+  // Epic 47-05 Story 1's types, here for the same reason and not for coverage of their own: nine
+  // of them declare a body, so leaving them out would have shrunk this sweep from every read tool
+  // with something to withhold to the six that existed when it was written.
+  const document_section = call.dpm_create_document_section({
+    document_id: spec.id,
+    heading: 'Data Model',
+    body: 'The prose that no other column can find the row by, held where a reader put it.',
+    position: 0,
+  });
+
+  const adr = call.dpm_create_adr({
+    parent_id: spec.id, slug: 'summaries', title: 'Read summaries by default',
+    decision: 'A read returns a summary unless the caller asks for the body.',
+  });
+  const adr_option = call.dpm_create_adr_option({
+    adr_id: adr.id, name: 'Return everything', position: 0,
+    rationale: 'Simplest, and unbounded on exactly the column that grows without limit.',
+  });
+  const adr_option_tradeoff = call.dpm_create_adr_option_tradeoff({
+    option_id: adr_option.id, axis: 'cost',
+    assessment: 'Cheap to write and expensive on every call that did not want the prose.',
+  });
+
+  const quick = call.dpm_create_quick({ slug: 'bound', title: 'Bound the reads' });
+  const quick_criterion = call.dpm_create_quick_criterion({
+    quick_id: quick.id, text: 'the default page is smaller than the table', position: 0,
+  });
+
+  const review = call.dpm_create_review({
+    parent_id: spec.id, slug: 'reads', title: 'Review of the read surface',
+  });
+  const finding = call.dpm_create_finding({
+    review_id: review.id, position: 0,
+    category_id: 'finding:testability-concerns', severity_id: 'severity:warning',
+    summary: 'A bound that cannot be raised is a truncation rather than a default.',
+  });
+
+  const retro = call.dpm_create_retro({ parent_id: epic.id, slug: 'reads', title: 'Reads retro' });
+  const observation = call.dpm_create_observation({
+    retro_id: retro.id, story_id: story.id, position: 0,
+    text: 'The body split earned its keep the first time a section body was stored.',
+    synthesis: 'Declare the columns; let the convention add the argument.',
+  });
+  const retro_application = call.dpm_create_retro_application({
+    retro_id: retro.id, applied_to_id: epic.id, disposition: 'applied',
+    note: 'Every new read tool declares its body columns rather than filtering by hand.',
+  });
+
+  const artifact = call.dpm_create_artifact({
+    url: 'https://example.invalid/reads', title: 'The read surface',
+    description: 'A published walk through the bound and the body split.',
+    published_at: '2026-08-09T00:00:00.000Z',
+  });
+
+  // A persona the plugin does not ship, which is FR24's append case and the only vocabulary with
+  // prose long enough to be a body.
+  const agent = call.dpm_create_agent({
+    name: 'archivist',
+    display_name: 'Wren',
+    icon: '🗄️',
+    role: 'Archivist',
+    personality: 'Keeps the record of what was decided and refuses to let it be quietly rewritten.',
+    communication_style: 'Cites the artefact and the date, then stops.',
+    position: 20,
+  });
+
+  const milestone = call.dpm_create_milestone({
+    spec_id: spec.id, label: 'M2', title: 'Spine and projection', position: 1,
+    summary: 'The earliest point where the design can be judged against real use.',
+  });
+
   return {
     spec, requirement, acceptance_criterion, epic, story, task, story_criterion, coverage, session,
+    document_section, adr, adr_option, adr_option_tradeoff, quick, quick_criterion, review,
+    finding, retro, observation, retro_application, artifact, agent, milestone,
   };
 }
 
@@ -109,9 +182,12 @@ function crowd(call) {
   const epics = spread(MANY).map((index) =>
     call.dpm_create_epic({ parent_id: home.id, slug: `epic-${index}`, title: `Epic ${index}` }));
 
+  // `crowd` is in the text because `requirement` is an indexed table, which makes these fifty-one
+  // rows the corpus `dpm_search` is bounded against as well as the ones `dpm_list_requirement`
+  // pages. One word in one place, so the two tools are held to the same row set.
   const requirements = spread(MANY).map((index) => call.dpm_create_requirement({
     spec_id: home.id, label: `FR${index}`, class: 'functional',
-    text: `requirement ${index}`, position: index,
+    text: `requirement ${index} crowd`, position: index,
   }));
 
   const stories = spread(MANY).map((index) => call.dpm_create_story({
@@ -146,20 +222,72 @@ function crowd(call) {
     story_criterion_id: criteria[0].id, position: index,
   }));
 
+  // The four vocabularies. They arrive seeded, so unlike every type above they are not empty to
+  // begin with — which is why the sweeps below count what the database holds rather than what was
+  // created here, and why fifty-one *added* terms is more than enough to make the bound bite.
+  spread(MANY).forEach((index) => call.dpm_create_taxonomy({
+    id: `observation:crowd-${index}`, domain: 'observation',
+    name: `Crowd ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_agent({
+    name: `agent-${index}`, display_name: `Crowd ${index}`, icon: '🧭', role: `Role ${index}`,
+    personality: `personality ${index}`, communication_style: `style ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_test_approach({
+    tag: `approach-${index}`, kind: 'level', position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_dependency_kind({
+    kind: `kind-${index}`, position: index,
+  }));
+
   return { home, epic: epics[0], story: stories[0], requirement: requirements[0] };
 }
 
-/** How many rows a list tool can reach, asked of the database rather than of the seeding. */
+/**
+ * How many rows a list tool can reach, asked of the database rather than of the seeding.
+ *
+ * Both narrowings are read off the tool rather than named here: a `document` list is pinned to one
+ * kind, and a vocabulary list hides retired terms. Restating either would make this agree with the
+ * tools by coincidence.
+ */
 function held(db, tool) {
+  // `dpm_search` reaches hits and not rows, so what it can return is the size of the match — asked
+  // of both indexes, because a count of one of them is the must-NOT this story is about.
+  if (tool.name === 'dpm_search') {
+    return db.prepare(
+      "SELECT (SELECT COUNT(*) FROM document_fts WHERE document_fts MATCH 'crowd') "
+      + "+ (SELECT COUNT(*) FROM entry_fts WHERE entry_fts MATCH 'crowd') AS rows",
+    ).get().rows;
+  }
+
   const kind = tool.table === 'document' ? tool.name.replace('dpm_list_', '') : null;
   const sql = `SELECT COUNT(*) AS rows FROM ${tool.table}`
-    + (kind ? ` WHERE kind = '${kind}'` : '');
+    + (kind ? ` WHERE kind = '${kind}'` : '')
+    + (tool.live ? ` WHERE ${tool.live} IS NULL` : '');
 
   return db.prepare(sql).get().rows;
 }
 
-/** Every list tool, taken from the registry by what it declares rather than by its name. */
+/** Every bounded read, taken from the registry by what it declares rather than by its name. */
 const paged = (tools) => tools.filter((tool) => tool.paged);
+
+/**
+ * The bounded reads that page **a table**, which is every one of them but `dpm_search`.
+ *
+ * The split arrived with Epic 47-05 Story 5 and is a real distinction rather than an accommodation
+ * of one tool. A list tool returns rows of its `table` in an order it declares; `dpm_search`
+ * returns hits merged from two FTS indexes in `rank` order, over six tables between them. FR13
+ * governs both — an unbounded search over a large corpus is exactly what the requirement forbids —
+ * so every assertion about the *bound* sweeps `paged`. Only the assertions about a table's rows
+ * and a table's key use this narrower set, and each says why below.
+ */
+const listed = (tools) => paged(tools).filter((tool) => tool.order);
+
+/** The arguments a bounded read needs before `limit` means anything. `dpm_search` needs a query. */
+const enough = (tool) => (tool.name === 'dpm_search' ? { query: 'crowd' } : {});
 
 /** Every read tool with something to withhold. */
 const withBody = (tools) =>
@@ -176,10 +304,21 @@ test('a read without a body request is strictly smaller than one with it', (t) =
 
   for (const tool of swept) {
     const type = tool.name.replace('dpm_read_', '');
-    const id = created[type].id;
+    const row = created[type];
 
-    const summary = call[tool.name]({ id });
-    const full = call[tool.name]({ id, include_body: true });
+    // A type absent from the chain is the silent skip the chain's own comment warns about, so it
+    // fails here rather than shrinking the sweep by one.
+    assert.ok(row, `${tool.name} has no row in the chain, so the sweep would pass over it`);
+
+    // The key is read off what the tool declares it requires, not assumed to be `id`. A join
+    // table is identified by both its columns, and hard-coding `{id}` would have restricted this
+    // sweep to the tools that happen to have a surrogate key.
+    const key = Object.fromEntries(
+      tool.inputSchema.required.map((column) => [column, row[column]]),
+    );
+
+    const summary = call[tool.name](key);
+    const full = call[tool.name]({ ...key, include_body: true });
 
     // Serialised, because "fewer bytes" is a claim about what crosses the wire, and compared
     // against the other response rather than a number — a fixed threshold would be a second
@@ -277,11 +416,16 @@ test('every list-returning tool declares a limit with a default and no ceiling',
     assert.equal(offset?.type, 'integer', `${tool.name} bounds without a way past the first page`);
   }
 
-  // The two sets agree, so a list tool built outside the factory — and therefore without the
-  // limit the factory injects — is caught by the name it would still have to carry.
+  // The two sets agree, so a bounded read built outside a factory — and therefore without the
+  // limit the factory injects — is caught by the name it would still have to carry. There are two
+  // verbs that return more than one row and `dpm_search` is the second; naming it here rather than
+  // loosening the pattern to "any tool" keeps the assertion's content, which is that a third verb
+  // is a decision someone has to write down.
   assert.deepEqual(
     lists.map((tool) => tool.name).sort(),
-    tools.map((tool) => tool.name).filter((name) => name.startsWith('dpm_list_')).sort(),
+    tools.map((tool) => tool.name)
+      .filter((name) => name.startsWith('dpm_list_') || name === 'dpm_search')
+      .sort(),
   );
 });
 
@@ -290,8 +434,8 @@ test('a caller who raises the limit receives the larger result, on every list to
   crowd(call);
 
   for (const tool of paged(tools)) {
-    const bounded = call[tool.name]({});
-    const raised = call[tool.name]({ limit: 1000 });
+    const bounded = call[tool.name](enough(tool));
+    const raised = call[tool.name]({ ...enough(tool), limit: 1000 });
 
     assert.equal(bounded.returned, DEFAULT_LIMIT, `${tool.name} ignored its own default`);
     assert.equal(bounded.more, true, `${tool.name} says there is no more when there is`);
@@ -325,19 +469,21 @@ test('no list tool returns an unbounded set when no limit is supplied', (t) => {
   crowd(call);
 
   for (const tool of paged(tools)) {
-    const page = call[tool.name]({});
+    const page = call[tool.name](enough(tool));
 
     assert.equal(page.items.length, DEFAULT_LIMIT, `${tool.name} returned an unbounded set`);
     assert.equal(page.limit, DEFAULT_LIMIT, `${tool.name} does not report the bound it applied`);
   }
 
-  // The control, and the only one that makes the assertion above mean anything: there really were
-  // more rows than the bound in every table it swept. Counted from the database rather than from
-  // the seeding, so a `crowd` that silently created fewer would fail here rather than pass above.
+  // The control, and the only one that makes the assertion above mean anything: there really was
+  // more than the bound within reach of every tool it swept. Counted from the database rather than
+  // from the seeding, so a `crowd` that silently created fewer would fail here rather than pass
+  // above — and through `held`, so the count is what that tool can actually reach rather than what
+  // its declared table happens to hold.
   for (const tool of paged(tools)) {
-    const { rows } = db.prepare(`SELECT COUNT(*) AS rows FROM ${tool.table}`).get();
+    const rows = held(db, tool);
 
-    assert.ok(rows > DEFAULT_LIMIT, `${tool.table} holds ${rows} rows — the bound cut nothing`);
+    assert.ok(rows > DEFAULT_LIMIT, `${tool.name} reaches ${rows} rows — the bound cut nothing`);
   }
 });
 
@@ -399,7 +545,7 @@ test('the tiebreaker on every list order is a key the table guarantees unique', 
   // day it stops is the day a page repeats a row — so the guard has to be that the order ends on
   // something the table guarantees unique, read out of the live schema rather than assumed to be
   // `id`, which is the same rule AD10 puts on the enums.
-  for (const tool of paged(tools)) {
+  for (const tool of listed(tools)) {
     const keys = db.prepare(`PRAGMA table_info(${tool.table})`).all()
       .filter((column) => column.pk > 0)
       .map((column) => column.name);
@@ -409,6 +555,15 @@ test('the tiebreaker on every list order is a key the table guarantees unique', 
       `${tool.name} orders by columns that can tie, so its pages can repeat and skip rows`);
     assert.ok(tool.order.length > 1, `${tool.name} orders by its key alone`);
   }
+
+  // `dpm_search` is the one bounded read this cannot ask, and the exclusion is derived rather than
+  // named: it has no `order` because it does not page a table, and an FTS index has no primary key
+  // to break a tie on. Its tiebreaker is `entity, entity_id` after `rank`, asserted in
+  // `search.test.js` against the thing that actually matters — that two pages tile the result set.
+  assert.deepEqual(
+    paged(tools).filter((tool) => !tool.order).map((tool) => tool.name),
+    ['dpm_search'],
+  );
 });
 
 test('a scope narrows a list, and its absence does not', (t) => {

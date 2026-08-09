@@ -1,8 +1,8 @@
-# CPM Plugin — Maintenance Reference
+# Plugin Maintenance Reference
 
-Development-facing records for the `cpm` plugin: dependencies on external components,
-formats CPM writes that something else parses, and coupling between skills that a change to
-one of them can break.
+Development-facing records for the plugins in this repository — `cpm` and, since Epic 47-05,
+`dpm`: dependencies on external components, formats one component writes that another parses,
+and coupling between parts that a change to one of them can break.
 
 **Nothing here is loaded at runtime, and nothing here is referenced from a skill.** That is
 the point of the file. A `SKILL.md` is read in full on every invocation of that skill, in
@@ -21,6 +21,73 @@ one without the other and the suite fails on the half that moved.
 - [`cpm:ralph` — `cpm:do` interaction gates](#cpmralph--cpmdo-interaction-gates)
 - [`cpm:epics` ↔ `coverage-rollup.sh` — the blocking classes](#cpmepics--coverage-rollupsh--the-blocking-classes)
 - [SessionStart hooks ↔ the harness — the hook payload size limit](#sessionstart-hooks--the-harness--the-hook-payload-size-limit)
+- [`dpm` — FTS5 trigger names the dumper reads](#dpm--fts5-trigger-names-the-dumper-reads)
+- [`dpm` — the retirement abort message the tool layer parses](#dpm--the-retirement-abort-message-the-tool-layer-parses)
+
+---
+
+## `dpm` — FTS5 trigger names the dumper reads
+
+**The record.** dpm's search indexes are maintained by triggers named for the index they
+maintain: `document_fts_insert`, `document_fts_update`, `document_fts_delete`
+(`dpm/src/schema/012-search.sql`), and the same pattern for `entry_fts`. **The dump filter in
+`dpm/src/dump/objects.js` depends on that naming, and on those objects being triggers rather
+than tables.**
+
+SQLite creates an FTS5 index's storage as tables named `<index>_data`, `<index>_idx`,
+`<index>_content`, `<index>_docsize` and `<index>_config`. A dump must exclude them — they are
+the internal representation of a derived index, and committing them commits an unreadable second
+copy of every indexed body. `isShadowOf` therefore excludes anything whose name starts with
+`<index>_` — **scoped to `type = 'table'`**, because the project's own triggers match that same
+prefix. Drop the type scope and the filter strips exactly the three triggers that rebuild the
+index from the data; a restored database then holds every row, an empty index, and reports no
+error. That is false-pass register entry #3 arriving out of the filter written to prevent #9.
+
+**What can break it.** Renaming a trigger so it no longer carries the index prefix does no harm.
+Naming a *real table* with the index prefix — `document_fts_notes` — silently excludes it and
+loses its rows. Removing the `type === 'table'` condition breaks restore silently.
+
+**What asserts it.** `dpm/tests/search-index.test.js` asserts the three trigger names;
+`dpm/tests/dump.test.js` asserts the five shadow tables are excluded *by name and with a reason*
+and that the virtual table and its triggers are kept; `dpm/tests/round-trip.test.js` asserts the
+index is rebuilt from the data rather than carried. A real table caught by the prefix would fail
+the no-silent-omission assertion, which names exactly what was dropped.
+
+---
+
+## `dpm` — the retirement abort message the tool layer parses
+
+**The record.** `dpm/src/schema/retirement.js` generates one trigger per vocabulary reference, and
+each raises exactly:
+
+```
+retired: <table>.<column>[, <table>.<column>…] references a retired <parent> row
+```
+
+**`dpm/src/tools/crud.js` parses that sentence** — for two things. It matches the shape to decide
+the failure is a caller's and not the server's, and it lifts the qualified column names out so the
+refusal can name the *value* the caller passed alongside the column the trigger blamed.
+
+**Why the parsing exists at all.** `RAISE(ABORT, …)` takes a string literal; SQLite gives a trigger
+no way to interpolate `NEW.<column>` into its own message. So the trigger can say which reference
+was refused and can never say which item. The values are only in scope at the tool boundary, which
+is where the naming is completed.
+
+**What can break it.** Rewording the abort — including changing `retired:` to anything else, or the
+`references a retired <parent> row` tail — silently costs both halves. The failure is not a wrong
+message: a message the shape no longer matches falls through the translation entirely and reaches
+the caller as a bare `Error` with `ERR_SQLITE_ERROR` and no `rpc` code, which the MCP boundary
+renders as **Internal error**. The row is still correctly refused. The caller is told dpm broke.
+That was the live behaviour until Epic 47-05 Story 6, because the translation matched only on
+`constraint|FOREIGN KEY|UNIQUE|CHECK` and the abort contains none of those words.
+
+Changing the qualified-column format — `<table>.<column>` — costs only the item naming, and does so
+silently, since the enrichment degrades to an empty string rather than failing.
+
+**What asserts it.** `dpm/tests/parity-integration.test.js`, over all four vocabularies: that the
+error is a `ToolError` carrying `rpc.code === -32602` — **not** merely that a refusal happened,
+which `assert.throws` satisfies against the broken state — and that its message contains the
+retired item in quotes. `dpm/tests/vocabulary-tools.test.js` asserts the guards fire.
 
 ---
 

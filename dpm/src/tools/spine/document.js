@@ -1,22 +1,31 @@
 /**
- * `spec` and `epic` — two kinds, one table, one factory.
+ * Every document kind — one table, one factory.
  *
- * They differ in three things and share everything else: a spec is root-numbered and takes no
- * parent, an epic is child-numbered under its spec, and the tool names say which is which. That
- * is a parameter, not a second module — and it matters beyond tidiness, because `document` is
- * where the composite `(id, kind)` parent key lives, and a second hand-written copy of these
- * statements is a second place for the `numbering`/`number`/`sequence` `CHECK` to be got wrong.
+ * The thirteen seeded kinds differ in three things and share everything else: how they are
+ * numbered, whether they hang off a parent, and whether AD7 gives them a detail table. Those are
+ * parameters, not thirteen modules — and it matters beyond tidiness, because `document` is where
+ * the composite `(id, kind)` parent key lives, and a second hand-written copy of these statements
+ * is a second place for the `numbering`/`number`/`sequence` `CHECK` to be got wrong.
  *
- * **Neither create tool takes a number.** FR5 promises numbers are allocated monotonically and
- * never reused; a tool that accepted one would let a caller hand back a number already issued,
- * and no constraint in the schema would notice — `document_root_number` is unique per kind, but
- * an archived row's number is free again as far as that index is concerned, which is the exact
- * case FR5 names. Allocating from `number_sequence` makes the promise hold by construction
- * rather than by a rule the caller has to know.
+ * **No create tool takes a number.** FR5 promises numbers are allocated monotonically and never
+ * reused; a tool that accepted one would let a caller hand back a number already issued, and no
+ * constraint in the schema would notice — `document_root_number` is unique per kind, but an
+ * archived row's number is free again as far as that index is concerned, which is the exact case
+ * FR5 names. Allocating from `number_sequence` makes the promise hold by construction rather than
+ * by a rule the caller has to know.
+ *
+ * **Numbering and parentage are read from the seeded tables, never passed in.** Whether a kind
+ * takes a parent is `document_kind_parent`'s answer, and it has to be, because the two axes are
+ * independent and reading one off the other excludes a whole kind: `review` and `retro` are
+ * *root*-numbered and both appear in the allow-list — a review hangs off the spec or epic it
+ * reviewed, a retro off the epic, spec or quick record it followed. A factory that read "takes a
+ * parent" off "is child-numbered" would build them unable to record what they were about, which
+ * is the `**Source spec**` string this schema exists to remove, arriving back as an unwritable
+ * column.
  */
 
 import { allocateNumber } from '../../numbering/allocate.js';
-import { defineTool, SUPPLIED } from '../convention.js';
+import { defineTool, SUPPLIED, ToolError } from '../convention.js';
 import { insert, readById, update } from '../crud.js';
 
 /** `document.status`'s `CHECK` set, copied by hand from `001-identity.sql`. AD10, Story 7. */
@@ -32,6 +41,40 @@ const MUTABLE = {
   commit_sha: { type: 'string' },
 };
 
+/** How a kind is numbered, from the table the column is pinned to. */
+function numberingOf(db, kind) {
+  const row = db.prepare('SELECT numbering FROM document_kind WHERE kind = ?').get(kind);
+
+  if (!row) throw new Error(`documentTools: '${kind}' is not a seeded document kind`);
+
+  return row.numbering;
+}
+
+/**
+ * Whether this kind takes a parent, and whether it must have one.
+ *
+ * `required` follows from the schema rather than from a preference: `CHECK (numbering <> 'child'
+ * OR parent_id IS NOT NULL)` makes a child-numbered document without a parent unwritable, so a
+ * tool that offered the argument optionally would advertise a call that can only ever fail.
+ */
+function parentageOf(db, kind, numbering) {
+  const allowed = db
+    .prepare('SELECT parent_kind FROM document_kind_parent WHERE kind = ? ORDER BY parent_kind')
+    .all(kind)
+    .map((row) => row.parent_kind);
+
+  if (allowed.length === 0) return { mode: 'none', allowed };
+
+  return { mode: numbering === 'child' ? 'required' : 'optional', allowed };
+}
+
+/** The detail row as read back, less the two columns that only repeat the document's identity. */
+const detailFields = (row) => {
+  const { document_id: id, document_kind: kind, ...rest } = row;
+
+  return rest;
+};
+
 /**
  * Build create, read and update for one document kind.
  *
@@ -41,99 +84,144 @@ const MUTABLE = {
  * @param {() => string} context.newId
  * @param {object} options
  * @param {string} options.kind A seeded `document_kind.kind` — NFR5 reads tool names against it.
- * @param {boolean} options.child Whether the kind is child-numbered, and so takes a parent.
+ * @param {object} [options.detail] The AD7 detail table this kind carries, if any:
+ *   `{table, fields, required, row}` — `row` maps validated arguments to the detail columns.
  * @returns {object[]}
  */
-export function documentTools({ db, now, newId }, { kind, child }) {
+export function documentTools({ db, now, newId }, { kind, detail = null }) {
   const create = `dpm_create_${kind}`;
   const read = `dpm_read_${kind}`;
   const modify = `dpm_update_${kind}`;
+
+  // Read once, to shape the schema `tools/list` publishes. The handler reads `numbering` again
+  // when it writes, because that column is denormalised onto `document` and pinned by a composite
+  // foreign key, so the stored value has to be the one `document_kind` holds at write time. If the
+  // two ever disagreed the row would be refused by the `CHECK` rather than written wrongly.
+  const numbering = numberingOf(db, kind);
+  const parent = parentageOf(db, kind, numbering);
+  const detailFieldNames = detail ? Object.keys(detail.fields) : [];
 
   const createProperties = {
     slug: { type: 'string', minLength: 1 },
     title: { type: 'string', minLength: 1 },
     status: { type: 'string', enum: STATUS, default: 'pending' },
     status_note: { type: 'string' },
+    ...(detail ? detail.fields : {}),
   };
 
-  if (child) {
+  if (parent.mode !== 'none') {
     createProperties.parent_id = {
       type: 'string',
       minLength: 1,
-      description: `the document this ${kind} hangs off`,
+      description: `the document this ${kind} hangs off — one of ${parent.allowed.join(', ')}`,
     };
   }
+
+  const allocated = { root: 'number', child: 'sequence' }[numbering];
+
+  const createRequired = [
+    ...(parent.mode === 'required' ? ['parent_id'] : []),
+    'slug',
+    'title',
+    ...(detail ? detail.required : []),
+  ];
 
   return [
     defineTool({
       name: create,
       table: 'document',
-      description: `Create a ${kind}. Its number is allocated, not supplied.`,
-      reads: ['document'],
+      writes: detail ? ['document', detail.table] : ['document'],
+      description: detail
+        ? `Create a ${kind} and its ${detail.table} row together. Its number is allocated, not supplied.`
+        : `Create a ${kind}. Its number is allocated, not supplied.`,
+      reads: detail ? ['document', detail.table] : ['document'],
       mutates: true,
       serverSupplied: {
         id: SUPPLIED.ulid,
         kind: SUPPLIED.derived('the tool'),
         numbering: SUPPLIED.derived('document_kind'),
-        [child ? 'sequence' : 'number']: SUPPLIED.allocated,
-        // A child derives its parent's kind from the parent it names; a root has no parent at
-        // all, and both columns are written NULL by this handler. Declared either way, because
-        // Story 7 asks every foreign key to be accounted for and "the tool fixes it at NULL" is
-        // an account — the alternative is a column nothing in the registry admits to filling.
-        ...(child
-          ? { parent_kind: SUPPLIED.derived('parent_id') }
-          : {
+        ...(allocated ? { [allocated]: SUPPLIED.allocated } : {}),
+        // A document that names a parent derives that parent's kind from the parent's own row; one
+        // that cannot have a parent writes both columns NULL. Declared either way, because Story 7
+        // asks every foreign key to be accounted for and "the tool fixes it at NULL" is an
+        // account — the alternative is a column nothing in the registry admits to filling.
+        ...(parent.mode === 'none'
+          ? {
             parent_id: SUPPLIED.derived(`the tool — a ${kind} has no parent`),
             parent_kind: SUPPLIED.derived(`the tool — a ${kind} has no parent`),
-          }),
+          }
+          : { parent_kind: SUPPLIED.derived('parent_id') }),
         created_at: SUPPLIED.clock,
         updated_at: SUPPLIED.clock,
+        ...(detail ? { document_id: SUPPLIED.derived('the document this tool creates') } : {}),
       },
       inputSchema: {
         type: 'object',
         additionalProperties: false,
         properties: createProperties,
-        required: child ? ['parent_id', 'slug', 'title'] : ['slug', 'title'],
+        required: createRequired,
       },
       handler: (args) => {
-        // Read live rather than held as a constant: `numbering` is denormalised onto `document`
-        // and pinned by a composite foreign key to `document_kind`, so the value has to be the
-        // one that table holds now, not the one that was true when this was written.
-        const numbering = db
-          .prepare('SELECT numbering FROM document_kind WHERE kind = ?')
-          .get(kind)?.numbering;
+        const live = numberingOf(db, kind);
+        const parentId = parent.mode === 'none' ? null : (args.parent_id ?? null);
 
-        if (!numbering) throw new Error(`${create}: '${kind}' is not a seeded document kind`);
-
-        // Likewise derived, not accepted. `parent_kind` exists so a child cannot claim a parent
-        // of the wrong sort; taking it as an argument would let the caller assert the very thing
-        // the column was added to check.
-        const parentKind = child ? readById(db, 'document', args.parent_id, create).kind : null;
+        // Derived, not accepted. `parent_kind` exists so a document cannot claim a parent of the
+        // wrong sort; taking it as an argument would let the caller assert the very thing the
+        // column was added to check. The allow-list itself is the composite foreign key's job.
+        const parentKind = parentId === null ? null : readById(db, 'document', parentId, create).kind;
         const stamp = now();
 
-        return insert(db, 'document', {
+        const values = {
           id: newId(),
           kind,
-          numbering,
-          number: child ? null : allocateNumber(db, kind),
-          sequence: child ? allocateNumber(db, kind, args.parent_id) : null,
+          numbering: live,
+          number: live === 'root' ? allocateNumber(db, kind) : null,
+          sequence: live === 'child' ? allocateNumber(db, kind, parentId) : null,
           slug: args.slug,
           title: args.title,
           status: args.status ?? 'pending',
           status_note: args.status_note ?? null,
-          parent_id: child ? args.parent_id : null,
+          parent_id: parentId,
           parent_kind: parentKind,
           created_at: stamp,
           updated_at: stamp,
-        }, create);
+        };
+
+        if (!detail) return insert(db, 'document', values, create);
+
+        // **Both rows or neither.** `adr.decision` and `library_document.doc_type` are NOT NULL,
+        // so a document of one of these kinds without its detail row is a half-made artefact no
+        // constraint forbids and every reader has to guess at. Joining a caller's transaction
+        // rather than refusing to run inside one keeps a batch of creates possible; what is not
+        // optional is that the two writes share whichever transaction is open.
+        const own = !db.isTransaction;
+
+        if (own) db.exec('BEGIN');
+
+        try {
+          const row = insert(db, 'document', values, create);
+          const extra = insert(db, detail.table, {
+            document_id: row.id,
+            ...detail.row(args),
+          }, create, 'document_id');
+
+          if (own) db.exec('COMMIT');
+
+          return { ...row, ...detailFields(extra) };
+        } catch (error) {
+          if (own) db.exec('ROLLBACK');
+          throw error;
+        }
       },
     }),
 
     defineTool({
       name: read,
       table: 'document',
-      description: `Read one ${kind} by id.`,
-      reads: ['document'],
+      description: detail
+        ? `Read one ${kind} by id, with its ${detail.table} columns.`
+        : `Read one ${kind} by id.`,
+      reads: detail ? ['document', detail.table] : ['document'],
       mutates: false,
       // Declared empty rather than omitted: `document` holds a title, a slug and a status note,
       // and none of them is a body. A tool with nothing to withhold says so.
@@ -153,27 +241,77 @@ export function documentTools({ db, now, newId }, { kind, child }) {
           throw new Error(`${read}: '${args.id}' is a ${row.kind}, not a ${kind}`);
         }
 
-        return row;
+        if (!detail) return row;
+
+        return { ...row, ...detailFields(readById(db, detail.table, row.id, read, 'document_id')) };
       },
     }),
 
     defineTool({
       name: modify,
       table: 'document',
-      description: `Update a ${kind}'s title, slug, status, archival or commit.`,
-      reads: ['document'],
+      writes: detail ? ['document', detail.table] : ['document'],
+      description: detail
+        ? `Update a ${kind}'s title, slug, status, archival, commit or ${detail.table} columns.`
+        : `Update a ${kind}'s title, slug, status, archival or commit.`,
+      reads: detail ? ['document', detail.table] : ['document'],
       mutates: true,
       serverSupplied: { updated_at: SUPPLIED.clock },
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        properties: { id: { type: 'string', minLength: 1 }, ...MUTABLE },
+        properties: {
+          id: { type: 'string', minLength: 1 },
+          ...MUTABLE,
+          ...(detail ? detail.fields : {}),
+        },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) => update(db, 'document', id, {
-        ...changes,
-        updated_at: now(),
-      }, modify),
+      handler: ({ id, ...changes }) => {
+        // Checked before anything is written, and not after. Thirteen kinds now share this table,
+        // so `dpm_update_adr` reaching a spec is an ordinary mistake rather than a remote one —
+        // and a check that ran after the `UPDATE` would refuse the call having already stamped
+        // `updated_at` on a document of a kind this tool is not named for.
+        const existing = readById(db, 'document', id, modify);
+
+        if (existing.kind !== kind) {
+          throw new ToolError(`${modify}: '${id}' is a ${existing.kind}, not a ${kind}`);
+        }
+
+        const own = detail && !db.isTransaction;
+
+        if (own) db.exec('BEGIN');
+
+        try {
+          const detailChanges = Object.fromEntries(
+            Object.entries(changes).filter(([column]) => detailFieldNames.includes(column)),
+          );
+          const documentChanges = Object.fromEntries(
+            Object.entries(changes).filter(([column]) => !detailFieldNames.includes(column)),
+          );
+
+          // `updated_at` is always written, so the document `UPDATE` always has something to do —
+          // which is what makes a detail-only change still stamp the document it belongs to.
+          const row = update(db, 'document', id, { ...documentChanges, updated_at: now() }, modify);
+
+          if (!detail) {
+            if (own) db.exec('COMMIT');
+
+            return row;
+          }
+
+          const extra = Object.keys(detailChanges).length > 0
+            ? update(db, detail.table, id, detailChanges, modify, 'document_id')
+            : readById(db, detail.table, id, modify, 'document_id');
+
+          if (own) db.exec('COMMIT');
+
+          return { ...row, ...detailFields(extra) };
+        } catch (error) {
+          if (own) db.exec('ROLLBACK');
+          throw error;
+        }
+      },
     }),
   ];
 }

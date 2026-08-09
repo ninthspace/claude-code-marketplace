@@ -1,19 +1,17 @@
 /**
- * The spine registry — eight entity types, create, read, update and list for each.
+ * The registry — create, read, update and list for every entity type in the schema.
  *
- * **Eight rather than the seven Story 2's criterion enumerates**, and the extra one is
- * deliberate. `acceptance_criterion` is named by the story's third criterion, it is the spec-side
- * twin of `story_criterion` with the same `polarity` column, and `coverage` — which *is* one of
- * the seven — cannot bind anything without both sides existing. Tooling one criterion table and
- * not the other would have left the join reachable from one end only.
+ * `acceptance_criterion` is here alongside `story_criterion` because they are the two halves of
+ * one join: `coverage` binds a spec-side criterion to a story-side one, and tooling either alone
+ * would have left it reachable from one end only. `document` carries thirteen of the types rather
+ * than one, because the kinds are one table distinguished by `kind`. That is why the count of
+ * tools is not the count of tables, and why anything asserting either derives it from this list
+ * rather than restating a number.
  *
- * `document` carries two of the eight, `spec` and `epic`, because they are one table
- * distinguished by `kind`. That is why the count of tools is not the count of tables, and why
- * anything asserting either derives it from this list rather than restating a number.
- *
- * The remaining tables — the sixteen without tools here — are Epic 47-05's. Story 5's
- * reachability assertion reads each tool's `reads`, so what is covered and what is not is a
- * property of this registry rather than of a list kept beside it.
+ * **What is not here is asserted rather than assumed.** `dpm/tests/parity.test.js` compares the
+ * live table list against this registry in both directions, and every table it passes over carries
+ * its reason beside it. Story 5's reachability assertion reads each tool's `reads` the same way —
+ * what is covered is a property of this registry, never of a list kept next to it.
  */
 
 import { ulid } from '../id/ulid.js';
@@ -21,13 +19,20 @@ import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
 import { integrityTools } from './cross/integrity.js';
 import { numberingTools } from './cross/numbering.js';
+import { artifactTools } from './entity/artifacts.js';
+import { milestoneTools } from './entity/milestones.js';
+import { reviewRetroTools } from './entity/review-retro.js';
 import { listTools } from './list.js';
+import { searchTools } from './search.js';
 import { sessionTools } from './session.js';
 import { coverageTools } from './spine/coverage.js';
 import { criterionTools } from './spine/criterion.js';
 import { deliveryTools } from './spine/delivery.js';
+import { DETAIL, detailChildTools } from './spine/detail.js';
 import { documentTools } from './spine/document.js';
 import { requirementTools } from './spine/requirement.js';
+import { sectionTools } from './spine/section.js';
+import { vocabularies, vocabularyJoins } from './vocabulary.js';
 
 /**
  * Build every spine tool against one database.
@@ -74,9 +79,17 @@ export function readOnlyTools(tools, { found, supported }) {
 export function spineTools(db, { now = () => new Date().toISOString(), newId = ulid } = {}) {
   const context = { db, now, newId };
 
+  // **The kinds come from `document_kind`, not from a list here.** A hand-kept enumeration in this
+  // file is what left eleven kinds without tools through Epic 47-03 and had the breakdown that
+  // found it name ten of them — and the same list would have to be edited again for every kind
+  // seeded afterwards. Read from the table, a kind acquires its three tools by being seeded, which
+  // is FR10's "from the outset" holding by construction rather than by anyone remembering.
+  const kinds = db.prepare('SELECT kind FROM document_kind ORDER BY kind').all().map((row) => row.kind);
+
   const spine = [
-    ...documentTools(context, { kind: 'spec', child: false }),
-    ...documentTools(context, { kind: 'epic', child: true }),
+    ...kinds.flatMap((kind) => documentTools(context, { kind, detail: DETAIL[kind] ?? null })),
+    ...sectionTools(context),
+    ...detailChildTools(context),
     ...requirementTools(context),
     ...criterionTools(context, {
       table: 'acceptance_criterion', parent: 'requirement_id', owner: 'requirement',
@@ -91,6 +104,11 @@ export function spineTools(db, { now = () => new Date().toISOString(), newId = u
       extra: { description: { type: 'string' } },
     }),
     ...coverageTools(context),
+    ...reviewRetroTools(context),
+    ...artifactTools(context),
+    ...milestoneTools(context),
+    ...vocabularies(context),
+    ...vocabularyJoins(context),
   ];
 
   return [
@@ -99,6 +117,11 @@ export function spineTools(db, { now = () => new Date().toISOString(), newId = u
     // Built from the spine rather than beside it: each list tool takes its body columns from the
     // read tool of the same type, so the two cannot answer the same question differently.
     ...listTools(context, spine),
+
+    // FR9's tool, over both indexes. It sits beside the list tools rather than in `spine` because
+    // it belongs to no entity type: what it returns is a hit naming one, and the entity vocabulary
+    // it accepts is read out of the schema at build time.
+    ...searchTools(context),
 
     // FR11's table. It sits here rather than in Epic 47-05 — where the parity enumeration counts
     // it — because session lifecycle is a server concern every skill needs from the first

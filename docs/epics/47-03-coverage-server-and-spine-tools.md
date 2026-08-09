@@ -8,7 +8,7 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | NFR1 | The plugin installs by clone or marketplace fetch with no build step, no `node-gyp`, and no per-platform binary. | A clean clone starts the server with no compilation step | Story 1 | `[target]` | |
+| 1 | NFR1 | The plugin installs by clone or marketplace fetch with no build step, no `node-gyp`, and no per-platform binary. | A clean clone starts the server with no compilation step | Story 1 | `[target]` | ✓ |
 | 2 | NFR2 | The server refuses to start with a clear message below its minimum Node version rather than failing on a missing module. | The server refuses to start below the Node floor with a message naming the required version | Story 1 | `[integration]` | ✓ |
 | 3 | NFR3 | The MCP stdio transport owns stdout. All logging, including Node's `ExperimentalWarning` for `node:sqlite`, goes to stderr or is suppressed (`NODE_NO_WARNINGS=1`). | A full session's stdout parses as well-formed JSON-RPC with no stray output | Story 1 | `[integration]` | ✓ |
 | 4 | FR1 | Every CPM artefact type is a table with typed columns, not a markdown file parsed at read time. | Creating each artefact type produces a row readable by its typed read tool | Story 2 | `[integration]` | ✓ |
@@ -37,7 +37,19 @@
 
 **Partial coverage to flag.**
 
-**Row 1 is `[target]` and stays unverified after Story 1, deliberately.** NFR1's criterion is
+**Row 1 was run on 2026-08-09 and is now marked.** A `git clone` into an empty directory, with
+no `npm install`, no `node_modules` anywhere in the tree and no lockfile: `bin/dpm-mcp.js`
+answered `initialize`, listed 115 tools, migrated a database to 39 tables and wrote a `spec` row
+through `dpm_create_spec` — and the full suite ran there, 362 passing. Nothing was fetched and
+nothing was built. **The residue is now one clause narrower than the paragraph below describes**:
+what remains unshown is a *different host* — another OS, another Node build — and not the
+install-or-build step NFR1's text actually names, which was exercised rather than inspected.
+Raised by review 06 (`docs/reviews/06-review-dpm-spec-47-progress.md`), which found this row and
+47-01's row 86 to be the same check under two wordings, both unrun.
+
+The original reasoning, kept because it is why the row was `[target]` in the first place:
+
+**Row 1 is `[target]` and stayed unverified after Story 1, deliberately.** NFR1's criterion is
 about a *clean clone on a real host*, and no suite running inside the tree can produce one. What
 Story 1 does close is the half a machine can honestly check, in `dpm/tests/plugin.test.js`: no
 `dependencies`, `devDependencies`, `peerDependencies` or `optionalDependencies`; no `install`,

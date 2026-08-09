@@ -15,6 +15,16 @@ all three files in one test and therefore sit on Story 4. What stays per-skill i
 skill writes, and the recovery clause, because what a skill would wrongly read back differs
 by skill.
 
+**Story 1 is a spike, and the epic stops after it.** Converting `spec` establishes the pattern
+that Stories 2 and 3 and all nineteen skills in Epics 47-07, 47-08 and 47-09 then repeat — 103
+of the 123 coverage rows left in the build. If the pattern is wrong it is wrong twenty-two
+times, and as this epic is written the first evidence about it arrives at Story 4, after three
+files already carry it. So: convert `spec`, then **stop and review the shape before starting
+Story 2** — whether a skill of that size is readable, whether the tool surface it needs is the
+one Epics 47-03 and 47-05 built, and whether the subtraction FR25 promises is what actually
+came out. Re-shaping four epics after one story is cheap; after twenty-two files it is the
+build. Added from review 06 (`docs/reviews/06-review-dpm-spec-47-progress.md`), 2026-08-09.
+
 ## Convert `spec` [plan]
 **Story**: 1  
 **Status**: Pending  

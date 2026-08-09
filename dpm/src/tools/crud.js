@@ -16,13 +16,64 @@
 
 import { ToolError } from './convention.js';
 
-/** Run a statement, turning SQLite's constraint failures into caller-facing refusals. */
-function attempt(where, run) {
+/**
+ * The abort a retirement guard raises, and the qualified columns it blames.
+ *
+ * `RAISE(ABORT, …)` takes a **string literal** — SQLite gives a trigger no way to interpolate
+ * `NEW.<column>` into its own message — so the guard can say which reference was refused and can
+ * never say which value. It comes out as `retired: finding.category_id, finding.category_domain
+ * references a retired taxonomy row`: enough to identify the argument, and silent on the item.
+ *
+ * The values are in scope here, so the naming is completed here. A caller told only the column
+ * has to cross-reference the message against their own call to find out what was retired, and a
+ * refusal that makes the caller do that work is a refusal that will be read as a bug in dpm.
+ */
+const RETIRED = /^retired: (\S.*) references a retired \w+ row$/;
+
+/**
+ * `— category_id 'finding:testability-concerns'` for a retirement abort, `''` for anything else.
+ *
+ * Columns with no value are dropped rather than reported as `undefined`: a composite reference
+ * whose second column is defaulted by the schema is named by the column the caller supplied.
+ */
+function itemNamed(message, table, values) {
+  const blamed = RETIRED.exec(message)?.[1];
+
+  if (!blamed) return '';
+
+  const named = blamed
+    .split(', ')
+    .filter((qualified) => qualified.startsWith(`${table}.`))
+    .map((qualified) => qualified.slice(table.length + 1))
+    .filter((column) => values[column] !== undefined && values[column] !== null)
+    .map((column) => `${column} '${values[column]}'`);
+
+  return named.length > 0 ? ` — ${named.join(', ')}` : '';
+}
+
+/**
+ * Run a statement, turning SQLite's constraint failures into caller-facing refusals.
+ *
+ * @param {string} where The tool name, for the message.
+ * @param {() => object} run
+ * @param {{table: string, values: Record<string, unknown>}} [wrote] What was being written, so a
+ *   retirement abort can name the item as well as the column. Omitted where nothing was.
+ */
+function attempt(where, run, wrote) {
   try {
     return run();
   } catch (error) {
-    if (/constraint|FOREIGN KEY|UNIQUE|CHECK/i.test(error.message)) {
-      throw new ToolError(`${where}: ${error.message}`);
+    // **`RAISE(ABORT, …)` carries the message the trigger wrote and nothing else** — no "constraint",
+    // no "CHECK", none of the words below. So the retirement guards, whose whole message is
+    // `retired: …`, fell straight through this test and reached the caller as a bare `Error` with
+    // `ERR_SQLITE_ERROR` and no `rpc` code: *Internal error* at the MCP boundary, for a call that
+    // was simply naming a retired term. The guard was working and the report said the server was
+    // broken. Found by Epic 47-05 Story 6 — Story 2 built the guards, Epic 47-03 built this
+    // translation, and until here nothing had run the two together.
+    if (RETIRED.test(error.message) || /constraint|FOREIGN KEY|UNIQUE|CHECK/i.test(error.message)) {
+      const item = wrote ? itemNamed(error.message, wrote.table, wrote.values) : '';
+
+      throw new ToolError(`${where}: ${error.message}${item}`);
     }
     throw error;
   }
@@ -39,9 +90,12 @@ function attempt(where, run) {
  * @param {string} table
  * @param {Record<string, unknown>} values
  * @param {string} where The tool name, for the message.
+ * @param {string|string[]} [key] The primary key columns, where they are not a single `id`. AD7's
+ *   detail tables key on `document_id` and the join tables key on both their columns, so the
+ *   read-back has to be told what identifies the row it just wrote.
  * @returns {object}
  */
-export function insert(db, table, values, where) {
+export function insert(db, table, values, where, key = 'id') {
   const columns = Object.keys(values);
 
   // **`undefined` is not a value SQLite can bind, and the failure it produces is the wrong one.**
@@ -59,9 +113,36 @@ export function insert(db, table, values, where) {
   const sql = `INSERT INTO ${table} (${columns.join(', ')}) `
     + `VALUES (${columns.map(() => '?').join(', ')})`;
 
-  attempt(where, () => db.prepare(sql).run(...columns.map((column) => values[column])));
+  attempt(where, () => db.prepare(sql).run(...columns.map((column) => values[column])),
+    { table, values });
 
-  return readById(db, table, values.id, where);
+  const keys = Array.isArray(key) ? key : [key];
+
+  return readByKey(db, table, Object.fromEntries(keys.map((column) => [column, values[column]])), where);
+}
+
+/**
+ * Read one row by whatever identifies it — a single column or a composite key.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} table
+ * @param {Record<string, unknown>} key Column-to-value, ANDed.
+ * @param {string} where
+ * @returns {object}
+ * @throws {ToolError} If there is no such row, for the reason `readById` gives.
+ */
+export function readByKey(db, table, key, where) {
+  const columns = Object.keys(key);
+  const sql = `SELECT * FROM ${table} WHERE ${columns.map((column) => `${column} = ?`).join(' AND ')}`;
+  const row = db.prepare(sql).get(...columns.map((column) => key[column]));
+
+  if (!row) {
+    throw new ToolError(
+      `${where}: no ${table} with ${columns.map((column) => `${column} '${key[column]}'`).join(', ')}`,
+    );
+  }
+
+  return row;
 }
 
 /**
@@ -98,17 +179,39 @@ export function readById(db, table, id, where, key = 'id') {
  *   the same silent-nothing shape `allocateNumber` guards against for the same reason.
  */
 export function update(db, table, id, values, where, key = 'id') {
+  return updateByKey(db, table, { [key]: id }, values, where);
+}
+
+/**
+ * The same, for a row identified by more than one column.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} table
+ * @param {Record<string, unknown>} key Column-to-value, ANDed.
+ * @param {Record<string, unknown>} values Only the columns present are written.
+ * @param {string} where
+ * @returns {object}
+ * @throws {ToolError} If no row was changed, for the reason `update` gives.
+ */
+export function updateByKey(db, table, key, values, where) {
   const columns = Object.keys(values);
+  const keyColumns = Object.keys(key);
 
   if (columns.length === 0) throw new ToolError(`${where}: nothing to update`);
 
   const sql = `UPDATE ${table} SET ${columns.map((column) => `${column} = ?`).join(', ')} `
-    + `WHERE ${key} = ?`;
+    + `WHERE ${keyColumns.map((column) => `${column} = ?`).join(' AND ')}`;
 
-  const changed = attempt(where, () =>
-    db.prepare(sql).run(...columns.map((column) => values[column]), id));
+  const changed = attempt(where, () => db.prepare(sql).run(
+    ...columns.map((column) => values[column]),
+    ...keyColumns.map((column) => key[column]),
+  ), { table, values });
 
-  if (changed.changes === 0) throw new ToolError(`${where}: no ${table} with ${key} '${id}'`);
+  if (changed.changes === 0) {
+    throw new ToolError(
+      `${where}: no ${table} with ${keyColumns.map((column) => `${column} '${key[column]}'`).join(', ')}`,
+    );
+  }
 
-  return readById(db, table, id, where, key);
+  return readByKey(db, table, key, where);
 }

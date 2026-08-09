@@ -123,6 +123,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 - A review run writes `review` with its `scope` and `scope_story_id`, `review_agent` rows referencing `agent` rows rather than carrying persona names as text, and `finding` rows with severity and category as taxonomy references [feature]
 - A story-scoped review parents onto the epic and narrows by `scope_story_id`, rather than appending `-s2` to a filename [integration]
 - The facilitation survives: agent selection still includes one reviewer challenging business value and one challenging technical approach, and the finding stage still reports comprehensively before the ranking stage curates [feature]
+- A review run loads its roster from the `agent` table with no YAML parse, so a persona a project added and the plugin never shipped is offered to agent selection with no plugin change and no file edit [feature]
 - must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool [unit]
 
 ### Write `review`, `review_agent` and `finding` rows with domain-scoped taxonomy references
