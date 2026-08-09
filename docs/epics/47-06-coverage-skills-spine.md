@@ -8,9 +8,9 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR25 | each rewritten against the tool surface | A spec run writes the document, its requirements with `class` and MoSCoW band, and its acceptance-criteria coverage rows, all through create tools | Story 1 | `[feature]` | |
-| 2 | FR25 | What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business. | The facilitation survives: the run still gates on scope, still produces a testing strategy, and still refuses an untestable criterion | Story 1 | `[feature]` | |
-| 3 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 1 | `[unit]` | |
+| 1 | FR25 | each rewritten against the tool surface | A spec run writes the document, its requirements with `class` and MoSCoW band, and its acceptance-criteria coverage rows, all through create tools | Story 1 | `[feature]` | ✓ |
+| 2 | FR25 | What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business. | The facilitation survives: the run still gates on scope, still produces a testing strategy, and still refuses an untestable criterion | Story 1 | `[feature]` | ✓ |
+| 3 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 1 | `[unit]` | ✓ |
 | 4 | FR25 | no number allocation | An epics run allocates every epic number through the allocation tool, and writes stories, tasks, criteria and coverage rows through create tools | Story 2 | `[feature]` | |
 | 5 | FR25 | no markdown parsing | The coverage matrix is a projection of `coverage` rows, not a file the skill writes — the skill emits no markdown table | Story 2 | `[integration]` | |
 | 6 | FR25 (must NOT) | no procedure that recovers an entity by reading what an earlier skill wrote | must NOT — the skill recovers an entity by reading a generated markdown file rather than by calling a read tool | Story 2 | `[unit]` | |

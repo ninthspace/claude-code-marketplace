@@ -170,8 +170,13 @@ function chain(call) {
  * Fifty-one of every type, hung off one root so each list tool has a scope to be given and a set
  * to be denied. Everything is created through the tools, so what is counted is what the surface
  * can actually produce.
+ *
+ * `tools` is taken rather than the kinds being listed, for the reason the document-kind block at
+ * the end gives: the sweeps below run over every paged tool the registry offers, so a kind this
+ * function does not reach is a tool asserted against an empty table — which passes the bound by
+ * having nothing to bound.
  */
-function crowd(call) {
+function crowd(call, tools) {
   const home = call.dpm_create_spec({ slug: 'home', title: 'Home' });
   const spread = (n) => Array.from({ length: n }, (unused, index) => index);
 
@@ -204,7 +209,7 @@ function crowd(call) {
       description: `task ${index}`, position: index,
     })));
 
-  spread(MANY).forEach((index) => call.dpm_create_acceptance_criterion({
+  const accepted = spread(MANY).map((index) => call.dpm_create_acceptance_criterion({
     requirement_id: requirements[0].id, text: `criterion ${index}`, position: index,
   }));
 
@@ -217,7 +222,7 @@ function crowd(call) {
     state: JSON.stringify({ index }),
   }));
 
-  spread(MANY).forEach((index) => call.dpm_create_coverage({
+  const coverages = spread(MANY).map((index) => call.dpm_create_coverage({
     requirement_id: requirements[0].id, spec_fragment: `fragment ${index}`,
     story_criterion_id: criteria[0].id, position: index,
   }));
@@ -241,6 +246,123 @@ function crowd(call) {
 
   spread(MANY).forEach((index) => call.dpm_create_dependency_kind({
     kind: `kind-${index}`, position: index,
+  }));
+
+  // **The remaining document kinds, taken from the registry rather than listed here.** `spec` and
+  // `epic` are crowded above because other types hang off them; the other eleven had no list tool
+  // at all until Epic 47-06 Story 1, and writing them out here would put a second hand-kept list
+  // beside the one `documentLists` was written to remove. Read off the tools, a kind is crowded by
+  // being seeded — which is what keeps the sweeps below honest, since a kind this function misses
+  // is a bound asserted against an empty table.
+  //
+  // Only the arguments a kind requires beyond `slug` and `title` are named, and only for the three
+  // kinds that require any. Their values are there to make a row valid and nothing reads them.
+  const extra = {
+    adr: { parent_id: home.id, decision: 'One sentence, because the column will not take none' },
+    coverage_matrix: { parent_id: epics[0].id },
+    library: { doc_type: 'reference' },
+  };
+
+  /** The first row of each kind, so the child tables below have a parent to hang off. */
+  const first = {};
+
+  for (const tool of tools) {
+    if (!tool.paged || tool.table !== 'document') continue;
+
+    const kind = tool.name.slice('dpm_list_'.length);
+    if (kind === 'spec' || kind === 'epic') continue;
+
+    const rows = spread(MANY).map((index) => call[`dpm_create_${kind}`]({
+      slug: `${kind}-${index}`, title: `${kind.replace(/_/g, ' ')} ${index}`, ...extra[kind],
+    }));
+
+    first[kind] = rows[0];
+  }
+
+  // **The child and link tables.** Their list tools arrived with Epic 47-06 Story 1, and until then
+  // a child row could be created and never found again — every read is by primary key, and nothing
+  // answered "the sections of this document". Crowding them is not optional decoration: the sweeps
+  // below run over every paged tool the registry offers, so a table this misses is a bound asserted
+  // against no rows, which passes by having nothing to bound.
+  //
+  // Each block varies whichever column its key needs varied, so fifty-one rows are fifty-one keys
+  // rather than one row written fifty-one times. Where the key is composite that is the second
+  // column; where it is `id` it is whatever the parent scope is not.
+  const term = (domain) => call.dpm_list_taxonomy({ domain, limit: 1 }).items[0].id;
+
+  spread(MANY).forEach((index) => call.dpm_create_document_section({
+    document_id: home.id, heading: `Section ${index}`, body: `body ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_library_scope({
+    document_id: first.library.id, scope: `skill-${index}`,
+  }));
+
+  const options = spread(MANY).map((index) => call.dpm_create_adr_option({
+    adr_id: first.adr.id, name: `option ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_adr_option_tradeoff({
+    option_id: options[0].id, axis: `axis-${index}`, assessment: `assessment ${index}`,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_review_agent({
+    document_id: first.review.id, agent: `agent-${index}`,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_quick_criterion({
+    quick_id: first.quick.id, text: `quick criterion ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_criterion_approach({
+    criterion_id: accepted[0].id, tag: `approach-${index}`,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_story_criterion_approach({
+    story_criterion_id: criteria[0].id, tag: `approach-${index}`,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_coverage_story({
+    coverage_id: coverages[index].id, story_id: stories[0].id,
+  }));
+
+  const milestones = spread(MANY).map((index) => call.dpm_create_milestone({
+    spec_id: home.id, label: `M${index}`, title: `Milestone ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_document_milestone({
+    document_id: epics[index].id, milestone_id: milestones[0].id,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_finding({
+    review_id: first.review.id, position: index, category_id: term('finding'),
+    severity_id: term('severity'), summary: `finding ${index}`,
+  }));
+
+  const observations = spread(MANY).map((index) => call.dpm_create_observation({
+    retro_id: first.retro.id, text: `observation ${index}`, position: index,
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_observation_category({
+    observation_id: observations[index].id, taxonomy_id: term('observation'),
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_audit_finding({
+    audit_id: first.audit.id, position: index, dimension_id: term('audit_dimension'),
+    file: `src/file-${index}.js`, severity_id: term('severity'),
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_retro_application({
+    retro_id: first.retro.id, applied_to_id: epics[index].id, disposition: 'applied',
+  }));
+
+  const artifacts = spread(MANY).map((index) => call.dpm_create_artifact({
+    url: `https://example.invalid/artifact-${index}`, title: `Artifact ${index}`,
+    published_at: '2026-08-09T00:00:00.000Z',
+  }));
+
+  spread(MANY).forEach((index) => call.dpm_create_artifact_document({
+    artifact_id: artifacts[index].id, document_id: home.id,
   }));
 
   return { home, epic: epics[0], story: stories[0], requirement: requirements[0] };
@@ -431,7 +553,7 @@ test('every list-returning tool declares a limit with a default and no ceiling',
 
 test('a caller who raises the limit receives the larger result, on every list tool', (t) => {
   const { db, tools, call } = surface(t);
-  crowd(call);
+  crowd(call, tools);
 
   for (const tool of paged(tools)) {
     const bounded = call[tool.name](enough(tool));
@@ -450,8 +572,8 @@ test('a caller who raises the limit receives the larger result, on every list to
 });
 
 test('a limit far past the row count is answered, not refused', (t) => {
-  const { call } = surface(t);
-  crowd(call);
+  const { call, tools } = surface(t);
+  crowd(call, tools);
 
   const everything = call.dpm_list_task({ limit: 100_000 });
 
@@ -466,7 +588,7 @@ test('a limit far past the row count is answered, not refused', (t) => {
 
 test('no list tool returns an unbounded set when no limit is supplied', (t) => {
   const { db, tools, call } = surface(t);
-  crowd(call);
+  crowd(call, tools);
 
   for (const tool of paged(tools)) {
     const page = call[tool.name](enough(tool));
@@ -503,8 +625,8 @@ test('the integrity report is exempt from the bound, deliberately', (t) => {
 // --- Paging that a second call can rely on -------------------------------------------------------
 
 test('pages tile the result set exactly once, in a stable order', (t) => {
-  const { call } = surface(t);
-  crowd(call);
+  const { call, tools } = surface(t);
+  crowd(call, tools);
 
   // Unscoped and over the table where numbers tie in pairs, so the walk is over a set the sort
   // cannot fully order on its own. **This does not catch a dropped tiebreaker** — measured, and
@@ -545,15 +667,34 @@ test('the tiebreaker on every list order is a key the table guarantees unique', 
   // day it stops is the day a page repeats a row — so the guard has to be that the order ends on
   // something the table guarantees unique, read out of the live schema rather than assumed to be
   // `id`, which is the same rule AD10 puts on the enums.
+  //
+  // **The key is the whole key, and that generalisation was forced rather than chosen.** This test
+  // asserted a *single-column* key until Epic 47-06 Story 1 gave the link tables list tools, which
+  // was true of the eight tables then listed and was never the rule — `library_scope` is keyed
+  // `(document_id, scope)` and ties on neither column alone. What uniqueness requires is that the
+  // order end on every column of the key, in key order.
   for (const tool of listed(tools)) {
-    const keys = db.prepare(`PRAGMA table_info(${tool.table})`).all()
-      .filter((column) => column.pk > 0)
+    const columns = db.prepare(`PRAGMA table_info(${tool.table})`).all();
+    const key = columns.filter((column) => column.pk > 0)
+      .sort((a, b) => a.pk - b.pk)
       .map((column) => column.name);
 
-    assert.equal(keys.length, 1, `${tool.table} has no single-column primary key to break ties on`);
-    assert.equal(tool.order.at(-1), keys[0],
+    assert.ok(key.length > 0, `${tool.table} has no primary key to break ties on`);
+    assert.deepEqual(tool.order.slice(-key.length), key,
       `${tool.name} orders by columns that can tie, so its pages can repeat and skip rows`);
-    assert.ok(tool.order.length > 1, `${tool.name} orders by its key alone`);
+
+    // And the other half: a table that offers an order of its own is paged in it rather than in key
+    // order. Without this, `['id']` satisfies everything above while returning rows in the order
+    // they were written — correct, deterministic, and not the order the artefact declares. Read off
+    // the table, so the two link tables that genuinely have no display column are skipped by having
+    // none rather than by being named.
+    const display = ['position', 'number', 'sequence', 'updated_at']
+      .filter((name) => columns.some((column) => column.name === name));
+
+    if (display.length > 0) {
+      assert.ok(display.includes(tool.order[0]),
+        `${tool.name} leads on ${tool.order[0]}, not on an order ${tool.table} declares`);
+    }
   }
 
   // `dpm_search` is the one bounded read this cannot ask, and the exclusion is derived rather than
@@ -567,8 +708,8 @@ test('the tiebreaker on every list order is a key the table guarantees unique', 
 });
 
 test('a scope narrows a list, and its absence does not', (t) => {
-  const { call } = surface(t);
-  const { home, epic, story } = crowd(call);
+  const { call, tools } = surface(t);
+  const { home, epic, story } = crowd(call, tools);
 
   const scoped = call.dpm_list_story({ epic_id: epic.id, limit: MANY });
   const unscoped = call.dpm_list_story({ limit: MANY });
@@ -597,7 +738,7 @@ test('a scope narrows a list, and its absence does not', (t) => {
 
 test('a page comes back as MCP content with its bound reported', (t) => {
   const { tools, call } = surface(t);
-  crowd(call);
+  crowd(call, tools);
 
   const table = methods(tools);
   const answered = dispatch({

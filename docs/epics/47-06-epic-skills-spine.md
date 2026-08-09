@@ -3,7 +3,11 @@
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
 **Status**: Pending  
-**Blocked by**: Epic 47-03-epic-server-and-spine-tools, Epic 47-04-epic-projection-guard-and-merge, Epic 47-05-epic-parity-and-search
+**Blocked by**: Epic 47-03-epic-server-and-spine-tools, Epic 47-04-epic-projection-guard-and-merge, Epic 47-05-epic-parity-and-search  
+**Retro applied**: 35 · Testing gaps · Applied — Story 4's two grep sweeps and every suite run go to a file and are read whole; no `head`, no `tail`, no piping to a count  
+**Retro applied**: 35 · Patterns worth reusing · Applied — Story 4's criteria are greps, so every hit is opened and read before it counts as a violation, and a clean pass gets a hostile read too  
+**Retro applied**: 34 · Codebase discoveries · Applied — Story 1 is the spike; the converted `spec` is tested against the hardest real case, spec 47 itself and the ten inline ADs register entry 3 names  
+**Retro applied**: 33 · Codebase discoveries · Applied — `spec`, `epics` and `do` are a pipeline, so converting one sweeps its consumers before that story is called done rather than waiting for Story 4
 
 Milestone M4 (AD6). Three of FR25's twenty-two skills, one story each. These three are the
 pipeline CPM's handoff problem lives in — each recovers the previous stage's work by parsing
@@ -27,9 +31,12 @@ build. Added from review 06 (`docs/reviews/06-review-dpm-spec-47-progress.md`), 
 
 ## Convert `spec` [plan]
 **Story**: 1  
-**Status**: Pending  
+**Status**: Complete — the spike's stop-and-review gate was taken; Chris approved the pattern and asked for it to be shrunk before Stories 2 and 3 inherit it, which was done (2,747 words against CPM's 5,260) and the rationale moved to this epic's Notes  
 **Blocked by**: —  
-**Satisfies**: FR25, FR5, FR11
+**Satisfies**: FR25, FR5, FR11  
+**Inline change**: eleven document kinds gained list tools; the converted `spec` cannot discover its inputs without them (2026-08-09)  
+**Inline change**: nineteen child and link tables gained list tools, derived from the schema; every read tool is by primary key, so a child row could be created and then reachable only through the rendered markdown FR25 forbids (2026-08-09)  
+**Inline change**: `dependency` was deliberately left out of that derivation — it has two ends and four candidate columns, and the rule would scope it on `kind`, answering a different question from the one the name asks. The direction is Story 3's to decide (2026-08-09)
 
 **Acceptance Criteria**:
 
@@ -40,17 +47,17 @@ build. Added from review 06 (`docs/reviews/06-review-dpm-spec-47-progress.md`), 
 ### Rewrite the spec write path as tool calls — document, requirements, criteria, coverage
 **Task**: 1.1  
 **Description**: Everything the skill currently composes into markdown becomes typed arguments. `class` and MoSCoW band stop being label prefixes the skill formats and become columns it passes.  
-**Status**: Pending
+**Status**: Complete
 
 ### Replace numbering, filename construction and the progress file with tool calls and a session row
 **Task**: 1.2  
 **Description**: Four of FR25's six subtractions land in this one task. The number comes from the allocation tool, the filename does not exist, and the progress file becomes an `UPDATE`.  
-**Status**: Pending
+**Status**: Complete
 
 ### Write tests for Convert `spec`
 **Task**: 1.3  
 **Description**: Write automated tests covering the story's acceptance criteria tagged `[unit]`, `[integration]`, or `[feature]`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
@@ -145,6 +152,50 @@ build. Added from review 06 (`docs/reviews/06-review-dpm-spec-47-progress.md`), 
 ---
 
 ## Notes
+
+### The conversion pattern, settled by Story 1
+
+Story 1 was the spike, and this is what it found. Stories 2 and 3 and the nineteen skills in
+Epics 47-07 to 47-09 inherit these rather than rediscovering them. The rationale lives here
+because a SKILL.md is loaded in full on every invocation, and a paragraph explaining why the
+shape is the shape is paid for on every run by readers who never saw the alternative.
+
+**What subtraction actually removes.** Six CPM shared procedures become tool calls written at
+the point of use: Numbering (`dpm_create_<kind>` assigns it), Progress File Management and
+Stale-Progress Check (`dpm_create_session` / `dpm_update_session` / `dpm_adopt_session` /
+`dpm_list_session`), Roster Loading (`dpm_list_agent`), Library Check (`dpm_list_library` plus
+`dpm_list_library_scope`), Retro Awareness (`dpm_list_retro` plus `dpm_list_observation`, with
+retirement carried on the row so nothing parses to find it). `dpm/shared/skill-conventions.md`
+holds only what is left: prose several skills reference and no tool implements.
+
+**Every value is an argument, and the file says so once.** A class, a MoSCoW band, an exclusion,
+a polarity and an approach tag are columns. A converted skill states that where the write
+happens and does not restate it — the corpus check in Story 4 and the per-skill argument binding
+in the test shape both hold it.
+
+**A skill never reports a path.** Building one from a number and a slug is the filename
+construction the conversion removes, and the projection alone decides where a kind renders.
+
+**Two things the schema settles that read the other way in CPM.** A `spec` takes no parent, so
+its lineage to a brief is a `builds_on` edge rather than containment. And `dpm_create_coverage`
+requires a `story_criterion_id`, so `spec` writes none: CPM's *Acceptance Criteria Coverage*
+section is requirement, criterion and tag, which is `acceptance_criterion` plus
+`criterion_approach`. Story 2 owns the binding, and its first criterion should be read that way.
+
+**The test shape, which twenty-one conversions repeat** (`dpm/tests/support/skills.js`): every
+`dpm_*` name the file mentions resolves to a real tool, every tool the driven run used is named
+in the file, and every fixed-vocabulary argument the run supplied is named in the file. The
+third was added after mutation testing showed the first two pass with `moscow` deleted from the
+skill entirely. No manifest of "the tools this skill uses" — that is a third place the truth
+lives and the only one nothing fails on.
+
+**Sizing, for the epic's readability question.** The converted `spec` is 2,747 words against
+CPM's 5,260 — 48% smaller. Line counts understate it because CPM's files do not wrap.
+
+**Still open, and Story 3's to decide.** Nothing enumerates the edges out of a document, so
+`dependency` has no list tool. The consequence is visible in `spec` now: constraint inheritance
+asks the user which problem brief a product brief came from, where CPM parsed a `**Source**:`
+field. Story 3's readiness query is where the direction gets settled.
 
 ### Self-hosting register — entries in this epic's scope
 

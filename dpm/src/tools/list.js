@@ -24,9 +24,12 @@ import { defineTool } from './convention.js';
 import { selectPage } from './query.js';
 
 /**
- * One row per list tool. `fixed` is scoping the tool applies whatever the caller says — `document`
- * holds two kinds in one table, and `dpm_list_spec` returning epics would make the type in the
- * name mean nothing, the same rule the kind-scoped read tools already hold to.
+ * One row per list tool, for the types that are not document kinds. The kinds are derived instead,
+ * by `documentLists` below.
+ *
+ * `fixed` is scoping the tool applies whatever the caller says — `document` holds every kind in one
+ * table, and `dpm_list_spec` returning epics would make the type in the name mean nothing, the same
+ * rule the kind-scoped read tools already hold to.
  *
  * `order` ends in the table's own primary key everywhere — `id` on the spine types, the term itself
  * on a vocabulary: `position` and `number` are unique only within a parent, so on an unscoped list
@@ -38,14 +41,6 @@ import { selectPage } from './query.js';
  * key and stops being offered.
  */
 const LISTS = [
-  { type: 'spec', table: 'document', fixed: { kind: 'spec' }, order: ['number', 'id'] },
-  {
-    type: 'epic',
-    table: 'document',
-    fixed: { kind: 'epic' },
-    within: 'parent_id',
-    order: ['sequence', 'id'],
-  },
   { type: 'requirement', table: 'requirement', within: 'spec_id', order: ['position', 'id'] },
   {
     type: 'acceptance_criterion',
@@ -84,6 +79,114 @@ const LISTS = [
 ];
 
 /**
+ * The document kinds' lists, derived from `document_kind` rather than declared above.
+ *
+ * **A kind acquires its list tool by being seeded**, which is the same rule `spineTools` applies to
+ * create, read and update — and it is here for a reason found rather than anticipated. Only `spec`
+ * and `epic` were listed by hand, so eleven of the thirteen kinds could be read by key and not
+ * enumerated at all. That is invisible to `dpm/tests/parity.test.js`, which compares tables against
+ * the registry and sees a `document` table well covered; it surfaced on the first attempt to
+ * convert a skill, because a skill that must find "the product briefs in this project" without
+ * reading a directory has nothing to call. A hand-kept list here would have to be edited for every
+ * kind seeded afterwards, and that is the drift this spec exists to remove.
+ *
+ * The two shapes follow `numbering`: a root-numbered kind is unique on `number` across the project,
+ * and a child-numbered one only within its parent, so the second is scoped and ordered by
+ * `sequence`. Both end on `id`, for the tiebreaker reason given above.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {object[]}
+ */
+function documentLists(db) {
+  return db.prepare('SELECT kind, numbering FROM document_kind ORDER BY kind').all()
+    .map(({ kind, numbering }) => ({
+      type: kind,
+      table: 'document',
+      fixed: { kind },
+      ...(numbering === 'child'
+        ? { within: 'parent_id', order: ['sequence', 'id'] }
+        : { order: ['number', 'id'] }),
+    }));
+}
+
+/**
+ * A composite-key pin rather than a scope. `milestone.spec_kind` accompanies `spec_id` to hold the
+ * foreign key to one kind; it narrows nothing on its own, and a list scoped by it would offer a
+ * caller an argument with one legal value.
+ */
+const PIN = /_(kind|domain)$/;
+
+/**
+ * Child tables whose owner cannot be derived, named here with the reason rather than guessed at.
+ *
+ * `dependency` is an edge with two ends and four candidate columns, and the rule below would scope
+ * it on `kind` — answering "every edge that blocks" where a caller asking for a list of an entity's
+ * dependencies means "the edges into this story". A tool that answers a different question from the
+ * one its name asks is worse than a missing tool, because the caller has no reason to check. The
+ * readiness query is Epic 47-06 Story 3's subject and is where the direction gets decided.
+ */
+const UNOWNED = new Set(['dependency']);
+
+/**
+ * The child and link tables' lists, derived from the schema.
+ *
+ * **Every read tool is by primary key, so before this existed a child row could be created and
+ * never found again.** `dpm_read_observation` needs an id, and nothing answered "the observations
+ * of this retro" — so a skill's only route back to a child row was the rendered markdown, which is
+ * the one thing FR25 forbids. Nineteen tables were in that state. It is invisible to
+ * `dpm/tests/parity.test.js`, which asks whether a table has *a* tool rather than whether its rows
+ * are reachable by someone who does not already hold their ids.
+ *
+ * Two shapes, both read off the table rather than declared:
+ *
+ * - **A composite key is its own scope.** `library_scope` is keyed `(document_id, scope)`, so the
+ *   first key column is the owner and the whole key is the order — already unique, no tiebreak to
+ *   add.
+ * - **A single `id` takes the first foreign key in column order**, skipping the pins above. That
+ *   is the parent in every case here: `observation.retro_id` precedes `story_id`, and
+ *   `finding.review_id` precedes the taxonomy references. A table with no foreign key at all —
+ *   `artifact` — lists unscoped, which is the same shape `dpm_list_agent` already has.
+ *
+ * `position` leads the order where the table has one and the key follows it, for the tiebreak
+ * reason `LISTS` gives: `position` is unique within a parent and ties across the table.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {object[]} spine
+ * @returns {object[]}
+ */
+function childLists(db, spine) {
+  const covered = new Set(['document', ...LISTS.map((entry) => entry.table)]);
+
+  const tables = [...new Set(spine
+    .filter((tool) => tool.name.startsWith('dpm_create_'))
+    .map((tool) => tool.table))]
+    .filter((table) => !covered.has(table) && !UNOWNED.has(table))
+    .sort();
+
+  return tables.map((table) => {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+    const key = columns.filter((column) => column.pk)
+      .sort((a, b) => a.pk - b.pk)
+      .map((column) => column.name);
+    const foreign = new Set(
+      db.prepare(`PRAGMA foreign_key_list(${table})`).all().map((entry) => entry.from),
+    );
+
+    const within = key.length > 1
+      ? key[0]
+      : columns.map((column) => column.name)
+        .find((name) => foreign.has(name) && !PIN.test(name));
+
+    return {
+      type: table,
+      table,
+      within,
+      order: [...(columns.some((column) => column.name === 'position') ? ['position'] : []), ...key],
+    };
+  });
+}
+
+/**
  * Build the list tools, taking each one's body columns from its own read tool.
  *
  * @param {object} context
@@ -92,7 +195,9 @@ const LISTS = [
  * @returns {object[]}
  */
 export function listTools({ db }, spine) {
-  return LISTS.map(({ type, table, fixed = {}, within, live, order }) => {
+  const all = [...documentLists(db), ...LISTS, ...childLists(db, spine)];
+
+  return all.map(({ type, table, fixed = {}, within, live, order }) => {
     const name = `dpm_list_${type}`;
     const read = spine.find((tool) => tool.name === `dpm_read_${type}`);
 
