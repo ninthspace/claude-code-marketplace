@@ -95,14 +95,14 @@ test('a live schema that differs from the files is caught, which a copy could no
     position INTEGER NOT NULL
   )`);
 
-  // Scoped to the create tool: `dpm_update_requirement` declares the same `class` enum, so the
+  // Scoped to the create tool: `update_requirement` declares the same `class` enum, so the
   // whole table's registry would report the same drift twice and say nothing more.
-  const requirementTools = tools.filter((tool) => tool.name === 'dpm_create_requirement');
+  const requirementTools = tools.filter((tool) => tool.name === 'create_requirement');
   const { problems, checked } = conformance(drifted, requirementTools);
 
   assert.ok(checked.enums > 0, 'the drifted table was not compared at all');
   assert.equal(problems.length, 1, `expected one disagreement, got: ${problems.join(' | ')}`);
-  assert.match(problems[0], /dpm_create_requirement: 'class' declares \[.*environmental_restriction/);
+  assert.match(problems[0], /create_requirement: 'class' declares \[.*environmental_restriction/);
   assert.match(problems[0], /requirement\.class admits \[/);
 
   // The control: against the real schema the same tools report nothing, so the failure above is
@@ -130,13 +130,13 @@ test('a column added to the live schema and to no tool is reported', (t) => {
   )`);
 
   const { problems } = conformance(drifted,
-    tools.filter((tool) => tool.name === 'dpm_create_story_criterion'));
+    tools.filter((tool) => tool.name === 'create_story_criterion'));
 
   assert.equal(problems.length, 1);
   assert.match(problems[0], /story_criterion\.approach is NOT NULL with no default/);
 
   assert.deepEqual(
-    conformance(db, tools.filter((tool) => tool.name === 'dpm_create_story_criterion')).problems,
+    conformance(db, tools.filter((tool) => tool.name === 'create_story_criterion')).problems,
     [],
   );
 });
@@ -147,11 +147,11 @@ test('a required argument dropped from a create tool fails here, as Story 2 said
   const { db, tools } = surface(t);
 
   // **The escape recorded on Story 2, verified at the story that owns the guard.** Dropping
-  // `spec_fragment` from `dpm_create_coverage`'s `required` survived a sweep that refuses each
+  // `spec_fragment` from `create_coverage`'s `required` survived a sweep that refuses each
   // declared required argument in turn, because the sweep reads `required` and the mutation
   // removed the entry it would have tested. A test that reads the *table* cannot be evaded that
   // way: the column is `NOT NULL` with no default whatever the tool says about it.
-  const coverage = tools.find((tool) => tool.name === 'dpm_create_coverage');
+  const coverage = tools.find((tool) => tool.name === 'create_coverage');
   const mutated = {
     ...coverage,
     inputSchema: {
@@ -170,7 +170,7 @@ test('a required argument dropped from a create tool fails here, as Story 2 said
 
   // And the same holds for every other required argument on every spine create tool — one at a
   // time, so a rule that only caught `spec_fragment` would fail here.
-  const creates = tools.filter((tool) => tool.name.startsWith('dpm_create_'));
+  const creates = tools.filter((tool) => tool.name.startsWith('create_'));
   let caught = 0;
 
   for (const tool of creates) {
@@ -196,7 +196,7 @@ test('a required argument dropped from a create tool fails here, as Story 2 said
 
 test('an enum that drifts from its column is caught in both directions', (t) => {
   const { db, tools } = surface(t);
-  const criterion = tools.find((tool) => tool.name === 'dpm_create_story_criterion');
+  const criterion = tools.find((tool) => tool.name === 'create_story_criterion');
 
   const withEnum = (values) => ({
     ...criterion,
@@ -240,11 +240,11 @@ test('an enum that drifts from its column is caught in both directions', (t) => 
 
 test('a foreign key no tool can set is reported', (t) => {
   const { db, tools } = surface(t);
-  const create = tools.find((tool) => tool.name === 'dpm_create_epic');
+  const create = tools.find((tool) => tool.name === 'create_epic');
 
   // `parent_id` is how an epic names its spec. Removed from both the arguments and the declared
   // server-supplied set, the column becomes one nothing in the registry admits to filling — the
-  // state `dpm_create_spec` was actually in until this story found it.
+  // state `create_spec` was actually in until this story found it.
   const { parent_id: dropped, ...properties } = create.inputSchema.properties;
   const { parent_kind: alsoDropped, ...serverSupplied } = create.serverSupplied;
 

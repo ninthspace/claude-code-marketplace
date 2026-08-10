@@ -20,6 +20,7 @@ import { loadDocument } from './load.js';
 import { resolve } from './markers.js';
 import { identifiers, pathOf, ProjectionError } from './naming.js';
 import { renderAdr } from './templates/adr.js';
+import { REGISTER_PATH, renderArtifactIndex } from './templates/artifacts.js';
 import { renderAudit } from './templates/audit.js';
 import { renderCoverageMatrix } from './templates/coverage-matrix.js';
 import { renderEpic } from './templates/epic.js';
@@ -166,6 +167,17 @@ export function project(db, { root = '.', write = true } = {}) {
       + `written:\n  ${refused.join('\n  ')}`,
     );
   }
+
+  // **The one output that is not a document.** `artifact` is a standalone table with no kind, so
+  // the loop above cannot reach it and `TEMPLATES` cannot hold it — its keys are enumerated against
+  // `document_kind`. The register goes in here instead, after the refusal check so that a corpus
+  // which could not be rendered still writes nothing at all.
+  //
+  // `null` when the project has published nothing, and then no file: a register whose existence
+  // depends on optional rows is the empty-block rule `render` already applies one level down.
+  const register = renderArtifactIndex(db, names);
+
+  if (register !== null) rendered.push({ path: REGISTER_PATH, text: register });
 
   if (write) {
     for (const { path, text } of rendered) {

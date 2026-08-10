@@ -58,6 +58,7 @@ export function reviewRetroTools(context) {
       fields: {
         retro_id: { type: 'string', minLength: 1, description: 'the grouping; set when the retro is written' },
         story_id: { type: 'string', minLength: 1, description: 'the origin; survives promotion into a retro' },
+        quick_id: { type: 'string', minLength: 1, description: 'the origin, on the quick path; survives promotion into a retro' },
         position: { type: 'integer', minimum: 0 },
         text: { type: 'string', minLength: 1 },
         synthesis: { type: 'string', description: 'written when grouped into a retro' },
@@ -66,18 +67,21 @@ export function reviewRetroTools(context) {
         retired_at: { type: 'string', description: 'ISO 8601; set with retired_reason or not at all' },
         retired_reason: { type: 'string' },
       },
-      // Only `text` is required. Which of `retro_id` and `story_id` must be present is a `CHECK`,
-      // and restating it here would be a second copy of a rule the database already holds.
+      // Only `text` is required. Which of `retro_id`, `story_id` and `quick_id` must be present is
+      // a `CHECK`, and restating it here would be a second copy of a rule the database already
+      // holds.
       required: ['text'],
-      mutable: ['retro_id', 'story_id', 'position', 'text', 'synthesis', 'note', 'library_doc_id',
-        'retired_at', 'retired_reason'],
+      mutable: ['retro_id', 'story_id', 'quick_id', 'position', 'text', 'synthesis', 'note',
+        'library_doc_id', 'retired_at', 'retired_reason'],
       body: ['text', 'synthesis'],
       supplied: {
         retro_kind: SUPPLIED.derived('retro_id'),
+        quick_kind: SUPPLIED.derived('quick_id'),
         library_doc_kind: SUPPLIED.derived('library_doc_id'),
       },
       derive: (args) => ({
         retro_kind: args.retro_id === undefined ? null : 'retro',
+        quick_kind: args.quick_id === undefined ? null : 'quick',
         library_doc_kind: args.library_doc_id === undefined ? null : 'library',
       }),
     }),
@@ -93,9 +97,22 @@ export function reviewRetroTools(context) {
         line: { type: 'integer', minimum: 1 },
         symbol: { type: 'string' },
         severity_id: { type: 'string', minLength: 1 },
+        summary: { type: 'string', minLength: 1, description: 'what is wrong, in one sentence' },
+        recommendation: {
+          type: 'string',
+          description: 'the scoped change that would fix it, where one is known',
+        },
       },
-      required: ['audit_id', 'position', 'dimension_id', 'file', 'severity_id'],
-      mutable: ['position', 'dimension_id', 'file', 'line', 'symbol', 'severity_id'],
+
+      // **`summary` is required here and merely defaulted in the schema**, and the two are not in
+      // conflict. `ALTER TABLE … ADD COLUMN` takes no `NOT NULL` without a default, so the column
+      // could not be made unwritable-by-omission the way `finding.summary` is. Requiring it at the
+      // tool is what closes that gap for every caller that goes through the surface, which is all
+      // of them bar a restore.
+      required: ['audit_id', 'position', 'dimension_id', 'file', 'severity_id', 'summary'],
+      mutable: ['position', 'dimension_id', 'file', 'line', 'symbol', 'severity_id', 'summary',
+        'recommendation'],
+      body: ['summary', 'recommendation'],
     }),
 
     ...entityTools(context, {

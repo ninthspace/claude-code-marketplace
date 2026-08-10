@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { openDatabaseFile } from './support/database.js';
 import { authoredTables } from './support/introspection.js';
 import { readOnlyTools, spineTools } from '../src/tools/index.js';
@@ -62,8 +62,11 @@ function vocabulary(db) {
   return { tables: new Set(tables), words: new Set([...tables, ...columns, ...kinds]) };
 }
 
-/** The part of a tool name after `dpm_<verb>_`. */
-const subject = (name) => name.split('_').slice(2).join('_');
+/** The part of a tool name after `<verb>_`. */
+const subject = (name) => name.split('_').slice(1).join('_');
+
+/** NFR5's shape rule, and the whole of it — every part a whole word of three letters or more. */
+const SHAPE = /^[a-z]{3,}(_[a-z]{3,})*$/;
 
 // --- Criterion 1: names built from the schema's own words ----------------------------------------
 
@@ -78,7 +81,14 @@ test('every tool name is a searchable word built from the live schema', (t) => {
   const unmatched = [];
 
   for (const tool of tools) {
-    assert.match(tool.name, /^dpm_[a-z_]{6,}$/, `${tool.name} is not a searchable dpm tool name`);
+    assert.match(tool.name, SHAPE, `${tool.name} is not a searchable dpm tool name`);
+
+    // FR29's half of the rule. The harness dispatches `mcp__dpm__create_spec` and supplies the
+    // `mcp__dpm__` itself, so a `dpm` part in the export is the server's identity said twice. This
+    // is asserted rather than merely not required, because the prefix was there for five epics and
+    // the shape rule above admits it back without complaint.
+    assert.ok(!tool.name.split('_').includes('dpm'),
+      `${tool.name} carries the server's own identity — the harness already prefixes it`);
 
     // A tool whose declared table is not one of the live tables is not acting on a table, it is
     // spanning the schema — and there is no schema word for that, which is a gap in the rule
@@ -93,24 +103,32 @@ test('every tool name is a searchable word built from the live schema', (t) => {
 
   // The tools taking the exemption are named, one line each. A third one appearing here is a
   // decision, not a detail — the exemption is meant to cover tools that sweep everything, and
-  // both of these do: `dpm_check_integrity` reads `sqlite_schema`, and `dpm_search` reads two FTS
-  // indexes covering six tables between them. Neither is named for an entity type because neither
-  // has one.
+  // both of these do: `check_integrity` reads `sqlite_schema`, and `search` reads two FTS indexes
+  // covering six tables between them. Neither is named for an entity type because neither has one.
   assert.deepEqual(
     tools.filter((tool) => !tables.has(tool.table)).map((tool) => tool.name).sort(),
-    ['dpm_check_integrity', 'dpm_search'],
+    ['check_integrity', 'search'],
   );
 
   // The control: the vocabulary is not so wide that any name passes. Three plausible names built
   // from words the schema does not hold — an abbreviation and two invented nouns — are rejected
-  // by the same lookup that accepted all thirty-five real ones.
+  // by the same lookup that accepted all the real ones.
   assert.deepEqual(
-    ['dpm_create_ce', 'dpm_read_thing', 'dpm_list_stuff'].filter((name) => words.has(subject(name))),
+    ['create_ce', 'read_thing', 'list_stuff'].filter((name) => words.has(subject(name))),
     [],
   );
 
-  // And the shape rule refuses what NFR5 names as the failure it exists to prevent.
-  assert.doesNotMatch('dpm_ce', /^dpm_[a-z_]{6,}$/);
+  // And the shape rule refuses what NFR5 names as the failure it exists to prevent — a name too
+  // short to search for — while admitting `search`, whose single part is a whole word. Requiring
+  // two parts would fail a name the requirement has no complaint about.
+  assert.doesNotMatch('ce', SHAPE);
+  assert.doesNotMatch('a_b', SHAPE);
+  assert.match('search', SHAPE);
+
+  // The mutation FR29 exists to catch, driven rather than described: the pre-rename name passes
+  // the shape rule and is refused only by the identity check above.
+  assert.match('dpm_create_spec', SHAPE);
+  assert.ok('dpm_create_spec'.split('_').includes('dpm'));
 });
 
 // --- Criterion 2: nothing written is unreadable ---------------------------------------------------
@@ -155,7 +173,7 @@ test('every table a registered tool writes is reachable through a read tool', (t
 function fromTheFuture(t) {
   const file = openDatabaseFile(t);
   const first = start(file.path);
-  const create = spineTools(first.db).find((tool) => tool.name === 'dpm_create_spec');
+  const create = spineTools(first.db).find((tool) => tool.name === 'create_spec');
   const spec = create.handler({ slug: 'history', title: 'Planning history' });
 
   first.db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)')
@@ -185,11 +203,11 @@ test('a database whose version is ahead is opened rather than refused', (t) => {
   // And the history is still there, which is the whole of what NFR7 asks for.
   const tools = readOnlyTools(spineTools(again.db),
     { found: again.migrated.from, supported: again.migrated.target });
-  const call = Object.fromEntries(tools.map((tool) => [tool.name, tool.handler]));
+  const call = handlers(tools);
 
-  assert.equal(call.dpm_read_spec({ id: spec.id }).title, 'Planning history');
-  assert.equal(call.dpm_list_spec({}).returned, 1);
-  assert.equal(call.dpm_check_integrity({}).ok, true);
+  assert.equal(call.read_spec({ id: spec.id }).title, 'Planning history');
+  assert.equal(call.list_spec({}).returned, 1);
+  assert.equal(call.check_integrity({}).ok, true);
 });
 
 test('the writes are refused by name, and the tools stay listed', (t) => {
@@ -200,13 +218,13 @@ test('the writes are refused by name, and the tools stay listed', (t) => {
 
   const full = spineTools(again.db);
   const tools = readOnlyTools(full, { found: FUTURE, supported: again.migrated.target });
-  const call = Object.fromEntries(tools.map((tool) => [tool.name, tool.handler]));
+  const call = handlers(tools);
 
   // Listed, not withheld. A withheld tool answers Method not found, which reads as a broken
   // server or a renamed tool and says nothing about a version skew.
   assert.deepEqual(tools.map((tool) => tool.name), full.map((tool) => tool.name));
 
-  const error = refused(() => call.dpm_create_spec({ slug: 'x', title: 'X' }));
+  const error = refused(() => call.create_spec({ slug: 'x', title: 'X' }));
 
   assert.match(error.message, new RegExp(`${FUTURE}`), 'the refusal does not name the database');
   assert.match(error.message, new RegExp(`${again.migrated.target}`),
@@ -223,11 +241,11 @@ test('the writes are refused by name, and the tools stay listed', (t) => {
   }
 
   assert.ok(refusals >= 17, `only ${refusals} write tools were swept`);
-  assert.equal(call.dpm_list_epic({}).returned, 0, 'a read tool was refused along with the writes');
+  assert.equal(call.list_epic({}).returned, 0, 'a read tool was refused along with the writes');
 
   // The control: the same registry against a current database writes perfectly well.
   const current = openPlanningDatabase(t);
-  assert.ok(spineTools(current).find((tool) => tool.name === 'dpm_create_spec')
+  assert.ok(spineTools(current).find((tool) => tool.name === 'create_spec')
     .handler({ slug: 'now', title: 'Now' }).id);
 });
 
@@ -237,9 +255,9 @@ test('the real server starts on a database from the future and answers a read', 
   const messages = [
     { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
     { jsonrpc: '2.0', id: 2, method: 'tools/call',
-      params: { name: 'dpm_read_spec', arguments: { id: spec.id } } },
+      params: { name: 'read_spec', arguments: { id: spec.id } } },
     { jsonrpc: '2.0', id: 3, method: 'tools/call',
-      params: { name: 'dpm_update_spec', arguments: { id: spec.id, title: 'Rewritten' } } },
+      params: { name: 'update_spec', arguments: { id: spec.id, title: 'Rewritten' } } },
   ].map((message) => JSON.stringify(message)).join('\n');
 
   const { code, stdout, stderr } = await runNode([BIN], `${messages}\n`,
@@ -263,7 +281,7 @@ test('the real server starts on a database from the future and answers a read', 
   const after = start(file.path);
   t.after(() => after.db.close());
   assert.equal(
-    spineTools(after.db).find((tool) => tool.name === 'dpm_read_spec').handler({ id: spec.id }).title,
+    spineTools(after.db).find((tool) => tool.name === 'read_spec').handler({ id: spec.id }).title,
     'Planning history',
   );
 });

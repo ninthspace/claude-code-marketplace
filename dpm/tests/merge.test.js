@@ -74,9 +74,9 @@ function branch(base, change) {
 
 /** A spec, and a requirement inside it whose text names the spec by marker. */
 const spec = (slug, title) => (db, call) => {
-  const made = call.dpm_create_spec({ slug, title });
+  const made = call.create_spec({ slug, title });
 
-  call.dpm_create_requirement({
+  call.create_requirement({
     spec_id: made.id,
     label: 'FR1',
     class: 'functional',
@@ -101,9 +101,9 @@ const later = (a, b) => (a > b ? a : b);
 
 /** An epic under `parent`, with a story, so the branch writes more than one table. */
 const epic = (slug, title, parent) => (db, call) => {
-  const made = call.dpm_create_epic({ parent_id: parent, slug, title });
+  const made = call.create_epic({ parent_id: parent, slug, title });
 
-  call.dpm_create_story({ epic_id: made.id, number: 1, title: `${title} story`, position: 0 });
+  call.create_story({ epic_id: made.id, number: 1, title: `${title} story`, position: 0 });
 
   return made;
 };
@@ -519,8 +519,8 @@ test('collisions are detectable before they are repaired', (t) => {
   ]);
 
   const call = surface(db);
-  const one = call.dpm_create_spec({ slug: 'one', title: 'One' });
-  const two = call.dpm_create_spec({ slug: 'two', title: 'Two' });
+  const one = call.create_spec({ slug: 'one', title: 'One' });
+  const two = call.create_spec({ slug: 'two', title: 'Two' });
 
   assert.deepEqual(collisions(db, scopes), [], 'a well-formed database has no collision');
 
@@ -567,7 +567,7 @@ test('a row deleted on one branch and untouched on the other is deleted in the m
     const call = surface(withTwo);
 
     spec('kept', 'Kept')(withTwo, call);
-    doomed = call.dpm_create_spec({ slug: 'withdrawn', title: 'Withdrawn' });
+    doomed = call.create_spec({ slug: 'withdrawn', title: 'Withdrawn' });
     base = dump(withTwo).sql;
   } finally {
     withTwo.close();
@@ -609,7 +609,7 @@ test('the merged counter carries every number either branch issued, not just our
   // passes every other assertion in this file. That is how this test came to be written.
   const theirs = branch(base, (db, call) => {
     const kept = spec('export', 'Export')(db, call);
-    const dropped = call.dpm_create_spec({ slug: 'withdrawn', title: 'Withdrawn' });
+    const dropped = call.create_spec({ slug: 'withdrawn', title: 'Withdrawn' });
 
     db.prepare('DELETE FROM document WHERE id = ?').run(dropped.id);
 
@@ -663,7 +663,7 @@ test('a side whose counter is behind its documents never reaches the merge at al
   // `merge()` restores every side. The guarantee the repair needs is enforced one layer down, and
   // this is the assertion that says so rather than a retry loop that could never iterate.
   const theirs = branch(base, (db, call) => {
-    const kept = call.dpm_create_spec({ slug: 'export', title: 'Export' });
+    const kept = call.create_spec({ slug: 'export', title: 'Export' });
 
     db.prepare(`INSERT INTO document (id, kind, numbering, number, slug, title, created_at, updated_at)
                 VALUES ('01HANDWRITTENROWAAAAAAAAAA', 'spec', 'root', 2, 'imported', 'Imported',
@@ -684,9 +684,9 @@ test('a merged counter always clears every number the merged documents hold', ()
   const base = emptyDump();
   const ours = branch(base, spec('search', 'Search'));
   const theirs = branch(base, (db, call) => {
-    call.dpm_create_spec({ slug: 'export', title: 'Export' });
+    call.create_spec({ slug: 'export', title: 'Export' });
 
-    return call.dpm_create_spec({ slug: 'archive', title: 'Archive' });
+    return call.create_spec({ slug: 'archive', title: 'Archive' });
   });
 
   const result = merge({ base, ours: ours.sql, theirs: theirs.sql });

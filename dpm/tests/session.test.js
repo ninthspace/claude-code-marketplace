@@ -16,7 +16,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 
 /** Sessions are stamped by the server clock, and staleness is measured from it. */
@@ -24,7 +24,7 @@ function surface(t, clock) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db, clock ? { now: () => clock.now } : undefined);
 
-  return { db, tools, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, tools, call: handlers(tools) };
 }
 
 function refused(run, message) {
@@ -47,12 +47,12 @@ test('a session survives resume under a new id, with one live end to the chain',
   const clock = { now: '2026-08-09T09:00:00.000Z' };
   const { call } = surface(t, clock);
 
-  const first = call.dpm_create_session({ id: 'sess-a', skill: 'cpm:do', phase: 'Story 6', state: STATE });
+  const first = call.create_session({ id: 'sess-a', skill: 'cpm:do', phase: 'Story 6', state: STATE });
 
   assert.equal(first.superseded_by, null, 'a new session is the live end of its own chain');
 
   clock.now = '2026-08-09T10:00:00.000Z';
-  const adopted = call.dpm_adopt_session({ id: 'sess-b', predecessor_id: 'sess-a', include_body: true });
+  const adopted = call.adopt_session({ id: 'sess-b', predecessor_id: 'sess-a', include_body: true });
 
   // The state reached the new id, which is the whole of what the old `--resume` adoption did.
   assert.equal(adopted.id, 'sess-b');
@@ -63,11 +63,11 @@ test('a session survives resume under a new id, with one live end to the chain',
 
   // And the predecessor points forward rather than being deleted — the record of the resume is
   // the link, so a chain read from either end tells the same story.
-  assert.equal(call.dpm_read_session({ id: 'sess-a' }).superseded_by, 'sess-b');
+  assert.equal(call.read_session({ id: 'sess-a' }).superseded_by, 'sess-b');
 
   // Exactly one live end, asserted over the whole table rather than over the two ids this test
   // happens to know: that is the property the two-files-and-no-way-to-tell failure violated.
-  const live = call.dpm_list_session({}).items.filter((row) => row.superseded_by === null);
+  const live = call.list_session({}).items.filter((row) => row.superseded_by === null);
 
   assert.deepEqual(live.map((row) => row.id), ['sess-b']);
 });
@@ -76,49 +76,49 @@ test('a chain of three resumes still has one live end and one state', (t) => {
   const clock = { now: '2026-08-09T09:00:00.000Z' };
   const { call } = surface(t, clock);
 
-  call.dpm_create_session({ id: 'sess-1', skill: 'cpm:do', state: STATE });
+  call.create_session({ id: 'sess-1', skill: 'cpm:do', state: STATE });
 
   for (const [predecessor, next] of [['sess-1', 'sess-2'], ['sess-2', 'sess-3']]) {
     clock.now = `2026-08-09T1${next.at(-1)}:00:00.000Z`;
-    call.dpm_adopt_session({ id: next, predecessor_id: predecessor });
+    call.adopt_session({ id: next, predecessor_id: predecessor });
   }
 
-  const live = call.dpm_list_session({}).items.filter((row) => row.superseded_by === null);
+  const live = call.list_session({}).items.filter((row) => row.superseded_by === null);
 
   assert.deepEqual(live.map((row) => row.id), ['sess-3']);
-  assert.equal(call.dpm_read_session({ id: 'sess-3', include_body: true }).state, STATE);
+  assert.equal(call.read_session({ id: 'sess-3', include_body: true }).state, STATE);
 
   // Written to under its current id, and the earlier rows are untouched history rather than
   // copies that quietly disagree.
   clock.now = '2026-08-09T13:00:00.000Z';
-  call.dpm_update_session({ id: 'sess-3', phase: 'Story 7' });
+  call.update_session({ id: 'sess-3', phase: 'Story 7' });
 
-  assert.equal(call.dpm_read_session({ id: 'sess-3' }).phase, 'Story 7');
-  assert.equal(call.dpm_read_session({ id: 'sess-1' }).phase, null);
+  assert.equal(call.read_session({ id: 'sess-3' }).phase, 'Story 7');
+  assert.equal(call.read_session({ id: 'sess-1' }).phase, null);
 });
 
 test('a predecessor is adopted once, and a session cannot adopt itself', (t) => {
   const { call } = surface(t);
 
-  call.dpm_create_session({ id: 'sess-a', state: STATE });
-  call.dpm_adopt_session({ id: 'sess-b', predecessor_id: 'sess-a' });
+  call.create_session({ id: 'sess-a', state: STATE });
+  call.adopt_session({ id: 'sess-b', predecessor_id: 'sess-a' });
 
   // Two resumes of one session, or a stale id replayed. Re-pointing the link would orphan
   // whichever branch lost, with no error and nothing afterwards able to find out.
-  const twice = refused(() => call.dpm_adopt_session({ id: 'sess-c', predecessor_id: 'sess-a' }));
+  const twice = refused(() => call.adopt_session({ id: 'sess-c', predecessor_id: 'sess-a' }));
 
   assert.match(twice.message, /already adopted by 'sess-b'/);
   assert.equal(twice.rpc.code, -32602);
-  assert.equal(call.dpm_read_session({ id: 'sess-a' }).superseded_by, 'sess-b');
+  assert.equal(call.read_session({ id: 'sess-a' }).superseded_by, 'sess-b');
 
-  const itself = refused(() => call.dpm_adopt_session({ id: 'sess-b', predecessor_id: 'sess-b' }));
+  const itself = refused(() => call.adopt_session({ id: 'sess-b', predecessor_id: 'sess-b' }));
   assert.match(itself.message, /cannot supersede itself/);
 
   // Two controls: adopting the live end works, and adopting something absent is a named refusal
   // rather than a foreign key.
-  assert.equal(call.dpm_adopt_session({ id: 'sess-d', predecessor_id: 'sess-b' }).id, 'sess-d');
+  assert.equal(call.adopt_session({ id: 'sess-d', predecessor_id: 'sess-b' }).id, 'sess-d');
   assert.match(
-    refused(() => call.dpm_adopt_session({ id: 'sess-e', predecessor_id: 'nope' })).message,
+    refused(() => call.adopt_session({ id: 'sess-e', predecessor_id: 'nope' })).message,
     /no session with id 'nope'/,
   );
 });
@@ -130,32 +130,32 @@ test('the adopting session may already exist, and the state still reaches it', (
   // id and may record the row before anything asks to resume, so adoption cannot depend on dpm
   // being the one that created it — a resume whose state arrived only when the row happened not
   // to exist yet would pass every test here and fail in the field.
-  call.dpm_create_session({ id: 'sess-a', skill: 'cpm:do', phase: 'Story 6', state: STATE });
-  call.dpm_create_session({ id: 'sess-b' });
+  call.create_session({ id: 'sess-a', skill: 'cpm:do', phase: 'Story 6', state: STATE });
+  call.create_session({ id: 'sess-b' });
 
-  const adopted = call.dpm_adopt_session({ id: 'sess-b', predecessor_id: 'sess-a', include_body: true });
+  const adopted = call.adopt_session({ id: 'sess-b', predecessor_id: 'sess-a', include_body: true });
 
   assert.equal(adopted.state, STATE, 'the state stopped at the row the harness had already made');
   assert.equal(adopted.skill, 'cpm:do');
-  assert.equal(call.dpm_read_session({ id: 'sess-a' }).superseded_by, 'sess-b');
+  assert.equal(call.read_session({ id: 'sess-a' }).superseded_by, 'sess-b');
 });
 
 test('an adoption that would overwrite state is refused before anything is written', (t) => {
   const { call } = surface(t);
 
-  call.dpm_create_session({ id: 'sess-a', skill: 'cpm:do', state: STATE });
-  call.dpm_create_session({ id: 'sess-b', state: JSON.stringify({ mine: true }) });
+  call.create_session({ id: 'sess-a', skill: 'cpm:do', state: STATE });
+  call.create_session({ id: 'sess-b', state: JSON.stringify({ mine: true }) });
 
   // A session already carrying its own state is not resuming the predecessor, and "adopt" is not
   // an operation anyone would expect to lose work under.
-  const error = refused(() => call.dpm_adopt_session({ id: 'sess-b', predecessor_id: 'sess-a' }));
+  const error = refused(() => call.adopt_session({ id: 'sess-b', predecessor_id: 'sess-a' }));
 
   assert.match(error.message, /already carries state of its own/);
 
   // Nothing was written: the link is the half that would otherwise survive a partial adoption,
   // and a predecessor marked superseded by a session that never continued it is unrecoverable.
-  assert.equal(call.dpm_read_session({ id: 'sess-a' }).superseded_by, null);
-  assert.equal(call.dpm_read_session({ id: 'sess-b', include_body: true }).state,
+  assert.equal(call.read_session({ id: 'sess-a' }).superseded_by, null);
+  assert.equal(call.read_session({ id: 'sess-b', include_body: true }).state,
     JSON.stringify({ mine: true }));
 });
 
@@ -169,25 +169,25 @@ test('stale sessions are selected by age, and fresh ones are not', (t) => {
 
   days.forEach((day, index) => {
     clock.now = `${day}T00:00:00.000Z`;
-    call.dpm_create_session({ id: `sess-${index}`, skill: 'cpm:do', state: STATE });
+    call.create_session({ id: `sess-${index}`, skill: 'cpm:do', state: STATE });
   });
 
-  const stale = call.dpm_list_session({ updated_before: '2026-08-06T00:00:00.000Z' });
+  const stale = call.list_session({ updated_before: '2026-08-06T00:00:00.000Z' });
 
   assert.deepEqual(stale.items.map((row) => row.id), ['sess-0', 'sess-1', 'sess-2']);
 
   // The control in both directions: no cutoff returns everything, and a cutoff before the oldest
   // returns nothing. A filter that was ignored would pass the first assertion alone.
-  assert.equal(call.dpm_list_session({}).returned, days.length);
-  assert.equal(call.dpm_list_session({ updated_before: '2026-07-01T00:00:00.000Z' }).returned, 0);
+  assert.equal(call.list_session({}).returned, days.length);
+  assert.equal(call.list_session({ updated_before: '2026-07-01T00:00:00.000Z' }).returned, 0);
 
   // Age is measured from the last write, not from creation, which is what makes a long-running
   // session not look abandoned: touching the oldest row moves it out of the stale set.
   clock.now = '2026-08-10T00:00:00.000Z';
-  call.dpm_update_session({ id: 'sess-0', phase: 'still going' });
+  call.update_session({ id: 'sess-0', phase: 'still going' });
 
   assert.deepEqual(
-    call.dpm_list_session({ updated_before: '2026-08-06T00:00:00.000Z' }).items.map((row) => row.id),
+    call.list_session({ updated_before: '2026-08-06T00:00:00.000Z' }).items.map((row) => row.id),
     ['sess-1', 'sess-2'],
   );
 });
@@ -199,7 +199,7 @@ test('the staleness cutoff composes with the other filters and with the bound', 
   ['cpm:do', 'cpm:spec'].forEach((skill, group) => {
     for (let index = 0; index < 3; index += 1) {
       clock.now = `2026-08-0${index + 1}T00:00:00.000Z`;
-      call.dpm_create_session({ id: `${skill}-${index}`, skill, state: STATE });
+      call.create_session({ id: `${skill}-${index}`, skill, state: STATE });
     }
     assert.ok(group >= 0);
   });
@@ -207,17 +207,17 @@ test('the staleness cutoff composes with the other filters and with the bound', 
   const cutoff = '2026-08-03T00:00:00.000Z';
 
   assert.deepEqual(
-    call.dpm_list_session({ skill: 'cpm:do', updated_before: cutoff }).items.map((row) => row.id),
+    call.list_session({ skill: 'cpm:do', updated_before: cutoff }).items.map((row) => row.id),
     ['cpm:do-0', 'cpm:do-1'],
   );
 
   // Both filters are doing work: dropping either one widens the result.
-  assert.equal(call.dpm_list_session({ updated_before: cutoff }).returned, 4);
-  assert.equal(call.dpm_list_session({ skill: 'cpm:do' }).returned, 3);
+  assert.equal(call.list_session({ updated_before: cutoff }).returned, 4);
+  assert.equal(call.list_session({ skill: 'cpm:do' }).returned, 3);
 
   // And the bound still applies to a filtered page, which is what makes a staleness sweep over a
   // long-lived project safe to run without knowing how many rows it will find.
-  const bounded = call.dpm_list_session({ updated_before: cutoff, limit: 1 });
+  const bounded = call.list_session({ updated_before: cutoff, limit: 1 });
 
   assert.equal(bounded.returned, 1);
   assert.equal(bounded.more, true);
@@ -228,9 +228,9 @@ test('the staleness cutoff composes with the other filters and with the bound', 
 test('the state blob is withheld until asked for, on the read and on the list', (t) => {
   const { call } = surface(t);
 
-  call.dpm_create_session({ id: 'sess-a', skill: 'cpm:do', phase: 'Story 6', state: STATE });
+  call.create_session({ id: 'sess-a', skill: 'cpm:do', phase: 'Story 6', state: STATE });
 
-  const summary = call.dpm_read_session({ id: 'sess-a' });
+  const summary = call.read_session({ id: 'sess-a' });
 
   // The progress file's own failure mode, and the reason FR11 and FR13 meet on this table: the
   // whole blob was read every time anything wanted to know which skill was running.
@@ -238,9 +238,9 @@ test('the state blob is withheld until asked for, on the read and on the list', 
   assert.equal(summary.skill, 'cpm:do');
   assert.equal(summary.phase, 'Story 6');
 
-  assert.equal(call.dpm_read_session({ id: 'sess-a', include_body: true }).state, STATE);
-  assert.equal(Object.hasOwn(call.dpm_list_session({}).items[0], 'state'), false);
-  assert.equal(call.dpm_list_session({ include_body: true }).items[0].state, STATE);
+  assert.equal(call.read_session({ id: 'sess-a', include_body: true }).state, STATE);
+  assert.equal(Object.hasOwn(call.list_session({}).items[0], 'state'), false);
+  assert.equal(call.list_session({ include_body: true }).items[0].state, STATE);
 });
 
 test('the session id is the caller\'s and is never minted here', (t) => {
@@ -249,15 +249,15 @@ test('the session id is the caller\'s and is never minted here', (t) => {
   // Every other create tool in the surface mints a ULID. This one must not: the id *is*
   // `CPM_SESSION_ID`, issued before dpm is reached, and a row the harness cannot find under the
   // id it already holds is a row nothing can adopt.
-  const written = call.dpm_create_session({ id: 'dc1fd4e4-eaa0-4de7-8e7f-f835c76e1d06' });
+  const written = call.create_session({ id: 'dc1fd4e4-eaa0-4de7-8e7f-f835c76e1d06' });
 
   assert.equal(written.id, 'dc1fd4e4-eaa0-4de7-8e7f-f835c76e1d06');
-  assert.match(refused(() => call.dpm_create_session({ skill: 'cpm:do' })).message, /'id' is required/);
+  assert.match(refused(() => call.create_session({ skill: 'cpm:do' })).message, /'id' is required/);
 
   // The control that it is a primary key and not a suffix scheme: the same id twice is refused,
   // which is what the session-suffixed filenames could not do.
   assert.match(
-    refused(() => call.dpm_create_session({ id: 'dc1fd4e4-eaa0-4de7-8e7f-f835c76e1d06' })).message,
+    refused(() => call.create_session({ id: 'dc1fd4e4-eaa0-4de7-8e7f-f835c76e1d06' })).message,
     /UNIQUE constraint failed/,
   );
 });

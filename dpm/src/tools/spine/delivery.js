@@ -47,7 +47,7 @@ export function deliveryTools({ db, newId }, { table, parent, extra = {} }) {
 
   return [
     defineTool({
-      name: `dpm_create_${table}`,
+      name: `create_${table}`,
       table,
       description: `Create a ${table} under its ${parent.replace('_id', '')}.`,
       reads: [table],
@@ -62,15 +62,18 @@ export function deliveryTools({ db, newId }, { table, parent, extra = {} }) {
       handler: (args) => insert(db, table, {
         id: newId(),
         [parent]: args[parent],
-        // Every optional column written explicitly as NULL rather than omitted, so what the row
-        // holds is decided here rather than by which keys happened to be present.
-        ...Object.fromEntries(columns.map((column) => [column, args[column] ?? null])),
-        status: args.status ?? 'pending',
-      }, `dpm_create_${table}`),
+        // Every optional column written explicitly rather than omitted, so what the row holds is
+        // decided here rather than by which keys happened to be present. A field declaring a
+        // `default` supplies it; the rest fall to NULL. `status` used to be a line of its own and
+        // is now the general case, which is what stops a second `NOT NULL` column arriving with a
+        // default nothing applies — the shape of this handler is what would have written NULL.
+        ...Object.fromEntries(columns.map((column) =>
+          [column, args[column] ?? fields[column].default ?? null])),
+      }, `create_${table}`),
     }),
 
     defineTool({
-      name: `dpm_read_${table}`,
+      name: `read_${table}`,
       table,
       description: `Read one ${table} by id.`,
       reads: [table],
@@ -82,11 +85,11 @@ export function deliveryTools({ db, newId }, { table, parent, extra = {} }) {
         properties: { id: { type: 'string', minLength: 1 } },
         required: ['id'],
       },
-      handler: (args) => readById(db, table, args.id, `dpm_read_${table}`),
+      handler: (args) => readById(db, table, args.id, `read_${table}`),
     }),
 
     defineTool({
-      name: `dpm_update_${table}`,
+      name: `update_${table}`,
       table,
       description: `Update a ${table}'s number, title, status or position.`,
       reads: [table],
@@ -97,7 +100,7 @@ export function deliveryTools({ db, newId }, { table, parent, extra = {} }) {
         properties: { id: { type: 'string', minLength: 1 }, ...fields },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) => update(db, table, id, changes, `dpm_update_${table}`),
+      handler: ({ id, ...changes }) => update(db, table, id, changes, `update_${table}`),
     }),
   ];
 }

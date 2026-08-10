@@ -12,7 +12,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { createHash } from 'node:crypto';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { defineTool, validate, ToolError } from '../src/tools/convention.js';
 import { insert } from '../src/tools/crud.js';
@@ -23,7 +24,7 @@ function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db, { now: () => STAMP });
 
-  return { db, tools, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, tools, call: handlers(tools) };
 }
 
 const STAMP = '2026-08-08T12:00:00.000Z';
@@ -37,25 +38,25 @@ const TYPES = [...SPINE, ALSO];
 
 /** A whole chain, so every type has something real to hang off. */
 function chain(call) {
-  const spec = call.dpm_create_spec({ slug: 'dpm', title: 'dpm SQLite persistence' });
-  const requirement = call.dpm_create_requirement({
+  const spec = call.create_spec({ slug: 'dpm', title: 'dpm SQLite persistence' });
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR1', class: 'functional',
     text: 'Every CPM artefact type is a table with typed columns', position: 0,
   });
-  const acceptance_criterion = call.dpm_create_acceptance_criterion({
+  const acceptance_criterion = call.create_acceptance_criterion({
     requirement_id: requirement.id, text: 'a row exists', position: 0,
   });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'spine', title: 'Spine tools' });
-  const story = call.dpm_create_story({
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'spine', title: 'Spine tools' });
+  const story = call.create_story({
     epic_id: epic.id, number: 2, title: 'Expose typed tools', position: 1,
   });
-  const task = call.dpm_create_task({
+  const task = call.create_task({
     story_id: story.id, number: 3, title: 'Implement', description: 'do it', position: 2,
   });
-  const story_criterion = call.dpm_create_story_criterion({
+  const story_criterion = call.create_story_criterion({
     story_id: story.id, text: 'creating each type produces a row', position: 0,
   });
-  const coverage = call.dpm_create_coverage({
+  const coverage = call.create_coverage({
     requirement_id: requirement.id, spec_fragment: 'is a table',
     story_criterion_id: story_criterion.id, position: 0,
   });
@@ -83,7 +84,7 @@ test('every spine type has create, read and update, and the count is derived', (
 
   const verbs = new Map();
   for (const { name } of tools) {
-    const [, verb, ...rest] = name.split('_');
+    const [verb, ...rest] = name.split('_');
     const type = rest.join('_');
     if (!verbs.has(type)) verbs.set(type, new Set());
     verbs.get(type).add(verb);
@@ -114,7 +115,7 @@ test('every spine type has create, read and update, and the count is derived', (
   const spineNames = tools
     .map((tool) => tool.name)
     .filter((name) => TYPES.some((type) =>
-      ['create', 'read', 'update'].some((verb) => name === `dpm_${verb}_${type}`)));
+      ['create', 'read', 'update'].some((verb) => name === `${verb}_${type}`)));
 
   assert.equal(spineNames.length, TYPES.length * 3);
   assert.equal(TYPES.length, SPINE.length + 1, 'seven spine types plus acceptance_criterion');
@@ -155,7 +156,7 @@ test('every type round-trips from create to its own read tool', (t) => {
   for (const [type, row] of Object.entries(created)) {
     // With the body asked for, since Story 4 made the summary the default — the round-trip is a
     // claim about the whole row, so it has to ask for the whole row.
-    const name = `dpm_read_${type}`;
+    const name = `read_${type}`;
     const { body } = tools.find((tool) => tool.name === name);
     const read = call[name](body.length > 0 ? { id: row.id, include_body: true } : { id: row.id });
 
@@ -169,19 +170,19 @@ test('a read tool named for a kind refuses a document of another kind', (t) => {
   const { call } = surface(t);
   const { spec, epic } = chain(call);
 
-  const error = refused(() => call.dpm_read_spec({ id: epic.id }));
+  const error = refused(() => call.read_spec({ id: epic.id }));
   assert.match(error.message, /is a epic, not a spec/);
 
   // Both controls, because a read that refused everything would pass the assertion above.
-  assert.equal(call.dpm_read_spec({ id: spec.id }).id, spec.id);
-  assert.equal(call.dpm_read_epic({ id: epic.id }).id, epic.id);
+  assert.equal(call.read_spec({ id: spec.id }).id, spec.id);
+  assert.equal(call.read_epic({ id: epic.id }).id, epic.id);
 });
 
 test('reading something that is not there is a refusal, not an empty artefact', (t) => {
   const { call } = surface(t);
   chain(call);
 
-  const error = refused(() => call.dpm_read_task({ id: 'no-such-id' }));
+  const error = refused(() => call.read_task({ id: 'no-such-id' }));
   assert.equal(error.rpc.code, -32602);
   assert.match(error.message, /no task with id 'no-such-id'/);
 });
@@ -192,7 +193,7 @@ test('the requirement create tool refuses a call with no class', (t) => {
   const { call } = surface(t);
   const { spec } = chain(call);
 
-  const error = refused(() => call.dpm_create_requirement({
+  const error = refused(() => call.create_requirement({
     spec_id: spec.id, label: 'NFR3', text: 'a label that names its own class', position: 1,
   }));
 
@@ -201,7 +202,7 @@ test('the requirement create tool refuses a call with no class', (t) => {
 
   // The control: the identical call with `class` supplied is accepted. Without it, a tool that
   // refused every requirement would pass the assertion above.
-  const accepted = call.dpm_create_requirement({
+  const accepted = call.create_requirement({
     spec_id: spec.id, label: 'NFR3', class: 'non_functional', text: 'x', position: 1,
   });
   assert.equal(accepted.class, 'non_functional');
@@ -224,13 +225,13 @@ test('a label of any shape is stored against the class it was given, never one r
   ];
 
   contrary.forEach((pair, index) => {
-    const written = call.dpm_create_requirement({
+    const written = call.create_requirement({
       spec_id: spec.id, ...pair, text: 'contrary', position: index + 10,
     });
 
     assert.equal(written.class, pair.class, `${pair.label} was reclassified`);
     assert.equal(written.label, pair.label, `${pair.label} was rewritten`);
-    assert.equal(call.dpm_read_requirement({ id: written.id }).class, pair.class);
+    assert.equal(call.read_requirement({ id: written.id }).class, pair.class);
   });
 });
 
@@ -240,12 +241,12 @@ test('requirement type distinctions are columns, readable with label and text wi
   const { call } = surface(t);
   const { spec } = chain(call);
 
-  const written = call.dpm_create_requirement({
+  const written = call.create_requirement({
     spec_id: spec.id, label: 'FR9', class: 'environmental_restriction',
     moscow: 'wont', exclusion: 'out_of_scope', text: 'the prose nobody may parse', position: 2,
   });
 
-  const read = call.dpm_read_requirement({ id: written.id });
+  const read = call.read_requirement({ id: written.id });
   delete read.label;
   delete read.text;
 
@@ -257,7 +258,7 @@ test('requirement type distinctions are columns, readable with label and text wi
   // And the read tool says which of its fields are the body, so Story 4's bound is a filter over
   // this shape rather than a change to it.
   assert.deepEqual(spineTools(openPlanningDatabase(t))
-    .find((tool) => tool.name === 'dpm_read_requirement').body, ['text']);
+    .find((tool) => tool.name === 'read_requirement').body, ['text']);
 });
 
 test('criterion polarity is a column on both criterion tables, not a prefix in the text', (t) => {
@@ -270,7 +271,7 @@ test('criterion polarity is a column on both criterion tables, not a prefix in t
   ];
 
   for (const [table, parent] of pairs) {
-    const written = call[`dpm_create_${table}`]({
+    const written = call[`create_${table}`]({
       ...parent,
       // Deliberately without the `must NOT —` prefix the markdown corpus recognised it by.
       text: 'the tool accepts an argument the schema rejects',
@@ -278,13 +279,13 @@ test('criterion polarity is a column on both criterion tables, not a prefix in t
       position: 5,
     });
 
-    const read = call[`dpm_read_${table}`]({ id: written.id });
+    const read = call[`read_${table}`]({ id: written.id });
     delete read.text;
 
     assert.equal(read.polarity, 'must_not', `${table} lost its polarity when text was withheld`);
 
     // The control: the default is the other value, so `must_not` above was stored and not assumed.
-    const plain = call[`dpm_create_${table}`]({ ...parent, text: 'plain', position: 6 });
+    const plain = call[`create_${table}`]({ ...parent, text: 'plain', position: 6 });
     assert.equal(plain.polarity, 'must');
   }
 });
@@ -293,21 +294,21 @@ test('an update that names one field leaves the others alone', (t) => {
   const { call } = surface(t);
   const { requirement } = chain(call);
 
-  const negative = call.dpm_create_acceptance_criterion({
+  const negative = call.create_acceptance_criterion({
     requirement_id: requirement.id, text: 'x', polarity: 'must_not', position: 7,
   });
 
   // `polarity` declares `default: 'must'` in the published schema. If the validator materialised
   // that default rather than merely advertising it, this update would silently reset a must-NOT
   // criterion to a positive one — a data loss with no error and no argument naming it.
-  const moved = call.dpm_update_acceptance_criterion({ id: negative.id, position: 8 });
+  const moved = call.update_acceptance_criterion({ id: negative.id, position: 8 });
 
   assert.equal(moved.polarity, 'must_not');
   assert.equal(moved.position, 8);
 
   // The control: asking for the change does make it.
   assert.equal(
-    call.dpm_update_acceptance_criterion({ id: negative.id, polarity: 'control' }).polarity,
+    call.update_acceptance_criterion({ id: negative.id, polarity: 'control' }).polarity,
     'control',
   );
 });
@@ -316,10 +317,10 @@ test('an update with nothing to change is refused rather than reported as done',
   const { call } = surface(t);
   const { requirement } = chain(call);
 
-  const error = refused(() => call.dpm_update_requirement({ id: requirement.id }));
+  const error = refused(() => call.update_requirement({ id: requirement.id }));
   assert.match(error.message, /nothing to update/);
 
-  assert.equal(call.dpm_update_requirement({ id: requirement.id, moscow: 'should' }).moscow,
+  assert.equal(call.update_requirement({ id: requirement.id, moscow: 'should' }).moscow,
     'should');
 });
 
@@ -330,15 +331,15 @@ test('the boundary refuses what it can see, and names what it refused', (t) => {
   const { spec, story } = chain(call);
 
   const cases = [
-    ['unknown argument', () => call.dpm_create_spec({ slug: 'x', title: 'X', number: 1 }),
+    ['unknown argument', () => call.create_spec({ slug: 'x', title: 'X', number: 1 }),
       /unknown argument 'number'/],
-    ['value outside the CHECK set', () => call.dpm_update_spec({ id: spec.id, status: 'done' }),
+    ['value outside the CHECK set', () => call.update_spec({ id: spec.id, status: 'done' }),
       /must be one of pending, complete — got 'done'/],
-    ['wrong type', () => call.dpm_create_task({
+    ['wrong type', () => call.create_task({
       story_id: story.id, number: 'three', title: 'T', position: 0 }), /must be integer/],
-    ['empty string where a value is needed', () => call.dpm_create_spec({ slug: '', title: 'X' }),
+    ['empty string where a value is needed', () => call.create_spec({ slug: '', title: 'X' }),
       /'slug' must not be empty/],
-    ['a required argument omitted', () => call.dpm_create_story({
+    ['a required argument omitted', () => call.create_story({
       epic_id: 'x', title: 'T', position: 0 }), /'number' is required/],
   ];
 
@@ -356,12 +357,12 @@ test('a constraint only the database can check is still a refusal, not a crash',
 
   // The tool boundary cannot know whether a parent exists or a binding is already taken; the
   // database can. Both must reach the caller as a bad call rather than as a broken server.
-  const missing = refused(() => call.dpm_create_story_criterion({
+  const missing = refused(() => call.create_story_criterion({
     story_id: 'no-such-story', text: 't', position: 0 }));
   assert.equal(missing.rpc.code, -32602);
   assert.match(missing.message, /FOREIGN KEY/);
 
-  const duplicate = refused(() => call.dpm_create_coverage({
+  const duplicate = refused(() => call.create_coverage({
     requirement_id: requirement.id, spec_fragment: coverage.spec_fragment,
     story_criterion_id: story_criterion.id, position: 99,
   }));
@@ -370,24 +371,46 @@ test('a constraint only the database can check is still a refusal, not a crash',
   // Two controls, and they are the pair that proves `position` is display order and no part of
   // identity: a different fragment at any position is accepted, and the same fragment at a
   // different position is not.
-  assert.ok(call.dpm_create_coverage({
+  assert.ok(call.create_coverage({
     requirement_id: requirement.id, spec_fragment: 'with typed columns',
     story_criterion_id: story_criterion.id, position: 99,
   }).id);
 });
 
-test('verification state is set as a pair or refused', (t) => {
-  const { call } = surface(t);
-  const { coverage } = chain(call);
+test('verification is set as a pair, and the hash is the servers rather than the callers', (t) => {
+  const { call, tools } = surface(t);
+  const { coverage, story_criterion } = chain(call);
 
-  const half = refused(() => call.dpm_update_coverage({
-    id: coverage.id, verified_at: '2026-08-08T00:00:00Z' }));
-  assert.match(half.message, /CHECK constraint failed/);
-
-  const whole = call.dpm_update_coverage({
-    id: coverage.id, verified_at: '2026-08-08T00:00:00Z', binding_hash: 'abc' });
+  // The half-set state the `CHECK` used to be the only guard against is now unreachable from the
+  // tool at all: `verified_at` alone completes itself. What was a refusal is the ordinary call.
+  const whole = call.update_coverage({ id: coverage.id, verified_at: '2026-08-08T00:00:00Z' });
   assert.equal(whole.verified_at, '2026-08-08T00:00:00Z');
-  assert.equal(whole.binding_hash, 'abc');
+
+  // Recomputed here from the two bound texts rather than read from `binding.js`, so a change to
+  // what is hashed or to the separator between the halves fails this rather than agreeing with
+  // itself. `is a table` is the fragment `chain` binds.
+  const expected = createHash('sha256')
+    .update(`is a table\\u0000${story_criterion.text}\\u0000`)
+    .digest('hex');
+
+  assert.equal(whole.binding_hash, expected,
+    'the hash is not over the fragment and the criterion text it binds');
+
+  // And the argument is gone from both coverage tools, which is what makes the hash evidence: a
+  // caller who can supply it can supply anything, and the `CHECK` accepts any string at all.
+  for (const name of ['create_coverage', 'update_coverage']) {
+    const tool = tools.find((entry) => entry.name === name);
+
+    assert.ok(!('binding_hash' in tool.inputSchema.properties),
+      `${name} lets the caller choose the digest that vouches for its own claim`);
+  }
+
+  // The other direction, and the reason the hash is read off the stored row: editing the criterion
+  // clears the pair (FR21's trigger), and re-verifying yields a hash over the *new* text.
+  call.update_story_criterion({ id: story_criterion.id, text: 'creating each type writes a row' });
+  const again = call.update_coverage({ id: coverage.id, verified_at: '2026-08-09T00:00:00Z' });
+
+  assert.notEqual(again.binding_hash, expected, 'the ✓ came back over text that had moved');
 });
 
 test('every create tool enforces every argument it declares required', (t) => {
@@ -396,30 +419,30 @@ test('every create tool enforces every argument it declares required', (t) => {
 
   // One valid call per create tool, and then each of its declared required arguments removed in
   // turn. **Written generically after a mutation got through the enumerated version**: dropping
-  // `spec_fragment` from `dpm_create_coverage`'s required list broke nothing, because every test
+  // `spec_fragment` from `create_coverage`'s required list broke nothing, because every test
   // that called it happened to supply one. A `required` entry nothing omits is a declaration, not
   // a constraint — and the gap is per-argument, so only a per-argument sweep closes it.
   const valid = {
-    dpm_create_spec: { slug: 'v', title: 'V' },
-    dpm_create_epic: { parent_id: spec.id, slug: 'v', title: 'V' },
-    dpm_create_requirement: {
+    create_spec: { slug: 'v', title: 'V' },
+    create_epic: { parent_id: spec.id, slug: 'v', title: 'V' },
+    create_requirement: {
       spec_id: spec.id, label: 'FR99', class: 'functional', text: 't', position: 50 },
-    dpm_create_acceptance_criterion: {
+    create_acceptance_criterion: {
       requirement_id: requirement.id, text: 't', position: 50 },
-    dpm_create_story_criterion: { story_id: story.id, text: 't', position: 50 },
-    dpm_create_story: { epic_id: epic.id, number: 50, title: 'V', position: 50 },
-    dpm_create_task: { story_id: story.id, number: 50, title: 'V', position: 50 },
-    dpm_create_coverage: {
+    create_story_criterion: { story_id: story.id, text: 't', position: 50 },
+    create_story: { epic_id: epic.id, number: 50, title: 'V', position: 50 },
+    create_task: { story_id: story.id, number: 50, title: 'V', position: 50 },
+    create_coverage: {
       requirement_id: requirement.id, spec_fragment: 'a distinct fragment',
       story_criterion_id: story_criterion.id, position: 50 },
   };
 
   const { tools } = surface(t);
 
-  // Scoped to the spine's own create tools. `dpm_create_dependency` is Story 3's and is swept by
+  // Scoped to the spine's own create tools. `create_dependency` is Story 3's and is swept by
   // that story's suite, where a valid edge needs two documents to hang off.
   const creates = tools.filter((tool) =>
-    TYPES.some((type) => tool.name === `dpm_create_${type}`));
+    TYPES.some((type) => tool.name === `create_${type}`));
 
   assert.deepEqual(
     Object.keys(valid).sort(),
@@ -462,7 +485,7 @@ test('a column reaching the insert with no value is a refusal, never a bound-par
     spec_fragment: undefined,
     story_criterion_id: story_criterion.id,
     position: 0,
-  }, 'dpm_create_coverage'));
+  }, 'create_coverage'));
 
   assert.ok(error instanceof ToolError, `a ${error.constructor.name} escaped instead`);
   assert.equal(error.rpc.code, -32602);
@@ -475,7 +498,7 @@ test('a column reaching the insert with no value is a refusal, never a bound-par
     spec_fragment: 'present',
     story_criterion_id: story_criterion.id,
     position: 1,
-  }, 'dpm_create_coverage').spec_fragment, 'present');
+  }, 'create_coverage').spec_fragment, 'present');
 });
 
 // --- Numbering ----------------------------------------------------------------------------------
@@ -483,13 +506,13 @@ test('a column reaching the insert with no value is a refusal, never a bound-par
 test('numbers are allocated, never supplied, and child numbering restarts under each parent', (t) => {
   const { call } = surface(t);
 
-  const first = call.dpm_create_spec({ slug: 'one', title: 'One' });
-  const second = call.dpm_create_spec({ slug: 'two', title: 'Two' });
+  const first = call.create_spec({ slug: 'one', title: 'One' });
+  const second = call.create_spec({ slug: 'two', title: 'Two' });
 
   assert.deepEqual([first.number, second.number], [1, 2]);
   assert.equal(first.sequence, null, 'a root-numbered kind stores no sequence');
 
-  const under = (spec, slug) => call.dpm_create_epic({ parent_id: spec.id, slug, title: slug });
+  const under = (spec, slug) => call.create_epic({ parent_id: spec.id, slug, title: slug });
 
   assert.deepEqual([under(first, 'a').sequence, under(first, 'b').sequence], [1, 2]);
   assert.equal(under(second, 'c').sequence, 1, 'every spec restarts its epics at 1');
@@ -498,15 +521,15 @@ test('numbers are allocated, never supplied, and child numbering restarts under 
 
 test('a refused create consumes no number', (t) => {
   const { call } = surface(t);
-  const spec = call.dpm_create_spec({ slug: 'one', title: 'One' });
+  const spec = call.create_spec({ slug: 'one', title: 'One' });
 
   // The order inside the handler is what this asserts: everything that can fail is done before
   // `allocateNumber` runs, so a refusal cannot leave a gap in the sequence. FR5 tolerates a gap —
   // never-reused is the promise, not never-skipped — but a gap per failed call is still a number
   // burnt by a caller's typo, and the ordering that avoids it is easy to lose in a later edit.
-  refused(() => call.dpm_create_epic({ parent_id: spec.id, slug: '', title: 'X' }));
+  refused(() => call.create_epic({ parent_id: spec.id, slug: '', title: 'X' }));
 
-  assert.equal(call.dpm_create_epic({ parent_id: spec.id, slug: 'a', title: 'A' }).sequence, 1);
+  assert.equal(call.create_epic({ parent_id: spec.id, slug: 'a', title: 'A' }).sequence, 1);
 });
 
 test('a child is refused by name when its parent is absent, not by a foreign key', (t) => {
@@ -521,7 +544,7 @@ test('a child is refused by name when its parent is absent, not by a foreign key
   // row, against an insert that fails on a foreign key one step later having already taken a
   // number. The derivation proper becomes falsifiable in Epic 47-05, where `adr` and `retro`
   // have several legal parent kinds and a constant cannot be right for all of them.
-  const error = refused(() => call.dpm_create_epic({
+  const error = refused(() => call.create_epic({
     parent_id: 'no-such-spec', slug: 'x', title: 'X',
   }));
 
@@ -537,7 +560,7 @@ test('created and updated timestamps come from the server, not the caller', (t) 
   assert.equal(spec.created_at, STAMP);
   assert.equal(spec.updated_at, STAMP);
 
-  refused(() => call.dpm_create_spec({ slug: 'x', title: 'X', created_at: '1999-01-01T00:00:00Z' }),
+  refused(() => call.create_spec({ slug: 'x', title: 'X', created_at: '1999-01-01T00:00:00Z' }),
     'the caller was allowed to set its own created_at');
 });
 
@@ -545,7 +568,7 @@ test('created and updated timestamps come from the server, not the caller', (t) 
 
 test('a tool cannot be defined without what the later stories will read from it', () => {
   const ok = {
-    name: 'dpm_create_thing', table: 'thing', description: 'd', reads: ['thing'], mutates: true,
+    name: 'create_thing', table: 'thing', description: 'd', reads: ['thing'], mutates: true,
     inputSchema: { type: 'object', additionalProperties: false, properties: {} },
     handler: () => ({}),
   };
@@ -570,13 +593,13 @@ test('a tool cannot be defined without what the later stories will read from it'
 
   for (const [label, tool] of Object.entries(broken)) refused(() => defineTool(tool), label);
 
-  assert.equal(defineTool(ok).name, 'dpm_create_thing', 'the control still defines');
+  assert.equal(defineTool(ok).name, 'create_thing', 'the control still defines');
 });
 
 test('validation is wrapped on, so a handler cannot receive what the schema forbids', () => {
   let seen;
   const tool = defineTool({
-    name: 'dpm_create_thing', table: 'thing', description: 'd', reads: ['thing'], mutates: true,
+    name: 'create_thing', table: 'thing', description: 'd', reads: ['thing'], mutates: true,
     inputSchema: {
       type: 'object', additionalProperties: false,
       properties: { a: { type: 'string' } }, required: ['a'],
@@ -598,11 +621,11 @@ test('validate refuses arguments that are not an object at all', () => {
   const schema = { type: 'object', additionalProperties: false, properties: {} };
 
   for (const bad of [null, 'string', 42, ['a']]) {
-    const error = refused(() => validate(schema, bad, 'dpm_create_thing'));
+    const error = refused(() => validate(schema, bad, 'create_thing'));
     assert.ok(error instanceof ToolError);
   }
 
-  assert.deepEqual(validate(schema, {}, 'dpm_create_thing'), {});
+  assert.deepEqual(validate(schema, {}, 'create_thing'), {});
 });
 
 // --- Over the protocol --------------------------------------------------------------------------
@@ -615,7 +638,7 @@ test('a tool call comes back as MCP content, and a refusal as a JSON-RPC error',
   const ask = (name, args, id = 1) => dispatch(
     { jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } }, table);
 
-  const answered = ask('dpm_read_spec', { id: spec.id });
+  const answered = ask('read_spec', { id: spec.id });
 
   // `content` is what the protocol requires and what Story 1 could not catch the absence of:
   // with no tools registered, a `tools/call` that never ran was conformant by vacancy.
@@ -631,11 +654,11 @@ test('a tool call comes back as MCP content, and a refusal as a JSON-RPC error',
 
   // A refused call is Invalid params, not Internal error — the difference between telling a
   // caller they got it wrong and telling them the server is broken.
-  assert.equal(ask('dpm_create_requirement', { spec_id: spec.id, label: 'NFR3', text: 't',
+  assert.equal(ask('create_requirement', { spec_id: spec.id, label: 'NFR3', text: 't',
     position: 0 }, 2).error.code, -32602);
 
   // And an unrecognised tool is a different failure again: Method not found.
-  assert.equal(ask('dpm_create_nothing', {}, 3).error.code, -32601);
+  assert.equal(ask('create_nothing', {}, 3).error.code, -32601);
 });
 
 test('every registered tool is listed with the schema a caller is checked against', (t) => {

@@ -22,14 +22,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 
 function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db);
 
-  return { db, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, call: handlers(tools) };
 }
 
 /**
@@ -102,29 +102,29 @@ function agree(db, where) {
 
 /** One row of every indexed type, each carrying a term of its own. */
 function corpus(call) {
-  const spec = call.dpm_create_spec({ slug: 'search', title: 'Search' });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'index', title: 'Index' });
-  const story = call.dpm_create_story({
+  const spec = call.create_spec({ slug: 'search', title: 'Search' });
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'index', title: 'Index' });
+  const story = call.create_story({
     epic_id: epic.id, number: 4, title: 'Index child rows', position: 0,
   });
 
-  const requirement = call.dpm_create_requirement({
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR9', class: 'functional', position: 0,
     text: 'Hand-written text on child rows is indexed, quartzite included.',
   });
 
-  const acceptance_criterion = call.dpm_create_acceptance_criterion({
+  const acceptance_criterion = call.create_acceptance_criterion({
     requirement_id: requirement.id, position: 0,
     text: 'A term held only on a child row is found, hornbeam for instance.',
   });
 
-  const story_criterion = call.dpm_create_story_criterion({
+  const story_criterion = call.create_story_criterion({
     story_id: story.id, position: 0,
     text: 'Every indexed table has three triggers, sarsaparilla notwithstanding.',
   });
 
-  const retro = call.dpm_create_retro({ parent_id: epic.id, slug: 'index', title: 'Index retro' });
-  const observation = call.dpm_create_observation({
+  const retro = call.create_retro({ parent_id: epic.id, slug: 'index', title: 'Index retro' });
+  const observation = call.create_observation({
     retro_id: retro.id, position: 0,
     text: 'The triple is the unit, wolframite.',
     synthesis: 'Enumerate the tables from the schema, malachite.',
@@ -135,15 +135,15 @@ function corpus(call) {
   // covers it: `a || NULL` is NULL in SQLite, so a concatenation without `coalesce` indexes the
   // *empty string* for this row — the whole observation unfindable, no error, and a search that
   // reports success. That is NFR6's false pass, and it survived four tests before this row existed.
-  const ungathered = call.dpm_create_observation({
+  const ungathered = call.create_observation({
     story_id: story.id, position: 1,
     text: 'Written against the story and not yet gathered, siltstone.',
   });
 
-  const review = call.dpm_create_review({
+  const review = call.create_review({
     parent_id: spec.id, slug: 'index', title: 'Review of the index',
   });
-  const finding = call.dpm_create_finding({
+  const finding = call.create_finding({
     review_id: review.id, position: 0,
     category_id: 'finding:testability-concerns', severity_id: 'severity:warning',
     summary: 'A missing delete trigger is invisible to search, cinnabar.',
@@ -208,13 +208,13 @@ test('the tag column scopes a search, and an untagged query spans every table', 
 
   // Every entity carries the same word, so the only thing separating the answers is the tag.
   for (const key of ['requirement', 'acceptance_criterion', 'story_criterion', 'finding']) {
-    call[`dpm_update_${key}`]({
+    call[`update_${key}`]({
       id: rows[key].id,
       [key === 'finding' ? 'summary' : 'text']: `A shared word: basalt. (${key})`,
     });
   }
 
-  call.dpm_update_observation({ id: rows.observation.id, text: 'A shared word: basalt.' });
+  call.update_observation({ id: rows.observation.id, text: 'A shared word: basalt.' });
 
   assert.equal(matched(db, 'basalt').length, 5, 'an untagged query did not span every table');
   assert.deepEqual(matched(db, 'entity:requirement AND basalt'),
@@ -250,13 +250,13 @@ test('editing the indexed column of every type replaces its entry rather than ad
   const { db, call } = surface(t);
   const rows = corpus(call);
 
-  call.dpm_update_requirement({ id: rows.requirement.id, text: 'Now mentions gypsum.' });
-  call.dpm_update_acceptance_criterion({
+  call.update_requirement({ id: rows.requirement.id, text: 'Now mentions gypsum.' });
+  call.update_acceptance_criterion({
     id: rows.acceptance_criterion.id, text: 'Now mentions gypsum.',
   });
-  call.dpm_update_story_criterion({ id: rows.story_criterion.id, text: 'Now mentions gypsum.' });
-  call.dpm_update_observation({ id: rows.observation.id, text: 'Now mentions gypsum.' });
-  call.dpm_update_finding({ id: rows.finding.id, summary: 'Now mentions gypsum.' });
+  call.update_story_criterion({ id: rows.story_criterion.id, text: 'Now mentions gypsum.' });
+  call.update_observation({ id: rows.observation.id, text: 'Now mentions gypsum.' });
+  call.update_finding({ id: rows.finding.id, summary: 'Now mentions gypsum.' });
 
   assert.equal(matched(db, 'gypsum').length, 5);
 
@@ -273,7 +273,7 @@ test('editing an observation synthesis alone still replaces the entry', (t) => {
   const { db, call } = surface(t);
   const rows = corpus(call);
 
-  call.dpm_update_observation({ id: rows.observation.id, synthesis: 'Replaced by feldspar.' });
+  call.update_observation({ id: rows.observation.id, synthesis: 'Replaced by feldspar.' });
 
   // `AFTER UPDATE OF text, synthesis` and not `OF text`: an observation gathered into a retro
   // acquires its synthesis in a second write, which is the common path rather than an edge case.
@@ -291,8 +291,8 @@ test('editing an unindexed column leaves the index untouched', (t) => {
   const before = db.prepare('SELECT rowid, entity, text, entity_id FROM entry_fts '
     + 'ORDER BY rowid').all();
 
-  call.dpm_update_requirement({ id: rows.requirement.id, position: 4 });
-  call.dpm_update_finding({ id: rows.finding.id, status: 'accepted' });
+  call.update_requirement({ id: rows.requirement.id, position: 4 });
+  call.update_finding({ id: rows.finding.id, status: 'accepted' });
 
   assert.deepEqual(
     db.prepare('SELECT rowid, entity, text, entity_id FROM entry_fts ORDER BY rowid').all(),
@@ -329,12 +329,12 @@ test('deleting a spec takes its requirements and their criteria out through two 
   // a document that other documents hang off is refused rather than orphaning them, so `rows.spec`
   // cannot be the subject here while its epic, review and ADR exist. That refusal is asserted
   // below rather than worked around silently.
-  const alone = call.dpm_create_spec({ slug: 'alone', title: 'Alone' });
-  const requirement = call.dpm_create_requirement({
+  const alone = call.create_spec({ slug: 'alone', title: 'Alone' });
+  const requirement = call.create_requirement({
     spec_id: alone.id, label: 'FR1', class: 'functional', position: 0,
     text: 'Prose that goes when its spec does, feldspar.',
   });
-  const criterion = call.dpm_create_acceptance_criterion({
+  const criterion = call.create_acceptance_criterion({
     requirement_id: requirement.id, position: 0,
     text: 'And so does this, gypsum.',
   });

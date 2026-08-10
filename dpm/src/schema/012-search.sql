@@ -19,7 +19,7 @@
 -- **`heading` is indexed and `section_id` is not.** A heading is prose a person wrote that no
 -- other column can find the row by, which is the rule Story 4 applies to the child tables and
 -- there is no reason for this table to apply a different one. `section_id` is carried so a hit
--- resolves to a live row through `dpm_read_document_section` — NFR7's reachability clause — and
+-- resolves to a live row through `read_document_section` — NFR7's reachability clause — and
 -- is `UNINDEXED` because a ULID is not a search term.
 
 CREATE VIRTUAL TABLE document_fts USING fts5(heading, body, section_id UNINDEXED);

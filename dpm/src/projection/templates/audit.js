@@ -36,13 +36,20 @@ export function renderAudit(db, tree, identifiers, where) {
 
     ...(findings.length > 0 ? [
       heading(2, 'Findings'),
-      table(['#', 'Dimension', 'Severity', 'Location', 'Symbol'],
+
+      // **`Recommendation` is a column and not a note under the table**, because the pairing is the
+      // point: a reader asking "what do I do about row 7" is answered on row 7. `Symbol` sits
+      // beside the location it qualifies rather than at the end, so the two citation cells read
+      // together.
+      table(['#', 'Dimension', 'Severity', 'Location', 'Symbol', 'Finding', 'Recommendation'],
         findings.map((finding, index) => [
           index + 1,
           taxonomyLabel(db, finding.dimension_id),
           taxonomyLabel(db, finding.severity_id),
           location(finding),
           finding.symbol ?? '',
+          ref(finding.summary),
+          ref(finding.recommendation ?? ''),
         ])),
     ] : []),
   ]);

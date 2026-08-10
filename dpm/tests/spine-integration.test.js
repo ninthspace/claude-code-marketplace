@@ -130,8 +130,8 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
   // the same file, which is also the only thing here that proves the writes were durable rather
   // than held on a connection.
   const first = await session(t, [
-    callTool(1, 'dpm_create_spec', { slug: 'dpm-persistence', title: 'DPM SQLite persistence' }),
-    callTool(2, 'dpm_create_requirement', {
+    callTool(1, 'create_spec', { slug: 'dpm-persistence', title: 'DPM SQLite persistence' }),
+    callTool(2, 'create_requirement', {
       spec_id: '', label: 'FR3', class: 'functional', position: 0,
       text: 'dpm ships an MCP server whose tool schemas are the write contract.',
     }),
@@ -149,11 +149,11 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
   assert.match(first.error(2).data.message, /must not be empty/);
 
   const second = await session(t, [
-    callTool(1, 'dpm_create_requirement', {
+    callTool(1, 'create_requirement', {
       spec_id: spec.id, label: 'FR3', class: 'functional', position: 0,
       text: 'dpm ships an MCP server whose tool schemas are the write contract.',
     }),
-    callTool(2, 'dpm_create_epic', {
+    callTool(2, 'create_epic', {
       parent_id: spec.id, slug: 'server-and-spine-tools', title: 'Server and spine tools',
     }),
   ], { path: first.path });
@@ -167,7 +167,7 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
   assert.equal(epic.number, null);
 
   const third = await session(t, [
-    callTool(1, 'dpm_create_story', {
+    callTool(1, 'create_story', {
       epic_id: epic.id, number: 8, position: 8, title: 'Verify cross-story integration',
     }),
   ], { path: first.path });
@@ -175,7 +175,7 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
   const story = third.result(1);
 
   const fourth = await session(t, [
-    callTool(1, 'dpm_create_story_criterion', {
+    callTool(1, 'create_story_criterion', {
       story_id: story.id, position: 0, polarity: 'must',
       text: 'A spec, an epic under it, a story and a coverage row all succeed in sequence.',
     }),
@@ -184,7 +184,7 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
   const criterion = fourth.result(1);
 
   const fifth = await session(t, [
-    callTool(1, 'dpm_create_coverage', {
+    callTool(1, 'create_coverage', {
       requirement_id: requirement.id,
       story_criterion_id: criterion.id,
       spec_fragment: 'whose tool schemas are the write contract',
@@ -192,12 +192,12 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
     }),
     // Read every link back through its own read tool, which is the second half of the criterion:
     // "read back consistently through their read tools", not "the inserts returned something".
-    callTool(2, 'dpm_read_spec', { id: spec.id }),
-    callTool(3, 'dpm_read_epic', { id: epic.id }),
-    callTool(4, 'dpm_read_story', { id: story.id }),
-    callTool(5, 'dpm_read_requirement', { id: requirement.id, include_body: true }),
-    callTool(6, 'dpm_read_story_criterion', { id: criterion.id, include_body: true }),
-    callTool(7, 'dpm_list_epic', { parent_id: spec.id }),
+    callTool(2, 'read_spec', { id: spec.id }),
+    callTool(3, 'read_epic', { id: epic.id }),
+    callTool(4, 'read_story', { id: story.id }),
+    callTool(5, 'read_requirement', { id: requirement.id, include_body: true }),
+    callTool(6, 'read_story_criterion', { id: criterion.id, include_body: true }),
+    callTool(7, 'list_epic', { parent_id: spec.id }),
   ], { path: first.path });
 
   const coverage = fifth.result(1);
@@ -234,7 +234,7 @@ test('a spec, an epic, a story, a criterion and a coverage row survive the whole
 
 test('an enum value the CHECK rejects fails at the boundary, and no row is written', async (t) => {
   const first = await session(t, [
-    callTool(1, 'dpm_create_spec', { slug: 's', title: 'S' }),
+    callTool(1, 'create_spec', { slug: 's', title: 'S' }),
   ]);
 
   const spec = first.result(1);
@@ -242,15 +242,15 @@ test('an enum value the CHECK rejects fails at the boundary, and no row is writt
   const run = await session(t, [
     // `environmental` is a plausible near-miss for two of the four real values, which is the
     // shape a caller actually gets wrong.
-    callTool(1, 'dpm_create_requirement', {
+    callTool(1, 'create_requirement', {
       spec_id: spec.id, label: 'ENV1', class: 'environmental', text: 'A rule.', position: 0,
     }),
     // The control: the same call with a value the `CHECK` admits.
-    callTool(2, 'dpm_create_requirement', {
+    callTool(2, 'create_requirement', {
       spec_id: spec.id, label: 'ENV1', class: 'environmental_requirement',
       text: 'A rule.', position: 0,
     }),
-    callTool(3, 'dpm_list_requirement', { spec_id: spec.id }),
+    callTool(3, 'list_requirement', { spec_id: spec.id }),
   ], { path: first.path });
 
   const error = run.error(1);
@@ -314,7 +314,7 @@ test('must NOT — a tool accepts an argument the schema rejects', async (t) => 
 
   // The control: every one of those tools accepts a legitimate call. A registry that refused
   // everything would satisfy the sweep above and be useless.
-  const create = tools.find((tool) => tool.name === 'dpm_create_spec');
+  const create = tools.find((tool) => tool.name === 'create_spec');
 
   assert.ok(create.handler({ slug: 'ok', title: 'OK', status: 'pending' }).id);
 });
@@ -382,7 +382,7 @@ test('every table the registered tools write is readable through a registered to
     .map((row) => row.name));
 
   // `sqlite_schema` is exempt because it is not a row of itself: SQLite's own catalogue does not
-  // list the catalogue, so a tool that reads it — `dpm_check_integrity`, which sweeps every table
+  // list the catalogue, so a tool that reads it — `check_integrity`, which sweeps every table
   // there is — declares a name this query can never return. That is a property of the catalogue,
   // not a tool declaring something that does not exist, and it is the same exemption Story 5's
   // assertion takes.
@@ -411,8 +411,8 @@ test('a session resumed under a new id returns the state written before the resu
   const STATE = JSON.stringify({ step: 3, of: 8, skill: 'cpm:do' });
 
   const first = await session(t, [
-    callTool(1, 'dpm_create_session', { id: 'session-alpha', skill: 'cpm:do', phase: 'story 8' }),
-    callTool(2, 'dpm_update_session', { id: 'session-alpha', phase: 'task 8.1', state: STATE }),
+    callTool(1, 'create_session', { id: 'session-alpha', skill: 'cpm:do', phase: 'story 8' }),
+    callTool(2, 'update_session', { id: 'session-alpha', phase: 'task 8.1', state: STATE }),
   ]);
 
   assert.equal(first.result(1).id, 'session-alpha');
@@ -420,10 +420,10 @@ test('a session resumed under a new id returns the state written before the resu
 
   // What a `--resume` actually looks like: a *new* harness id adopting the previous run's row.
   const second = await session(t, [
-    callTool(1, 'dpm_adopt_session', { id: 'session-beta', predecessor_id: 'session-alpha' }),
-    callTool(2, 'dpm_read_session', { id: 'session-beta', include_body: true }),
-    callTool(3, 'dpm_read_session', { id: 'session-alpha' }),
-    callTool(4, 'dpm_list_session', {}),
+    callTool(1, 'adopt_session', { id: 'session-beta', predecessor_id: 'session-alpha' }),
+    callTool(2, 'read_session', { id: 'session-beta', include_body: true }),
+    callTool(3, 'read_session', { id: 'session-alpha' }),
+    callTool(4, 'list_session', {}),
   ], { path: first.path });
 
   const adopted = second.result(2);
@@ -442,7 +442,7 @@ test('a session resumed under a new id returns the state written before the resu
   // Read withheld by default and returned when asked — the bound Story 4 put on every read,
   // asserted here at the layer a client sees.
   const third = await session(t, [
-    callTool(1, 'dpm_read_session', { id: 'session-beta' }),
+    callTool(1, 'read_session', { id: 'session-beta' }),
   ], { path: first.path });
 
   assert.equal(Object.hasOwn(third.result(1), 'state'), false,

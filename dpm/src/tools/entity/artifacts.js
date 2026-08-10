@@ -27,6 +27,14 @@ export function artifactTools(context) {
         title: { type: 'string', minLength: 1 },
         description: { type: 'string' },
         published_at: { type: 'string', minLength: 1, description: 'ISO 8601' },
+        retired_at: {
+          type: 'string',
+          description: 'ISO 8601; no longer pointed at. Set with a reason. Still readable',
+        },
+        retired_reason: {
+          type: 'string',
+          description: 'Superseded, replaced, or gone — the register answers which',
+        },
       },
       required: ['url', 'title', 'published_at'],
       body: ['description'],

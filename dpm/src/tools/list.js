@@ -3,7 +3,7 @@
  *
  * **Why these exist in this story rather than a later one.** Story 2 and Story 3 built twenty-seven
  * tools and not one of them returns more than a single row: every read is by primary key, and
- * `dpm_check_integrity` is deliberately unbounded (a truncated integrity report is precisely the
+ * `check_integrity` is deliberately unbounded (a truncated integrity report is precisely the
  * false pass NFR6 forbids, and it is excluded here for that reason, not by oversight). FR13's
  * criterion — "every list-returning tool declares a `limit` with a default, and a caller that
  * raises it receives the larger result" — and its must-NOT would both have passed by having
@@ -17,18 +17,18 @@
  *
  * **`body` is copied off the matching read tool, never restated.** A list that withheld a
  * different set of columns from the read of the same type would be two answers to one question,
- * and the pair a caller compares most often is `dpm_list_x` then `dpm_read_x`.
+ * and the pair a caller compares most often is `list_x` then `read_x`.
  */
 
 import { defineTool } from './convention.js';
-import { selectPage } from './query.js';
+import { selectPage, includeFlag } from './query.js';
 
 /**
  * One row per list tool, for the types that are not document kinds. The kinds are derived instead,
  * by `documentLists` below.
  *
  * `fixed` is scoping the tool applies whatever the caller says — `document` holds every kind in one
- * table, and `dpm_list_spec` returning epics would make the type in the name mean nothing, the same
+ * table, and `list_spec` returning epics would make the type in the name mean nothing, the same
  * rule the kind-scoped read tools already hold to.
  *
  * `order` ends in the table's own primary key everywhere — `id` on the spine types, the term itself
@@ -54,9 +54,116 @@ const LISTS = [
     within: 'story_id',
     order: ['position', 'id'],
   },
-  { type: 'story', table: 'story', within: 'epic_id', order: ['number', 'id'] },
+  { type: 'story', table: 'story', within: 'epic_id', gated: 'story', order: ['number', 'id'] },
   { type: 'task', table: 'task', within: 'story_id', order: ['number', 'id'] },
-  { type: 'coverage', table: 'coverage', within: 'requirement_id', order: ['position', 'id'] },
+  // `story_criterion_id` alongside the owner because both directions of the binding are asked for:
+  // `epics` walks a spec's requirements to find gaps, and `do` walks a story's criteria to record
+  // verifications. Without it the second is a sweep of every requirement in the spec, filtered by
+  // the caller — which is a join done in prose.
+  {
+    type: 'coverage',
+    table: 'coverage',
+    within: 'requirement_id',
+    scopes: ['story_criterion_id'],
+    order: ['position', 'id'],
+  },
+
+  // Declared rather than derived, for both of the reasons the derivation cannot reach.
+  //
+  // **The origin scopes.** Derivation takes the first foreign key in column order, which here is
+  // `retro_id` — the grouping. `story_id` and `quick_id` are the two *origins*, and an observation
+  // carries one from the moment `do` or `quick` writes it, which is before any retro exists to
+  // group it under. Without the scopes, "the observations of this story" is an unscoped list
+  // filtered by the caller, and the whole point of the inclusive parentage is that the origin stays
+  // queryable. Two columns rather than one polymorphic pair, because they reference different
+  // tables and the foreign keys are what make each origin checkable.
+  //
+  // **`library_doc_id` is the same argument run backwards, and it is why provenance is an edge
+  // rather than a source line.** A promoted lesson points at the library entry it became; without
+  // the scope, a reader holding the entry can only list every observation and filter — and every
+  // one of them is retired, so the filter has to ask for the retired rows first, which is a caller
+  // reconstructing the query the tool exists to answer. With it, "which observations became this
+  // entry, and which stories did they come from" is one call, and the `→`-joined `**Source**` line
+  // CPM parsed out of prose is replaced by something readable from both ends.
+  //
+  // **`live`.** Retirement on an observation means the lesson is spent or has graduated to the
+  // library, and a retired one must never be offered as a candidate again — that is what stops a
+  // promoted lesson being promoted twice. Left to the caller it is a convention a skill remembers;
+  // here it is the same `WHERE` clause the four vocabularies already get, with `include_retired`
+  // for the reader that wants the audit trail rather than the roster. Provenance is that reader:
+  // a `library_doc_id` scope always wants `include_retired`, because promotion retires in the same
+  // call that sets the link.
+  {
+    type: 'observation',
+    table: 'observation',
+    within: 'retro_id',
+    scopes: ['story_id', 'quick_id', 'library_doc_id'],
+    live: 'retired_at',
+    order: ['position', 'id'],
+  },
+
+  // Declared for `live` alone — the scope and the order are what derivation already produced.
+  //
+  // A section is superseded when a consolidation folds it into one that says it better, and the
+  // amendment stays readable rather than being deleted because it is the record of how the document
+  // came to say what it says. Left to the caller that exclusion is a filter every reader has to
+  // remember, and the readers here are every skill's Library Check — so the one that forgot would
+  // render an amendment beside the body it was already folded into and report a document that
+  // contradicts itself.
+  {
+    type: 'document_section',
+    table: 'document_section',
+    within: 'document_id',
+    live: 'superseded_at',
+    order: ['position', 'id'],
+  },
+
+  // The other direction of the artifact join. Derivation takes the first column of a composite key,
+  // which here is `artifact_id` — "what was this artifact published from". The reverse question,
+  // "what has already been published from this document", is the one a regeneration asks, and it is
+  // asked before the artifact's id is known: a run holding its sources and no artifact has nothing
+  // to scope by. Without it the check is a list of every artifact in the project compared in the
+  // caller, so a project with more artifacts than one page silently mints a second row for a source
+  // set that already has one — an unbounded scan producing a duplicate, which is both halves of what
+  // FR13 and FR2 are for.
+  //
+  // Both ends optional and ANDed, as on `dependency`: the pair is the primary key, so supplying both
+  // is an existence check on one edge, which is what an update-in-place offer needs to be certain of.
+  {
+    type: 'artifact_document',
+    table: 'artifact_document',
+    within: 'artifact_id',
+    scopes: ['document_id'],
+    order: ['artifact_id', 'document_id'],
+  },
+
+  // The edge table, whose scope is named rather than derived — see `UNOWNED` below. Every end is
+  // optional and they AND, so "what blocks this story" is one call and so is "every edge of this
+  // kind". `kind` earns its place here because the ends are present alongside it: on its own it
+  // was the wrong question, which is what deferred this tool.
+  {
+    type: 'dependency',
+    table: 'dependency',
+    scopes: ['kind', 'source_document_id', 'source_story_id',
+      'target_document_id', 'target_story_id'],
+    order: ['id'],
+  },
+
+  // Declared for `live` alone; derivation already lists it unscoped, a table with no foreign key.
+  //
+  // A retired artifact is one this project no longer points anyone at — superseded, replaced, or
+  // gone — and it must stay readable, because "what happened to that page?" is one of the questions
+  // the register exists to answer. That is the vocabularies' rule exactly, and `include_retired` is
+  // what the reader asking the historical question passes.
+  { type: 'artifact', table: 'artifact', live: 'retired_at', order: ['id'] },
+
+  // The kinds themselves, which is the roster `templates` offers a choice from. Every other list
+  // here enumerates rows a project wrote; this one enumerates what a project *can* write, and
+  // without it a skill asking "which kinds are there?" has to carry the thirteen in its own prose —
+  // a list that goes stale the moment a project seeds a fourteenth, with no diagnostic. Ordered on
+  // `kind`, which is the table's primary key, so there is nothing left to tiebreak; two kinds share
+  // a directory (`epic` and `coverage_matrix`), so ordering by `dir` would not be total.
+  { type: 'document_kind', table: 'document_kind', order: ['kind'] },
 
   // The vocabularies. A term is reachable by key without these, and a *roster* is not — FR24's
   // "extensible per project" is only observable if something can enumerate what the project now
@@ -90,22 +197,37 @@ const LISTS = [
  * reading a directory has nothing to call. A hand-kept list here would have to be edited for every
  * kind seeded afterwards, and that is the drift this spec exists to remove.
  *
- * The two shapes follow `numbering`: a root-numbered kind is unique on `number` across the project,
- * and a child-numbered one only within its parent, so the second is scoped and ordered by
- * `sequence`. Both end on `id`, for the tiebreaker reason given above.
+ * **Order follows `numbering`; the parent scope follows parentage, and they are not the same
+ * question.** A root-numbered kind is unique on `number` across the project and a child-numbered
+ * one only within its parent, so the two order differently. But a kind can be root-numbered and
+ * still have a parent — `retro` hangs off an epic, `review` off a spec or an epic, `product_brief`
+ * off a problem brief — and deriving the scope from `numbering` left all three listable only
+ * unscoped. That is not a missing convenience: "the retros of this epic" is how a roll-up finds a
+ * completed epic that has none, and answering it by listing every retro in the project and matching
+ * parents in the run is the join-in-the-caller this file exists to remove. `document_kind_parent`
+ * already says which kinds have parents, so the scope is read from there. Both orders end on `id`,
+ * for the tiebreaker reason given above.
+ *
+ * `live: 'archived_at'` applies to every kind, because archival is on `document` rather than on any
+ * one of them. It is the same clause the vocabularies get and a different word for it — see
+ * `includeFlag`.
  *
  * @param {import('node:sqlite').DatabaseSync} db
  * @returns {object[]}
  */
 function documentLists(db) {
+  const parented = new Set(db.prepare('SELECT DISTINCT kind FROM document_kind_parent').all()
+    .map((row) => row.kind));
+
   return db.prepare('SELECT kind, numbering FROM document_kind ORDER BY kind').all()
     .map(({ kind, numbering }) => ({
       type: kind,
       table: 'document',
       fixed: { kind },
-      ...(numbering === 'child'
-        ? { within: 'parent_id', order: ['sequence', 'id'] }
-        : { order: ['number', 'id'] }),
+      gated: 'document',
+      live: 'archived_at',
+      ...(parented.has(kind) ? { within: 'parent_id' } : {}),
+      order: numbering === 'child' ? ['sequence', 'id'] : ['number', 'id'],
     }));
 }
 
@@ -122,8 +244,14 @@ const PIN = /_(kind|domain)$/;
  * `dependency` is an edge with two ends and four candidate columns, and the rule below would scope
  * it on `kind` — answering "every edge that blocks" where a caller asking for a list of an entity's
  * dependencies means "the edges into this story". A tool that answers a different question from the
- * one its name asks is worse than a missing tool, because the caller has no reason to check. The
- * readiness query is Epic 47-06 Story 3's subject and is where the direction gets decided.
+ * one its name asks is worse than a missing tool, because the caller has no reason to check.
+ *
+ * **It stays exempt from derivation and is declared in `LISTS` instead**, with all four ends
+ * offered separately, so the caller says which question it is asking rather than the schema
+ * guessing. The direction the deferral was waiting on came out the other way from expected:
+ * readiness is not a scoping of this tool at all but a clause on the blocked table's own list —
+ * `ready` on `list_story` and `list_epic`, from `readyClause`. This tool answers the second half,
+ * *why* not, which a boolean cannot.
  */
 const UNOWNED = new Set(['dependency']);
 
@@ -131,7 +259,7 @@ const UNOWNED = new Set(['dependency']);
  * The child and link tables' lists, derived from the schema.
  *
  * **Every read tool is by primary key, so before this existed a child row could be created and
- * never found again.** `dpm_read_observation` needs an id, and nothing answered "the observations
+ * never found again.** `read_observation` needs an id, and nothing answered "the observations
  * of this retro" — so a skill's only route back to a child row was the rendered markdown, which is
  * the one thing FR25 forbids. Nineteen tables were in that state. It is invisible to
  * `dpm/tests/parity.test.js`, which asks whether a table has *a* tool rather than whether its rows
@@ -145,7 +273,7 @@ const UNOWNED = new Set(['dependency']);
  * - **A single `id` takes the first foreign key in column order**, skipping the pins above. That
  *   is the parent in every case here: `observation.retro_id` precedes `story_id`, and
  *   `finding.review_id` precedes the taxonomy references. A table with no foreign key at all —
- *   `artifact` — lists unscoped, which is the same shape `dpm_list_agent` already has.
+ *   `artifact` — lists unscoped, which is the same shape `list_agent` already has.
  *
  * `position` leads the order where the table has one and the key follows it, for the tiebreak
  * reason `LISTS` gives: `position` is unique within a parent and ties across the table.
@@ -158,7 +286,7 @@ function childLists(db, spine) {
   const covered = new Set(['document', ...LISTS.map((entry) => entry.table)]);
 
   const tables = [...new Set(spine
-    .filter((tool) => tool.name.startsWith('dpm_create_'))
+    .filter((tool) => tool.name.startsWith('create_'))
     .map((tool) => tool.table))]
     .filter((table) => !covered.has(table) && !UNOWNED.has(table))
     .sort();
@@ -197,12 +325,12 @@ function childLists(db, spine) {
 export function listTools({ db }, spine) {
   const all = [...documentLists(db), ...LISTS, ...childLists(db, spine)];
 
-  return all.map(({ type, table, fixed = {}, within, live, order }) => {
-    const name = `dpm_list_${type}`;
-    const read = spine.find((tool) => tool.name === `dpm_read_${type}`);
+  return all.map(({ type, table, fixed = {}, within, scopes = [], gated, live, order }) => {
+    const name = `list_${type}`;
+    const read = spine.find((tool) => tool.name === `read_${type}`);
 
     if (!read) {
-      throw new Error(`${name}: there is no dpm_read_${type} to take its body columns from`);
+      throw new Error(`${name}: there is no read_${type} to take its body columns from`);
     }
 
     const owner = within?.replace(/_id$/, '');
@@ -212,7 +340,9 @@ export function listTools({ db }, spine) {
       table,
       description: `List ${type} rows${owner ? `, optionally within one ${owner}` : ''}. `
         + 'Bounded by `limit`, which has a default and no ceiling.'
-        + (live ? ' Retired terms are left out unless `include_retired` asks for them.' : ''),
+        + (gated ? ' `ready` narrows to what can be worked on now.' : '')
+        + (live ? ` Rows with \`${live}\` set are left out unless \`${includeFlag(live)}\` asks `
+          + 'for them.' : ''),
       reads: [table],
       mutates: false,
       body: read.body,
@@ -229,13 +359,36 @@ export function listTools({ db }, spine) {
           ...(within
             ? { [within]: { type: 'string', minLength: 1, description: `Only rows under this ${owner}` } }
             : {}),
-          ...(live
+          // Named scopes AND with each other and with `within`. Absent means unscoped on that
+          // column, the same rule `selectPage` applies to every filter.
+          ...Object.fromEntries(scopes.map((column) => [column, {
+            type: 'string',
+            minLength: 1,
+            description: `Only rows whose ${column} is this`,
+          }])),
+          ...(gated
             ? {
-              include_retired: {
+              ready: {
                 type: 'boolean',
                 default: false,
-                description: 'Include terms that have been retired. They stay readable and stay '
-                  + 'referenced by existing rows; what retirement stops is new rows arriving.',
+                description: 'Only rows that can be worked on now: not complete, and with no '
+                  + 'incomplete blocker over an edge kind whose `gates_work` is set. FR22 — the '
+                  + 'answer comes from the edges, so a blocker completing releases its work '
+                  + 'without anything being restated.',
+              },
+            }
+            : {}),
+          ...(live
+            ? {
+              [includeFlag(live)]: {
+                type: 'boolean',
+                default: false,
+                description: live === 'archived_at'
+                  ? 'Include documents that have been archived. Archival is orthogonal to status — '
+                    + 'an archived document is complete and true, just out of the working set — so '
+                    + 'this is what to pass when the question is the record rather than the work.'
+                  : 'Include terms that have been retired. They stay readable and stay referenced '
+                    + 'by existing rows; what retirement stops is new rows arriving.',
               },
             }
             : {}),
@@ -247,9 +400,14 @@ export function listTools({ db }, spine) {
       handler: (args) => selectPage(db, {
         table,
         order,
+        gated,
         live,
         where: name,
-        filters: { ...fixed, ...(within ? { [within]: args[within] } : {}) },
+        filters: {
+          ...fixed,
+          ...(within ? { [within]: args[within] } : {}),
+          ...Object.fromEntries(scopes.map((column) => [column, args[column]])),
+        },
       }, args),
     });
   });

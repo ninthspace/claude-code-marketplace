@@ -51,43 +51,43 @@ function insertSections(db, documentId, sections) {
  */
 export function fullCorpus(db, call) {
   // --- The spine, through its tools ----------------------------------------------------------
-  const spec = call.dpm_create_spec({ slug: 'persistence', title: 'Artefact persistence' });
-  const epic = call.dpm_create_epic({
+  const spec = call.create_spec({ slug: 'persistence', title: 'Artefact persistence' });
+  const epic = call.create_epic({
     parent_id: spec.id, slug: 'projection', title: 'Projection and guard',
   });
 
-  const requirement = call.dpm_create_requirement({
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR10', class: 'functional', moscow: 'must', position: 0,
     text: `Every kind has a template. Superseded by spec {{ref:${spec.id}}}.`,
   });
 
-  call.dpm_create_acceptance_criterion({
+  call.create_acceptance_criterion({
     requirement_id: requirement.id, text: 'Thirteen kinds, thirteen templates',
     polarity: 'must', position: 0,
   });
 
-  const story = call.dpm_create_story({
+  const story = call.create_story({
     epic_id: epic.id, number: 1, title: 'Write a template for every kind', position: 0,
   });
-  const blocked = call.dpm_create_story({
+  const blocked = call.create_story({
     epic_id: epic.id, number: 2, title: 'Guard the generated tree', position: 1,
   });
 
-  call.dpm_create_task({
+  call.create_task({
     story_id: story.id, number: 1, title: 'Write the templates',
     description: 'One per seeded kind — a | pipe here, on purpose.', position: 0,
   });
 
-  const criterion = call.dpm_create_story_criterion({
+  const criterion = call.create_story_criterion({
     story_id: story.id, text: 'Each kind renders', polarity: 'must', position: 0,
   });
 
-  call.dpm_create_coverage({
+  call.create_coverage({
     requirement_id: requirement.id, spec_fragment: 'Every kind has a template',
     story_criterion_id: criterion.id, position: 0,
   });
 
-  call.dpm_create_dependency({
+  call.create_dependency({
     kind: 'blocks', source_story_id: blocked.id, target_story_id: story.id,
   });
 

@@ -131,7 +131,10 @@ test('a database of all thirteen kinds regenerates byte-identically twice [integ
   const first = project(repo.db, { write: false });
   const second = project(repo.db, { write: false });
 
-  assert.equal(first.written.length + first.inline.length, 13);
+  // Thirteen documents plus the artifact register — see the guard test below for why the register
+  // is counted rather than exempted. Determinism is the claim being made here, and it covers the
+  // register too: its rows are ordered `published_at DESC, id DESC`, which is total.
+  assert.equal(first.written.length + first.inline.length, 14);
   assert.deepEqual(second, first);
 
   // And on disk, which is where the guard will compare them. An in-memory renderer that agreed
@@ -153,7 +156,7 @@ test('a database of all thirteen kinds regenerates byte-identically twice [integ
 test('a commit carrying only a database write is refused until both artefacts regenerate [feature]', (t) => {
   const repo = repository(t);
 
-  repo.call.dpm_create_spec({ slug: 'search', title: 'Search' });
+  repo.call.create_spec({ slug: 'search', title: 'Search' });
 
   // **One artefact regenerated and not the other** — the shape FR7 names second, and the one that
   // reads as current in a prose diff while the committed database is behind it.
@@ -200,7 +203,7 @@ test('a merge that renumbers a spec leaves filenames and cross-references agreei
 
   // The base holds a spec that both branches will point a reference at, so whichever new spec is
   // renumbered, a *different* document's prose names it and has to follow.
-  const anchor = repo.write((db, call) => call.dpm_create_spec({
+  const anchor = repo.write((db, call) => call.create_spec({
     slug: 'persistence', title: 'Artefact persistence',
   }));
 
@@ -208,9 +211,9 @@ test('a merge that renumbers a spec leaves filenames and cross-references agreei
   repo.git('commit', '--quiet', '-m', 'The anchor');
 
   const adds = (slug, title, label) => (db, call) => {
-    const made = call.dpm_create_spec({ slug, title });
+    const made = call.create_spec({ slug, title });
 
-    call.dpm_create_requirement({
+    call.create_requirement({
       spec_id: anchor.id,
       label,
       class: 'functional',
@@ -335,5 +338,12 @@ test('the guard checks every file the projection produces, and says how many', (
   // against the renderer's own output alone.
   assert.deepEqual(checked.diverged, []);
   assert.equal(checked.checked.files, rendered.written.length);
-  assert.equal(checked.checked.files + rendered.inline.length, 13);
+
+  // Thirteen documents and the artifact register, which is the one projected file that is not a
+  // document — `artifact` is a standalone table with no kind, so it cannot come out of the
+  // per-document loop. It is counted here rather than exempted, because the guard covering every
+  // file *except* the register would be the stale-projection false pass one file wide.
+  assert.equal(checked.checked.files + rendered.inline.length, 14);
+  assert.ok(rendered.written.some((file) => file.path === 'docs/artifacts/index.md'),
+    'the register was not among the projected files, so the count moved for another reason');
 });

@@ -39,6 +39,14 @@ const MUTABLE = {
   status_note: { type: 'string', description: 'The free-text qualifier a real epic appends' },
   archived_at: { type: 'string', description: 'ISO 8601; orthogonal to status' },
   commit_sha: { type: 'string' },
+
+  // Waiving a retro. Both or neither — the schema's CHECK refuses one alone, so a run that names a
+  // date without saying why is refused rather than storing a decision with no record of it.
+  retro_waived_at: {
+    type: 'string',
+    description: 'ISO 8601; this document is settled without a retro. Set with a reason',
+  },
+  retro_waived_reason: { type: 'string', description: 'Why no retro is coming' },
 };
 
 /** How a kind is numbered, from the table the column is pinned to. */
@@ -85,13 +93,14 @@ const detailFields = (row) => {
  * @param {object} options
  * @param {string} options.kind A seeded `document_kind.kind` — NFR5 reads tool names against it.
  * @param {object} [options.detail] The AD7 detail table this kind carries, if any:
- *   `{table, fields, required, row}` — `row` maps validated arguments to the detail columns.
+ *   `{table, fields, required, row, guard}` — `row` maps validated arguments to the detail columns,
+ *   and `guard` is an optional rule no constraint can hold, run inside the write's transaction.
  * @returns {object[]}
  */
 export function documentTools({ db, now, newId }, { kind, detail = null }) {
-  const create = `dpm_create_${kind}`;
-  const read = `dpm_read_${kind}`;
-  const modify = `dpm_update_${kind}`;
+  const create = `create_${kind}`;
+  const read = `read_${kind}`;
+  const modify = `update_${kind}`;
 
   // Read once, to shape the schema `tools/list` publishes. The handler reads `numbering` again
   // when it writes, because that column is denormalised onto `document` and pinned by a composite
@@ -205,6 +214,12 @@ export function documentTools({ db, now, newId }, { kind, detail = null }) {
             ...detail.row(args),
           }, create, 'document_id');
 
+          // Run on what was stored rather than on the arguments, and inside the transaction, so a
+          // refusal takes the document row with it. A detail rule reads the row as a whole — the
+          // arguments are a fragment of it on update, and the defaults are not applied to them at
+          // all — so the written row is the only state worth judging.
+          if (detail.guard) detail.guard(db, extra, create);
+
           if (own) db.exec('COMMIT');
 
           return { ...row, ...detailFields(extra) };
@@ -235,7 +250,7 @@ export function documentTools({ db, now, newId }, { kind, detail = null }) {
       handler: (args) => {
         const row = readById(db, 'document', args.id, read);
 
-        // A read tool named for a kind must not answer for another one, or `dpm_read_spec` would
+        // A read tool named for a kind must not answer for another one, or `read_spec` would
         // return an epic quite happily and the type in the name would mean nothing.
         if (row.kind !== kind) {
           throw new Error(`${read}: '${args.id}' is a ${row.kind}, not a ${kind}`);
@@ -269,7 +284,7 @@ export function documentTools({ db, now, newId }, { kind, detail = null }) {
       },
       handler: ({ id, ...changes }) => {
         // Checked before anything is written, and not after. Thirteen kinds now share this table,
-        // so `dpm_update_adr` reaching a spec is an ordinary mistake rather than a remote one —
+        // so `update_adr` reaching a spec is an ordinary mistake rather than a remote one —
         // and a check that ran after the `UPDATE` would refuse the call having already stamped
         // `updated_at` on a document of a kind this tool is not named for.
         const existing = readById(db, 'document', id, modify);
@@ -300,9 +315,17 @@ export function documentTools({ db, now, newId }, { kind, detail = null }) {
             return row;
           }
 
-          const extra = Object.keys(detailChanges).length > 0
+          const touched = Object.keys(detailChanges).length > 0;
+          const extra = touched
             ? update(db, detail.table, id, detailChanges, modify, 'document_id')
             : readById(db, detail.table, id, modify, 'document_id');
+
+          // **Only a call that touched the detail is judged by the detail's rule.** A restore can
+          // put a row in a state this guard forbids, and refusing a title change on the strength of
+          // it would block the edit while leaving the violation exactly where it was. What is
+          // refused is a call that sets the offending state, not a call that happens to arrive
+          // after one.
+          if (detail.guard && touched) detail.guard(db, extra, modify);
 
           if (own) db.exec('COMMIT');
 

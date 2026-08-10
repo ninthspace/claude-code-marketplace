@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
-**Status**: Complete — 25 of 26 matrix rows verified; row 1 is `[target]` and needs a human on a clean clone  
+**Status**: Complete — 24 of 26 matrix rows verified; row 1 is `[target]` and needs a human on a clean clone, and row 14's ✓ was cleared by the pivot of 2026-08-09 when FR29 changed the name pattern it asserts  
 **Blocked by**: Epic 47-01-epic-substrate
 
 **Retro applied**: 33 · Codebase discoveries · Applied — every tool is exercised against a live database as it is written rather than reasoned about, and Story 7's conformance check reads `PRAGMA table_info` / `foreign_key_list` output directly. The same practice found three defects in Epic 47-02 on first execution, each invisible in code that looked correct.  
@@ -161,11 +161,12 @@ The projection — M2's other half — is Epic 47-04.
 **Story**: 5  
 **Status**: Complete — two criteria were amended here; both amendments are recorded below  
 **Blocked by**: Story 2, Story 3  
-**Satisfies**: NFR5, NFR7
+**Satisfies**: NFR5, NFR7  
+**Pivot**: 2026-08-09 — the first criterion's pattern changed from `dpm_[a-z_]{6,}` to `[a-z]{3,}(_[a-z]{3,})+` when FR29 established that the harness supplies the `mcp__dpm__` prefix, so an export carrying `dpm` states the server's identity twice. Coverage row 14's ✓ was cleared with it. The rule this story settled is untouched — every part after the verb is still schema vocabulary, and `check_integrity` still takes the derived exemption. What changed is only the shape of the prefix, and the rename itself is Epic 47-06 Story 0.
 
 **Acceptance Criteria**:
 
-- Every exported tool name matches `dpm_[a-z_]{6,}`, and every part after the verb is a table name, a column name, or a seeded `document_kind.kind` value — checked against the live schema, not against a hand-kept word list. A tool whose declared table is not one of the live tables spans the schema rather than acting on it, and is held to the shape and not to the vocabulary [unit]
+- Every exported tool name matches `[a-z]{3,}(_[a-z]{3,})*`, and every part after the verb is a table name, a column name, or a seeded `document_kind.kind` value — checked against the live schema, not against a hand-kept word list. A tool whose declared table is not one of the live tables spans the schema rather than acting on it, and is held to the shape and not to the vocabulary [unit]
 - Every table a registered tool writes is reachable through at least one read tool, compared in both directions from the tools' own declarations against `sqlite_master` — and the tables no tool reaches yet are named by the same assertion rather than excluded from it [integration]
 - A database whose schema version is ahead of the server still answers read tools rather than refusing to start [integration]
 

@@ -6,6 +6,12 @@
     "name": "Chris Aves"
   },
   "license": "MIT",
+  "mcpServers": {
+    "dpm": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/dpm-mcp.js"]
+    }
+  },
   "keywords": [
     "planning",
     "sqlite",

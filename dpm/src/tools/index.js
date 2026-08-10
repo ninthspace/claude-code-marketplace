@@ -19,6 +19,7 @@ import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
 import { integrityTools } from './cross/integrity.js';
 import { numberingTools } from './cross/numbering.js';
+import { templateTools } from './cross/template.js';
 import { artifactTools } from './entity/artifacts.js';
 import { milestoneTools } from './entity/milestones.js';
 import { reviewRetroTools } from './entity/review-retro.js';
@@ -97,18 +98,45 @@ export function spineTools(db, { now = () => new Date().toISOString(), newId = u
     ...criterionTools(context, {
       table: 'story_criterion', parent: 'story_id', owner: 'story',
     }),
-    ...deliveryTools(context, { table: 'story', parent: 'epic_id' }),
+    ...deliveryTools(context, {
+      table: 'story',
+      parent: 'epic_id',
+      // FR4. CPM appends `[plan]` to the story's `##` heading and reads it back off there; here
+      // `epics` sets a column and `do` asks the story. Declared 0/1 rather than a boolean so the
+      // argument and `CHECK (plan IN (0, 1))` are the same set, which is what AD10's conformance
+      // seam compares — a boolean at the tool boundary would have nothing to check against.
+      extra: {
+        plan: {
+          type: 'integer',
+          enum: [0, 1],
+          default: 0,
+          description: 'whether this story is planned in full before any of its tasks are executed',
+        },
+      },
+    }),
     ...deliveryTools(context, {
       table: 'task',
       parent: 'story_id',
       extra: { description: { type: 'string' } },
     }),
     ...coverageTools(context),
+    // In the spine rather than below with the other cross-entity tools, because `list_dependency`
+    // takes its body columns from `read_dependency` and `listTools` is handed the spine to find
+    // them in. An edge is a create/read pair like any other; what makes it cross-entity is which
+    // tables it points at, not how it is built.
+    ...dependencyTools(context),
     ...reviewRetroTools(context),
     ...artifactTools(context),
     ...milestoneTools(context),
     ...vocabularies(context),
     ...vocabularyJoins(context),
+
+    // FR6's discoverability pair, in the spine rather than below because `list_document_kind` is
+    // derived from `LISTS` and takes its body columns from `read_document_kind` — which has to
+    // exist by the time `listTools` runs. `spineTools` is handed down rather than imported over
+    // there, because the preview seeds its example through the ordinary create tools and an import
+    // would close a cycle back through this module while it is still being built.
+    ...templateTools(context, (scratch) => spineTools(scratch)),
   ];
 
   return [
@@ -128,9 +156,8 @@ export function spineTools(db, { now = () => new Date().toISOString(), newId = u
     // conversion. The epic's Notes carry the reasoning.
     ...sessionTools(context),
 
-    // The three that belong to no single entity: a number, an edge, and the sweep over both.
+    // The two that belong to no single entity: a number, and the sweep over everything.
     ...numberingTools(context),
-    ...dependencyTools(context),
     ...integrityTools(context),
   ];
 }

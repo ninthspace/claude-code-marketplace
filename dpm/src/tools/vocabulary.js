@@ -52,7 +52,7 @@ function vocabularyTools(context, options) {
     ...entityTools(context, options),
 
     defineTool({
-      name: `dpm_retire_${table}`,
+      name: `retire_${table}`,
       table,
       description: `Retire ${noun}. Rows already referencing it stay intact and readable; new `
         + 'rows referencing it are refused. Not reversible through the tools.',
@@ -66,7 +66,7 @@ function vocabularyTools(context, options) {
         required: key,
       },
       handler: (args) => {
-        const where = `dpm_retire_${table}`;
+        const where = `retire_${table}`;
         const identity = Object.fromEntries(key.map((column) => [column, args[column]]));
 
         // Reported rather than silently rewriting the timestamp. Retiring twice is almost always a
@@ -117,7 +117,7 @@ export function vocabularies(context) {
       guard: (args) => {
         if (!args.id.startsWith(`${args.domain}:`)) {
           throw new ToolError(
-            `dpm_create_taxonomy: id '${args.id}' does not begin with '${args.domain}:'. The `
+            `create_taxonomy: id '${args.id}' does not begin with '${args.domain}:'. The `
             + 'seeded terms are keyed that way so a term means the same thing in two databases, '
             + 'and FR24\'s migration channel compares on that key.',
           );

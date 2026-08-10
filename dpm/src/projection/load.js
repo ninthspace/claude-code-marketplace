@@ -36,7 +36,16 @@ import { ancestryOf } from './naming.js';
  * @type {Record<string, {table: string, parent: string, order: string[]}>}
  */
 export const COLLECTIONS = {
-  sections: { table: 'document_section', parent: 'document_id', order: ['position', 'id'] },
+  // `live` is the one optional field, and only this collection has it. A section superseded by a
+  // consolidation stays readable through `list_document_section` with `include_superseded` — the
+  // record of how the document came to say what it says — and must not render, because rendering
+  // it beside the body it was folded into is the duplication the column exists to end. The
+  // exclusion belongs here rather than in a template: it is a fact about which rows *are* the
+  // document, and a per-template filter is a rule seven renderers each have to remember.
+  sections: {
+    table: 'document_section', parent: 'document_id', live: 'superseded_at',
+    order: ['position', 'id'],
+  },
   requirements: { table: 'requirement', parent: 'spec_id', order: ['position', 'id'] },
   criteria: { table: 'acceptance_criterion', parent: 'requirement_id', order: ['position', 'id'] },
   milestones: { table: 'milestone', parent: 'spec_id', order: ['position', 'id'] },
@@ -104,12 +113,14 @@ export const COLLECTIONS = {
  * @returns {object[]}
  */
 export function collection(db, name, parentId) {
-  const { table, parent, order } = COLLECTIONS[name];
+  const { table, parent, order, live } = COLLECTIONS[name] ?? {};
 
   if (!table) throw new Error(`no such projected collection: ${name}`);
 
   return db
-    .prepare(`SELECT * FROM ${table} WHERE ${parent} = ? ORDER BY ${order.join(', ')}`)
+    .prepare(`SELECT * FROM ${table} WHERE ${parent} = ?`
+      + (live ? ` AND ${live} IS NULL` : '')
+      + ` ORDER BY ${order.join(', ')}`)
     .all(parentId)
     .map((row) => ({ ...row }));
 }

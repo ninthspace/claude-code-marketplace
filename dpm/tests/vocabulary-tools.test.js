@@ -19,7 +19,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { renderDocument } from '../src/projection/index.js';
 import { observationsOf } from '../src/projection/load.js';
@@ -28,7 +28,7 @@ function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db);
 
-  return { db, tools, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, tools, call: handlers(tools) };
 }
 
 function refused(run, message) {
@@ -52,14 +52,30 @@ const schemaOf = (db) => db
 
 /** A spec, an epic and a retro on it — what an observation needs to hang off. */
 function retro(call) {
-  const spec = call.dpm_create_spec({ slug: 'vocab', title: 'Vocabularies' });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'terms', title: 'Terms' });
-  const record = call.dpm_create_retro({
+  const spec = call.create_spec({ slug: 'vocab', title: 'Vocabularies' });
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'terms', title: 'Terms' });
+  const record = call.create_retro({
     parent_id: epic.id, slug: 'terms', title: 'Retro on the terms',
   });
 
   return { spec, epic, retro: record };
 }
+
+/**
+ * The tables that carry `retired_at` and are **not** vocabularies, so the retire *verb* does not
+ * apply to them and the update tool is the intended path.
+ *
+ * A vocabulary is a roster something is offered from, and its retire tool exists so that retiring is
+ * one deliberate act with a reason rather than a column an ordinary update could set — or clear. The
+ * two below are neither: an `observation` is a retro lesson that has been spent or has graduated to
+ * the library, retired by `dpm:retro retire` setting the column; an `artifact` is a published page
+ * this project no longer points anyone at, retired by `dpm:artifact` doing the same. Both are
+ * records rather than rosters, and neither is offered as a choice to a run.
+ *
+ * Named here rather than skipped inline so the two checks below cannot drift apart, and so adding a
+ * third is a decision with a place to write the reason down.
+ */
+const NOT_A_VOCABULARY = new Set(['observation', 'artifact']);
 
 /**
  * Every table a term can be retired in, found by the column that makes retirement possible.
@@ -88,7 +104,7 @@ test('a term the plugin never seeded is added and used, and the schema is untouc
 
   // A category CPM's prose does not have and dpm does not seed. This is the append FR24's
   // evolution clause is about: the project has a kind of observation the plugin never anticipated.
-  const term = call.dpm_create_taxonomy({
+  const term = call.create_taxonomy({
     id: 'observation:tooling-friction',
     domain: 'observation',
     name: 'Tooling Friction',
@@ -96,18 +112,18 @@ test('a term the plugin never seeded is added and used, and the schema is untouc
     position: 7,
   });
 
-  const observation = call.dpm_create_observation({
+  const observation = call.create_observation({
     retro_id: record.id, position: 0,
     text: 'The retire tool is a separate verb, and that is why a mistyped update cannot undo one.',
   });
 
-  const attached = call.dpm_create_observation_category({
+  const attached = call.create_observation_category({
     observation_id: observation.id, taxonomy_id: term.id,
   });
 
   assert.equal(attached.taxonomy_id, 'observation:tooling-friction');
   assert.deepEqual(
-    call.dpm_read_observation_category({ observation_id: observation.id, taxonomy_id: term.id }),
+    call.read_observation_category({ observation_id: observation.id, taxonomy_id: term.id }),
     attached,
   );
 
@@ -119,7 +135,7 @@ test('a term the plugin never seeded is added and used, and the schema is untouc
 
   // And it is offered, not merely stored. A term reachable only by the key you already know is
   // not a vocabulary a skill can put in front of anyone.
-  const offered = call.dpm_list_taxonomy({ domain: 'observation', limit: 100 });
+  const offered = call.list_taxonomy({ domain: 'observation', limit: 100 });
 
   assert.ok(offered.items.some((row) => row.id === term.id), 'the added term is not in the roster');
   assert.ok(offered.items.every((row) => row.domain === 'observation'), 'the domain scope leaked');
@@ -129,7 +145,7 @@ test('the domain prefix is required, because it is the key two databases agree o
   const { call } = surface(t);
 
   assert.match(
-    refused(() => call.dpm_create_taxonomy({
+    refused(() => call.create_taxonomy({
       id: 'tooling-friction', domain: 'observation', name: 'Tooling Friction', position: 7,
     })).message,
     /does not begin with 'observation:'/,
@@ -143,18 +159,18 @@ test('an observation carrying two categories appears under both in the projectio
   const { epic, retro: record } = retro(call);
 
   // One seeded term and one the project added, so the pair cannot both be coming from the seed.
-  call.dpm_create_taxonomy({
+  call.create_taxonomy({
     id: 'observation:tooling-friction', domain: 'observation',
     name: 'Tooling Friction', singular: 'Tooling friction', position: 7,
   });
 
-  const observation = call.dpm_create_observation({
+  const observation = call.create_observation({
     retro_id: record.id, position: 0,
     text: 'The join is the requirement: this observation is a testing gap and a tooling one at once.',
   });
 
   for (const taxonomy_id of ['observation:testing-gaps', 'observation:tooling-friction']) {
-    call.dpm_create_observation_category({ observation_id: observation.id, taxonomy_id });
+    call.create_observation_category({ observation_id: observation.id, taxonomy_id });
   }
 
   // The round trip, through the loader the templates use rather than through raw SQL.
@@ -184,7 +200,7 @@ test('an observation carrying two categories appears under both in the projectio
   assert.equal(/ · /.test(single), false);
 
   // Restored, so the epic's own retro of this work does not have to trust the paragraph above.
-  call.dpm_create_observation_category({
+  call.create_observation_category({
     observation_id: observation.id, taxonomy_id: 'observation:tooling-friction',
   });
 
@@ -195,11 +211,11 @@ test('a category from another domain is refused, so the join cannot widen the sc
   const { call } = surface(t);
   const { retro: record } = retro(call);
 
-  const observation = call.dpm_create_observation({
+  const observation = call.create_observation({
     retro_id: record.id, position: 0, text: 'A severity is not a category.',
   });
 
-  refused(() => call.dpm_create_observation_category({
+  refused(() => call.create_observation_category({
     observation_id: observation.id, taxonomy_id: 'severity:warning',
   }), 'a severity was accepted in a category slot');
 });
@@ -211,30 +227,30 @@ test('retiring a taxonomy term, a test approach and a dependency kind spares exi
   const { spec, epic, retro: record } = retro(call);
 
   // One row of each kind, written while every term is live.
-  const observation = call.dpm_create_observation({
+  const observation = call.create_observation({
     retro_id: record.id, position: 0, text: 'Written before the term was retired.',
   });
-  call.dpm_create_observation_category({
+  call.create_observation_category({
     observation_id: observation.id, taxonomy_id: 'observation:testing-gaps',
   });
 
-  const requirement = call.dpm_create_requirement({
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR24', class: 'functional',
     text: 'Vocabularies are seeded, extensible and retirable', position: 0,
   });
-  const criterion = call.dpm_create_acceptance_criterion({
+  const criterion = call.create_acceptance_criterion({
     requirement_id: requirement.id, text: 'a retired term keeps its rows', position: 0,
   });
-  call.dpm_create_criterion_approach({ criterion_id: criterion.id, tag: 'unit' });
+  call.create_criterion_approach({ criterion_id: criterion.id, tag: 'unit' });
 
-  const other = call.dpm_create_epic({ parent_id: spec.id, slug: 'later', title: 'Later' });
-  call.dpm_create_dependency({
+  const other = call.create_epic({ parent_id: spec.id, slug: 'later', title: 'Later' });
+  call.create_dependency({
     kind: 'blocks', source_document_id: epic.id, target_document_id: other.id,
   });
 
-  const retiredTaxonomy = call.dpm_retire_taxonomy({ id: 'observation:testing-gaps' });
-  const retiredApproach = call.dpm_retire_test_approach({ tag: 'unit' });
-  const retiredKind = call.dpm_retire_dependency_kind({ kind: 'blocks' });
+  const retiredTaxonomy = call.retire_taxonomy({ id: 'observation:testing-gaps' });
+  const retiredApproach = call.retire_test_approach({ tag: 'unit' });
+  const retiredKind = call.retire_dependency_kind({ kind: 'blocks' });
 
   for (const row of [retiredTaxonomy, retiredApproach, retiredKind]) {
     assert.ok(row.retired_at, 'the retire tool did not stamp a date');
@@ -243,7 +259,7 @@ test('retiring a taxonomy term, a test approach and a dependency kind spares exi
   // Half one: what already referenced the term is untouched and still readable. A retirement that
   // took its rows with it would be a delete with a gentler name.
   assert.deepEqual(
-    { ...call.dpm_read_observation_category({
+    { ...call.read_observation_category({
       observation_id: observation.id, taxonomy_id: 'observation:testing-gaps',
     }) },
     {
@@ -255,30 +271,30 @@ test('retiring a taxonomy term, a test approach and a dependency kind spares exi
     },
   );
   assert.deepEqual(
-    { ...call.dpm_read_criterion_approach({ criterion_id: criterion.id, tag: 'unit' }) },
+    { ...call.read_criterion_approach({ criterion_id: criterion.id, tag: 'unit' }) },
     { criterion_id: criterion.id, tag: 'unit' },
   );
-  assert.equal(call.dpm_list_requirement({ spec_id: spec.id }).returned, 1);
+  assert.equal(call.list_requirement({ spec_id: spec.id }).returned, 1);
 
   // Half two: nothing new may arrive against any of the three. Both halves, on every one of them,
   // because each can pass while the other fails — a term that kept its rows and accepted new ones
   // is not retired, and one that refused new rows by cascading the old ones away is worse.
-  const second = call.dpm_create_observation({
+  const second = call.create_observation({
     retro_id: record.id, position: 1, text: 'Written after.',
   });
 
-  refused(() => call.dpm_create_observation_category({
+  refused(() => call.create_observation_category({
     observation_id: second.id, taxonomy_id: 'observation:testing-gaps',
   }), 'a retired category accepted a new row');
 
-  const later = call.dpm_create_acceptance_criterion({
+  const later = call.create_acceptance_criterion({
     requirement_id: requirement.id, text: 'and refuses new ones', position: 1,
   });
 
-  refused(() => call.dpm_create_criterion_approach({ criterion_id: later.id, tag: 'unit' }),
+  refused(() => call.create_criterion_approach({ criterion_id: later.id, tag: 'unit' }),
     'a retired test approach accepted a new row');
 
-  refused(() => call.dpm_create_dependency({
+  refused(() => call.create_dependency({
     kind: 'blocks', source_document_id: other.id, target_document_id: epic.id,
   }), 'a retired dependency kind accepted a new edge');
 });
@@ -286,28 +302,28 @@ test('retiring a taxonomy term, a test approach and a dependency kind spares exi
 test('a retired term drops out of the roster and stays readable by key', (t) => {
   const { call } = surface(t);
 
-  call.dpm_retire_test_approach({ tag: 'unit' });
+  call.retire_test_approach({ tag: 'unit' });
 
-  const offered = call.dpm_list_test_approach({ limit: 100 }).items.map((row) => row.tag);
+  const offered = call.list_test_approach({ limit: 100 }).items.map((row) => row.tag);
 
   assert.equal(offered.includes('unit'), false, 'a retired approach is still being offered');
   assert.ok(offered.length > 0, 'the roster emptied rather than losing one term');
 
   // Readable by key, and visible on request. Retirement is not a delete, and a projection that
   // has to render a row written years ago still needs the term's display form.
-  assert.ok(call.dpm_read_test_approach({ tag: 'unit' }).retired_at);
-  assert.ok(call.dpm_list_test_approach({ include_retired: true, limit: 100 })
+  assert.ok(call.read_test_approach({ tag: 'unit' }).retired_at);
+  assert.ok(call.list_test_approach({ include_retired: true, limit: 100 })
     .items.some((row) => row.tag === 'unit'));
 });
 
 test('retiring twice is reported rather than silently moving the date', (t) => {
   const { call } = surface(t);
 
-  const first = call.dpm_retire_dependency_kind({ kind: 'supersedes' });
-  const again = refused(() => call.dpm_retire_dependency_kind({ kind: 'supersedes' }));
+  const first = call.retire_dependency_kind({ kind: 'supersedes' });
+  const again = refused(() => call.retire_dependency_kind({ kind: 'supersedes' }));
 
   assert.match(again.message, /already retired at/);
-  assert.equal(call.dpm_read_dependency_kind({ kind: 'supersedes' }).retired_at, first.retired_at);
+  assert.equal(call.read_dependency_kind({ kind: 'supersedes' }).retired_at, first.retired_at);
 });
 
 test('retirement is not offered as a column an update can set or clear', (t) => {
@@ -317,8 +333,8 @@ test('retirement is not offered as a column an update can set or clear', (t) => 
   // Scoped to the tables that have a retire *verb*, and derived rather than listed. `observation`
   // also carries `retired_at` and is deliberately not among them: a spent retro lesson is retired
   // by `cpm:retro retire` setting the column, and there the update tool is the intended path.
-  const withVerb = tools.filter((tool) => tool.name.startsWith('dpm_update_')
-    && named.has(tool.name.replace('dpm_update_', 'dpm_retire_')));
+  const withVerb = tools.filter((tool) => tool.name.startsWith('update_')
+    && named.has(tool.name.replace('update_', 'retire_')));
 
   assert.equal(withVerb.length, 4, 'the four vocabularies did not all get an update tool');
 
@@ -329,7 +345,7 @@ test('retirement is not offered as a column an update can set or clear', (t) => 
 
   // And the refusal a caller actually meets, rather than only the absence from the schema.
   assert.match(
-    refused(() => call.dpm_update_agent({ name: 'pm', retired_at: null })).message,
+    refused(() => call.update_agent({ name: 'pm', retired_at: null })).message,
     /unknown argument/,
   );
 });
@@ -343,15 +359,14 @@ test('every retirable table has a create tool and a retire tool, enumerated from
 
   // The control. Without it an enumeration that found nothing would pass, which is the shape the
   // must-NOT would take if `retired_at` were ever renamed.
-  assert.deepEqual(tables, ['agent', 'dependency_kind', 'observation', 'taxonomy', 'test_approach']);
+  assert.deepEqual(tables,
+    ['agent', 'artifact', 'dependency_kind', 'observation', 'taxonomy', 'test_approach']);
 
   for (const table of tables) {
-    // `observation` carries `retired_at` and is not a vocabulary — an observation is retired as a
-    // lesson that has been spent, by `cpm:retro retire`, and its tool is the update that sets it.
-    if (table === 'observation') continue;
+    if (NOT_A_VOCABULARY.has(table)) continue;
 
-    assert.ok(named.has(`dpm_create_${table}`), `${table} is seeded and cannot be extended`);
-    assert.ok(named.has(`dpm_retire_${table}`), `${table} is extensible and cannot be retired`);
+    assert.ok(named.has(`create_${table}`), `${table} is seeded and cannot be extended`);
+    assert.ok(named.has(`retire_${table}`), `${table} is extensible and cannot be retired`);
   }
 });
 
@@ -361,11 +376,11 @@ test('a vocabulary whose retire tool is missing is named by the enumeration', (t
   // The must-NOT driven through the check: the state it forbids, built by removing one tool.
   const without = new Set(tools
     .map((tool) => tool.name)
-    .filter((name) => name !== 'dpm_retire_dependency_kind'));
+    .filter((name) => name !== 'retire_dependency_kind'));
 
   const unretirable = retirable(db)
-    .filter((table) => table !== 'observation')
-    .filter((table) => without.has(`dpm_create_${table}`) && !without.has(`dpm_retire_${table}`));
+    .filter((table) => !NOT_A_VOCABULARY.has(table))
+    .filter((table) => without.has(`create_${table}`) && !without.has(`retire_${table}`));
 
   assert.deepEqual(unretirable, ['dependency_kind']);
 
@@ -374,8 +389,8 @@ test('a vocabulary whose retire tool is missing is named by the enumeration', (t
 
   assert.deepEqual(
     retirable(db)
-      .filter((table) => table !== 'observation')
-      .filter((table) => named.has(`dpm_create_${table}`) && !named.has(`dpm_retire_${table}`)),
+      .filter((table) => !NOT_A_VOCABULARY.has(table))
+      .filter((table) => named.has(`create_${table}`) && !named.has(`retire_${table}`)),
     [],
   );
 });
@@ -386,12 +401,12 @@ test('a persona the plugin never shipped joins the roster in position order', (t
   const { db, call } = surface(t);
 
   const before = schemaOf(db);
-  const seeded = call.dpm_list_agent({ limit: 100 }).items.map((row) => row.name);
+  const seeded = call.list_agent({ limit: 100 }).items.map((row) => row.name);
 
   assert.ok(seeded.length >= 8, 'the seeded roster is smaller than the plugin ships');
   assert.equal(seeded.includes('archivist'), false);
 
-  call.dpm_create_agent({
+  call.create_agent({
     name: 'archivist',
     display_name: 'Wren',
     icon: '🗄️',
@@ -401,7 +416,7 @@ test('a persona the plugin never shipped joins the roster in position order', (t
     position: 3,
   });
 
-  const roster = call.dpm_list_agent({ limit: 100 }).items;
+  const roster = call.list_agent({ limit: 100 }).items;
 
   // Appended — not replacing the ten, which is the operation `agents/roster.yaml` cannot express:
   // a file is overridden whole, so adding one persona means forking all of them and maintaining
@@ -422,25 +437,25 @@ test('a persona the plugin never shipped joins the roster in position order', (t
   assert.equal(schemaOf(db), before);
 
   // The body split holds here too, so a roster listing does not carry two paragraphs per persona.
-  const summary = call.dpm_list_agent({ limit: 100 }).items[0];
+  const summary = call.list_agent({ limit: 100 }).items[0];
 
   assert.equal(Object.hasOwn(summary, 'personality'), false);
-  assert.ok(call.dpm_read_agent({ name: 'archivist', include_body: true }).personality);
+  assert.ok(call.read_agent({ name: 'archivist', include_body: true }).personality);
 });
 
 test('a retired persona leaves the roster and its past attributions still resolve', (t) => {
   const { db, call } = surface(t);
 
-  const spec = call.dpm_create_spec({ slug: 'roster', title: 'Roster' });
-  const review = call.dpm_create_review({
+  const spec = call.create_spec({ slug: 'roster', title: 'Roster' });
+  const review = call.create_review({
     parent_id: spec.id, slug: 'reads', title: 'Review of the reads',
   });
 
-  call.dpm_create_review_agent({ document_id: review.id, agent: 'pm' });
-  call.dpm_retire_agent({ name: 'pm' });
+  call.create_review_agent({ document_id: review.id, agent: 'pm' });
+  call.retire_agent({ name: 'pm' });
 
   assert.equal(
-    call.dpm_list_agent({ limit: 100 }).items.some((row) => row.name === 'pm'),
+    call.list_agent({ limit: 100 }).items.some((row) => row.name === 'pm'),
     false,
     'a retired persona is still being offered for new work',
   );

@@ -15,6 +15,7 @@
  * with their own tools, because there may be any number of them or none.
  */
 
+import { ToolError } from '../convention.js';
 import { entityTools } from '../entity.js';
 
 /** `adr.decision_status`'s `CHECK` set, copied by hand from `002-detail.sql`. */
@@ -46,6 +47,33 @@ export const DETAIL = {
       decision_status: args.decision_status ?? 'proposed',
       decision: args.decision,
     }),
+
+    // **An ADR becomes `accepted` only once exactly one of its options is chosen.** This is the
+    // half of integrity register entry 8 that `adr_option`'s own guard cannot reach: zero chosen
+    // options is not a fact about any option, so nothing on the option side is in a position to
+    // refuse it. Here it is, because this is where the ADR takes the status the invariant is
+    // conditioned on.
+    //
+    // It follows that a `create_adr` call cannot carry `accepted` — an ADR has no options at the
+    // moment it is created. That is the intended shape rather than a side effect: a decision is
+    // recorded as `proposed`, its options are explored, one is chosen, and the promotion is the
+    // separate act. The register check stays either way, because a restore writes rows without
+    // passing through any of this.
+    guard: (db, row, where) => {
+      if (row.decision_status !== 'accepted') return;
+
+      const { chosen } = db
+        .prepare('SELECT COUNT(*) AS chosen FROM adr_option WHERE adr_id = ? AND chosen = 1')
+        .get(row.document_id);
+
+      if (chosen === 1) return;
+
+      throw new ToolError(
+        `${where}: ADR '${row.document_id}' has ${chosen} chosen options — an accepted ADR has `
+        + 'exactly one, so choose an option before accepting the decision (integrity register '
+        + 'entry 8)',
+      );
+    },
   },
 
   review: {
@@ -99,6 +127,8 @@ export const DETAIL = {
  * @returns {object[]}
  */
 export function detailChildTools(context) {
+  const { db } = context;
+
   return [
     ...entityTools(context, {
       table: 'adr_option',
@@ -106,13 +136,57 @@ export function detailChildTools(context) {
       fields: {
         adr_id: { type: 'string', minLength: 1, description: 'the ADR this option belongs to' },
         name: { type: 'string', minLength: 1 },
-        chosen: { type: 'boolean', default: false, description: 'exactly one option should be' },
+        chosen: { type: 'boolean', default: false, description: 'exactly one option may be' },
         rationale: { type: 'string' },
         position: { type: 'integer', minimum: 0 },
       },
       required: ['adr_id', 'name', 'position'],
       mutable: ['name', 'chosen', 'rationale', 'position'],
       body: ['rationale'],
+
+      // **The option side of integrity register entry 8.** `chosen` is a column on the option and
+      // the rule is about the set, so no `CHECK` can hold it. Refusing it here means a run cannot
+      // create the state; the register keeps its own copy of the rule for what a restore brings in.
+      //
+      // Two refusals, and the second is the one that is easy to miss. Choosing a second option is
+      // the obvious violation. *Un*choosing the only one is the same violation arrived at from the
+      // other side, and an ADR that has already been accepted is left with none — so the count is
+      // taken over the set this write would leave behind rather than over the row in hand.
+      //
+      // A `proposed` ADR may have no chosen option, which is what being proposed means. The
+      // symmetric refusal for promoting such an ADR to `accepted` lives on `DETAIL.adr` above,
+      // because zero chosen options is not a fact about any option and no guard here could see it.
+      // **Each refusal names a remedy that works from where the caller is standing.** On an
+      // accepted ADR every single-step fix is itself refused — unsetting the choice leaves none,
+      // setting another leaves two — so the only route through is to move the decision back to
+      // `proposed`. The accepted case is therefore tested first, or the caller is handed advice
+      // that fails on the next call.
+      guard: (row, where) => {
+        const chosen = Number(row.chosen) === 1;
+        const others = db
+          .prepare('SELECT * FROM adr_option WHERE adr_id = ? AND chosen = 1 AND id <> ?')
+          .all(row.adr_id, row.id);
+        const adr = db
+          .prepare('SELECT decision_status FROM adr WHERE document_id = ?')
+          .get(row.adr_id);
+        const total = others.length + (chosen ? 1 : 0);
+
+        if (adr?.decision_status === 'accepted' && total !== 1) {
+          throw new ToolError(
+            `${where}: ADR '${row.adr_id}' is accepted and this would leave it with ${total} `
+            + 'chosen options — an accepted ADR has exactly one. Move the decision back to '
+            + 'proposed, change the choice there, and accept it again (integrity register entry 8)',
+          );
+        }
+
+        if (chosen && others.length > 0) {
+          throw new ToolError(
+            `${where}: '${others[0].name}' is already the chosen option of ADR '${row.adr_id}' — `
+            + 'an ADR has one chosen option, so unset that one before choosing another (integrity '
+            + 'register entry 8)',
+          );
+        }
+      },
     }),
 
     ...entityTools(context, {

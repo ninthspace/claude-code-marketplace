@@ -10,13 +10,13 @@
  *
  * **Every hit names its entity and its row id, and that is asserted by using them.** A test that
  * checked the two fields were present would pass on a hit naming an entity whose read tool refuses
- * the id — NFR7's must-NOT, and the reason the sweep here calls `dpm_read_<entity>` on every hit
+ * the id — NFR7's must-NOT, and the reason the sweep here calls `read_<entity>` on every hit
  * rather than inspecting its shape.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { DEFAULT_LIMIT } from '../src/tools/convention.js';
 
@@ -24,7 +24,7 @@ function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db);
 
-  return { db, tools, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, tools, call: handlers(tools) };
 }
 
 function refused(run, message) {
@@ -47,42 +47,42 @@ function refused(run, message) {
  * search spanning rather than merely finding.
  */
 function corpus(call) {
-  const spec = call.dpm_create_spec({ slug: 'search', title: 'Search' });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'find', title: 'Find' });
-  const story = call.dpm_create_story({
+  const spec = call.create_spec({ slug: 'search', title: 'Search' });
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'find', title: 'Find' });
+  const story = call.create_story({
     epic_id: epic.id, number: 5, title: 'Search', position: 0,
   });
 
-  const section = call.dpm_create_document_section({
+  const section = call.create_document_section({
     document_id: spec.id, heading: 'Coverage', position: 0,
     body: 'A section body mentioning the coverage helpers, and the word sandstone.',
   });
 
-  const requirement = call.dpm_create_requirement({
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR9', class: 'functional', position: 0,
     text: 'Which requirement mentioned the coverage helpers — the word here is limestone.',
   });
 
-  const acceptance_criterion = call.dpm_create_acceptance_criterion({
+  const acceptance_criterion = call.create_acceptance_criterion({
     requirement_id: requirement.id, position: 0,
     text: 'The helpers are found from a criterion too, marlstone.',
   });
 
-  const story_criterion = call.dpm_create_story_criterion({
+  const story_criterion = call.create_story_criterion({
     story_id: story.id, position: 0,
     text: 'And from a story criterion, greywacke, with the helpers.',
   });
 
-  const retro = call.dpm_create_retro({ parent_id: epic.id, slug: 'find', title: 'Find retro' });
-  const observation = call.dpm_create_observation({
+  const retro = call.create_retro({ parent_id: epic.id, slug: 'find', title: 'Find retro' });
+  const observation = call.create_observation({
     retro_id: retro.id, position: 0,
     text: 'An observation about the helpers, mudstone.',
   });
 
-  const review = call.dpm_create_review({
+  const review = call.create_review({
     parent_id: spec.id, slug: 'find', title: 'Review of search',
   });
-  const finding = call.dpm_create_finding({
+  const finding = call.create_finding({
     review_id: review.id, position: 0,
     category_id: 'finding:testability-concerns', severity_id: 'severity:warning',
     summary: 'A finding about the helpers, siltstone.',
@@ -102,7 +102,7 @@ test('a search returns ranked hits, best first, from both indexes at once', (t) 
   const { call } = surface(t);
   const rows = corpus(call);
 
-  const page = call.dpm_search({ query: 'helpers' });
+  const page = call.search({ query: 'helpers' });
 
   assert.equal(page.returned, 6, 'a hit is missing, or one index was not queried');
   assert.deepEqual(ids(page), [
@@ -129,9 +129,9 @@ test('a row written in the same call sequence is searchable immediately', (t) =>
   const { call } = surface(t);
   const rows = corpus(call);
 
-  assert.deepEqual(call.dpm_search({ query: 'anorthosite' }).items, []);
+  assert.deepEqual(call.search({ query: 'anorthosite' }).items, []);
 
-  const late = call.dpm_create_requirement({
+  const late = call.create_requirement({
     spec_id: rows.spec.id, label: 'FR99', class: 'functional', position: 1,
     text: 'Written after the first search: anorthosite.',
   });
@@ -139,12 +139,12 @@ test('a row written in the same call sequence is searchable immediately', (t) =>
   // FR9's own clause. The index is maintained by triggers rather than by a reindex step, so there
   // is no moment at which the data is ahead of the index — the failure this rules out is the one
   // that returns a result set missing the thing just written *and reports success*.
-  assert.deepEqual(ids(call.dpm_search({ query: 'anorthosite' })), [`requirement:${late.id}`]);
+  assert.deepEqual(ids(call.search({ query: 'anorthosite' })), [`requirement:${late.id}`]);
 
   // The same for an edit and for a delete, since a stale index fails all three ways.
-  call.dpm_update_requirement({ id: late.id, text: 'Rewritten: charnockite.' });
-  assert.deepEqual(call.dpm_search({ query: 'anorthosite' }).items, []);
-  assert.deepEqual(ids(call.dpm_search({ query: 'charnockite' })), [`requirement:${late.id}`]);
+  call.update_requirement({ id: late.id, text: 'Rewritten: charnockite.' });
+  assert.deepEqual(call.search({ query: 'anorthosite' }).items, []);
+  assert.deepEqual(ids(call.search({ query: 'charnockite' })), [`requirement:${late.id}`]);
 });
 
 // --- Criterion 2: a term only on a child row, and a hit that resolves ---------------------------
@@ -155,7 +155,7 @@ test('a term held only in a requirement text is found by an unscoped search', (t
 
   // `limestone` appears in no section body. This is the spec's example: a search that covered
   // `document_section` alone would return nothing here and report success.
-  const page = call.dpm_search({ query: 'limestone' });
+  const page = call.search({ query: 'limestone' });
 
   assert.deepEqual(ids(page), [`requirement:${rows.requirement.id}`]);
   assert.equal(page.items[0].entity, 'requirement');
@@ -167,7 +167,7 @@ test('every hit resolves to a live row through its own entity read tool', (t) =>
 
   corpus(call);
 
-  const page = call.dpm_search({ query: 'helpers' });
+  const page = call.search({ query: 'helpers' });
 
   assert.equal(page.returned, 6);
 
@@ -175,7 +175,7 @@ test('every hit resolves to a live row through its own entity read tool', (t) =>
   // a hit naming an entity whose read tool refuses the id is a search that answers a question and
   // withholds the answer, and it looks identical to a working one from the outside.
   for (const hit of page.items) {
-    const read = call[`dpm_read_${hit.entity}`];
+    const read = call[`read_${hit.entity}`];
 
     assert.ok(read, `nothing reads '${hit.entity}', so the hit names an entity a caller cannot open`);
     assert.equal(read({ id: hit.entity_id }).id, hit.entity_id);
@@ -186,27 +186,27 @@ test('an entity: term scopes a search, and an unknown one is refused rather than
   const { call } = surface(t);
   const rows = corpus(call);
 
-  assert.deepEqual(ids(call.dpm_search({ query: 'entity:requirement AND helpers' })),
+  assert.deepEqual(ids(call.search({ query: 'entity:requirement AND helpers' })),
     [`requirement:${rows.requirement.id}`]);
-  assert.deepEqual(ids(call.dpm_search({ query: 'entity:finding AND helpers' })),
+  assert.deepEqual(ids(call.search({ query: 'entity:finding AND helpers' })),
     [`finding:${rows.finding.id}`]);
 
   // The section index has no `entity` column, so this scope is answered by removing the term and
   // querying `document_fts` alone — not by passing it through, which FTS5 rejects outright.
-  assert.deepEqual(ids(call.dpm_search({ query: 'entity:document_section AND helpers' })),
+  assert.deepEqual(ids(call.search({ query: 'entity:document_section AND helpers' })),
     [`document_section:${rows.section.id}`]);
 
   // An unknown scope is the false pass in miniature: FTS5 answers `entity:tsak AND helpers` with
   // an empty set, which reads as "nothing matched" and is really "you named nothing".
-  assert.match(refused(() => call.dpm_search({ query: 'entity:tsak AND helpers' })).message,
+  assert.match(refused(() => call.search({ query: 'entity:tsak AND helpers' })).message,
     /nothing indexes 'tsak'/);
 
   // And the two shapes that would make the tool mean different things over its two indexes: a
   // disjunctive scope, which only `entry_fts` could express, and a scope with nothing to search
   // for, which `document_fts` could not run at all once the term was lifted out.
-  assert.match(refused(() => call.dpm_search({ query: 'entity:requirement OR helpers' })).message,
+  assert.match(refused(() => call.search({ query: 'entity:requirement OR helpers' })).message,
     /Scoping is conjunctive/);
-  assert.match(refused(() => call.dpm_search({ query: 'entity:requirement' })).message,
+  assert.match(refused(() => call.search({ query: 'entity:requirement' })).message,
     /gives nothing to search for/);
 });
 
@@ -217,7 +217,7 @@ test('a search covering sections alone misses five of the six, and says nothing 
 
   corpus(call);
 
-  // The must-NOT built rather than described. This is the query `dpm_search` would run if it read
+  // The must-NOT built rather than described. This is the query `search` would run if it read
   // one index — the shape the requirement exists to forbid.
   const sectionsOnly = db
     .prepare("SELECT section_id FROM document_fts WHERE document_fts MATCH 'helpers'")
@@ -227,7 +227,7 @@ test('a search covering sections alone misses five of the six, and says nothing 
 
   // It returns. It is not empty. It is ranked. And it is missing five of the six answers, which is
   // exactly why "the tool reports success" is in the must-NOT's wording.
-  assert.equal(call.dpm_search({ query: 'helpers' }).returned, 6);
+  assert.equal(call.search({ query: 'helpers' }).returned, 6);
 
   // The other direction, and the one that makes it a must-NOT rather than an inequality: for
   // `limestone` the one-index search returns *nothing at all* and would have to report that as no
@@ -237,26 +237,26 @@ test('a search covering sections alone misses five of the six, and says nothing 
       .get().rows,
     0,
   );
-  assert.equal(call.dpm_search({ query: 'limestone' }).returned, 1);
+  assert.equal(call.search({ query: 'limestone' }).returned, 1);
 });
 
 // --- The bound, on the shape that has no table -------------------------------------------------
 
 test('pages of search results tile the match exactly once, in a stable order', (t) => {
   const { call } = surface(t);
-  const spec = call.dpm_create_spec({ slug: 'many', title: 'Many' });
+  const spec = call.create_spec({ slug: 'many', title: 'Many' });
   const total = DEFAULT_LIMIT + 7;
 
   // Requirements and sections in equal measure, so the walk crosses both indexes rather than
   // paging one of them and appending the other.
   for (let index = 0; index < total; index += 1) {
     if (index % 2 === 0) {
-      call.dpm_create_requirement({
+      call.create_requirement({
         spec_id: spec.id, label: `FR${index}`, class: 'functional', position: index,
         text: `tourmaline requirement ${index}`,
       });
     } else {
-      call.dpm_create_document_section({
+      call.create_document_section({
         document_id: spec.id, heading: `Section ${index}`, position: index,
         body: `tourmaline section ${index}`,
       });
@@ -267,7 +267,7 @@ test('pages of search results tile the match exactly once, in a stable order', (
   const size = 10;
 
   for (let offset = 0; offset < total + size; offset += size) {
-    const page = call.dpm_search({ query: 'tourmaline', limit: size, offset });
+    const page = call.search({ query: 'tourmaline', limit: size, offset });
 
     seen.push(...page.items.map((hit) => `${hit.entity}:${hit.entity_id}`));
     if (!page.more) break;
@@ -279,7 +279,7 @@ test('pages of search results tile the match exactly once, in a stable order', (
   // Against the whole set in one call, which is what makes the order *stable* rather than merely
   // complete: a walk that tiles the match while disagreeing with the single call is a pager whose
   // answer depends on how it was asked.
-  const whole = call.dpm_search({ query: 'tourmaline', limit: total }).items;
+  const whole = call.search({ query: 'tourmaline', limit: total }).items;
 
   assert.deepEqual(seen, whole.map((hit) => `${hit.entity}:${hit.entity_id}`));
 

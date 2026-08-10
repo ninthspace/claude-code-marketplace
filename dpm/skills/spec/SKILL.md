@@ -22,8 +22,8 @@ Resolve the starting context in this order.
 2. If `$ARGUMENTS` is a description, use it as the starting context.
 3. Otherwise offer what the project already holds, product briefs first because they carry vision,
    value and constraints already argued over:
-   - `dpm_list_product_brief` — offer the results with `AskUserQuestion`, showing each title.
-   - If there are none, `dpm_list_problem_brief` and offer the most recent.
+   - `mcp__dpm__list_product_brief` — offer the results with `AskUserQuestion`, showing each title.
+   - If there are none, `mcp__dpm__list_problem_brief` and offer the most recent.
 4. If neither returns anything, ask the user to describe what they want to build.
 
 An empty database gets step 4, which is the expected first run rather than a failure.
@@ -32,42 +32,35 @@ An empty database gets step 4, which is the expected first run rather than a fai
 
 ### Session
 
-1. `dpm_list_session` for what is open. A row whose `updated_at` is more than three days old is
-   stale; present those and let the user decide, deleting nothing that was not named.
-2. On a resume, `dpm_adopt_session` with the new session id and the predecessor's, asking for the
-   body. It returns the state the earlier run carried and points the old row at this one.
-3. Otherwise `dpm_create_session` with the harness's session id, `skill: 'dpm:spec'`, and the
-   section about to start as `phase`.
-
-As each section is approved, `dpm_update_session` moves `phase` on and carries the accumulated
-`state` — a blob this skill defines and dpm does not interpret.
+Follow the shared **Session Startup** procedure with `skill: 'dpm:spec'`, putting the section about
+to start in `phase` and moving it on as each section is approved.
 
 ### Roster
 
-`dpm_list_agent`, for **Perspectives** in Sections 4 and 5. Use only what the row carries.
+`mcp__dpm__list_agent`, for **Perspectives** in Sections 4 and 5. Use only what the row carries.
 
 ### Library
 
-`dpm_list_library`, then `dpm_list_library_scope` on each to find those scoped to `spec` or `all`.
-Read the ones that apply with `dpm_list_document_section` and `dpm_read_document_section`, and
-carry them into Sections 4 and 5, where decisions meet recorded standards.
+Follow the shared **Library Check** procedure with scope keyword `spec`. Carry what it returns into
+Sections 4 and 5, where decisions meet recorded standards.
 
 ### Prior decisions
 
-`dpm_list_adr`. If there are any, read each and summarise: "Found {N} existing decisions:
-{titles}. I'll reference these in Section 4 and only facilitate the gaps." If there are none,
-Section 4 facilitates from scratch.
+`mcp__dpm__list_adr`, then `mcp__dpm__read_adr` on each — the list carries identity and the read
+carries the decision, and Section 4 references what was decided rather than what it was called.
+Summarise: "Found {N} existing decisions: {titles}. I'll reference these in Section 4 and only
+facilitate the gaps." If there are none, Section 4 facilitates from scratch.
 
 ### Constraint inheritance
 
 Constraints are captured once, in the problem brief, and Step 3a facilitates only the gaps.
 
 1. If the resolved input is a problem brief, that is the source.
-2. If it is a product brief, `dpm_list_problem_brief` and **ask which one this brief came from**.
+2. If it is a product brief, `mcp__dpm__list_problem_brief` and **ask which one this brief came from**.
    Do **not** substitute the most recent — recency answers a different question, and the two
    diverge the moment a project has more than one line of work. An empty list means there is no
    problem brief, which is not an error.
-3. `dpm_list_document_section` on the resolved brief and read the section headed *Constraints*,
+3. `mcp__dpm__list_document_section` on the resolved brief and read the section headed *Constraints*,
    along with the context and consequences of any decision bearing on the environment.
 4. Carry both into Step 3a as entries already known.
 
@@ -76,10 +69,8 @@ time features have been argued over. Reach past it.
 
 ### Retro awareness
 
-`dpm_list_retro`, then `dpm_list_observation` on the ones whose subject overlaps this work. Skip
-any observation carrying a retirement. Select the few most relevant rather than everything from the
-newest retro, judging by subject overlap and category and using recency only to break a tie.
-Present the selection, naming its source retro, and ask whether to incorporate. If yes:
+Follow the shared **Retro Awareness** procedure. Where a lesson is incorporated, it routes by
+category:
 
 - **Criteria gaps** inform Section 2 and Step 6b.
 - **Scope surprises** inform Section 5 — surface the boundary that caused the surprise.
@@ -106,13 +97,13 @@ they still cannot, record both options and move on — **except in Step 3a**, wh
 Summarise the problem from the input and confirm it. From a brief this is quick: verify nothing has
 changed.
 
-On approval, agree a title and a short kebab-case slug and call `dpm_create_spec` — that call
+On approval, agree a title and a short kebab-case slug and call `mcp__dpm__create_spec` — that call
 assigns the number, which nothing here works out. Everything after hangs off the id it returns,
-starting with the recap as a `dpm_create_document_section` row.
+starting with the recap as a `mcp__dpm__create_document_section` row.
 
-If the input was a brief, record the lineage with `dpm_create_dependency`: `kind: 'builds_on'`,
-this spec as the source document, the brief as the target. A spec takes no parent, so the lineage
-is an edge.
+If the input was a brief, record the lineage with `mcp__dpm__create_dependency`: `kind: 'builds_on'`,
+this spec as `source_document_id`, the brief as `target_document_id`. A spec takes no parent, so the
+lineage is an edge.
 
 ### Section 2: Functional requirements
 
@@ -124,7 +115,7 @@ Give each requirement its `FRn` label as it is agreed, numbered once across must
 rather than restarting under each — the label is what the user refers to for the rest of the
 session. Present a draft and refine.
 
-Each agreed requirement is one `dpm_create_requirement` call:
+Each agreed requirement is one `mcp__dpm__create_requirement` call:
 
 - `class` is `functional` here, and is **an argument, never inferred from the label**. `FR1` is a
   display string beside the row; the value passed is what makes the row functional.
@@ -139,7 +130,7 @@ an outstanding gap.
 ### Section 3: Non-functional requirements
 
 Cover only what applies — performance, security, scalability, reliability, usability. Each is a
-`dpm_create_requirement` call with `class: 'non_functional'`.
+`mcp__dpm__create_requirement` call with `class: 'non_functional'`.
 
 #### Step 3a: Environmental constraints
 
@@ -177,7 +168,7 @@ checkable form. That is a refinement round, not a rejection of the concern.
 and **blocks this step**. Never dropped, never silently reclassified, never recorded without its
 class.
 
-Record each as `dpm_create_requirement` with `class: 'environmental_requirement'` for something that
+Record each as `mcp__dpm__create_requirement` with `class: 'environmental_requirement'` for something that
 must be available and `class: 'environmental_restriction'` for something that must not be required,
 so the roll-up traces them as it traces the others.
 
@@ -191,10 +182,16 @@ why, and what else was evaluated.
 Cover as relevant: stack and framework, data storage, key integrations, deployment model, major
 structural patterns.
 
-Each decision is `dpm_create_adr` with `parent_id` set to this spec — a decision is a child
-document of the artefact that raised it. Its `decision` is the choice in one sentence and
-`decision_status` where it stands. Each option is `dpm_create_adr_option` with `chosen` on the one
-taken, and each axis they were weighed on is `dpm_create_adr_option_tradeoff`.
+Each decision is `mcp__dpm__create_adr` with `parent_id` set to this spec — a decision is a child
+document of the artefact that raised it. Its `decision` is the choice in one sentence. Each option
+is `mcp__dpm__create_adr_option` carrying its reasoning as `rationale`, with `chosen` on the one
+taken, and each axis they were weighed on is `mcp__dpm__create_adr_option_tradeoff`. The rejected
+options carry their reasoning too — a decision that records only the choice records no decision.
+
+**A settled decision is accepted last**, by `mcp__dpm__update_adr` setting `decision_status` to
+`accepted`. An ADR is created `proposed`, because at the moment it is created it has no options and
+an accepted one has exactly one chosen — a rule the tool enforces rather than reports. So the order
+is the ADR, then its options, then `decision_status`.
 
 **Perspectives**: before presenting each major decision, follow the shared **Perspectives**
 procedure — two or three agents whose expertise bears on it.
@@ -205,7 +202,7 @@ Consolidate what is **in scope**, what is **explicitly out of scope**, and what 
 Gate the boundary before recording it: this is the section where a spec grows past what anyone
 intended, and the gate is what stops it.
 
-Record the three with `dpm_create_document_section`. A requirement that turns out to be out of
+Record the three with `mcp__dpm__create_document_section`. A requirement that turns out to be out of
 scope takes `exclusion` on its own row rather than moving into prose here.
 
 **Perspectives**: before finalising, follow the shared **Perspectives** procedure — two or three
@@ -215,7 +212,7 @@ agents on keeping scope tight, on foundational work, and on dependencies that fo
 
 #### Step 6a: Confirm the vocabulary
 
-`dpm_list_test_approach` returns the approaches this project recognises, each with its meaning.
+`mcp__dpm__list_test_approach` returns the approaches this project recognises, each with its meaning.
 Present them and let the user adjust.
 
 `target` is not a weaker `manual`. The check *is* mechanical; only the environment is missing.
@@ -244,15 +241,15 @@ absence itself is not.
 would reject?" A rejected behaviour is its own criterion with `polarity: 'must_not'` — a value on
 the row, not the words "must NOT" at the front of the text.
 
-Each criterion is `dpm_create_acceptance_criterion` under its requirement, and each approach is
-`dpm_create_criterion_approach` naming the criterion and the tag. A criterion verified two ways
+Each criterion is `mcp__dpm__create_acceptance_criterion` under its requirement, and each approach is
+`mcp__dpm__create_criterion_approach` naming the criterion and the tag. A criterion verified two ways
 carries two of them.
 
 #### Step 6c: Integration boundaries
 
 Identify the seams between components — contracts, event shapes, data flows — from the decisions
 recorded in Section 4. These are where integration coverage belongs. Present, refine, then record
-with `dpm_create_document_section`.
+with `mcp__dpm__create_document_section`.
 
 #### Step 6d: Reconcile the tags against the constraints
 
@@ -275,11 +272,11 @@ to Step 3a. Refine before proceeding.
 ### Section 7: Review
 
 Render the complete spec in the message body from the rows just written, reading them back with
-`dpm_read_spec`, `dpm_list_requirement`, `dpm_list_acceptance_criterion`, `dpm_list_adr` and
-`dpm_list_document_section`. Then gate: "Approve this spec?" with `Approve` / `Request changes` /
-`Stop`.
+`mcp__dpm__read_spec`, `mcp__dpm__list_requirement`, `mcp__dpm__list_acceptance_criterion`, `mcp__dpm__list_adr` and
+`mcp__dpm__list_document_section`, each list carrying a `limit` above what the spec just wrote. Then
+gate: "Approve this spec?" with `Approve` / `Request changes` / `Stop`.
 
-On approval, `dpm_update_spec` sets `status` to `complete`. On *Request changes*, return to the
+On approval, `mcp__dpm__update_spec` sets `status` to `complete`. On *Request changes*, return to the
 section the change belongs to and leave the status alone.
 
 **Read the rows, not the rendered document.** A value that never reached a row renders as an
@@ -294,7 +291,7 @@ pre-commit check keeps the two from diverging.
 this skill does without, and it is wrong the moment the projection moves where a kind renders.
 
 Write the sections that carry prose — the problem recap, the scope boundary, the integration
-boundaries — with `dpm_create_document_section`, each with its heading and position. Everything
+boundaries — with `mcp__dpm__create_document_section`, each with its heading and position. Everything
 else is already a row: requirements, criteria, approaches, decisions, options.
 
 An artifact can be published from this output on request — follow the shared **Artifact Publishing**
@@ -308,8 +305,8 @@ driven by the requirement's nature, never by a flag, and the visual has to earn 
 one line what it carries that the prose cannot, and if that line cannot be written, do not generate
 it.
 
-Record it only once published, with `dpm_create_artifact` carrying its address, title and
-publication time, then `dpm_create_artifact_document` binding it to this spec — so the rows never
+Record it only once published, with `mcp__dpm__create_artifact` carrying its address, title and
+publication time, then `mcp__dpm__create_artifact_document` binding it to this spec — so the rows never
 claim a visual a reader cannot reach.
 
 ### After the spec

@@ -146,8 +146,15 @@ test('one document of every kind renders, and only the ADR renders without a fil
   const kinds = db.prepare('SELECT kind, dir FROM document_kind ORDER BY kind').all();
   const filed = kinds.filter((row) => row.dir !== null);
 
-  assert.equal(written.length, filed.length,
-    `${filed.length} kinds have a dir and ${written.length} files were written`);
+  // One file per kind with a `dir`, **plus the artifact register**, which is the only projected
+  // file that is not a document — `artifact` is a standalone table with no kind, so it comes out of
+  // `project()` directly rather than out of the per-document loop. Named in the assertion rather
+  // than folded into the number, so a kind quietly losing its file cannot be absorbed by the extra.
+  const register = written.filter((file) => file.path === 'docs/artifacts/index.md');
+
+  assert.equal(register.length, 1, 'the register was not projected');
+  assert.equal(written.length - register.length, filed.length,
+    `${filed.length} kinds have a dir and ${written.length - register.length} files were written`);
   assert.deepEqual(inline.map((key) => key.slice(0, key.indexOf(':'))), ['adr'],
     'exactly one seeded kind renders inside its parent, and it is the ADR');
 
@@ -268,18 +275,18 @@ test('a coverage matrix renders its epic\'s rows and no other epic\'s', (t) => {
   // A second epic under the same spec, with its own story, criterion and coverage row. The matrix
   // reaches its rows through its epic, and the only thing stopping it reaching these is that
   // filter — which no fixture with one epic in it can exercise.
-  const other = call.dpm_create_epic({
+  const other = call.create_epic({
     parent_id: built.spec.id, slug: 'merge', title: 'Merge and renumber',
   });
-  const otherStory = call.dpm_create_story({
+  const otherStory = call.create_story({
     epic_id: other.id, number: 1, title: 'Renumber the loser', position: 0,
   });
-  const otherCriterion = call.dpm_create_story_criterion({
+  const otherCriterion = call.create_story_criterion({
     story_id: otherStory.id, text: 'A renumber renames the file', polarity: 'must', position: 0,
   });
   const requirement = db.prepare('SELECT id FROM requirement LIMIT 1').get();
 
-  call.dpm_create_coverage({
+  call.create_coverage({
     requirement_id: requirement.id, spec_fragment: 'renames its projection file',
     story_criterion_id: otherCriterion.id, position: 1,
   });
@@ -373,15 +380,15 @@ test('a story blocked by a story in another epic names that epic', (t) => {
   const { db, call } = surface(t);
   const built = fullCorpus(db, call);
 
-  const other = call.dpm_create_epic({
+  const other = call.create_epic({
     parent_id: built.spec.id, slug: 'merge', title: 'Merge and renumber',
   });
-  const otherStory = call.dpm_create_story({
+  const otherStory = call.create_story({
     epic_id: other.id, number: 4, title: 'Renumber the loser', position: 0,
   });
   const mine = db.prepare("SELECT id FROM story WHERE number = 1 AND epic_id = ?").get(built.epic.id);
 
-  call.dpm_create_dependency({
+  call.create_dependency({
     kind: 'blocks', source_story_id: mine.id, target_story_id: otherStory.id,
   });
 

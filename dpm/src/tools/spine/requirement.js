@@ -15,7 +15,8 @@
  * requirement labelled `NFR3` and classed `functional` stores and returns `functional`.
  */
 
-import { defineTool, SUPPLIED } from '../convention.js';
+import { ToolError, defineTool, SUPPLIED } from '../convention.js';
+import { claimComplete } from '../../coverage/claim.js';
 import { insert, readById, update } from '../crud.js';
 
 /** Copied by hand from `003-requirements.sql`. Story 7 asserts each against `PRAGMA`. */
@@ -36,6 +37,24 @@ const FIELDS = {
 };
 
 /**
+ * FR26's completeness claim, offered on update and not on create.
+ *
+ * A requirement is never born claimed — there is nothing bound to it yet — so putting this in
+ * `FIELDS` would give `create_requirement` an argument whose only honest value is absent.
+ *
+ * `coverage_claim_hash` is not here for the reason `binding_hash` is not on the coverage tools:
+ * it is computed by `claimHash` over the bound fragment set, and a digest supplied by the party
+ * making the claim records nothing.
+ */
+const CLAIM = {
+  coverage_claimed_at: {
+    type: 'string',
+    description: 'ISO 8601. Claims the bound coverage rows account for this requirement whole; '
+      + 'the server computes the hash over the bound set that accompanies it',
+  },
+};
+
+/**
  * @param {object} context
  * @param {import('node:sqlite').DatabaseSync} context.db
  * @param {() => string} context.newId
@@ -44,7 +63,7 @@ const FIELDS = {
 export function requirementTools({ db, newId }) {
   return [
     defineTool({
-      name: 'dpm_create_requirement',
+      name: 'create_requirement',
       table: 'requirement',
       description: 'Create a requirement. `class` is required and is never inferred from `label`.',
       reads: ['requirement'],
@@ -68,11 +87,11 @@ export function requirementTools({ db, newId }) {
         parent_id: args.parent_id ?? null,
         text: args.text,
         position: args.position,
-      }, 'dpm_create_requirement'),
+      }, 'create_requirement'),
     }),
 
     defineTool({
-      name: 'dpm_read_requirement',
+      name: 'read_requirement',
       table: 'requirement',
       description: 'Read one requirement by id, with its class, band and exclusion as columns.',
       reads: ['requirement'],
@@ -86,23 +105,36 @@ export function requirementTools({ db, newId }) {
         properties: { id: { type: 'string', minLength: 1 } },
         required: ['id'],
       },
-      handler: (args) => readById(db, 'requirement', args.id, 'dpm_read_requirement'),
+      handler: (args) => readById(db, 'requirement', args.id, 'read_requirement'),
     }),
 
     defineTool({
-      name: 'dpm_update_requirement',
+      name: 'update_requirement',
       table: 'requirement',
-      description: "Update a requirement's label, class, band, exclusion, text or position.",
+      description: "Update a requirement's label, class, band, exclusion, text or position, "
+        + 'or claim that the coverage rows bound to it account for it whole.',
       reads: ['requirement'],
       mutates: true,
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        properties: { id: { type: 'string', minLength: 1 }, ...FIELDS },
+        properties: { id: { type: 'string', minLength: 1 }, ...FIELDS, ...CLAIM },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) =>
-        update(db, 'requirement', id, changes, 'dpm_update_requirement'),
+      handler: ({ id, coverage_claimed_at: claimedAt, ...changes }) => {
+        if (Object.keys(changes).length > 0) update(db, 'requirement', id, changes, 'update_requirement');
+        else if (claimedAt === undefined) throw new ToolError('update_requirement: nothing to update');
+        // A claim against a requirement that is not there is a boundary rejection like any other,
+        // and `claimComplete` raises an internal error rather than one — so the row is reached
+        // for here, where the failure has the shape FR3 asks for.
+        else readById(db, 'requirement', id, 'update_requirement');
+
+        // After the edits and never before: `requirement_unclaim_on_text_edit` would clear a claim
+        // written first, and the claim is about the set as it stands when this call is finished.
+        if (claimedAt !== undefined) claimComplete(db, id, claimedAt);
+
+        return readById(db, 'requirement', id, 'update_requirement');
+      },
     }),
   ];
 }

@@ -38,10 +38,16 @@ export const DOCUMENT_KINDS = [
  * this is a table rather than a `parent_kind` column on `document_kind`.
  *
  * A kind absent from this list can still be parented by nothing — which is the point for the
- * ten root kinds that stand alone, and the reason an `epic` under a `review` is unwritable
- * rather than merely discouraged.
+ * root kinds that stand alone, and the reason an `epic` under a `review` is unwritable rather
+ * than merely discouraged.
+ *
+ * **Being listed is not the same as being required.** `parentageOf` reads this table and makes
+ * the parent optional for a root-numbered kind and required for a child-numbered one, so a
+ * `product_brief` may name the problem brief it came from or stand on its own — which is how
+ * `brief` is actually run — while an `epic` cannot exist without its spec.
  */
 export const KIND_PARENTS = [
+  ['product_brief', 'problem_brief'],
   ['epic', 'spec'],
   ['coverage_matrix', 'epic'],
   ['adr', 'spec'],

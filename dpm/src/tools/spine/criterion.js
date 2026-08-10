@@ -47,7 +47,7 @@ export function criterionTools({ db, newId }, { table, parent, owner }) {
 
   return [
     defineTool({
-      name: `dpm_create_${table}`,
+      name: `create_${table}`,
       table,
       description: `Create a criterion under its ${owner}. Polarity is a value, not a prefix.`,
       reads: [table],
@@ -65,11 +65,11 @@ export function criterionTools({ db, newId }, { table, parent, owner }) {
         text: args.text,
         polarity: args.polarity ?? 'must',
         position: args.position,
-      }, `dpm_create_${table}`),
+      }, `create_${table}`),
     }),
 
     defineTool({
-      name: `dpm_read_${table}`,
+      name: `read_${table}`,
       table,
       description: `Read one criterion by id, with its polarity as a column.`,
       reads: [table],
@@ -81,11 +81,11 @@ export function criterionTools({ db, newId }, { table, parent, owner }) {
         properties: { id: { type: 'string', minLength: 1 } },
         required: ['id'],
       },
-      handler: (args) => readById(db, table, args.id, `dpm_read_${table}`),
+      handler: (args) => readById(db, table, args.id, `read_${table}`),
     }),
 
     defineTool({
-      name: `dpm_update_${table}`,
+      name: `update_${table}`,
       table,
       description: `Update a criterion's text, polarity or position.`,
       reads: [table],
@@ -96,7 +96,7 @@ export function criterionTools({ db, newId }, { table, parent, owner }) {
         properties: { id: { type: 'string', minLength: 1 }, ...fields },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) => update(db, table, id, changes, `dpm_update_${table}`),
+      handler: ({ id, ...changes }) => update(db, table, id, changes, `update_${table}`),
     }),
   ];
 }

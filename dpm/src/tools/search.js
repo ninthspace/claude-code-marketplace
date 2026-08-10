@@ -11,7 +11,7 @@
  * **Every hit names its entity and its row id, and that is what makes it a result.** A ranked list
  * of excerpts a caller cannot open is a search that answers a question and withholds the answer;
  * NFR7 asks that every piece of state be reachable through a read tool, and the pair
- * `(entity, entity_id)` is what a caller turns into `dpm_read_<entity>({id})`.
+ * `(entity, entity_id)` is what a caller turns into `read_<entity>({id})`.
  *
  * **The entity vocabulary is read out of the schema, not written here.** The names come from the
  * tables `entry_fts`'s triggers fire on, which is the same enumeration Story 4's structural
@@ -105,7 +105,7 @@ export function searchTools({ db }) {
 
   return [
     defineTool({
-      name: 'dpm_search',
+      name: 'search',
       table: 'document_fts',
       description:
         'Search every indexed artefact — document section bodies and the prose held on '
@@ -138,7 +138,7 @@ export function searchTools({ db }) {
 
         if (scope !== null && !entities.includes(scope)) {
           throw new ToolError(
-            `dpm_search: nothing indexes '${scope}'. The entities are ${entities.join(', ')}. `
+            `search: nothing indexes '${scope}'. The entities are ${entities.join(', ')}. `
             + 'An unknown scope is reported rather than answered with an empty result, which '
             + 'reads as "no matches" and is not.',
           );
@@ -151,12 +151,12 @@ export function searchTools({ db }) {
 
           // The terms either side of the scope, which is also the check that there are any: a
           // query of nothing but `entity:requirement` is a listing rather than a search, and
-          // `dpm_list_requirement` is the tool for that.
+          // `list_requirement` is the tool for that.
           const terms = CONJUNCTIVE.map((shape) => shape.exec(args.query)?.[1]).find(Boolean);
 
           if (!terms) {
             throw new ToolError(
-              `dpm_search: '${args.query}' scopes to '${scope}' and gives nothing to search for. `
+              `search: '${args.query}' scopes to '${scope}' and gives nothing to search for. `
               + 'Write `entity:<name> AND <terms>`. Scoping is conjunctive on purpose — '
               + '`document_fts` has no `entity` column, so a disjunctive scope would mean one '
               + 'thing over the entry index and be unwritable over the section index.',

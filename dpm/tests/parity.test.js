@@ -34,7 +34,7 @@ function surface(t) {
 }
 
 /**
- * The tables no `dpm_create_*` tool writes, and why.
+ * The tables no `create_*` tool writes, and why.
  *
  * Every entry is checked to be **unspent** below: an exemption naming a table that has acquired a
  * tool fails until it is deleted. That is what lets a *deferral* be written here safely — Story 1
@@ -81,17 +81,17 @@ const liveTables = (db) => authoredTables(db);
  *
  * `writes` and not `table`, because a create tool for one of AD7's structured kinds writes its
  * `document` row and its detail row together and says so. Read off `table` alone this would report
- * `adr` as having no create tool while `dpm_create_adr` was creating its rows.
+ * `adr` as having no create tool while `create_adr` was creating its rows.
  */
 const created = (tools) => new Set(
-  tools.filter((tool) => tool.name.startsWith('dpm_create_')).flatMap((tool) => tool.writes),
+  tools.filter((tool) => tool.name.startsWith('create_')).flatMap((tool) => tool.writes),
 );
 
-/** The kinds some `dpm_create_<kind>` tool names, read off the registry. */
+/** The kinds some `create_<kind>` tool names, read off the registry. */
 const createdKinds = (tools) => new Set(
   tools
-    .filter((tool) => tool.name.startsWith('dpm_create_') && tool.table === 'document')
-    .map((tool) => tool.name.replace('dpm_create_', '')),
+    .filter((tool) => tool.name.startsWith('create_') && tool.table === 'document')
+    .map((tool) => tool.name.replace('create_', '')),
 );
 
 const seededKinds = (db) =>
@@ -210,7 +210,7 @@ test('no tool declares a table or a kind the database does not have', (t) => {
   const kinds = new Set(seededKinds(db));
 
   // Existence asked of the connection rather than of the table list above, because that list
-  // deliberately excludes SQLite's own — and `dpm_check_integrity` legitimately reads
+  // deliberately excludes SQLite's own — and `check_integrity` legitimately reads
   // `sqlite_schema`, which is not a row in `sqlite_master` under any name.
   const exists = (name) => db.prepare(`PRAGMA table_info(${name})`).all().length > 0;
 
@@ -221,7 +221,7 @@ test('no tool declares a table or a kind the database does not have', (t) => {
   }
 
   for (const kind of createdKinds(tools)) {
-    assert.ok(kinds.has(kind), `dpm_create_${kind} names a kind that is not seeded`);
+    assert.ok(kinds.has(kind), `create_${kind} names a kind that is not seeded`);
   }
 });
 
@@ -255,10 +255,10 @@ test('a registry that tools two kinds passes the table check and fails the kind 
 test('a create tool that stops declaring a detail table it writes is caught', (t) => {
   const { db, tools } = surface(t);
 
-  // `dpm_create_adr` writes `document` and `adr`. Narrowed to `document` alone — the shape the
+  // `create_adr` writes `document` and `adr`. Narrowed to `document` alone — the shape the
   // registry would have if `writes` were dropped and `table` read instead — `adr` becomes a table
   // with no create tool, and the enumeration says so.
-  const narrowed = tools.map((tool) => (tool.name === 'dpm_create_adr'
+  const narrowed = tools.map((tool) => (tool.name === 'create_adr'
     ? { ...tool, writes: ['document'] }
     : tool));
 

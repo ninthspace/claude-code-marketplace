@@ -1,5 +1,5 @@
 /**
- * `dpm_create_dependency` — the edge, and the one rule the schema cannot express.
+ * `create_dependency` — the edge, and the one rule the schema cannot express.
  *
  * `010-dependency.sql` says plainly what it leaves open: the self-edge `CHECK`s rule out
  * `A depends on A` and nothing more, because `A blocks B` together with `B blocks A` is two
@@ -63,7 +63,7 @@ export function dependencyTools({ db, newId = ulid }) {
 
   return [
     defineTool({
-      name: 'dpm_read_dependency',
+      name: 'read_dependency',
       table: 'dependency',
       description: 'Read one edge by id, with both its ends and its kind as columns.',
       reads: ['dependency'],
@@ -78,11 +78,11 @@ export function dependencyTools({ db, newId = ulid }) {
       // below and readable by nothing. An edge a caller can create and cannot inspect is the
       // NFR7 gap in its plainest form — and the one thing FR22's readiness queries have to build
       // on, since a caller that cannot see the edge cannot tell a refusal from a missing write.
-      handler: (args) => readById(db, 'dependency', args.id, 'dpm_read_dependency'),
+      handler: (args) => readById(db, 'dependency', args.id, 'read_dependency'),
     }),
 
     defineTool({
-      name: 'dpm_create_dependency',
+      name: 'create_dependency',
       table: 'dependency',
       description:
         'Link two documents or stories with a typed edge, reading source-blocks-target. '
@@ -111,7 +111,7 @@ export function dependencyTools({ db, newId = ulid }) {
         // fails on a `CHECK` whose message names neither the tool nor which end was missing.
         if (!source || !target) {
           throw new ToolError(
-            'dpm_create_dependency: an edge needs one source and one target — give exactly one '
+            'create_dependency: an edge needs one source and one target — give exactly one '
             + 'of source_document_id/source_story_id and one of target_document_id/target_story_id',
           );
         }
@@ -120,7 +120,7 @@ export function dependencyTools({ db, newId = ulid }) {
         // transaction. The failure here is louder but no more welcome: SQLite refuses a nested
         // `BEGIN` with a message about transactions that says nothing about dependencies.
         if (db.isTransaction) {
-          throw new Error('dpm_create_dependency: cannot run inside a caller\'s transaction — it '
+          throw new Error('create_dependency: cannot run inside a caller\'s transaction — it '
             + 'needs its own, to roll back an edge that turns out to close a cycle');
         }
 
@@ -137,7 +137,7 @@ export function dependencyTools({ db, newId = ulid }) {
             source_story_id: args.source_story_id ?? null,
             target_document_id: args.target_document_id ?? null,
             target_story_id: args.target_story_id ?? null,
-          }, 'dpm_create_dependency');
+          }, 'create_dependency');
         } catch (error) {
           db.exec('ROLLBACK');
           throw error;
@@ -152,7 +152,7 @@ export function dependencyTools({ db, newId = ulid }) {
           // the same pair of documents linked by `builds_on` would have been accepted, and a
           // message that omitted the kind would leave the caller unable to tell why.
           throw new ToolError(
-            `dpm_create_dependency: '${args.kind}' gates work, and ${source} → ${target} would `
+            `create_dependency: '${args.kind}' gates work, and ${source} → ${target} would `
             + `close a cycle reaching ${introduced.join(', ')}`,
           );
         }

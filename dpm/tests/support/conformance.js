@@ -134,7 +134,7 @@ export function conformance(db, tools) {
       }
     }
 
-    if (!tool.name.startsWith('dpm_create_')) continue;
+    if (!tool.name.startsWith('create_')) continue;
 
     const required = new Set(tool.inputSchema.required ?? []);
     const supplied = new Set(Object.keys(tool.serverSupplied ?? {}));

@@ -1,5 +1,5 @@
 /**
- * `dpm_allocate_number` — a boundary over the allocation statement, and nothing else.
+ * `allocate_number` — a boundary over the allocation statement, and nothing else.
  *
  * The statement is Epic 47-01's (`src/numbering/allocate.js`) and holds FR5 by construction: it
  * is an upsert whose `RETURNING next_value` reads the value after the increment, so the counter
@@ -7,7 +7,7 @@
  * that is re-implemented here, and re-implementing it would be the mistake — two statements
  * counting the same sequence is exactly the drift the table exists to remove.
  *
- * **`dpm_create_spec` and `dpm_create_epic` allocate for themselves**, so this tool is not how
+ * **`create_spec` and `create_epic` allocate for themselves**, so this tool is not how
  * those get their numbers. It exists for the kinds that have no create tool yet — `retro`,
  * `adr`, `quick` and the rest arrive in Epic 47-05 — and for a caller that needs a number before
  * it has a row to put it on. Two callers of one statement, which is the arrangement that keeps
@@ -31,7 +31,7 @@ import { defineTool, ToolError } from '../convention.js';
 export function numberingTools({ db }) {
   return [
     defineTool({
-      name: 'dpm_read_number_sequence',
+      name: 'read_number_sequence',
       table: 'number_sequence',
       description:
         'Read the counter for a kind, or for a kind within one parent. Reports what the next '
@@ -52,7 +52,7 @@ export function numberingTools({ db }) {
         required: ['kind'],
       },
       // **NFR7's reason for existing, not a convenience.** Story 5's reachability assertion found
-      // this table written by `dpm_allocate_number` and readable by nothing, which is precisely
+      // this table written by `allocate_number` and readable by nothing, which is precisely
       // the shape NFR7 forbids: a counter a caller can move but not inspect leaves "what number
       // will this get?" answerable only by allocating one, and allocation is not reversible.
       //
@@ -67,7 +67,7 @@ export function numberingTools({ db }) {
             .get(args.kind, args.parent_id);
 
         if (!row) {
-          throw new ToolError(`dpm_read_number_sequence: nothing has been allocated for '`
+          throw new ToolError(`read_number_sequence: nothing has been allocated for '`
             + `${args.kind}'${args.parent_id ? ` under '${args.parent_id}'` : ''} yet`);
         }
 
@@ -76,7 +76,7 @@ export function numberingTools({ db }) {
     }),
 
     defineTool({
-      name: 'dpm_allocate_number',
+      name: 'allocate_number',
       table: 'number_sequence',
       description:
         'Allocate the next number for a document kind, within a parent for child-numbered kinds. '
@@ -108,7 +108,7 @@ export function numberingTools({ db }) {
           // neither the argument nor the tool, so it is translated the way `crud.js` translates
           // the rest. A raw constraint error would reach the caller as an internal one.
           if (/constraint/i.test(error.message)) {
-            throw new ToolError(`dpm_allocate_number: ${error.message}`);
+            throw new ToolError(`allocate_number: ${error.message}`);
           }
           throw error;
         }
@@ -118,7 +118,7 @@ export function numberingTools({ db }) {
         // error, and the tool boundary is where a caller stops being able to see which happened.
         if (typeof allocated !== 'number') {
           throw new Error(
-            `dpm_allocate_number: allocation for '${args.kind}' produced no number — refusing to `
+            `allocate_number: allocation for '${args.kind}' produced no number — refusing to `
             + 'report success without one',
           );
         }

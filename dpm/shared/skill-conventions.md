@@ -11,10 +11,80 @@ sections repeated in twenty-two files.
 referenced by a single skill belongs in that skill; one referenced by none is documentation and
 belongs in `docs/`.
 
-**Nothing here describes what a tool already does.** Numbering, session state, roster loading,
-library lookup and retro selection are each a tool call, written at the point of use. Prose
-restating a tool's behaviour is a second specification of it, and the two drift — the prose being
-the copy that no test holds to account.
+**Nothing here describes what a tool already does.** Prose restating a tool's behaviour is a second
+specification of it, and the two drift — the prose being the copy that no test holds to account.
+Numbering is the clearest case: `mcp__dpm__create_epic` allocates, and a paragraph here explaining
+how would be a rule nothing enforces.
+
+**A procedure carrying judgement the tool does not is a different thing, and it belongs here.**
+Which sessions are stale, how many observations to select and on what, whether a retro's lesson is
+presented before it is used — none of that is in a tool, and all of it has to be the same in every
+skill or the corpus behaves differently depending on which one a project happens to run. The test is
+not "does this mention a tool" but "would two skills implementing it separately agree". **Perspectives**
+has always been here on those terms, and the three startup procedures below joined it for the same
+reason: they were near-verbatim in ten files, which is ten places for one of them to drift.
+
+**Where a skill's own judgement lives.** Each procedure names the small part that is genuinely
+per-skill — the scope keyword, what the session `state` must hold, what an incorporated lesson
+changes — and the skill states that part and nothing else.
+
+## Session Startup
+
+Every skill's run is one `session` row. There is no progress file.
+
+1. `mcp__dpm__list_session` for what is open. A row whose `updated_at` is more than three days old
+   is stale; present those and let the user decide, deleting nothing that was not named.
+2. On a resume, `mcp__dpm__adopt_session` with the new session id and the predecessor's, passing
+   `include_body` so the state comes back. It returns what the earlier run carried and points the
+   old row at this one.
+3. Otherwise `mcp__dpm__create_session` with the harness's session id, the skill's own name as
+   `skill`, and the step or phase about to start as `phase`.
+
+As each step closes, `mcp__dpm__update_session` moves `phase` on and carries the accumulated
+`state` — a blob the skill defines and dpm does not interpret.
+
+**What `state` holds is the per-skill part, and it is the part worth stating.** It is the run's
+memory: what a step settled goes in as it is settled, because a step summarised only in the
+conversation is one that has to be re-facilitated after a compaction. **It does not hold anything
+that is a column** — a status, a number, a flag — because a copy in the blob is a second answer that
+goes stale the moment the row moves.
+
+## Library Check
+
+1. `mcp__dpm__list_library`, then `mcp__dpm__list_library_scope` on each, to find those scoped to
+   the skill's own keyword or to `all`.
+2. Read the ones that apply with `mcp__dpm__list_document_section` and
+   `mcp__dpm__read_document_section`, passing `include_body` — without it a section comes back as a
+   heading with no text, and a run that omitted it has read nothing and does not know.
+
+A section a consolidation has superseded is not returned — the list omits it — so a document that has
+been amended and reconciled reads as one document rather than as a body followed by the amendments it
+already absorbed.
+
+The per-skill part is the scope keyword and *when* the documents bear: a coding standard is read
+before code is written, an architecture document before a structural decision.
+
+## Retro Awareness
+
+1. `mcp__dpm__list_retro`, then `mcp__dpm__list_observation` on the ones whose subject overlaps this
+   work, passing `include_body`.
+2. Each observation's category is `mcp__dpm__list_observation_category` resolved against
+   `mcp__dpm__list_taxonomy`, which is called with a `limit` above the seeded count so a project
+   that added terms does not lose them to the default page.
+3. **Select the few most relevant rather than everything from the newest retro**, judging by subject
+   overlap and category and using recency only to break a tie.
+4. Present the selection, naming its source retro, and ask whether to incorporate.
+
+A retired observation is not returned — the list omits it — so there is nothing to skip and no
+marker in the text to read for.
+
+The per-skill part is what an incorporated lesson *changes*: which step or phase a category routes
+to, or, where a skill has no such routing, what a lesson turns into instead. A lesson that cannot be
+turned into something this skill does is one to leave.
+
+**A skill that must not merely offer this may replace step 4 with a gate of its own** — `dpm:do`
+does, requiring a disposition per observation and recording each as a row. Steps 1 to 3 are the same
+either way.
 
 ## Gate Presentation
 
@@ -33,7 +103,7 @@ layout variant. They are transient and easy to miss, so nothing the user needs t
 
 Some sections invite agent personas to weigh in before the user decides.
 
-1. **Load the roster** with `dpm_list_agent`. Its rows carry `display_name`, `icon`, `role`,
+1. **Load the roster** with `mcp__dpm__list_agent`. Its rows carry `display_name`, `icon`, `role`,
    `personality` and `communication_style`. A project that added a persona has it in that list;
    nothing is read from a file and nothing is invented beyond the row.
 2. **Select two or three** whose `role` and `personality` bear on the decision at hand.
@@ -45,7 +115,7 @@ Some sections invite agent personas to weigh in before the user decides.
 5. **Weave them into the facilitation** before the user decides, rather than presenting them as a
    section of their own.
 
-If `dpm_list_agent` returns nothing, skip perspectives and carry on.
+If `mcp__dpm__list_agent` returns nothing, skip perspectives and carry on.
 
 ## Conversational Output
 

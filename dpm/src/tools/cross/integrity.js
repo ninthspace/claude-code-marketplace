@@ -1,5 +1,5 @@
 /**
- * `dpm_check_integrity` — FR14's sweep, callable without SQL.
+ * `check_integrity` — FR14's sweep, callable without SQL.
  *
  * The checks are Epic 47-01's: `checkIntegrity` runs the thirteen register entries and the orphan
  * sweep, and this is a boundary over it. What FR14 adds beyond having the checks is that a
@@ -34,7 +34,7 @@ import { defineTool } from '../convention.js';
 export function integrityTools({ db }) {
   return [
     defineTool({
-      name: 'dpm_check_integrity',
+      name: 'check_integrity',
       // NFR5's rule — every part after the verb is a table name, a column name or a seeded
       // `document_kind.kind` — has no word for a tool that spans tables, and `integrity` is not
       // one. Named for what it does rather than bent to the regex; Story 5 decides whether to

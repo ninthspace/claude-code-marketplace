@@ -25,3 +25,21 @@ export function openPlanningDatabase(t) {
 
   return db;
 }
+
+/**
+ * The tools as a plain dispatcher, keyed by name — the second half of that starting point, since a
+ * registry is a list and every test calls it as a map.
+ *
+ * It lives beside the database rather than in `support/skills.js` because it belongs to any test
+ * that opens one, and the skill tests are only where the *distinction* it draws matters. There,
+ * `recorder` wraps the same handlers and records what the run called, and the binding then holds
+ * that set to what the SKILL.md names — so every read the *test* performs to check the result, and
+ * every write it makes to seed a fixture, has to go through this instead. Otherwise the binding
+ * fails on a call the test invented rather than on anything the skill got wrong.
+ *
+ * @param {object[]} tools
+ * @returns {Record<string, Function>}
+ */
+export function handlers(tools) {
+  return Object.fromEntries(tools.map((tool) => [tool.name, tool.handler]));
+}

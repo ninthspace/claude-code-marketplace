@@ -77,23 +77,23 @@ export function toolCorpus(call) {
   // assert that is to use one: every reference below that *can* name an added term does, so a
   // vocabulary that were somehow special-cased to its seeds would fail here rather than in a test
   // written specially for it.
-  const category = call.dpm_create_taxonomy({
+  const category = call.create_taxonomy({
     id: 'observation:latite', domain: 'observation', name: 'Latite',
     singular: 'Latite observation', position: 90,
   });
 
-  call.dpm_create_agent({
+  call.create_agent({
     name: 'charnockite', display_name: 'Charnockite', icon: '🪨', role: 'Petrologist',
     personality: 'Patient', communication_style: 'Measured', position: 90,
   });
 
-  call.dpm_create_test_approach({ tag: 'tonalite', kind: 'level', position: 90 });
-  call.dpm_create_dependency_kind({ kind: 'norite', gates_work: true, position: 90 });
+  call.create_test_approach({ tag: 'tonalite', kind: 'level', position: 90 });
+  call.create_dependency_kind({ kind: 'norite', gates_work: true, position: 90 });
 
   // --- The spec, and everything hanging off it ------------------------------------------------
-  const spec = call.dpm_create_spec({ slug: 'kimberlite', title: 'The kimberlite spec' });
+  const spec = call.create_spec({ slug: 'kimberlite', title: 'The kimberlite spec' });
 
-  call.dpm_create_document_section({
+  call.create_document_section({
     document_id: spec.id, heading: 'Context', position: 0,
     body: 'A body only this section holds: peridotite.',
   });
@@ -101,12 +101,12 @@ export function toolCorpus(call) {
   // The text carries the coverage fragment as a literal substring: integrity register entry 9
   // requires it, and a fixture that ignored that would build a database the restorer refuses —
   // which is the check working, and was found by it.
-  const requirement = call.dpm_create_requirement({
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR1', class: 'functional', moscow: 'must', position: 0,
     text: 'Every table is reachable through its own tool: andesite, and tephra.',
   });
 
-  const criterion = call.dpm_create_acceptance_criterion({
+  const criterion = call.create_acceptance_criterion({
     requirement_id: requirement.id, polarity: 'must', position: 0,
     text: 'A row round-trips: pumice.',
   });
@@ -114,39 +114,39 @@ export function toolCorpus(call) {
   // Two tags on one criterion, and one of them is the added one: `criterion_approach`'s witness is
   // the seeded tag and `test_approach`'s is the added tag, so dropping the join loses both and
   // failing to read the vocabulary loses only the second. One witness for the pair could not.
-  call.dpm_create_criterion_approach({ criterion_id: criterion.id, tag: 'unit' });
-  call.dpm_create_criterion_approach({ criterion_id: criterion.id, tag: 'tonalite' });
+  call.create_criterion_approach({ criterion_id: criterion.id, tag: 'unit' });
+  call.create_criterion_approach({ criterion_id: criterion.id, tag: 'tonalite' });
 
-  const milestone = call.dpm_create_milestone({
+  const milestone = call.create_milestone({
     spec_id: spec.id, label: 'M1', title: 'The ignimbrite milestone',
     summary: 'Substrate and tools', position: 0,
   });
 
   // --- The epic, its stories, and the delivery rows -------------------------------------------
-  const epic = call.dpm_create_epic({
+  const epic = call.create_epic({
     parent_id: spec.id, slug: 'parity', title: 'Parity and search',
   });
 
-  call.dpm_create_document_milestone({ document_id: epic.id, milestone_id: milestone.id });
+  call.create_document_milestone({ document_id: epic.id, milestone_id: milestone.id });
 
-  const story = call.dpm_create_story({
+  const story = call.create_story({
     epic_id: epic.id, number: 1, title: 'Write the dacite story', position: 0,
   });
-  const second = call.dpm_create_story({
+  const second = call.create_story({
     epic_id: epic.id, number: 2, title: 'And the one it waits on', position: 1,
   });
 
-  call.dpm_create_task({
+  call.create_task({
     story_id: story.id, number: 1, title: 'Cut the obsidian', position: 0,
     description: 'One task, so the collection is not empty.',
   });
 
-  const storyCriterion = call.dpm_create_story_criterion({
+  const storyCriterion = call.create_story_criterion({
     story_id: story.id, polarity: 'must', position: 0,
     text: 'Each table renders: scoria.',
   });
 
-  call.dpm_create_story_criterion_approach({
+  call.create_story_criterion_approach({
     story_criterion_id: storyCriterion.id, tag: 'integration',
   });
 
@@ -155,113 +155,118 @@ export function toolCorpus(call) {
   // story-level one renders only its target, under `**Blocked by**` — and it renders there at all
   // only if the template asked `dependency_kind.gates_work` rather than matching the name
   // `blocks`, which is what FR24's extensibility means for a template and what this pair asserts.
-  call.dpm_create_dependency({
+  call.create_dependency({
     kind: 'norite', source_story_id: second.id, target_story_id: story.id,
   });
-  call.dpm_create_dependency({
+  call.create_dependency({
     kind: 'norite', source_document_id: epic.id, target_document_id: spec.id,
   });
 
   // --- The matrix, and the binding that gives it a row ----------------------------------------
-  const matrix = call.dpm_create_coverage_matrix({
+  const matrix = call.create_coverage_matrix({
     parent_id: epic.id, slug: 'parity', title: 'Coverage: parity and search',
   });
 
-  const coverage = call.dpm_create_coverage({
+  const coverage = call.create_coverage({
     requirement_id: requirement.id, story_criterion_id: storyCriterion.id, position: 0,
     spec_fragment: 'its own tool: andesite, and tephra',
   });
 
-  call.dpm_create_coverage_story({ coverage_id: coverage.id, story_id: story.id });
+  call.create_coverage_story({ coverage_id: coverage.id, story_id: story.id });
 
   // --- The ADR, which renders inside its parent rather than into a file of its own -------------
-  const adr = call.dpm_create_adr({
+  const adr = call.create_adr({
     parent_id: spec.id, slug: 'one-way', title: 'The projection is one-way',
     decision: 'Markdown is written and never read: eclogite.',
-    decision_status: 'accepted',
   });
 
-  const option = call.dpm_create_adr_option({
+  const option = call.create_adr_option({
     adr_id: adr.id, name: 'The gabbro option', chosen: true, position: 0,
     rationale: 'Chosen because it is the simpler of the two.',
   });
 
-  call.dpm_create_adr_option_tradeoff({
+  call.create_adr_option_tradeoff({
     option_id: option.id, axis: 'cost', assessment: 'low, and komatiite',
   });
 
+  // Accepted last, because an accepted ADR has exactly one chosen option and the guard on
+  // `DETAIL.adr` counts them at the moment the status is written.
+  call.update_adr({ id: adr.id, decision_status: 'accepted' });
+
   // --- The review, its agent and its finding ---------------------------------------------------
-  const review = call.dpm_create_review({
+  const review = call.create_review({
     parent_id: epic.id, slug: 'parity', title: 'Review: parity and search',
     scope: 'story', scope_story_id: story.id,
   });
 
   // The seeded persona and the added one, for the same reason the criterion carries two tags.
-  call.dpm_create_review_agent({ document_id: review.id, agent: 'architect' });
-  call.dpm_create_review_agent({ document_id: review.id, agent: 'charnockite' });
+  call.create_review_agent({ document_id: review.id, agent: 'architect' });
+  call.create_review_agent({ document_id: review.id, agent: 'charnockite' });
 
-  call.dpm_create_finding({
+  call.create_finding({
     review_id: review.id, position: 0, agent: 'architect',
     category_id: 'finding:hidden-complexity', severity_id: 'severity:critical',
     summary: 'A finding only this review holds: trachyte.',
   });
 
   // --- The retro, its observation, that observation's added category, and an application -------
-  const retro = call.dpm_create_retro({
+  const retro = call.create_retro({
     parent_id: epic.id, slug: 'parity', title: 'Retro: parity and search',
   });
 
-  const observation = call.dpm_create_observation({
+  const observation = call.create_observation({
     retro_id: retro.id, story_id: story.id, position: 0,
     text: 'An observation only this retro holds: phonolite.',
     note: 'Held structurally.',
   });
 
-  call.dpm_create_observation_category({
+  call.create_observation_category({
     observation_id: observation.id, taxonomy_id: category.id,
   });
 
-  call.dpm_create_retro_application({
+  call.create_retro_application({
     retro_id: retro.id, applied_to_id: epic.id, disposition: 'applied',
     theme: 'The monzonite theme', note: 'Carried into the next epic.',
   });
 
   // --- The audit and its finding ---------------------------------------------------------------
-  const audit = call.dpm_create_audit({ slug: 'render', title: 'Audit: the render path' });
+  const audit = call.create_audit({ slug: 'render', title: 'Audit: the render path' });
 
-  call.dpm_create_audit_finding({
+  call.create_audit_finding({
     audit_id: audit.id, position: 0, dimension_id: 'audit_dimension:test-debt',
     file: 'src/projection/syenite.js', line: 100, symbol: 'table',
     severity_id: 'severity:suggestion',
+    summary: 'The table helper has no test for a row shorter than its header.',
+    recommendation: 'Add the short-row case beside the existing width test.',
   });
 
   // --- The quick, and its criteria -------------------------------------------------------------
-  const quick = call.dpm_create_quick({
+  const quick = call.create_quick({
     slug: 'basalt', title: 'The basalt quick', closed_at: '2026-01-01T00:00:00Z',
   });
 
-  call.dpm_create_quick_criterion({
+  call.create_quick_criterion({
     quick_id: quick.id, text: 'A cell renders whole: rhyolite.', met: true, position: 0,
   });
 
   // --- The library document, and the scopes it is loaded under ---------------------------------
-  const library = call.dpm_create_library({
+  const library = call.create_library({
     slug: 'standards', title: 'Coding standards', doc_type: 'coding-standards',
   });
 
-  call.dpm_create_library_scope({ document_id: library.id, scope: 'do' });
-  call.dpm_create_document_section({
+  call.create_library_scope({ document_id: library.id, scope: 'do' });
+  call.create_document_section({
     document_id: library.id, heading: 'Rules', position: 0,
     body: 'Edit file-by-file. Also: peridotite.',
   });
 
   // --- The artifact, and the document it belongs to ---------------------------------------------
-  const artifact = call.dpm_create_artifact({
+  const artifact = call.create_artifact({
     url: 'https://example.invalid/diorite', title: 'The diorite artifact',
     description: 'A walk through the render path', published_at: '2026-01-01T00:00:00Z',
   });
 
-  call.dpm_create_artifact_document({ artifact_id: artifact.id, document_id: spec.id });
+  call.create_artifact_document({ artifact_id: artifact.id, document_id: spec.id });
 
   // --- The four remaining kinds, each of which renders as prose ---------------------------------
   const prose = {};
@@ -270,8 +275,8 @@ export function toolCorpus(call) {
     ['problem_brief', 'kimberlite'], ['product_brief', 'kimberlite'],
     ['discussion', 'kimberlite'], ['runbook', 'kimberlite'],
   ]) {
-    prose[kind] = call[`dpm_create_${kind}`]({ slug, title: `The kimberlite ${kind}` });
-    call.dpm_create_document_section({
+    prose[kind] = call[`create_${kind}`]({ slug, title: `The kimberlite ${kind}` });
+    call.create_document_section({
       document_id: prose[kind].id, heading: 'Body', position: 0,
       body: 'Prose that renders: peridotite.',
     });
@@ -281,7 +286,7 @@ export function toolCorpus(call) {
   //
   // Written so the absence below is an absence *of a rendering*, not of a row. A test that checked
   // `session` never appears would pass against a fixture that never wrote one.
-  call.dpm_create_session({
+  call.create_session({
     id: 'session-kimberlite', skill: 'cpm:do', phase: 'story-2', state: '{"story":2}',
   });
 

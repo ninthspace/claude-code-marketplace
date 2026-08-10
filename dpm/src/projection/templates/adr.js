@@ -12,9 +12,10 @@
  * thirteenth kind that nothing is responsible for.
  */
 
-import { adrDetail } from '../load.js';
+import { adrDetail, collection } from '../load.js';
 import { identifierOf } from '../naming.js';
 import { field, heading, paragraph, render, table } from '../text.js';
+import { sections } from './common.js';
 
 /**
  * One ADR's blocks, starting at `level`.
@@ -39,6 +40,14 @@ export function adrBlocks(db, adr, ancestry, ref, level = 3) {
     heading(level, `${identifierOf(adr, ...ancestry)} — ${ref(adr.title)}`),
     field('Decision status', detail.decision_status),
     paragraph(ref(detail.decision)),
+
+    // **An ADR's prose is `document_section`, like every other kind's.** `decision` is one
+    // sentence by design, so the context a decision was taken in and the consequences that follow
+    // from it have nowhere else to go — and an ADR that recorded neither would be a worse artefact
+    // than the markdown one it replaces. They sit between the decision and the options because
+    // that is the order a reader needs them in: why this was being decided, then what was weighed.
+    ...sections(collection(db, 'sections', adr.id), ref, level + 1),
+
     ...detail.options.flatMap((option) => [
       heading(level + 1, `${option.name}${option.chosen === 1 ? ' — chosen' : ''}`),
       option.rationale === null ? null : paragraph(ref(option.rationale)),

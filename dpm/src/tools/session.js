@@ -42,7 +42,7 @@ const FIELDS = {
 export function sessionTools({ db, now }) {
   return [
     defineTool({
-      name: 'dpm_create_session',
+      name: 'create_session',
       table: 'session',
       description: 'Record a session under the id the harness issued. State is a skill-defined blob.',
       reads: ['session'],
@@ -73,12 +73,12 @@ export function sessionTools({ db, now }) {
           superseded_by: args.superseded_by ?? null,
           created_at: stamp,
           updated_at: stamp,
-        }, 'dpm_create_session');
+        }, 'create_session');
       },
     }),
 
     defineTool({
-      name: 'dpm_read_session',
+      name: 'read_session',
       table: 'session',
       description: 'Read one session by id, with its state withheld unless asked for.',
       reads: ['session'],
@@ -92,11 +92,11 @@ export function sessionTools({ db, now }) {
         properties: { id: { type: 'string', minLength: 1 } },
         required: ['id'],
       },
-      handler: (args) => readById(db, 'session', args.id, 'dpm_read_session'),
+      handler: (args) => readById(db, 'session', args.id, 'read_session'),
     }),
 
     defineTool({
-      name: 'dpm_update_session',
+      name: 'update_session',
       table: 'session',
       description: "Update a session's skill, phase or state. Stamps updated_at, which is what age is measured from.",
       reads: ['session'],
@@ -111,11 +111,11 @@ export function sessionTools({ db, now }) {
       handler: ({ id, ...changes }) => update(db, 'session', id, {
         ...changes,
         updated_at: now(),
-      }, 'dpm_update_session'),
+      }, 'update_session'),
     }),
 
     defineTool({
-      name: 'dpm_adopt_session',
+      name: 'adopt_session',
       table: 'session',
       description:
         'Resume: point a predecessor at the session that continues it, and hand back the state '
@@ -139,16 +139,16 @@ export function sessionTools({ db, now }) {
       },
       handler: (args) => {
         if (args.id === args.predecessor_id) {
-          throw new ToolError('dpm_adopt_session: a session cannot supersede itself');
+          throw new ToolError('adopt_session: a session cannot supersede itself');
         }
 
-        const predecessor = readById(db, 'session', args.predecessor_id, 'dpm_adopt_session');
+        const predecessor = readById(db, 'session', args.predecessor_id, 'adopt_session');
 
         // Refused rather than re-pointed. A predecessor already superseded means either two
         // resumes of one session or a stale id being replayed, and silently moving the link would
         // orphan whichever branch lost — with no error and no way to find out afterwards.
         if (predecessor.superseded_by !== null) {
-          throw new ToolError(`dpm_adopt_session: '${args.predecessor_id}' was already adopted by `
+          throw new ToolError(`adopt_session: '${args.predecessor_id}' was already adopted by `
             + `'${predecessor.superseded_by}'`);
         }
 
@@ -163,7 +163,7 @@ export function sessionTools({ db, now }) {
         // has already written its own state is not resuming the predecessor, and overwriting it
         // would lose whatever it had done under an operation named "adopt".
         if (existing?.state !== undefined && existing?.state !== null) {
-          throw new ToolError(`dpm_adopt_session: '${args.id}' already carries state of its own — `
+          throw new ToolError(`adopt_session: '${args.id}' already carries state of its own — `
             + 'adopting would overwrite it');
         }
 
@@ -183,15 +183,15 @@ export function sessionTools({ db, now }) {
 
         try {
           if (existing) {
-            update(db, 'session', args.id, carried, 'dpm_adopt_session');
+            update(db, 'session', args.id, carried, 'adopt_session');
           } else {
             insert(db, 'session', {
               id: args.id, ...carried, superseded_by: null, created_at: stamp,
-            }, 'dpm_adopt_session');
+            }, 'adopt_session');
           }
 
           update(db, 'session', args.predecessor_id, { superseded_by: args.id, updated_at: stamp },
-            'dpm_adopt_session');
+            'adopt_session');
         } catch (error) {
           db.exec('ROLLBACK');
           throw error;
@@ -199,12 +199,12 @@ export function sessionTools({ db, now }) {
 
         db.exec('COMMIT');
 
-        return readById(db, 'session', args.id, 'dpm_adopt_session');
+        return readById(db, 'session', args.id, 'adopt_session');
       },
     }),
 
     defineTool({
-      name: 'dpm_list_session',
+      name: 'list_session',
       table: 'session',
       description:
         'List sessions, newest last. `updated_before` selects stale rows by age; `superseded_by` '
@@ -237,7 +237,7 @@ export function sessionTools({ db, now }) {
         filters: { skill: args.skill },
         before: { column: 'updated_at', value: args.updated_before },
         order: ORDER,
-        where: 'dpm_list_session',
+        where: 'list_session',
       }, args),
     }),
   ];

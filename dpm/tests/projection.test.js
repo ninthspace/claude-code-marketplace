@@ -70,8 +70,8 @@ function surface(t) {
  * content, different physical arrival.
  */
 function corpus(db, call, { order = 'forward' } = {}) {
-  const spec = call.dpm_create_spec({ slug: 'persistence', title: 'Artefact persistence' });
-  const other = call.dpm_create_spec({ slug: 'search', title: 'Full-text search' });
+  const spec = call.create_spec({ slug: 'persistence', title: 'Artefact persistence' });
+  const other = call.create_spec({ slug: 'search', title: 'Full-text search' });
 
   const sections = [
     { heading: 'Context', body: `Supersedes spec {{ref:${other.id}}}.`, position: 0 },
@@ -105,13 +105,13 @@ function corpus(db, call, { order = 'forward' } = {}) {
   }
 
   for (const row of maybeReverse(requirements)) {
-    const created = call.dpm_create_requirement({
+    const created = call.create_requirement({
       spec_id: spec.id, label: row.label, class: row.class, moscow: row.moscow,
       text: row.text, position: row.position,
     });
 
     for (const criterion of maybeReverse(row.criteria)) {
-      call.dpm_create_acceptance_criterion({
+      call.create_acceptance_criterion({
         requirement_id: created.id, text: criterion.text,
         polarity: criterion.polarity, position: criterion.position,
       });
@@ -329,8 +329,8 @@ test('must NOT — a projected body carries a number no row produced', (t) => {
 test('the identifier and the filename are one derivation', (t) => {
   const { db, call } = surface(t);
 
-  const spec = call.dpm_create_spec({ slug: 'persistence', title: 'Artefact persistence' });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'projection', title: 'Projection' });
+  const spec = call.create_spec({ slug: 'persistence', title: 'Artefact persistence' });
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'projection', title: 'Projection' });
 
   assert.equal(identifierOf(spec), '1');
   assert.equal(identifierOf(epic, spec), '1-01', 'a sequence is zero-padded to two digits');

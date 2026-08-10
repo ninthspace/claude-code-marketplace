@@ -12,7 +12,7 @@
  * not `coverage`.** The name comes from the section CPM's `spec` writes — *Acceptance Criteria
  * Coverage*, whose columns are requirement, criterion and tag. The `coverage` table is a
  * different thing with a colliding name: it binds a requirement to a **story** criterion, so
- * `dpm_create_coverage` requires a `story_criterion_id` that does not exist until `epics` has
+ * `create_coverage` requires a `story_criterion_id` that does not exist until `epics` has
  * run. Reading the criterion the other way would make it unsatisfiable by the skill it is
  * written about, so the run below writes the pair and Story 2 owns the binding.
  *
@@ -28,9 +28,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
-import { skillSource, frontMatter, toolNames, section, recorder, valuedArguments } from './support/skills.js';
+import {
+  skillSource, frontMatter, section, recorder, recoveries, bindings, reachable, seedStartup,
+  driveStartup,
+} from './support/skills.js';
 
 const SKILL = 'spec';
 const source = skillSource(SKILL);
@@ -39,56 +42,29 @@ const source = skillSource(SKILL);
  * The project a spec run starts in: a brief chain, a scoped library document, a prior decision
  * and a retro with an observation. Written with the raw handlers rather than the recorded ones,
  * because none of it is the skill's own work — a fixture write counted as a run write would put
- * `dpm_create_problem_brief` in the used set and demand the skill name a tool it never calls.
+ * `create_problem_brief` in the used set and demand the skill name a tool it never calls.
  */
 function project(tools) {
-  const seed = Object.fromEntries(tools.map((tool) => [tool.name, tool.handler]));
+  const seed = handlers(tools);
 
-  const problem = seed.dpm_create_problem_brief({ slug: 'planning-drift', title: 'Planning drift' });
-  seed.dpm_create_document_section({
+  const problem = seed.create_problem_brief({ slug: 'planning-drift', title: 'Planning drift' });
+  seed.create_document_section({
     document_id: problem.id,
     heading: 'Constraints',
     body: 'The store has to survive a machine with no package manager.',
     position: 0,
   });
 
-  const product = seed.dpm_create_product_brief({ slug: 'dpm', title: 'dpm' });
+  const product = seed.create_product_brief({ slug: 'dpm', title: 'dpm' });
 
-  const library = seed.dpm_create_library({
-    slug: 'coding-standards',
-    title: 'Coding standards',
-    doc_type: 'reference',
-  });
-  seed.dpm_create_library_scope({ document_id: library.id, scope: 'spec' });
-  seed.dpm_create_document_section({
-    document_id: library.id,
-    heading: 'Style',
-    body: 'Two spaces, and no abbreviations in exported names.',
-    position: 0,
-  });
-
-  const retro = seed.dpm_create_retro({ slug: 'round-one', title: 'Round one' });
-  seed.dpm_create_observation({
-    retro_id: retro.id,
-    position: 0,
-    text: 'A criterion tagged manual was automatable all along.',
-  });
-  seed.dpm_create_observation({
-    retro_id: retro.id,
-    position: 1,
-    text: 'A lesson that has since been spent.',
-    retired_at: '2026-01-01T00:00:00.000Z',
-    retired_reason: 'the module it warned about is gone',
-  });
-
-  const earlier = seed.dpm_create_session({
-    id: 'session-before',
+  const startup = seedStartup(seed, {
+    scope: 'spec',
     skill: 'dpm:spec',
     phase: 'Section 2',
-    state: '{"requirements":2}',
+    live: ['A criterion tagged manual was automatable all along.'],
   });
 
-  return { problem, product, library, retro, earlier };
+  return { problem, product, ...startup };
 }
 
 /**
@@ -99,42 +75,29 @@ function project(tools) {
  * the tools that replaced them unexercised and unnamed.
  */
 function run(call, fixture) {
-  // Startup: session, roster, library, prior decisions, constraint inheritance, retro awareness.
-  call.dpm_list_session({});
-  call.dpm_adopt_session({ id: 'session-now', predecessor_id: fixture.earlier.id, include_body: true });
-  call.dpm_create_session({ id: 'session-run', skill: 'dpm:spec', phase: 'Section 1', state: '{}' });
+  // Startup: session, roster, library and retro awareness are the four every skill runs; the
+  // prior decisions and the constraint inheritance below are this skill's own.
+  const startup = driveStartup(call, fixture, { scope: 'spec', skill: 'dpm:spec' });
 
-  call.dpm_list_agent({});
+  // Prior decisions: listed, then read, because the decision itself is not on the list row.
+  for (const decision of call.list_adr({}).items) call.read_adr({ id: decision.id });
 
-  for (const document of call.dpm_list_library({}).items) {
-    const scopes = call.dpm_list_library_scope({ document_id: document.id }).items;
-    if (!scopes.some((entry) => entry.scope === 'spec' || entry.scope === 'all')) continue;
-
-    for (const heading of call.dpm_list_document_section({ document_id: document.id }).items) {
-      call.dpm_read_document_section({ id: heading.id, include_body: true });
-    }
-  }
-
-  call.dpm_list_adr({});
-
-  call.dpm_list_product_brief({});
-  const briefs = call.dpm_list_problem_brief({});
+  call.list_product_brief({});
+  const briefs = call.list_problem_brief({});
   const brief = briefs.items.find((item) => item.id === fixture.problem.id);
-  const constraints = call.dpm_list_document_section({ document_id: brief.id, include_body: true })
+  const constraints = call.list_document_section({ document_id: brief.id, include_body: true })
     .items.find((entry) => entry.heading === 'Constraints');
 
-  const observations = call.dpm_list_retro({}).items
-    .flatMap((retro) => call.dpm_list_observation({ retro_id: retro.id, include_body: true }).items)
-    .filter((observation) => !observation.retired_at);
+  const observations = startup.observations.map((entry) => entry.observation);
 
   // Section 1: the spec exists from here on, and its lineage is an edge.
-  const spec = call.dpm_create_spec({ slug: 'dpm-persistence', title: 'dpm SQLite persistence' });
-  call.dpm_create_dependency({
+  const spec = call.create_spec({ slug: 'dpm-persistence', title: 'dpm SQLite persistence' });
+  call.create_dependency({
     kind: 'builds_on',
     source_document_id: spec.id,
     target_document_id: fixture.problem.id,
   });
-  call.dpm_create_document_section({
+  call.create_document_section({
     document_id: spec.id,
     heading: 'Problem Statement',
     body: 'Planning artefacts are markdown, so every skill parses what the last one wrote.',
@@ -157,11 +120,11 @@ function run(call, fixture) {
       class: 'environmental_restriction',
       text: 'No dependency whose install requires compilation',
     },
-  ].map((fields, position) => call.dpm_create_requirement({ spec_id: spec.id, position, ...fields }));
+  ].map((fields, position) => call.create_requirement({ spec_id: spec.id, position, ...fields }));
 
   // Section 6a and 6b: the vocabulary is read, then each criterion is written with its polarity
   // and its tag as arguments.
-  const approaches = call.dpm_list_test_approach({}).items.map((entry) => entry.tag);
+  const approaches = call.list_test_approach({}).items.map((entry) => entry.tag);
 
   const criteria = [
     { requirement: requirements[0], text: 'A create tool rejects a call with no class', tag: 'unit' },
@@ -175,73 +138,75 @@ function run(call, fixture) {
     { requirement: requirements[4], text: 'The suite runs from one command', tag: 'feature' },
     { requirement: requirements[5], text: 'The manifest declares no dependencies', tag: 'unit' },
   ].map(({ requirement, tag, ...fields }, position) => {
-    const criterion = call.dpm_create_acceptance_criterion({
+    const criterion = call.create_acceptance_criterion({
       requirement_id: requirement.id,
       position,
       ...fields,
     });
-    call.dpm_create_criterion_approach({ criterion_id: criterion.id, tag });
+    call.create_criterion_approach({ criterion_id: criterion.id, tag });
     return { criterion, tag };
   });
 
   // Section 4: the decision, its options and the axes they were weighed on.
-  const adr = call.dpm_create_adr({
+  const adr = call.create_adr({
     slug: 'sqlite-store',
     title: 'SQLite as the store',
     parent_id: spec.id,
     decision: 'Planning state lives in one SQLite database, rendered one way to markdown.',
-    decision_status: 'accepted',
   });
-  const chosen = call.dpm_create_adr_option({
+  const chosen = call.create_adr_option({
     adr_id: adr.id,
     name: 'SQLite',
     chosen: true,
     rationale: 'It ships with the runtime.',
     position: 0,
   });
-  call.dpm_create_adr_option({ adr_id: adr.id, name: 'Markdown', position: 1 });
-  call.dpm_create_adr_option_tradeoff({
+  call.create_adr_option({ adr_id: adr.id, name: 'Markdown', position: 1 });
+  call.create_adr_option_tradeoff({
     option_id: chosen.id,
     axis: 'Install cost',
     assessment: 'None — no package to add.',
   });
 
+  // Accepted once an option is chosen, which is the order the guard on `DETAIL.adr` requires.
+  call.update_adr({ id: adr.id, decision_status: 'accepted' });
+
   // Section 5 and Step 6c: the prose sections.
-  call.dpm_create_document_section({
+  call.create_document_section({
     document_id: spec.id,
     heading: 'Scope Boundary',
     body: 'In scope: the store and the tools. Out of scope: a web view.',
     position: 1,
   });
-  call.dpm_create_document_section({
+  call.create_document_section({
     document_id: spec.id,
     heading: 'Integration Boundaries',
     body: 'The tool schemas are the write contract.',
     position: 2,
   });
 
-  call.dpm_update_session({ id: 'session-run', phase: 'Section 7', state: '{"sections":7}' });
+  call.update_session({ id: startup.session, phase: 'Section 7', state: '{"sections":7}' });
 
   // Section 7: the review reads rows.
   const review = {
-    spec: call.dpm_read_spec({ id: spec.id }),
-    requirements: call.dpm_list_requirement({ spec_id: spec.id, limit: 100 }).items,
+    spec: call.read_spec({ id: spec.id }),
+    requirements: call.list_requirement({ spec_id: spec.id, limit: 100 }).items,
     criteria: requirements.flatMap((requirement) =>
-      call.dpm_list_acceptance_criterion({ requirement_id: requirement.id, include_body: true }).items),
-    decisions: call.dpm_list_adr({ parent_id: spec.id }).items,
-    sections: call.dpm_list_document_section({ document_id: spec.id, include_body: true }).items,
+      call.list_acceptance_criterion({ requirement_id: requirement.id, include_body: true }).items),
+    decisions: call.list_adr({ parent_id: spec.id }).items,
+    sections: call.list_document_section({ document_id: spec.id, include_body: true }).items,
   };
 
-  call.dpm_update_spec({ id: spec.id, status: 'complete' });
-  const approved = call.dpm_read_spec({ id: spec.id });
+  call.update_spec({ id: spec.id, status: 'complete' });
+  const approved = call.read_spec({ id: spec.id });
 
   // A published companion, recorded only once it has an address.
-  const artifact = call.dpm_create_artifact({
+  const artifact = call.create_artifact({
     url: 'https://example.invalid/spec',
     title: 'Requirement explorer',
     published_at: '2026-08-09T00:00:00.000Z',
   });
-  call.dpm_create_artifact_document({ artifact_id: artifact.id, document_id: spec.id });
+  call.create_artifact_document({ artifact_id: artifact.id, document_id: spec.id });
 
   return { spec, requirements, criteria, approaches, adr, review, approved, constraints, observations };
 }
@@ -282,7 +247,7 @@ test('a spec run writes the document, its classed requirements and its tagged cr
   const tags = db.prepare('SELECT criterion_id, tag FROM criterion_approach').all();
   assert.equal(tags.length, result.criteria.length);
   for (const { tag } of tags) {
-    assert.ok(result.approaches.includes(tag), `${tag} is a term dpm_list_test_approach offered`);
+    assert.ok(result.approaches.includes(tag), `${tag} is a term list_test_approach offered`);
   }
 
   // The graph reads back whole through the read tools. The review sees `pending` because the
@@ -295,31 +260,8 @@ test('a spec run writes the document, its classed requirements and its tagged cr
   assert.deepEqual(result.review.sections.map((row) => row.heading),
     ['Problem Statement', 'Scope Boundary', 'Integration Boundaries']);
 
-  // Both directions of the binding to the file.
-  const named = toolNames(source);
-  const known = new Set(tools.map((tool) => tool.name));
-
-  for (const name of named) {
-    assert.ok(known.has(name), `${SKILL} instructs a run to call ${name}, which is not a tool`);
-  }
-  for (const name of [...used].sort()) {
-    assert.ok(named.includes(name),
-      `this test drove ${name} and the skill never names it — one of the two has drifted`);
-  }
-
-  // And the same binding one level down: every fixed-vocabulary argument this run supplied is
-  // named in the file, so a value cannot quietly go back to being a heading.
-  for (const tool of tools.filter((entry) => used.has(entry.name))) {
-    for (const argument of valuedArguments(tool)) {
-      if (!result.passed.get(tool.name)?.has(argument)) continue;
-
-      // Matched inside a code span but not to its end, because a skill names an argument both
-      // bare (`class`) and with the value it should carry (`polarity: 'must_not'`).
-      assert.match(source, new RegExp(`\`${argument}\\b`),
-        `the run passes ${argument} to ${tool.name} and the skill never names it — a value that `
-          + 'nothing instructs the run to supply is a value the next reader infers');
-    }
-  }
+  // The three directions of the binding to the file, all reported at once.
+  assert.deepEqual(bindings(source, tools, { used, passed: result.passed }), []);
 });
 
 test('the facilitation survives: scope gates, the testing strategy is produced, and an untestable criterion is refused', () => {
@@ -337,9 +279,9 @@ test('the facilitation survives: scope gates, the testing strategy is produced, 
   for (const step of ['Step 6a', 'Step 6b', 'Step 6c', 'Step 6d']) {
     assert.notEqual(section(source, step), '', `${step} still exists`);
   }
-  assert.match(section(source, 'Step 6a'), /dpm_list_test_approach/,
+  assert.match(section(source, 'Step 6a'), /list_test_approach/,
     'the vocabulary is still confirmed with the user before tags are assigned');
-  assert.match(section(source, 'Step 6b'), /dpm_create_criterion_approach/,
+  assert.match(section(source, 'Step 6b'), /create_criterion_approach/,
     'and every criterion still gets a tag written as a row');
 
   // The refusal is asserted in the two steps that own one, because a refusal stated once in a
@@ -355,43 +297,16 @@ test('the facilitation survives: scope gates, the testing strategy is produced, 
 });
 
 test('must NOT — the skill recovers an entity by reading a generated markdown file', () => {
-  const forbidden = [
-    { pattern: /docs\//, why: 'a path into the rendered tree — the projection owns those' },
-    { pattern: /\bglob\b/i, why: 'a glob, which is how every recovery this conversion removes began' },
-    { pattern: /\*\.md\b|\[0-9\]\*/, why: 'a filename pattern' },
-    { pattern: /\{nn\}|\{slug\}|\{session_id\}/, why: 'a filename template' },
-    { pattern: /front\s*matter/i, why: 'a front-matter read, which is a parse of a generated file' },
-    { pattern: /\bRead tool\b|\bGrep tool\b|\bGlob tool\b/, why: 'a file-reading tool' },
-    { pattern: /\*\*Status\*\*:|\*\*Blocked by\*\*:|\*\*Source\*\*:/, why: 'a metadata field parsed out of prose' },
-    { pattern: /progress file/i, why: 'a progress-file lifecycle — session state is a row' },
-  ];
+  // `RECOVERY` in `support/skills.js` carries the patterns and the reason a markdown-table check
+  // is deliberately not among them — Step 3a's requirement/restriction grid is exactly the
+  // facilitation aid such a check would fail.
+  assert.deepEqual(recoveries(source), []);
 
-  // **A markdown table in the file is not on that list, and should not be.** The obvious check —
-  // a `|---|---|` divider — fires on Step 3a's requirement/restriction grid, which is a table the
-  // skill *shows the user* while facilitating. The criterion forbids recovering an entity by
-  // reading a generated file; a table the skill draws is neither generated nor read. A check that
-  // cannot tell those apart fails a correct file and would be silenced by deleting a facilitation
-  // aid, which is the wrong repair.
-
-  // The one path the skill is allowed to name is its own shared conventions, which is not a
-  // generated artefact and is not recovered from — it is read, once, for prose.
-  const body = source.replace(/`dpm\/shared\/skill-conventions\.md`/g, '');
-
-  for (const { pattern, why } of forbidden) {
-    const hit = body.match(pattern);
-    assert.ok(!hit, hit && `${SKILL} names ${why} — ${JSON.stringify(context(body, hit.index))}`);
-  }
-
-  // The positive half: every discovery the skill does make goes through a list or read tool.
+  // The positive half: every discovery the skill does make goes through a list or read tool. The
+  // step is read through `reachable`, because a step that delegates to a shared procedure names the
+  // tools by citing it — and a citation the run cannot follow to a named tool is what this catches.
   for (const step of ['Prior decisions', 'Constraint inheritance', 'Retro awareness', 'Library']) {
-    assert.match(section(source, step), /dpm_(list|read)_[a-z_]+/,
+    assert.match(reachable(section(source, step)), /(list|read)_[a-z_]+/,
       `${step} recovers what it needs by calling a tool`);
   }
 });
-
-/** The line a match sits on, so a failure names the sentence rather than an offset. */
-function context(text, index) {
-  const start = text.lastIndexOf('\n', index) + 1;
-  const end = text.indexOf('\n', index);
-  return text.slice(start, end === -1 ? undefined : end).trim();
-}

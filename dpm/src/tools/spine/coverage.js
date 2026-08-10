@@ -10,13 +10,15 @@
  * default, and it is display order; nothing here reads it to decide whether a binding exists.
  *
  * **`verified_at` and `binding_hash` are set together or not at all**, which the table's `CHECK`
- * enforces and this tool does not duplicate. A caller supplying one alone is refused by the
- * database and the refusal is surfaced as a tool error rather than an internal one — the division
- * FR3 draws is between what the tool boundary can know (a value outside an enum, a missing
- * argument) and what only a row in context can (this pair, a foreign key, a duplicate binding).
+ * enforces and this tool does not duplicate. What these tools do add is that the pair can only be
+ * set *correctly*: `verified_at` is the caller's, `binding_hash` is computed from the row's own two
+ * texts by `src/coverage/binding.js` and is not an argument at all. A hash chosen by the party
+ * making the claim attests to nothing, and the `CHECK` would have accepted any string — so a
+ * skill writing a ✓ says when, and the server says over what.
  */
 
 import { defineTool, SUPPLIED } from '../convention.js';
+import { bindingHash } from '../../coverage/binding.js';
 import { insert, readById, update } from '../crud.js';
 import { entityTools } from '../entity.js';
 
@@ -32,8 +34,10 @@ const BINDING = {
 
 const STATE = {
   position: { type: 'integer', minimum: 0, description: 'Display order only; not identity' },
-  verified_at: { type: 'string', description: 'ISO 8601; set with binding_hash or not at all' },
-  binding_hash: { type: 'string', description: 'Hash of (fragment ‖ criterion text) at verification' },
+  verified_at: {
+    type: 'string',
+    description: 'ISO 8601. Records the ✓; the server computes the binding hash that accompanies it',
+  },
 };
 
 /**
@@ -45,12 +49,12 @@ const STATE = {
 export function coverageTools({ db, newId }) {
   return [
     defineTool({
-      name: 'dpm_create_coverage',
+      name: 'create_coverage',
       table: 'coverage',
       description: 'Bind a requirement fragment to a story criterion. One matrix row.',
       reads: ['coverage'],
       mutates: true,
-      serverSupplied: { id: SUPPLIED.ulid },
+      serverSupplied: { id: SUPPLIED.ulid, binding_hash: SUPPLIED.derived('the bound texts') },
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -64,12 +68,14 @@ export function coverageTools({ db, newId }) {
         story_criterion_id: args.story_criterion_id,
         position: args.position,
         verified_at: args.verified_at ?? null,
-        binding_hash: args.binding_hash ?? null,
-      }, 'dpm_create_coverage'),
+        // Computed from the arguments rather than read back, because the row is not there yet —
+        // and the criterion is, which is the half that has to be looked up either way.
+        binding_hash: args.verified_at === undefined ? null : bindingHash(db, args),
+      }, 'create_coverage'),
     }),
 
     defineTool({
-      name: 'dpm_read_coverage',
+      name: 'read_coverage',
       table: 'coverage',
       description: 'Read one coverage row by id, with its verification state as columns.',
       reads: ['coverage'],
@@ -81,13 +87,13 @@ export function coverageTools({ db, newId }) {
         properties: { id: { type: 'string', minLength: 1 } },
         required: ['id'],
       },
-      handler: (args) => readById(db, 'coverage', args.id, 'dpm_read_coverage'),
+      handler: (args) => readById(db, 'coverage', args.id, 'read_coverage'),
     }),
 
     defineTool({
-      name: 'dpm_update_coverage',
+      name: 'update_coverage',
       table: 'coverage',
-      description: "Update a coverage row's position or verification state.",
+      description: "Update a coverage row's position, or record its verification.",
       reads: ['coverage'],
       mutates: true,
       inputSchema: {
@@ -96,7 +102,13 @@ export function coverageTools({ db, newId }) {
         properties: { id: { type: 'string', minLength: 1 }, ...STATE },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) => update(db, 'coverage', id, changes, 'dpm_update_coverage'),
+      handler: ({ id, ...changes }) => update(db, 'coverage', id, changes.verified_at === undefined
+        ? changes
+        // Hashed off the stored row rather than off anything the caller holds: a verification is
+        // a statement about the texts as they are now, and a caller working from a copy read
+        // earlier would otherwise stamp a hash over text that has since moved.
+        : { ...changes, binding_hash: bindingHash(db, readById(db, 'coverage', id, 'update_coverage')) },
+        'update_coverage'),
     }),
 
     // "Covered by: Story 2, Story 4" — a criterion may be delivered by more than the story that

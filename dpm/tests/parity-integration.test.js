@@ -24,7 +24,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { openDatabaseFile } from './support/database.js';
 import { authoredTables } from './support/introspection.js';
 import { toolCorpus, WITNESS } from './support/tool-corpus.js';
@@ -37,7 +37,7 @@ function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db);
 
-  return { db, tools, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, tools, call: handlers(tools) };
 }
 
 function refused(run) {
@@ -89,35 +89,35 @@ test('one row of every indexed type is written by its tool and found by a single
 
   assert.ok(indexed.length >= 6, `only ${indexed.length} indexed types — the enumeration is wrong`);
 
-  const spec = call.dpm_create_spec({ slug: 'lodestone', title: 'Lodestone' });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'find', title: 'Find' });
-  const story = call.dpm_create_story({
+  const spec = call.create_spec({ slug: 'lodestone', title: 'Lodestone' });
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'find', title: 'Find' });
+  const story = call.create_story({
     epic_id: epic.id, number: 1, title: 'Find', position: 0,
   });
-  const requirement = call.dpm_create_requirement({
+  const requirement = call.create_requirement({
     spec_id: spec.id, label: 'FR9', class: 'functional', position: 0, text: 'lodestone requirement',
   });
-  const review = call.dpm_create_review({ parent_id: spec.id, slug: 'find', title: 'Review' });
-  const retro = call.dpm_create_retro({ parent_id: epic.id, slug: 'find', title: 'Retro' });
+  const review = call.create_review({ parent_id: spec.id, slug: 'find', title: 'Review' });
+  const retro = call.create_retro({ parent_id: epic.id, slug: 'find', title: 'Retro' });
 
   // One row per indexed type, each through the type's own create tool and each carrying the same
   // term. Written as a map keyed by the enumerated name so a type nobody wrote is a failure here
   // rather than an entity quietly missing from the search below.
   const written = {
-    document_section: () => call.dpm_create_document_section({
+    document_section: () => call.create_document_section({
       document_id: spec.id, heading: 'Body', position: 0, body: 'a lodestone section',
     }),
     requirement: () => requirement,
-    acceptance_criterion: () => call.dpm_create_acceptance_criterion({
+    acceptance_criterion: () => call.create_acceptance_criterion({
       requirement_id: requirement.id, position: 0, text: 'a lodestone criterion',
     }),
-    story_criterion: () => call.dpm_create_story_criterion({
+    story_criterion: () => call.create_story_criterion({
       story_id: story.id, position: 0, text: 'a lodestone story criterion',
     }),
-    observation: () => call.dpm_create_observation({
+    observation: () => call.create_observation({
       retro_id: retro.id, position: 0, text: 'a lodestone observation',
     }),
-    finding: () => call.dpm_create_finding({
+    finding: () => call.create_finding({
       review_id: review.id, position: 0, category_id: 'finding:hidden-complexity',
       severity_id: 'severity:warning', summary: 'a lodestone finding',
     }),
@@ -133,7 +133,7 @@ test('one row of every indexed type is written by its tool and found by a single
   // One search, and it has to reach all six. The tools are Story 1's and Story 2's, the triggers
   // are Stories 3's and 4's, and the query is Story 5's — three stories that pass in isolation
   // against a database where one of the six was never wired up.
-  const page = call.dpm_search({ query: 'lodestone', limit: 50 });
+  const page = call.search({ query: 'lodestone', limit: 50 });
   const found = new Map(page.items.map((hit) => [hit.entity, hit.entity_id]));
 
   assert.deepEqual([...found.keys()].sort(), [...indexed].sort(),
@@ -150,11 +150,11 @@ test('one row of every indexed type is written by its tool and found by a single
 test('a create tool refuses a term retired through the retire tool, and names the item', (t) => {
   const { db, call } = surface(t);
 
-  const spec = call.dpm_create_spec({ slug: 'retired', title: 'Retired' });
-  const epic = call.dpm_create_epic({ parent_id: spec.id, slug: 'retired', title: 'Retired' });
-  const review = call.dpm_create_review({ parent_id: spec.id, slug: 'r', title: 'Review' });
-  const story = call.dpm_create_story({ epic_id: epic.id, number: 1, title: 'S', position: 0 });
-  const criterion = call.dpm_create_story_criterion({
+  const spec = call.create_spec({ slug: 'retired', title: 'Retired' });
+  const epic = call.create_epic({ parent_id: spec.id, slug: 'retired', title: 'Retired' });
+  const review = call.create_review({ parent_id: spec.id, slug: 'r', title: 'Review' });
+  const story = call.create_story({ epic_id: epic.id, number: 1, title: 'S', position: 0 });
+  const criterion = call.create_story_criterion({
     story_id: story.id, position: 0, text: 'A criterion',
   });
 
@@ -163,37 +163,37 @@ test('a create tool refuses a term retired through the retire tool, and names th
   const cases = [
     {
       vocabulary: 'taxonomy',
-      retire: () => call.dpm_retire_taxonomy({ id: 'finding:hidden-complexity' }),
+      retire: () => call.retire_taxonomy({ id: 'finding:hidden-complexity' }),
       item: 'finding:hidden-complexity',
-      create: () => call.dpm_create_finding({
+      create: () => call.create_finding({
         review_id: review.id, position: 0, category_id: 'finding:hidden-complexity',
         severity_id: 'severity:warning', summary: 'A finding',
       }),
     },
     {
       vocabulary: 'agent',
-      retire: () => call.dpm_retire_agent({ name: 'architect' }),
+      retire: () => call.retire_agent({ name: 'architect' }),
       item: 'architect',
-      create: () => call.dpm_create_review_agent({ document_id: review.id, agent: 'architect' }),
+      create: () => call.create_review_agent({ document_id: review.id, agent: 'architect' }),
     },
     {
       vocabulary: 'test_approach',
-      retire: () => call.dpm_retire_test_approach({ tag: 'integration' }),
+      retire: () => call.retire_test_approach({ tag: 'integration' }),
       item: 'integration',
-      create: () => call.dpm_create_story_criterion_approach({
+      create: () => call.create_story_criterion_approach({
         story_criterion_id: criterion.id, tag: 'integration',
       }),
     },
     {
       vocabulary: 'dependency_kind',
-      retire: () => call.dpm_retire_dependency_kind({ kind: 'blocks' }),
+      retire: () => call.retire_dependency_kind({ kind: 'blocks' }),
       item: 'blocks',
       create: () => {
-        const other = call.dpm_create_story({
+        const other = call.create_story({
           epic_id: epic.id, number: 2, title: 'T', position: 1,
         });
 
-        return call.dpm_create_dependency({
+        return call.create_dependency({
           kind: 'blocks', source_story_id: other.id, target_story_id: story.id,
         });
       },
@@ -301,7 +301,7 @@ test('the tables that reach no template say why, and the reason is checkable', (
   // seen from the projection's end.
   const writable = new Set(
     spineTools(db)
-      .filter((tool) => tool.name.startsWith('dpm_create_'))
+      .filter((tool) => tool.name.startsWith('create_'))
       .flatMap((tool) => tool.writes),
   );
 
@@ -344,12 +344,12 @@ test('every search hit opens through its own read tool, across the whole corpus'
   // have one, so the sweep runs over each indexed entity's own witness and unions the hits. That
   // is the harder version: it covers hits from both indexes and from every tagged table.
   const hits = ['peridotite', 'andesite', 'pumice', 'scoria', 'phonolite', 'trachyte']
-    .flatMap((term) => call.dpm_search({ query: term, limit: 50 }).items);
+    .flatMap((term) => call.search({ query: term, limit: 50 }).items);
 
   assert.ok(hits.length >= 6, `only ${hits.length} hits — the corpus is not being searched`);
 
   for (const hit of hits) {
-    const read = call[`dpm_read_${hit.entity}`];
+    const read = call[`read_${hit.entity}`];
 
     assert.ok(read, `nothing reads '${hit.entity}' — the hit names an entity a caller cannot open`);
     assert.equal(read({ id: hit.entity_id }).id, hit.entity_id);
@@ -361,7 +361,7 @@ test('must NOT — the index outlives its rows, and the hit that survives opens 
 
   toolCorpus(call);
 
-  const before = call.dpm_search({ query: 'andesite', limit: 50 });
+  const before = call.search({ query: 'andesite', limit: 50 });
 
   assert.equal(before.returned, 1);
 
@@ -372,7 +372,7 @@ test('must NOT — the index outlives its rows, and the hit that survives opens 
   db.prepare('INSERT INTO entry_fts (entity, text, entity_id) VALUES (?, ?, ?)')
     .run('requirement', 'andesite, but for a row that is not there', 'no-such-requirement');
 
-  const after = call.dpm_search({ query: 'andesite', limit: 50 });
+  const after = call.search({ query: 'andesite', limit: 50 });
 
   // It returns. It is ranked. It has an excerpt. Nothing about it looks like a failure — and one
   // of its two hits cannot be opened.
@@ -382,7 +382,7 @@ test('must NOT — the index outlives its rows, and the hit that survives opens 
 
   assert.ok(orphan, 'the drifted row did not come back, so this test is asserting nothing');
   assert.ok(orphan.excerpt.length > 0);
-  assert.match(refused(() => call.dpm_read_requirement({ id: orphan.entity_id })).message,
+  assert.match(refused(() => call.read_requirement({ id: orphan.entity_id })).message,
     /no requirement with/);
 
   // And the reason it cannot happen through the surface: nothing writes `entry_fts`. Not "no

@@ -214,24 +214,24 @@ test('an unparseable line becomes a parse error on stdout and a diagnostic on st
 test('an unknown method and an unknown tool are errors, not silence', async () => {
   const { replies } = await session([
     { jsonrpc: '2.0', id: 1, method: 'no/such/method' },
-    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'dpm_not_a_tool' } },
+    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'not_a_tool' } },
   ]);
 
   assert.equal(replies[0].error.code, -32601);
   assert.equal(replies[0].error.data.method, 'no/such/method');
   assert.equal(replies[1].error.code, -32601);
-  assert.match(replies[1].error.data.message, /dpm_not_a_tool/);
+  assert.match(replies[1].error.data.message, /not_a_tool/);
 });
 
 test('a tool that throws becomes an error response rather than stopping the server', async () => {
   const { replies } = await session(
     [
-      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'dpm_explodes', arguments: {} } },
+      { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'explodes', arguments: {} } },
       { jsonrpc: '2.0', id: 2, method: 'ping' },
     ],
     [
       {
-        name: 'dpm_explodes',
+        name: 'explodes',
         description: 'throws',
         inputSchema: { type: 'object', properties: {} },
         handler: () => {

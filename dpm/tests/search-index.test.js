@@ -23,18 +23,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 
 function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db);
 
-  return { db, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, call: handlers(tools) };
 }
 
 /** A spec to hang sections off. */
-const home = (call) => call.dpm_create_spec({ slug: 'search', title: 'Search' });
+const home = (call) => call.create_spec({ slug: 'search', title: 'Search' });
 
 /** The section ids the index returns for `term`. */
 const matched = (db, term) => db
@@ -78,7 +78,7 @@ test('a section written through the tool is retrievable by MATCH under its ULID'
   const { db, call } = surface(t);
   const spec = home(call);
 
-  const section = call.dpm_create_document_section({
+  const section = call.create_document_section({
     document_id: spec.id,
     heading: 'Quartzite',
     body: 'The prose a reader put here, holding the word hornbeam and nothing else notable.',
@@ -150,12 +150,12 @@ test('editing a body replaces the index entry rather than adding to it', (t) => 
   const { db, call } = surface(t);
   const spec = home(call);
 
-  const section = call.dpm_create_document_section({
+  const section = call.create_document_section({
     document_id: spec.id, heading: 'Minerals', position: 0,
     body: 'The first draft mentions quartzite.',
   });
 
-  call.dpm_update_document_section({ id: section.id, body: 'The second draft mentions cinnabar.' });
+  call.update_document_section({ id: section.id, body: 'The second draft mentions cinnabar.' });
 
   assert.deepEqual(matched(db, 'cinnabar'), [section.id]);
 
@@ -170,12 +170,12 @@ test('editing a heading replaces the index entry too', (t) => {
   const { db, call } = surface(t);
   const spec = home(call);
 
-  const section = call.dpm_create_document_section({
+  const section = call.create_document_section({
     document_id: spec.id, heading: 'Wolframite', position: 0,
     body: 'A body that does not change, so only the heading can account for the difference.',
   });
 
-  call.dpm_update_document_section({ id: section.id, heading: 'Sarsaparilla' });
+  call.update_document_section({ id: section.id, heading: 'Sarsaparilla' });
 
   // This is the case that makes `AFTER UPDATE OF heading, body` a decision rather than a habit:
   // narrowed to `body`, the section stays findable under a heading it no longer has.
@@ -189,14 +189,14 @@ test('editing only the position touches neither the index nor its agreement with
   const { db, call } = surface(t);
   const spec = home(call);
 
-  const section = call.dpm_create_document_section({
+  const section = call.create_document_section({
     document_id: spec.id, heading: 'Hornbeam', position: 0,
     body: 'Text that stays exactly as written while the section moves.',
   });
 
   const before = db.prepare('SELECT rowid, heading, body, section_id FROM document_fts').all();
 
-  call.dpm_update_document_section({ id: section.id, position: 3 });
+  call.update_document_section({ id: section.id, position: 3 });
 
   // The rowid is asserted along with the content, because a trigger that fired and rewrote the
   // same values would leave the index correct and the rowid changed — a distinction that costs
@@ -211,10 +211,10 @@ test('deleting a section removes it from the index', (t) => {
   const { db, call } = surface(t);
   const spec = home(call);
 
-  const kept = call.dpm_create_document_section({
+  const kept = call.create_document_section({
     document_id: spec.id, heading: 'Kept', position: 0, body: 'This one mentions hornbeam.',
   });
-  const going = call.dpm_create_document_section({
+  const going = call.create_document_section({
     document_id: spec.id, heading: 'Going', position: 1, body: 'This one mentions cinnabar.',
   });
 
@@ -232,15 +232,15 @@ test('deleting a section removes it from the index', (t) => {
 test('deleting a document takes its sections out of the index through the cascade', (t) => {
   const { db, call } = surface(t);
   const spec = home(call);
-  const other = call.dpm_create_spec({ slug: 'elsewhere', title: 'Elsewhere' });
+  const other = call.create_spec({ slug: 'elsewhere', title: 'Elsewhere' });
 
-  call.dpm_create_document_section({
+  call.create_document_section({
     document_id: spec.id, heading: 'One', position: 0, body: 'Mentions quartzite.',
   });
-  call.dpm_create_document_section({
+  call.create_document_section({
     document_id: spec.id, heading: 'Two', position: 1, body: 'Mentions wolframite.',
   });
-  const survivor = call.dpm_create_document_section({
+  const survivor = call.create_document_section({
     document_id: other.id, heading: 'Three', position: 0, body: 'Mentions sarsaparilla.',
   });
 

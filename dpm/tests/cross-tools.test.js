@@ -11,7 +11,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase } from './support/planning-database.js';
+import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { REGISTER } from '../src/integrity/register.js';
 
@@ -19,7 +19,7 @@ function surface(t) {
   const db = openPlanningDatabase(t);
   const tools = spineTools(db);
 
-  return { db, tools, call: Object.fromEntries(tools.map((tool) => [tool.name, tool.handler])) };
+  return { db, tools, call: handlers(tools) };
 }
 
 function refused(run, message) {
@@ -36,7 +36,7 @@ function refused(run, message) {
 
 /** Three specs to hang edges between, since both ends of a `blocks` edge are documents. */
 const specs = (call, count = 3) => Array.from({ length: count }, (unused, index) =>
-  call.dpm_create_spec({ slug: `s${index}`, title: `S${index}` }));
+  call.create_spec({ slug: `s${index}`, title: `S${index}` }));
 
 const edges = (db) => db.prepare('SELECT count(*) AS n FROM dependency').get().n;
 
@@ -45,7 +45,7 @@ const edges = (db) => db.prepare('SELECT count(*) AS n FROM dependency').get().n
 test('allocation returns the value, and the first one for a kind is 1', (t) => {
   const { call } = surface(t);
 
-  const first = call.dpm_allocate_number({ kind: 'retro' });
+  const first = call.allocate_number({ kind: 'retro' });
 
   // The criterion is "returns the value and never a success without one", so the response is
   // checked for the number itself rather than for not having thrown. A body with `ok: true` and
@@ -56,7 +56,7 @@ test('allocation returns the value, and the first one for a kind is 1', (t) => {
 
   assert.deepEqual(
     [2, 3, 4],
-    [1, 2, 3].map(() => call.dpm_allocate_number({ kind: 'retro' }).number),
+    [1, 2, 3].map(() => call.allocate_number({ kind: 'retro' }).number),
   );
 });
 
@@ -64,19 +64,19 @@ test('a child-numbered kind counts within its parent and restarts under a new on
   const { call } = surface(t);
   const [one, two] = specs(call, 2);
 
-  const under = (spec) => call.dpm_allocate_number({ kind: 'adr', parent_id: spec.id }).number;
+  const under = (spec) => call.allocate_number({ kind: 'adr', parent_id: spec.id }).number;
 
   assert.deepEqual([under(one), under(one), under(two)], [1, 2, 1]);
 
   // The control: the same kind allocated with no parent is a different sequence entirely, which
   // is the partition the two partial indexes on `number_sequence` exist to enforce.
-  assert.equal(call.dpm_allocate_number({ kind: 'retro' }).number, 1);
+  assert.equal(call.allocate_number({ kind: 'retro' }).number, 1);
 });
 
 test('a kind the vocabulary does not carry is refused, not counted', (t) => {
   const { db, call } = surface(t);
 
-  const error = refused(() => call.dpm_allocate_number({ kind: 'nonsense' }));
+  const error = refused(() => call.allocate_number({ kind: 'nonsense' }));
 
   assert.equal(error.rpc.code, -32602, 'refused as a bad call, not reported as a broken server');
   assert.equal(
@@ -85,18 +85,18 @@ test('a kind the vocabulary does not carry is refused, not counted', (t) => {
     'a refused allocation left a sequence row behind',
   );
 
-  assert.equal(call.dpm_allocate_number({ kind: 'retro' }).number, 1);
+  assert.equal(call.allocate_number({ kind: 'retro' }).number, 1);
 });
 
 test('numbers are not reused after the document holding one is archived', (t) => {
   const { call } = surface(t);
 
-  const first = call.dpm_create_spec({ slug: 'a', title: 'A' });
-  call.dpm_update_spec({ id: first.id, archived_at: '2026-08-08T00:00:00Z' });
+  const first = call.create_spec({ slug: 'a', title: 'A' });
+  call.update_spec({ id: first.id, archived_at: '2026-08-08T00:00:00Z' });
 
   // FR5's whole promise, and the reason `number_sequence` never consults the documents: the
   // filename-globbing implementation this replaces would have handed 1 straight back out.
-  assert.equal(call.dpm_create_spec({ slug: 'b', title: 'B' }).number, 2);
+  assert.equal(call.create_spec({ slug: 'b', title: 'B' }).number, 2);
 });
 
 // --- The cycle refusal --------------------------------------------------------------------------
@@ -105,7 +105,7 @@ test('an edge that would close a gates_work cycle is refused, naming both ends',
   const { db, call } = surface(t);
   const [a, b, c] = specs(call);
 
-  const link = (kind, source, target) => call.dpm_create_dependency({
+  const link = (kind, source, target) => call.create_dependency({
     kind, source_document_id: source.id, target_document_id: target.id });
 
   assert.ok(link('blocks', a, b).id);
@@ -129,7 +129,7 @@ test('a lineage kind may close the same loop a gating kind may not', (t) => {
   const { call } = surface(t);
   const [a, b] = specs(call, 2);
 
-  const link = (kind, source, target) => call.dpm_create_dependency({
+  const link = (kind, source, target) => call.create_dependency({
     kind, source_document_id: source.id, target_document_id: target.id });
 
   link('blocks', a, b);
@@ -147,7 +147,7 @@ test('a self-edge is refused by the schema, and reaches the caller as a bad call
   const { call } = surface(t);
   const [a] = specs(call, 1);
 
-  const error = refused(() => call.dpm_create_dependency({
+  const error = refused(() => call.create_dependency({
     kind: 'blocks', source_document_id: a.id, target_document_id: a.id }));
 
   assert.equal(error.rpc.code, -32602);
@@ -163,12 +163,12 @@ test('an edge missing an end is refused before the transaction opens', (t) => {
     { kind: 'blocks', target_document_id: b.id },
     { kind: 'blocks' },
   ]) {
-    const error = refused(() => call.dpm_create_dependency(partial));
+    const error = refused(() => call.create_dependency(partial));
     assert.match(error.message, /one source and one target/);
   }
 
   assert.equal(db.isTransaction, false, 'a refused call left a transaction open');
-  assert.ok(call.dpm_create_dependency({
+  assert.ok(call.create_dependency({
     kind: 'blocks', source_document_id: a.id, target_document_id: b.id }).id);
 });
 
@@ -190,12 +190,12 @@ test('a cycle already in the database does not block unrelated edges', (t) => {
   assert.equal(REGISTER.find((entry) => entry.entry === 1).check(db).length, 2,
     'the fixture did not actually produce a cycle');
 
-  assert.ok(call.dpm_create_dependency({
+  assert.ok(call.create_dependency({
     kind: 'blocks', source_document_id: c.id, target_document_id: d.id }).id,
   'an unrelated edge was refused because of a cycle it has nothing to do with');
 
   // And the rule still holds for the edge that would extend the damage.
-  refused(() => call.dpm_create_dependency({
+  refused(() => call.create_dependency({
     kind: 'blocks', source_document_id: d.id, target_document_id: c.id }));
 });
 
@@ -210,14 +210,14 @@ test('the cycle rule and the integrity check are the same rule, not two', (t) =>
   assert.ok(entry, 'register entry 1 is missing');
   assert.match(entry.invariant, /cycle/i);
   assert.notEqual(REGISTER.indexOf(entry), -1);
-  assert.ok(tools.some((tool) => tool.name === 'dpm_create_dependency'));
+  assert.ok(tools.some((tool) => tool.name === 'create_dependency'));
 });
 
 // --- The integrity sweep ------------------------------------------------------------------------
 
 test('the integrity tool reports every register entry, not only the failing ones', (t) => {
   const { call } = surface(t);
-  const report = call.dpm_check_integrity({});
+  const report = call.check_integrity({});
 
   // The criterion is "reports every register entry it checks". `checkIntegrity` alone returns
   // only the entries that produced rows, so a register of thirteen quiet entries and one of
@@ -239,13 +239,13 @@ test('a clean database reports ok, and a corrupted one names where', (t) => {
   const { db, call } = surface(t);
   const [a] = specs(call, 1);
 
-  call.dpm_create_requirement({
+  call.create_requirement({
     spec_id: a.id, label: 'FR1', class: 'functional', text: 't', position: 0 });
 
   // The control comes first, because "reports a violation" means nothing from a tool that
   // reports one always — and entry 5 did exactly that until this story, on every database where
   // a number was both allocated and written.
-  const clean = call.dpm_check_integrity({});
+  const clean = call.check_integrity({});
   assert.equal(clean.ok, true, JSON.stringify(clean.entries.filter((entry) => !entry.held)));
   assert.equal(clean.entries.every((entry) => entry.held), true);
   assert.deepEqual(clean.orphans, []);
@@ -261,7 +261,7 @@ test('a clean database reports ok, and a corrupted one names where', (t) => {
       VALUES ('adr-1', 'superseded', 'd')`).run();
   db.exec('PRAGMA foreign_keys = ON');
 
-  const dirty = call.dpm_check_integrity({});
+  const dirty = call.check_integrity({});
   const failed = dirty.entries.filter((entry) => !entry.held);
 
   assert.equal(dirty.ok, false);
@@ -273,11 +273,11 @@ test('a clean database reports ok, and a corrupted one names where', (t) => {
 test('the integrity tool takes no arguments and refuses any', (t) => {
   const { call } = surface(t);
 
-  const error = refused(() => call.dpm_check_integrity({ limit: 10 }));
+  const error = refused(() => call.check_integrity({ limit: 10 }));
 
   // Story 4 bounds reads. This response must stay unbounded: rows that fell off the end of an
   // integrity report are indistinguishable from rows that were never there, which is the false
   // pass NFR6 forbids from the one report whose job is to be trusted.
   assert.match(error.message, /unknown argument 'limit'/);
-  assert.ok(call.dpm_check_integrity({}).entries.length > 0);
+  assert.ok(call.check_integrity({}).entries.length > 0);
 });

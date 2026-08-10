@@ -83,15 +83,14 @@ export function milestoneTools(context) {
         document_id: { type: 'string', minLength: 1, description: 'any kind of document' },
         milestone_id: { type: 'string', minLength: 1 },
       },
-      guard: (args) => {
-        const where = 'dpm_create_document_milestone';
-        const milestone = readById(db, 'milestone', args.milestone_id, where);
-        const root = rootOf(db, args.document_id, where);
+      guard: (row, where) => {
+        const milestone = readById(db, 'milestone', row.milestone_id, where);
+        const root = rootOf(db, row.document_id, where);
 
         if (root.id !== milestone.spec_id) {
           throw new ToolError(
             `${where}: milestone '${milestone.label}' belongs to spec '${milestone.spec_id}' and `
-            + `document '${args.document_id}' sits under '${root.id}' — a document may only `
+            + `document '${row.document_id}' sits under '${root.id}' — a document may only `
             + 'deliver a milestone of its own spec (integrity register entry 12)',
           );
         }

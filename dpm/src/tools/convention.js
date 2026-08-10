@@ -181,7 +181,7 @@ export function validate(schema, args, where) {
     // client what omitting the argument will get them — and materialising it here would make an
     // absent argument indistinguishable from a supplied one by the time a handler sees it. On a
     // create tool that is merely redundant, since the handler supplies the same fallback. On an
-    // *update* tool it is a silent data loss: `dpm_update_story_criterion({id})` would arrive
+    // *update* tool it is a silent data loss: `update_story_criterion({id})` would arrive
     // carrying `polarity: 'must'` and reset a `must_not` criterion nobody asked to change.
     const value = args[name];
 
@@ -220,7 +220,9 @@ export function validate(schema, args, where) {
  * stories, and a tool that quietly omitted one would make those assertions pass by covering less.
  *
  * @param {object} tool
- * @param {string} tool.name Matches NFR5's `dpm_[a-z_]{6,}`; Story 5 asserts the word rule.
+ * @param {string} tool.name The **exported** name, `create_spec` — the harness makes it callable as
+ *   `mcp__dpm__create_spec` (FR29). Matches NFR5's `[a-z]{3,}(_[a-z]{3,})*`; the word rule, that
+ *   every part after the verb is schema vocabulary, is asserted in `naming.test.js`.
  * @param {string} tool.table The table the tool writes, or the primary one it reads.
  * @param {string[]} [tool.writes] Every table this tool inserts into or updates, where that is
  *   more than `table` alone. Four document kinds carry a detail table whose primary key **is**
@@ -234,7 +236,7 @@ export function validate(schema, args, where) {
  *   search tools declare `mutates: false`, and a `writes` naming their `table` would be a claim
  *   no call could make true — read by the parity enumeration as coverage a create tool has to
  *   supply. It went unnoticed while every non-mutating tool happened to declare a table that some
- *   create tool also wrote; `dpm_search` is the first that does not, since nothing may ever
+ *   create tool also wrote; `search` is the first that does not, since nothing may ever
  *   insert into an FTS index by hand.
  * @param {string} tool.description Shown by `tools/list`.
  * @param {object} tool.inputSchema Hand-written. See the note at the head of this file.
@@ -254,7 +256,13 @@ export function defineTool(tool) {
   const { name, table, description, reads, handler, body = [], paged = false, mutates } = tool;
   const writes = tool.writes ?? (tool.mutates ? [table] : []);
 
-  if (!/^dpm_[a-z_]+$/.test(name ?? '')) throw new Error(`not a dpm tool name: ${name}`);
+  // Exported names carry no server prefix: the harness dispatches `mcp__dpm__create_spec`, and it
+  // supplies the `mcp__dpm__` itself (FR29). A `dpm` part here would be the server's identity said
+  // twice, so the shape check refuses one rather than merely not requiring it.
+  if (!/^[a-z]{3,}(_[a-z]{3,})*$/.test(name ?? '')) throw new Error(`not a dpm tool name: ${name}`);
+  if (name.split('_').includes('dpm')) {
+    throw new Error(`${name}: exported names carry no 'dpm' part — the harness prefixes them`);
+  }
   if (!table) throw new Error(`${name}: no table declared`);
   if (!description) throw new Error(`${name}: no description — tools/list is how a caller finds it`);
   if (!Array.isArray(reads) || reads.length === 0) {

@@ -16,8 +16,15 @@
  * - **`derive`** — the columns this server fills from another argument. `observation.retro_kind`
  *   is NULL exactly when `retro_id` is, held by a `CHECK`, and asking a caller for it would be
  *   asking them to assert the thing the pairing exists to check.
- * - **`guard`** — a rule the schema cannot express, run before the insert. There is one:
- *   `document_milestone`'s register entry #12.
+ * - **`guard`** — a rule the schema cannot express, run before the write on create *and* on update.
+ *   `document_milestone`'s register entry #12 and `adr_option`'s register entry #8.
+ *
+ * **A guard sees the resolved row, not the arguments.** On create that is what is about to be
+ * written; on update it is the stored row with the changes merged over it. Written that way a guard
+ * never asks which call it is running under — which matters because the two calls carry different
+ * arguments for the same rule: `update_adr_option` may be passed nothing but an `id` and `chosen`,
+ * and the rule it breaks is about the `adr_id` it did not mention. The tool name arrives separately,
+ * so a refusal can still say which call was refused.
  *
  * **A `boolean` argument is written as 0 or 1.** SQLite has no boolean type and `node:sqlite`
  * refuses to bind one, so the choice is between a tool surface that says `chosen: true` and one
@@ -50,8 +57,9 @@ const toColumn = (value) => (typeof value === 'boolean' ? Number(value) : value)
  * @param {string[]} [options.body] Columns withheld unless `include_body` asks for them.
  * @param {Record<string, string>} [options.supplied] What `derive` fills, declared for Story 7.
  * @param {(args: object) => object} [options.derive] Columns derived from the arguments.
- * @param {(args: object) => void} [options.guard] A rule no constraint can hold, run before the
- *   insert so a refusal happens instead of a row.
+ * @param {(row: object, where: string) => void} [options.guard] A rule no constraint can hold, run
+ *   before the write on create and on update, so a refusal happens instead of a row. It receives
+ *   the resolved row and the name of the tool that is being refused.
  * @returns {object[]}
  */
 export function entityTools({ db, newId }, {
@@ -88,7 +96,7 @@ export function entityTools({ db, newId }, {
 
   const tools = [
     defineTool({
-      name: `dpm_create_${table}`,
+      name: `create_${table}`,
       table,
       description: `Create ${noun}.`,
       reads: [table],
@@ -101,8 +109,6 @@ export function entityTools({ db, newId }, {
         required: [...new Set([...(surrogate ? [] : keys), ...required])],
       },
       handler: (args) => {
-        if (guard) guard(args);
-
         // **A column the caller omitted is left out of the `INSERT` rather than written NULL.**
         // The spine factories write every column explicitly, which is right where the omitted ones
         // are nullable — and wrong here, because `retro_application.theme` and `.note` are
@@ -111,12 +117,14 @@ export function entityTools({ db, newId }, {
         // either way.
         const row = { ...(surrogate ? { id: newId() } : {}), ...values(args) };
 
-        return insert(db, table, row, `dpm_create_${table}`, keys);
+        if (guard) guard(row, `create_${table}`);
+
+        return insert(db, table, row, `create_${table}`, keys);
       },
     }),
 
     defineTool({
-      name: `dpm_read_${table}`,
+      name: `read_${table}`,
       table,
       description: `Read one ${noun} by ${keys.join(' and ')}.`,
       reads: [table],
@@ -128,13 +136,13 @@ export function entityTools({ db, newId }, {
         properties: keyProperties,
         required: keys,
       },
-      handler: (args) => readByKey(db, table, readKey(args), `dpm_read_${table}`),
+      handler: (args) => readByKey(db, table, readKey(args), `read_${table}`),
     }),
   ];
 
   // **A table whose every column is its own key gets no update tool, and that is not an omission.**
   // `artifact_document` holds an artifact id and a document id and nothing else; changing either
-  // is deleting one row and writing another, which `dpm_create_*` already does. An update tool
+  // is deleting one row and writing another, which `create_*` already does. An update tool
   // there would take an id, have nothing to set, and refuse every call it received.
   if (changeable.length > 0) {
     const changeableFields = Object.fromEntries(
@@ -142,7 +150,7 @@ export function entityTools({ db, newId }, {
     );
 
     tools.push(defineTool({
-      name: `dpm_update_${table}`,
+      name: `update_${table}`,
       table,
       description: `Update ${noun}'s ${changeable.join(', ')}.`,
       reads: [table],
@@ -169,7 +177,16 @@ export function entityTools({ db, newId }, {
           if (value !== null && value !== undefined) changes[column] = value;
         }
 
-        return updateByKey(db, table, readKey(args), changes, `dpm_update_${table}`);
+        // The stored row with the changes over it, so the guard sees the state this call would
+        // leave behind rather than the fragment it was passed. Read before the `UPDATE` and not
+        // after: a guard consulted afterwards would be describing a row it had already allowed.
+        if (guard) {
+          const stored = readByKey(db, table, readKey(args), `update_${table}`);
+
+          guard({ ...stored, ...changes }, `update_${table}`);
+        }
+
+        return updateByKey(db, table, readKey(args), changes, `update_${table}`);
       },
     }));
   }

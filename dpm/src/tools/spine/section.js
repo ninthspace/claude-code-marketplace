@@ -12,6 +12,11 @@
  * schema, and a list of a spec's sections that returned every one of them in full is the unbounded
  * result the requirement exists to prevent — the heading and the position are what a caller needs
  * to decide which one to open.
+ *
+ * **`superseded_at` is what stops a consolidated amendment being rendered twice**, and it is a
+ * column rather than a deletion because the amendment is the record of how the document came to say
+ * what it says. `list_document_section` excludes it by the same `IS NULL` clause the vocabularies
+ * get, and `include_superseded` reaches it again — see `018-section-supersession.sql`.
  */
 
 import { entityTools } from '../entity.js';
@@ -29,9 +34,13 @@ export function sectionTools(context) {
       heading: { type: 'string', minLength: 1 },
       body: { type: 'string', minLength: 1, description: 'the section\'s prose, verbatim' },
       position: { type: 'integer', minimum: 0 },
+      superseded_at: {
+        type: 'string',
+        description: 'ISO 8601; folded into a section that now says it better. Still readable',
+      },
     },
     required: ['document_id', 'heading', 'body', 'position'],
-    mutable: ['heading', 'body', 'position'],
+    mutable: ['heading', 'body', 'position', 'superseded_at'],
     body: ['body'],
   });
 }
