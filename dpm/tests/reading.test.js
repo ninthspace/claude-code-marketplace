@@ -315,8 +315,8 @@ function crowd(call, tools) {
     option_id: options[0].id, axis: `axis-${index}`, assessment: `assessment ${index}`,
   }));
 
-  spread(MANY).forEach((index) => call.create_review_agent({
-    document_id: first.review.id, agent: `agent-${index}`,
+  spread(MANY).forEach((index) => call.create_document_agent({
+    document_id: first.review.id, document_kind: 'review', agent: `agent-${index}`,
   }));
 
   spread(MANY).forEach((index) => call.create_quick_criterion({

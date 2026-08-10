@@ -69,8 +69,11 @@ export function coverageTools({ db, newId }) {
         position: args.position,
         verified_at: args.verified_at ?? null,
         // Computed from the arguments rather than read back, because the row is not there yet —
-        // and the criterion is, which is the half that has to be looked up either way.
-        binding_hash: args.verified_at === undefined ? null : bindingHash(db, args),
+        // and the criterion is, which is the half that has to be looked up either way. Nullish,
+        // so a row created explicitly unverified gets no hash: a `binding_hash` beside a NULL
+        // `verified_at` is a binding recorded for a verification that was never made, which is
+        // the state FR21's decay triggers exist to prevent arising the other way round.
+        binding_hash: args.verified_at == null ? null : bindingHash(db, args),
       }, 'create_coverage'),
     }),
 
@@ -102,13 +105,23 @@ export function coverageTools({ db, newId }) {
         properties: { id: { type: 'string', minLength: 1 }, ...STATE },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) => update(db, 'coverage', id, changes.verified_at === undefined
-        ? changes
-        // Hashed off the stored row rather than off anything the caller holds: a verification is
-        // a statement about the texts as they are now, and a caller working from a copy read
-        // earlier would otherwise stamp a hash over text that has since moved.
-        : { ...changes, binding_hash: bindingHash(db, readById(db, 'coverage', id, 'update_coverage')) },
-        'update_coverage'),
+      // The mark and its binding move together, in all three of the states a caller can now
+      // express. Omitting `verified_at` leaves both alone. Supplying one hashes off the **stored**
+      // row rather than off anything the caller holds: a verification is a statement about the
+      // texts as they are now, and a caller working from a copy read earlier would otherwise stamp
+      // a hash over text that has since moved. Clearing it clears the hash with it — a binding
+      // left behind by an unverification is the stale mark of a verification nobody made.
+      handler: ({ id, ...changes }) => {
+        if (changes.verified_at === undefined) {
+          return update(db, 'coverage', id, changes, 'update_coverage');
+        }
+
+        const binding = changes.verified_at === null
+          ? null
+          : bindingHash(db, readById(db, 'coverage', id, 'update_coverage'));
+
+        return update(db, 'coverage', id, { ...changes, binding_hash: binding }, 'update_coverage');
+      },
     }),
 
     // "Covered by: Story 2, Story 4" — a criterion may be delivered by more than the story that

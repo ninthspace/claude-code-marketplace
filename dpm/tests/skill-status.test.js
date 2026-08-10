@@ -325,11 +325,19 @@ test('archived and retro-waived rows are excluded by a WHERE clause, not by a ma
     raw.read_epic({ id: fixture.orphan.id }).status,
     'the two epics differ in status, so the waiver is not what separated them');
 
-  // **The waiver cannot be lifted, and that is the surface rather than this test.** `entityTools`
-  // drops nulls when building a change set, so the clear is accepted and changes nothing — which is
-  // why the comparison above is two rows rather than one row before and after.
-  raw.update_epic({ id: fixture.waived.id, retro_waived_at: null, retro_waived_reason: null });
-  assert.equal(raw.read_epic({ id: fixture.waived.id }).retro_waived_at, '2026-08-10T00:00:00.000Z');
+  // **The waiver can be lifted, and this assertion used to say it could not.** It described the
+  // clear as "accepted and changes nothing", which is false-pass register #22 stated as a feature:
+  // the call returned success and the column kept its value. Story 8 made an explicit null
+  // distinguishable from an omitted argument, so a waiver decided in error is now reversible by the
+  // tool that set it — which is the right shape for a triage call, and is why the recommendation
+  // comparison above is two rows differing in one column rather than one row read twice.
+  assert.equal(
+    raw.update_epic({
+      id: fixture.waived.id, retro_waived_at: null, retro_waived_reason: null,
+    }).retro_waived_at,
+    null,
+    'a waiver could not be lifted through the tool that set it',
+  );
 
   const phase = prose(source, 'Phase 1');
   assert.match(phase, /that is a `WHERE` clause rather than a rule this skill\s*remembers/);

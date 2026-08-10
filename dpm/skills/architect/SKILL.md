@@ -14,7 +14,7 @@ names no files, and never reads back what it or another skill wrote.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
 This skill uses **Gate Presentation**, **Perspectives**, **Conversational Output**, **Written
-Deliverable Length** and **Artifact Publishing** from it.
+Deliverable Length**, **Cross-References** and **Artifact Publishing** from it.
 
 ## Input
 
@@ -52,7 +52,8 @@ agreed.
 
 ### Roster
 
-`mcp__dpm__list_agent`, for **Perspectives** in Phases 2 and 4. Use only what the row carries.
+`mcp__dpm__list_agent` with `include_body`, for **Perspectives** in Phases 2 and 4. The traits are
+body columns, so without it the roster arrives as names and roles. Use only what the row carries.
 
 ### Library
 

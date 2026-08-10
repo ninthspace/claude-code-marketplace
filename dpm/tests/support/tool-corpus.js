@@ -26,7 +26,7 @@ export const WITNESS = {
   adr_option: 'gabbro',
   adr_option_tradeoff: 'komatiite',
   review: 'story',
-  review_agent: 'Architect',
+  document_agent: 'Architect',
   quick: 'basalt',
   quick_criterion: 'rhyolite',
   requirement: 'andesite',
@@ -200,8 +200,12 @@ export function toolCorpus(call) {
   });
 
   // The seeded persona and the added one, for the same reason the criterion carries two tags.
-  call.create_review_agent({ document_id: review.id, agent: 'architect' });
-  call.create_review_agent({ document_id: review.id, agent: 'charnockite' });
+  call.create_document_agent({
+    document_id: review.id, document_kind: 'review', agent: 'architect',
+  });
+  call.create_document_agent({
+    document_id: review.id, document_kind: 'review', agent: 'charnockite',
+  });
 
   call.create_finding({
     review_id: review.id, position: 0, agent: 'architect',

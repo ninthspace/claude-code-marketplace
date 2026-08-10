@@ -101,8 +101,17 @@ const seededKinds = (db) =>
  * The detail tables, found in the schema rather than listed here.
  *
  * A detail table is one whose composite foreign key is `(document_id, document_kind)` into
- * `document(id, kind)` — the shape `002-detail.sql` uses to make the one-to-one structural. The
- * kind it is pinned to is its `document_kind` default, which is the same value its `CHECK` admits.
+ * `document(id, kind)` **and whose whole primary key is `document_id`** — the shape
+ * `002-detail.sql` uses to make the one-to-one structural. The kind it is pinned to is its
+ * `document_kind` default, which is the same value its `CHECK` admits.
+ *
+ * **The primary key is what separates a detail table from a child table with a pinned parent.**
+ * `document_agent` carries the same composite key into `document` and is not detail: its primary
+ * key is `(document_id, agent)`, so a document has any number of the rows rather than exactly one,
+ * and its `CHECK` admits two kinds rather than defaulting to one. Matching on the foreign key
+ * alone counted it as a fifth detail table, which is the reading AD7 does not support — a detail
+ * row cannot exist without its document, cannot outlive it, and *cannot be duplicated*, and only
+ * the key delivers the third of those.
  */
 function detailTables(db) {
   const found = new Map();
@@ -124,8 +133,12 @@ function detailTables(db) {
 
     if (pairs.length === 0) continue;
 
-    const pinned = db.prepare(`PRAGMA table_info(${table})`).all()
-      .find((column) => column.name === 'document_kind')?.dflt_value;
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+    const primary = columns.filter((column) => column.pk > 0).map((column) => column.name);
+
+    if (primary.length !== 1 || primary[0] !== 'document_id') continue;
+
+    const pinned = columns.find((column) => column.name === 'document_kind')?.dflt_value;
 
     found.set(table, pinned?.replace(/^'|'$/g, '') ?? null);
   }
@@ -231,8 +244,8 @@ test('a registry that tools two kinds passes the table check and fails the kind 
   const { db } = surface(t);
   const context = { db, now: () => '2026-08-09T00:00:00.000Z', newId: () => 'x' };
 
-  // The registry as it stood before this story: `document` reachable through two kinds, and eleven
-  // kinds with no tool at all. Built by hand here precisely because `spineTools` no longer can —
+  // The registry as it stood before this story: `document` reachable through two kinds, and every
+  // other kind with no tool at all. Built by hand here precisely because `spineTools` no longer can —
   // it reads the kinds from `document_kind`, which is what makes the omission unrepeatable.
   const partial = [
     ...documentTools(context, { kind: 'spec' }),
@@ -242,12 +255,18 @@ test('a registry that tools two kinds passes the table check and fails the kind 
   // The table-level check sees nothing wrong, because `document` has create tools.
   assert.equal(created(partial).has('document'), true);
 
-  // The kind-level check names all eleven. This asymmetry is the whole reason the second check
-  // exists, and asserting it here is what stops the second check being mistaken for a restatement
-  // of the first.
+  // The kind-level check names every one of them. This asymmetry is the whole reason the second
+  // check exists, and asserting it here is what stops the second check being mistaken for a
+  // restatement of the first.
+  //
+  // Counted against the seeded set rather than pinned to a number, because the number is not what
+  // the check is about: a kind seeded tomorrow gets tools from `spineTools` and no tools from this
+  // hand-built pair, so a literal here would fail on a correct change and teach the next reader to
+  // bump it. The two named kinds are the ones with tools; everything else must be missing.
   const missing = seededKinds(db).filter((kind) => !createdKinds(partial).has(kind));
 
-  assert.equal(missing.length, 11, `expected eleven untooled kinds, got ${missing.join(', ')}`);
+  assert.equal(missing.length, seededKinds(db).length - 2,
+    `every kind but spec and epic should be untooled, got ${missing.join(', ')}`);
   assert.ok(missing.includes('coverage_matrix'),
     'coverage_matrix is the kind this story\'s own breakdown omitted, and the check must name it');
 });

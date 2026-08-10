@@ -32,18 +32,19 @@ import { renderReview } from './templates/review.js';
 import { renderSpec } from './templates/spec.js';
 
 /**
- * `document_kind.kind` → the function that renders it. Thirteen entries, one per seeded kind.
+ * `document_kind.kind` → the function that renders it. Fourteen entries, one per seeded kind.
  *
  * **There is no generic fallback and there must not be one.** A registry is exactly where a
  * convenience default gets added — "render the columns as a table until someone writes a proper
  * template" — and the result is that FR10's coverage passes with twelve templates and an untyped
  * dump in place of the thirteenth. A missing template raises, loudly, naming the kind.
  *
- * That rule is what makes `renderProse` appearing four times legitimate rather than a fallback
- * wearing a different name. `problem_brief`, `product_brief`, `discussion` and `runbook` each name
- * it, and a kind that named nothing would still reach nothing. The difference is checkable and not
- * a claim: the enumeration test compares these keys against `document_kind` in both directions, so
- * a fourteenth kind seeded tomorrow fails here whatever the twelve above it share.
+ * That rule is what makes `renderProse` appearing five times legitimate rather than a fallback
+ * wearing a different name. `problem_brief`, `product_brief`, `discussion`, `runbook` and
+ * `communication` each name it, and a kind that named nothing would still reach nothing. The
+ * difference is checkable and not a claim: the enumeration test compares these keys against
+ * `document_kind` in both directions, so a fifteenth kind seeded tomorrow fails here whatever the
+ * thirteen above it share.
  *
  * @type {Record<string, (db: object, tree: object, names: Map<string, string>, where: string)
  *   => string>}
@@ -58,6 +59,7 @@ export const TEMPLATES = {
   retro: renderRetro,
   quick: renderQuick,
   discussion: renderProse,
+  communication: renderProse,
   audit: renderAudit,
   runbook: renderProse,
   library: renderLibrary,

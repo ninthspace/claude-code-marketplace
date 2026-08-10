@@ -1,7 +1,7 @@
 /**
  * Epic 47-07 Story 4 — the converted `review`, and the five claims made about it.
  *
- * - "A review run writes `review` with its `scope` and `scope_story_id`, `review_agent` rows
+ * - "A review run writes `review` with its `scope` and `scope_story_id`, `document_agent` rows
  *   referencing `agent` rows rather than carrying persona names as text, and `finding` rows with
  *   severity and category as taxonomy references" [feature]
  * - "A story-scoped review parents onto the epic and narrows by `scope_story_id`, rather than
@@ -183,7 +183,11 @@ function run(call, fixture, { story = null, approved = true, remediate = true, a
     ...(story === null ? {} : { scope: 'story', scope_story_id: story }),
   });
 
-  for (const agent of panel) call.create_review_agent({ document_id: review.id, agent: agent.name });
+  for (const agent of panel) {
+    call.create_document_agent({
+      document_id: review.id, document_kind: 'review', agent: agent.name,
+    });
+  }
 
   const findings = found.map((finding, position) => call.create_finding({
     review_id: review.id, position, ...finding,
@@ -231,14 +235,16 @@ test('a review run writes its scope, its panel by reference and its findings by 
 
   // **The panel is a reference, not a copy.** Each row names an `agent`, so a persona renamed in
   // the table does not orphan the reviews that cited it.
-  const agents = raw.list_review_agent({ document_id: stored.id }).items;
+  const agents = raw.list_document_agent({ document_id: stored.id }).items;
   assert.equal(agents.length, result.panel.length);
   const roster = new Set(raw.list_agent({}).items.map((row) => row.name));
   for (const row of agents) assert.ok(roster.has(row.agent), `${row.agent} is not on the roster`);
 
   // An agent nobody added is refused rather than stored as text.
   assert.throws(
-    () => raw.create_review_agent({ document_id: stored.id, agent: 'nobody' }),
+    () => raw.create_document_agent({
+      document_id: stored.id, document_kind: 'review', agent: 'nobody',
+    }),
     /FOREIGN KEY/,
     'a review credited a persona that does not exist',
   );
@@ -457,7 +463,7 @@ test('the skill recovers nothing by reading a generated file', (t) => {
 
   for (const required of ['list_epic', 'read_epic', 'list_story', 'list_task',
     'list_story_criterion', 'read_spec', 'list_requirement', 'list_coverage', 'list_adr',
-    'list_agent', 'list_taxonomy', 'create_review', 'create_review_agent', 'create_finding',
+    'list_agent', 'list_taxonomy', 'create_review', 'create_document_agent', 'create_finding',
     'update_finding', 'create_story', 'create_task']) {
     assert.ok(named.includes(required), `the skill never names ${required}`);
     assert.ok(known.has(required), `${required} is not a tool`);

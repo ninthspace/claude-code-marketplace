@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
-**Status**: Complete — all eight stories; 32 of 32 coverage rows verified  
+**Status**: Complete — all eight stories and all 32 coverage rows verified. Row 10's ✓ was cleared by the pivot of 2026-08-10 when `review_agent` became `document_agent`, and restored on 2026-08-10 against `skill-review.test.js`, which drives a review run writing `document_agent` rows against the roster and refuses a persona no `agent` row carries  
 **Blocked by**: Epic 47-04-epic-projection-guard-and-merge, Epic 47-05-epic-parity-and-search  
 **Retro applied**: 36 · Codebase discovery · Applied — each story opens by calling the reads and writes its skill needs against the live surface before any SKILL.md is written; this epic's tables (`adr_option`, `adr_option_tradeoff`, `finding`, `audit_finding`, `library_document`, `quick_criterion`) have had less consumer exercise than the spine's  
 **Retro applied**: 36 · Pattern worth reusing · Applied — every conversion test opens with `bindings(source, tools, run)` from `support/skills.js` as standard rather than per-story choice; Story 8 runs it over all seven files at once  
@@ -158,7 +158,7 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 
 **Acceptance Criteria**:
 
-- A review run writes `review` with its `scope` and `scope_story_id`, `review_agent` rows referencing `agent` rows rather than carrying persona names as text, and `finding` rows with severity and category as taxonomy references [feature]
+- A review run writes `review` with its `scope` and `scope_story_id`, `document_agent` rows referencing `agent` rows rather than carrying persona names as text, and `finding` rows with severity and category as taxonomy references [feature]
 - A story-scoped review parents onto the epic and narrows by `scope_story_id`, rather than appending `-s2` to a filename [integration]
 - The facilitation survives: agent selection still includes one reviewer challenging business value and one challenging technical approach, and the finding stage still reports comprehensively before the ranking stage curates [feature]
 - A review run loads its roster from the `agent` table with no YAML parse, so a persona a project added and the plugin never shipped is offered to agent selection with no plugin change and no file edit [feature]
@@ -334,6 +334,22 @@ checks sweep all seven files on Story 8 rather than being restated per story.
 ---
 
 ## Notes
+
+### `review_agent` became `document_agent` after this epic completed
+
+Added on 2026-08-10 by `/cpm:pivot`. **No story, criterion or status above is changed by it.** The
+note exists because this epic's `review` conversion writes participant rows, and the table it writes
+them to has since been renamed and widened.
+
+Epic 47-08 Story 7 found that `review_agent` was pinned by composite foreign key to the `review`
+kind, so a `discussion` — which both `consult` and `party` write — could not record who took part.
+The spec now carries `document_agent`, pinned by `CHECK` to `review` and `discussion`, keeping the
+composite-key guarantee the narrower table had. **Epic 47-09 Story 8** builds it and **Story 9**
+updates the three skills that write to it, `review` among them.
+
+Nothing here was wrong. The table was correct for the only consumer that existed when this epic
+converted `review`; a second consumer arrived one epic later, which is retro 36's observation that a
+conversion is a consumer test the tools have never had, showing up a second time.
 
 ### Self-hosting register — entries in this epic's scope
 

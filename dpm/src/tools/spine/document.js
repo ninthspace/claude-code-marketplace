@@ -28,8 +28,14 @@ import { allocateNumber } from '../../numbering/allocate.js';
 import { defineTool, SUPPLIED, ToolError } from '../convention.js';
 import { insert, readById, update } from '../crud.js';
 
-/** `document.status`'s `CHECK` set, copied by hand from `001-identity.sql`. AD10, Story 7. */
-const STATUS = ['pending', 'complete'];
+/**
+ * `document.status`'s `CHECK` set, copied by hand from `020-status-lifecycle.sql`. AD10, Story 7.
+ *
+ * `superseded` and `withdrawn` are terminal and user-set, and neither is completion — which is the
+ * distinction `readyClause` turns on. Anything reading "not `pending`" as done is wrong for two of
+ * these four.
+ */
+const STATUS = ['pending', 'complete', 'superseded', 'withdrawn'];
 
 /** Columns a caller may change after creation. Identity, kind and numbering are not among them. */
 const MUTABLE = {

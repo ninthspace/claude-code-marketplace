@@ -334,7 +334,7 @@ test('the boundary refuses what it can see, and names what it refused', (t) => {
     ['unknown argument', () => call.create_spec({ slug: 'x', title: 'X', number: 1 }),
       /unknown argument 'number'/],
     ['value outside the CHECK set', () => call.update_spec({ id: spec.id, status: 'done' }),
-      /must be one of pending, complete — got 'done'/],
+      /must be one of pending, complete, superseded, withdrawn — got 'done'/],
     ['wrong type', () => call.create_task({
       story_id: story.id, number: 'three', title: 'T', position: 0 }), /must be integer/],
     ['empty string where a value is needed', () => call.create_spec({ slug: '', title: 'X' }),

@@ -148,7 +148,16 @@ The three gap queries worth running, each a comparison between two reads rather 
   `mcp__dpm__list_story_criterion_approach` says what the criterion was actually tagged, and
   `mcp__dpm__list_criterion_approach` says what the spec asked for. A mark resting on `manual` or
   `target` is not a mark a test produced.
-- **A completed epic with no retro** — the scoped `mcp__dpm__list_retro` answers it directly.
+- **A completed epic with no retro** — the scoped `mcp__dpm__list_retro` answers it directly. A
+  retired epic is not one of these: asking what was learned from work that was dropped is asking
+  about a decision to stop, and the gap query would report one for every such epic forever.
+
+**A retired item is reported as retired, in both directions.** `superseded` and `withdrawn` are
+terminal without being delivery, so a report that reads the four statuses as two puts them in one of
+two wrong places: `pending` says the work is still coming, `complete` says it shipped. A change set
+tracing to a story or an epic in either state is a finding in its own right — code written against
+work somebody stopped — and it is precisely the finding that disappears when the vocabulary is
+flattened.
 
 **Where the rows do not exist**, fall back through whatever the repository has: ADRs or decision
 records, RFCs, design docs, CHANGELOG, README, issue references, commit trailers, branch names. Say

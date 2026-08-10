@@ -49,10 +49,12 @@ export function templateTools({ db }, build) {
       name: 'read_document_kind',
       table: 'document_kind',
       description:
-        'One document kind: the directory its files land in, and whether it is numbered from the '
-        + 'root or within a parent. A null directory means the kind renders inside its parent and '
-        + 'has no file of its own.',
-      reads: ['document_kind'],
+        'One document kind: the directory its files land in, whether it is numbered from the '
+        + 'root or within a parent, and its parentage in both directions. A null directory means '
+        + 'the kind renders inside its parent and has no file of its own. `parents` names the '
+        + 'kinds this one may hang off; `children` names the kinds that may hang off it, which '
+        + 'is what a cascade walks.',
+      reads: ['document_kind', 'document_kind_parent'],
       mutates: false,
       inputSchema: {
         type: 'object',
@@ -69,7 +71,27 @@ export function templateTools({ db }, build) {
 
         if (!row) throw new ToolError(`read_document_kind: no kind '${kind}' in this project`);
 
-        return { ...row };
+        // **Both directions, because the two answer different questions and only one of them was
+        // reachable.** `documentTools` already reads the upward half to decide whether a kind takes
+        // a parent, so `parents` is that same answer made available to a caller. The downward half
+        // had no route at all: `document_kind_parent` is keyed `(kind, parent_kind)` and nothing
+        // queried it by the second column, so a run holding a document could not ask what hangs off
+        // it. That is the edge list a cascade traverses, and a cascade that cannot read it carries
+        // a copy of this table in its own prose — the hand-kept mapping FR1 opens the spec with,
+        // one directory over from where it was found.
+        //
+        // Ordered on the returned column so two calls agree. Empty is a real answer both ways: a
+        // root kind nothing may parent, and a leaf nothing hangs off.
+        const parents = db
+          .prepare('SELECT parent_kind FROM document_kind_parent WHERE kind = ? ORDER BY parent_kind')
+          .all(kind)
+          .map((entry) => entry.parent_kind);
+        const children = db
+          .prepare('SELECT kind FROM document_kind_parent WHERE parent_kind = ? ORDER BY kind')
+          .all(kind)
+          .map((entry) => entry.kind);
+
+        return { ...row, parents, children };
       },
     }),
 

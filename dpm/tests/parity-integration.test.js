@@ -174,7 +174,9 @@ test('a create tool refuses a term retired through the retire tool, and names th
       vocabulary: 'agent',
       retire: () => call.retire_agent({ name: 'architect' }),
       item: 'architect',
-      create: () => call.create_review_agent({ document_id: review.id, agent: 'architect' }),
+      create: () => call.create_document_agent({
+        document_id: review.id, document_kind: 'review', agent: 'architect',
+      }),
     },
     {
       vocabulary: 'test_approach',

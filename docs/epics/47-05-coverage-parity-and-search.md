@@ -47,7 +47,11 @@ adding a table changes no text here. Row 1's Spec Text remains identical to its 
 rows are unverified under the verification rule.
 
 The arithmetic itself, and the phrase to quote if a count is ever needed again, live in one place:
-the Data Model's *"thirteen document kinds, eight child tables and two standalone tables"*.
+the Data Model's *"fourteen document kinds, nine child tables and two standalone tables"*.
+That phrase read *thirteen, eight and two* when this epic was written and delivered against it;
+the pivot of 2026-08-10 added `communication` and `document_agent`, both of which are Epic 47-09's
+to build. **This epic's sixteen is therefore unchanged** — it is what was accounted for here, not a
+figure that tracks the current schema.
 
 **Row 4's spec text is FR24's own multi-category clause, not the criterion's projection
 half.** The projection is where the two categories are observed; FR24 is what requires there

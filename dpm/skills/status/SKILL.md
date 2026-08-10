@@ -64,6 +64,11 @@ rather than as a truncated read; raise the `limit` and call again rather than re
 Then the roll-up, per epic: `mcp__dpm__list_story` on it, and `mcp__dpm__list_task` per story where
 task-level detail is wanted. An epic's completion is its stories' `status`, counted.
 
+**Retired stories leave the count rather than joining either side of it.** An epic with three
+complete stories and one `withdrawn` is complete: a withdrawn story is not work waiting to be done,
+and holding it against the total keeps the epic open for something nobody intends to do. Say how
+many were retired alongside the fraction, so a denominator that shrank does not do it silently.
+
 **Archived documents do not come back, and that is a `WHERE` clause rather than a rule this skill
 remembers.** Every document list omits rows with `archived_at` set unless the caller passes
 `include_archived`. Archival is orthogonal to `status` — an archived epic is complete *and* swept —
@@ -119,19 +124,27 @@ If no rows exist at all, say so: the project has not started the dpm pipeline ye
 | Briefs but no specs | `/dpm:spec {brief id}` |
 | Specs but no epics | `/dpm:epics {spec id}` |
 | An epic with incomplete stories | `/dpm:do {epic id}` |
+| A retired epic, or one whose only incomplete stories are retired | Nothing — it will not be worked, and no retro is owed on it |
 | A complete epic, no retro, no `retro_waived_at` | `/dpm:retro {epic id}` |
 | A complete epic carrying `retro_waived_at` | Nothing — it is settled |
 | A session in flight | Resume it — name the skill and its `phase` |
 | Uncommitted changes | Commit before starting new work |
 
+**Two of the four statuses are neither outstanding nor delivered, and the report says so in its own
+word.** `pending` and `complete` are the working pair; `superseded` means replaced by other work and
+`withdrawn` means dropped, both terminal and both set by a person. Report them as **retired**, on a
+line of their own. Folded into "complete" they overstate what was built; folded into "pending" they
+are work somebody will pick up. Neither error is visible in a total, which is why the word is worth
+a line rather than a parenthesis.
+
 **A status that cannot be read is flagged, never guessed, and counts as not-done.** `status` is a
-closed set of two values the database enforces, so an off-vocabulary status cannot reach this report
-— it is refused at the write. What *can* reach it is a `status_note` that reads like a status:
-"superseded", "withdrawn", "folded into Story 10". Report those in a callout of their own, naming
-the document and quoting the note verbatim, and count the row by its `status` column. **Do not read
-a note as a status.** A note saying "superseded" beside `status: 'pending'` is a row that counts as
-outstanding and a project asking for a vocabulary it does not have; treating it as retired would
-silently close work nobody closed.
+closed set the database enforces, so an off-vocabulary status cannot reach this report — it is
+refused at the write. What *can* reach it is a `status_note` that reads like a status on a row whose
+`status` is `pending`: "superseded", "withdrawn", "folded into Story 10". Report those in a callout
+of their own, naming the document and quoting the note verbatim, count the row by its `status`
+column, and recommend setting the status the note describes. **Do not read a note as a status** —
+treating it as retired closes work nobody closed, and here the remedy is one call the reader can
+make rather than a vocabulary the project lacks.
 
 ### Phase 3b: Spec coverage roll-up (only for a spec)
 

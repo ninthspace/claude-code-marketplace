@@ -70,7 +70,7 @@ test('the template registry and the seeded document kinds name the same set', (t
     .map((row) => row.kind);
   const registered = Object.keys(TEMPLATES).sort();
 
-  assert.equal(seeded.length, 13, 'the seed is the parity contract and it moved');
+  assert.equal(seeded.length, 14, 'the seed is the parity contract and it moved');
 
   // **Both directions, and the two failures are different.** A seeded kind with no entry ships an
   // artefact type that nothing renders; a registered kind with no seed is a template for something

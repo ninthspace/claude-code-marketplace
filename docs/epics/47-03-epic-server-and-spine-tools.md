@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
-**Status**: Complete — 24 of 26 matrix rows verified; row 1 is `[target]` and needs a human on a clean clone, and row 14's ✓ was cleared by the pivot of 2026-08-09 when FR29 changed the name pattern it asserts  
+**Status**: Complete — all 26 matrix rows carry a ✓. Row 14's was cleared by the pivot of 2026-08-09 when FR29 changed the name pattern it asserts, and restored on 2026-08-10 against `naming.test.js`, whose `SHAPE` is the amended pattern and whose parts are checked against the live schema. Row 1 is `[target]`: its ✓ predates this and stands on the automated start-up check, not on a human running a clean clone  
 **Blocked by**: Epic 47-01-epic-substrate
 
 **Retro applied**: 33 · Codebase discoveries · Applied — every tool is exercised against a live database as it is written rather than reasoned about, and Story 7's conformance check reads `PRAGMA table_info` / `foreign_key_list` output directly. The same practice found three defects in Epic 47-02 on first execution, each invisible in code that looked correct.  
@@ -364,8 +364,10 @@ server concern that every skill needs from the first conversion, so the tool liv
   and no skill constructs a query", is a property of the skill corpus and belongs to Epics  
   47-06 through 47-09.
 - **FR10** — the seven spine entity types only. The remaining **sixteen** are Epic 47-05's —  
-  the Data Model's *thirteen document kinds, eight child tables and two standalone tables*,  
-  less this epic's seven. One of the sixteen, `session`, has its table  
+  the Data Model's *fourteen document kinds, nine child tables and two standalone tables*,  
+  less this epic's seven, where that phrase read *thirteen, eight and two* on the date this  
+  was written and the sixteen is the figure delivered against; the two types the pivot of  
+  2026-08-10 added belong to Epic 47-09. One of the sixteen, `session`, has its table  
   and its tool built *here* under FR11 and is counted there only for the enumeration's  
   arithmetic, so 47-05 writes fifteen tools against sixteen accounted types. The derivation  
   is stated here because the number alone cannot be reconciled from either epic on its own:  

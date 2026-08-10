@@ -33,6 +33,12 @@ export function renderLibrary(db, tree, identifiers, where) {
   return document(tree, ref, identifiers, [
     [
       detail ? field('Type', detail.doc_type) : null,
+
+      // Rendered only when there is one, because the NULL is the answer for a document written
+      // here rather than a value missing from one imported. A rendered `**Source**: —` invites the
+      // reader to fill it in, which is the prose field the column exists to replace.
+      detail?.source ? field('Source', detail.source) : null,
+
       scopes.length === 0
         ? null
         : field('Scope', scopes.map(({ scope }) => scope).join(', ')),

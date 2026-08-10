@@ -35,9 +35,18 @@ export class ProjectionError extends Error {}
  * as a schema gap rather than as the rule being wrong.
  *
  * A matrix therefore takes the epic's shape rather than a three-part number: `47-03`, from spec 47
- * and its own `sequence`. It shares those bytes with its epic on purpose, and what keeps the two
- * files apart is the kind in the filename — the same thing that keeps `epic` and `coverage_matrix`
- * apart in `docs/epics/`, now load-bearing for the number as well as the directory.
+ * and **the epic's** `sequence`. It shares those bytes with its epic on purpose, and what keeps the
+ * two files apart is the kind in the filename — the same thing that keeps `epic` and
+ * `coverage_matrix` apart in `docs/epics/`, now load-bearing for the number as well as the
+ * directory.
+ *
+ * **The sequence comes from the child directly under the root, not from the document itself**, and
+ * the difference is invisible in a project with one epic. `document_child_number` allocates per
+ * parent, so every matrix is `sequence` 1 under its own epic; taking the document's own sequence
+ * therefore named every matrix in every project `{spec}-01`, and two matrices under different
+ * epics differed only by slug. The rule above is what the sharing sentence always meant, and this
+ * repository's own tree has always shown it — `47-03-coverage-server-and-spine-tools.md` carries
+ * its epic's number, not a `01`.
  *
  * @param {object} document A `document` row.
  * @param {...object} ancestry Its parent, then grandparent, and so on — nearest first. Required
@@ -54,16 +63,21 @@ export function identifierOf(document, ...ancestry) {
       );
     }
 
-    const root = ancestry.find((ancestor) => ancestor && ancestor.numbering === 'root');
+    const chain = [document, ...ancestry];
+    const rootIndex = chain.findIndex((ancestor) => ancestor && ancestor.numbering === 'root');
 
-    if (!root) {
+    if (rootIndex === -1) {
       throw new ProjectionError(
         `${document.kind} '${document.id}' has no root-numbered ancestor — the chain is `
         + `${ancestry.map((ancestor) => `${ancestor.kind}/${ancestor.numbering}`).join(' → ')}`,
       );
     }
 
-    return `${root.number}-${pad(document.sequence)}`;
+    // The document immediately below the root, which is the document itself at one level down and
+    // its parent at two. Its sequence is the one both share.
+    const numbered = chain[rootIndex - 1];
+
+    return `${chain[rootIndex].number}-${pad(numbered.sequence)}`;
   }
 
   // `numbering = 'none'` is legal in the schema and has no human number by construction. Reaching

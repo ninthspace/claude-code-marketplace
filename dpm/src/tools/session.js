@@ -20,7 +20,7 @@
  */
 
 import { defineTool, SUPPLIED, ToolError } from './convention.js';
-import { insert, readById, update } from './crud.js';
+import { deleteById, insert, readById, update } from './crud.js';
 import { selectPage } from './query.js';
 
 /** Declared once and used by both the tool and its statement, so the two cannot disagree. */
@@ -239,6 +239,39 @@ export function sessionTools({ db, now }) {
         order: ORDER,
         where: 'list_session',
       }, args),
+    }),
+
+    defineTool({
+      name: 'delete_session',
+      table: 'session',
+      description:
+        'Remove one session by id, returning the row as it was. Refused while another session '
+        + 'was adopted from it, and refused if there is no such row.',
+      reads: ['session'],
+      mutates: true,
+      // Withheld by default like every other body, but this is the one call where `include_body`
+      // is the last chance to ask: after it returns there is no row left to read the blob from.
+      body: ['state'],
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { id: { type: 'string', minLength: 1 } },
+        required: ['id'],
+      },
+      // **One row per call, named by id, and that is the shape rather than an omission.** A sweep
+      // wants a cutoff and a `DELETE … WHERE updated_at < ?` would serve it in one statement — but
+      // `clean` exists to put every candidate in front of someone before anything goes, and a tool
+      // taking the cutoff would let the confirmation stand for a set whose membership was decided
+      // after it was given. `list_session` selects; this removes what was named.
+      //
+      // **The chain protects itself, in the direction that is easy to get backwards.** A
+      // predecessor carries `superseded_by`, so it is the *successor* that something points at:
+      // deleting the live end of a chain while its predecessor survives is refused by the foreign
+      // key, and deleting the predecessor is always allowed. Oldest-first, which is the order
+      // `list_session` returns and the order a staleness sweep works in, never meets the refusal —
+      // and a caller reaching for the newest row alone gets an error instead of a row pointing at
+      // nothing.
+      handler: (args) => deleteById(db, 'session', args.id, 'delete_session'),
     }),
   ];
 }

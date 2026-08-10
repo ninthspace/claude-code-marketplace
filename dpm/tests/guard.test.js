@@ -94,16 +94,16 @@ test('a tree whose generated files match the database passes, and says what it c
   const { code, out, err } = invoke(repo);
 
   assert.equal(code, 0, err);
-  // Twelve documents with a file of their own, plus the artifact register — the one projected file
-  // that is not a document, and so the one the per-document loop cannot produce.
-  assert.match(out, /13 projected files and \.dpm\/dpm\.sql match the database/);
+  // Thirteen documents with a file of their own, plus the artifact register — the one projected
+  // file that is not a document, and so the one the per-document loop cannot produce.
+  assert.match(out, /14 projected files and \.dpm\/dpm\.sql match the database/);
 
   // `checked` is returned so a pass over nothing is distinguishable from a pass. An empty
   // `diverged` says nothing on its own — NFR6's shape exactly.
   const result = guard(repo.db, { root: repo.root });
 
   assert.equal(result.diverged.length, 0);
-  assert.equal(result.checked.files, 13);
+  assert.equal(result.checked.files, 14);
 });
 
 // --- Hand-edits (criterion 1, and the must-NOT beside it) ------------------------------------

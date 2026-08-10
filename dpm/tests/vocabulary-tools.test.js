@@ -451,7 +451,7 @@ test('a retired persona leaves the roster and its past attributions still resolv
     parent_id: spec.id, slug: 'reads', title: 'Review of the reads',
   });
 
-  call.create_review_agent({ document_id: review.id, agent: 'pm' });
+  call.create_document_agent({ document_id: review.id, document_kind: 'review', agent: 'pm' });
   call.retire_agent({ name: 'pm' });
 
   assert.equal(

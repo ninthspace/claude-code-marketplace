@@ -60,7 +60,9 @@ export function numberingTools({ db }) {
       // `parent_id IS NULL` is the root counter and `= ?` is a child's, and the two are different
       // statements because SQL's `=` never matches NULL.
       handler: (args) => {
-        const row = args.parent_id === undefined
+        // Nullish, because omitting the parent and naming it as null are the same statement here:
+        // this counter has no parent. The two branches are different SQL, not a filter.
+        const row = args.parent_id == null
           ? db.prepare('SELECT * FROM number_sequence WHERE kind = ? AND parent_id IS NULL')
             .get(args.kind)
           : db.prepare('SELECT * FROM number_sequence WHERE kind = ? AND parent_id = ?')

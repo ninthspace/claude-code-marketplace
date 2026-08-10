@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
-**Status**: Complete  
+**Status**: Complete — all 88 coverage rows verified. Row 81's ✓ was cleared by the pivot of 2026-08-10 when `review_agent` became `document_agent`, and restored on 2026-08-10 against `vocabulary.test.js`, which asserts the rejection on `document_agent.agent` and on `finding.agent` alike — the criterion as amended, not as it stood before  
 **Blocked by**: —  
 **Retro applied**: 33 · Codebase discovery · Applied — every DDL batch is executed against a real SQLite database as it is written; each kind-pinning and rejection criterion is asserted by a failed INSERT rather than by reading the constraint  
 **Retro applied**: 33 · Codebase discovery · Applied — no probe or test counts unless `PRAGMA foreign_keys=ON` was set on that same connection; Story 1's fresh-connection criterion asserts against a reopened temp-file database, not a shared handle  
@@ -133,7 +133,7 @@ is identity only.
 - A severity row is rejected in a category slot, and an audit dimension in a severity slot, on `finding` and `audit_finding` alike [unit]
 - Retiring a taxonomy row leaves rows referencing it intact and readable [unit]
 - must NOT — a new row is accepted referencing a taxonomy row, test approach or dependency kind already retired, so that retirement stops rows arriving as well as preserving those that have [unit]
-- `review_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, so the roster is a vocabulary rather than free text [unit]
+- `document_agent.agent` and `finding.agent` both reject a persona name no `agent` row carries, so the roster is a vocabulary rather than free text [unit]
 - must NOT — a `document_kind` row exists that the parity enumeration does not name, or the reverse [unit]
 - An `adr` parents onto a spec, a brief or a discussion, and onto an epic not at all [unit]
 - A `retro` parents onto an epic, a spec or a quick record — the three sources `cpm:retro` actually accepts [unit]
@@ -149,7 +149,7 @@ is identity only.
 **Description**: Covers the severity-in-a-category-slot rejections on `finding` and `audit_finding` alike. A plain `REFERENCES taxonomy(id)` would relocate the drift rather than remove it.  
 **Status**: Complete
 
-### Write and seed the `agent` table, and point `review_agent` and `finding` at it
+### Write and seed the `agent` table, and point `document_agent` and `finding` at it
 **Task**: 2.3  
 **Description**: The roster becomes a vocabulary under FR24 — its own table rather than a `taxonomy` domain, for the reason `test_approach` is one: it carries four columns no other vocabulary needs. Seed from CPM's `agents/roster.yaml`. Both referencing columns are declared several hundred lines before `agent` in the Data Model's DDL order; SQLite resolves a foreign key at write time rather than at `CREATE`, so the forward reference holds — asserted by the story's rejection criterion rather than assumed.  
 **Status**: Complete

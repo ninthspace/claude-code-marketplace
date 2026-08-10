@@ -113,10 +113,10 @@ function repository(t) {
 
 // --- Criterion 1: determinism across the whole template set -------------------------------------
 
-test('a database of all thirteen kinds regenerates byte-identically twice [integration]', (t) => {
+test('a database of all fourteen kinds regenerates byte-identically twice [integration]', (t) => {
   const repo = repository(t);
 
-  // **Thirteen, and the count is asserted rather than assumed.** Story 1's determinism test ran
+  // **Fourteen, and the count is asserted rather than assumed.** Story 1's determinism test ran
   // against one kind, and a renderer is deterministic per template — a second template that
   // emitted a timestamp would pass there and fail here, which is the whole reason this row exists
   // separately from row 1.
@@ -125,16 +125,16 @@ test('a database of all thirteen kinds regenerates byte-identically twice [integ
   const present = repo.db.prepare('SELECT DISTINCT kind FROM document ORDER BY kind').all()
     .map((row) => row.kind);
 
-  assert.equal(kinds.length, 13);
+  assert.equal(kinds.length, 14);
   assert.deepEqual(present, kinds, 'the corpus does not hold one document of every kind');
 
   const first = project(repo.db, { write: false });
   const second = project(repo.db, { write: false });
 
-  // Thirteen documents plus the artifact register — see the guard test below for why the register
+  // Fourteen documents plus the artifact register — see the guard test below for why the register
   // is counted rather than exempted. Determinism is the claim being made here, and it covers the
   // register too: its rows are ordered `published_at DESC, id DESC`, which is total.
-  assert.equal(first.written.length + first.inline.length, 14);
+  assert.equal(first.written.length + first.inline.length, 15);
   assert.deepEqual(second, first);
 
   // And on disk, which is where the guard will compare them. An in-memory renderer that agreed
@@ -339,11 +339,11 @@ test('the guard checks every file the projection produces, and says how many', (
   assert.deepEqual(checked.diverged, []);
   assert.equal(checked.checked.files, rendered.written.length);
 
-  // Thirteen documents and the artifact register, which is the one projected file that is not a
+  // Fourteen documents and the artifact register, which is the one projected file that is not a
   // document — `artifact` is a standalone table with no kind, so it cannot come out of the
   // per-document loop. It is counted here rather than exempted, because the guard covering every
   // file *except* the register would be the stale-projection false pass one file wide.
-  assert.equal(checked.checked.files + rendered.inline.length, 14);
+  assert.equal(checked.checked.files + rendered.inline.length, 15);
   assert.ok(rendered.written.some((file) => file.path === 'docs/artifacts/index.md'),
     'the register was not among the projected files, so the count moved for another reason');
 });

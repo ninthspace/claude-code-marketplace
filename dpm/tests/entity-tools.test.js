@@ -354,7 +354,9 @@ test('every remaining type creates and reads back through its own tools', (t) =>
   const tradeoff = call.create_adr_option_tradeoff({
     option_id: option.id, axis: 'reversibility', assessment: 'Total.',
   });
-  const agent = call.create_review_agent({ document_id: review.id, agent: 'architect' });
+  const agent = call.create_document_agent({
+    document_id: review.id, document_kind: 'review', agent: 'architect',
+  });
   const criterion = call.create_quick_criterion({
     quick_id: quick.id, text: 'it holds', position: 0,
   });
@@ -400,7 +402,7 @@ test('every remaining type creates and reads back through its own tools', (t) =>
   assert.equal(call.read_adr_option_tradeoff({
     option_id: option.id, axis: 'reversibility', include_body: true,
   }).assessment, 'Total.');
-  assert.equal(call.read_review_agent({ document_id: review.id, agent: 'architect' }).agent,
+  assert.equal(call.read_document_agent({ document_id: review.id, agent: 'architect' }).agent,
     agent.agent);
   assert.equal(call.read_quick_criterion({ id: criterion.id }).met, null);
   assert.equal(call.read_library_scope({ document_id: library.id, scope: 'do' }).scope,

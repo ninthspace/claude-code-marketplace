@@ -316,9 +316,9 @@ test('the gates run in turn, and a regeneration updates in place rather than min
   assert.match(record, /\*\*The artifacts common to every source, not the ones any source has\.\*\*/);
   assert.match(record, /offering to overwrite it is the same mistake as minting a duplicate/);
 
-  // A declined publication stores nothing, and says so — a quiet end reads as a saved one.
-  assert.match(record, /the draft in the conversation is the deliverable and nothing is stored/);
-  assert.match(record, /a run that ends quietly reads as one that saved something/);
+  // A declined publication says which of the two things happened — a quiet end reads as either one.
+  assert.match(record, /Say that it was stored and not published/);
+  assert.match(record, /a run that ends quietly reads as one that did neither/);
   assert.match(record, /keep it local, do not offer publishing/);
 
   // The degradation table answers every absence with a behaviour rather than a failure.
@@ -329,10 +329,12 @@ test('the gates run in turn, and a regeneration updates in place rather than min
     assert.ok(table.includes(missing), `the table does not answer: ${missing}`);
   }
 
-  // It writes no document row, and the reason is the one the whole design rests on.
-  assert.match(prose(source, 'Output'), /This skill writes no document row of its own/);
+  // A published communication writes no document row, and the reason is the one the whole design
+  // rests on. Story 9 gave the *unpublished* case a row of its own; this half is unchanged by that,
+  // because what makes a second copy stale is the page that already holds the first one.
+  assert.match(prose(source, 'Output'), /an `artifact` row with\s+one `artifact_document` per source and \*\*no document row\*\*/);
   assert.match(prose(source, 'Output'),
-    /storing it as a document would be a second copy of their content that goes stale/);
+    /a second copy of its content in `document_section` goes stale/);
 });
 
 // --- Criterion 3 (must NOT): no recovery by reading what was written -----------------------------

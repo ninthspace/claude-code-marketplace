@@ -226,8 +226,8 @@ test('the scope is suggested rather than applied, and every derived field is con
   assert.ok(source.indexOf('2. Derive what the library needs') < source.indexOf('3. Write it'));
 
   const derive = prose(source, '2. Derive what the library needs');
-  assert.match(derive, /\*\*all four presented together before anything is written\*\*/);
-  assert.match(derive, /Render the four in the message body and gate them: accept, adjust, or stop/);
+  assert.match(derive, /\*\*all five presented together before anything is written\*\*/);
+  assert.match(derive, /Render the five in the message body and gate them: accept, adjust, or stop/);
   assert.match(prose(source, '3. Write it'), /On approval, and in this order/);
 
   // The scope is suggested and adjusted, never applied — and the reason is that both errors are
@@ -236,7 +236,7 @@ test('the scope is suggested rather than applied, and every derived field is con
   assert.match(derive, /too narrow and the document is never loaded by the skill that needed it/);
   assert.match(derive, /Neither shows up as a failure/);
 
-  // All four derived fields are named, and the suggestion table is still there to derive from.
+  // The derived fields are named, and the suggestion table is still there to derive from.
   for (const field of ['`title`', '`slug`', '`doc_type`', 'The scope']) {
     assert.ok(section(source, '2. Derive what the library needs').includes(`- **${field}**`),
       `the derivation step does not name ${field}`);
@@ -295,7 +295,7 @@ test('the scope is suggested rather than applied, and every derived field is con
 
   // The three writes happen in the order the file gives, because scope rows reference the document.
   assert.match(instructions(source, '3. Write it'),
-    /`mcp__dpm__create_library` with the `slug`, `title` and `doc_type`/);
+    /`mcp__dpm__create_library` with the `slug`, `title`, `doc_type`/);
   assert.match(instructions(source, '3. Write it'),
     /`mcp__dpm__create_library_scope` per scope value/);
 });

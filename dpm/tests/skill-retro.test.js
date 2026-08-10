@@ -245,18 +245,33 @@ test('retirement is two columns and the list omits what they mark', (t) => {
     'an observation was retired without a reason',
   );
 
-  // **Retirement is durable, and the file says so because the surface makes it so.** An update
-  // carrying explicit nulls does not clear the pair — `entityTools` drops null and undefined alike
-  // when building its change set, so the call reports nothing to update rather than un-retiring.
-  // There is no un-retire tool either, here or on the vocabularies. The assertion is on the
-  // behaviour rather than on the message, so a surface that later grows one fails here and gets
-  // the prose corrected with it.
+  // **The pair holds in both directions**: clearing one end and leaving the other is the same
+  // half-state the `CHECK` refuses on the way in.
   assert.throws(
-    () => raw.update_observation({ id: fixture.spent.id, retired_at: null, retired_reason: null }),
-    /nothing to update/,
-    'a retirement was lifted through the ordinary update path',
+    () => raw.update_observation({ id: fixture.spent.id, retired_at: null }),
+    /CHECK constraint/,
+    'a retirement was left with a reason and no date',
   );
-  assert.equal(raw.list_observation({ story_id: fixture.stories[1].id }).items.length, 1);
+
+  // **Retirement is durable because no skill undoes it, not because the tools cannot.** Story 8
+  // made an explicit null distinguishable from an omitted argument, which is what closes false-pass
+  // register #22 — and an update that accepts a clear, reports success and changes nothing is that
+  // entry exactly. This assertion used to read the other way round and pinned the defect in place,
+  // citing `entityTools` dropping nulls as the mechanism. Clearing both columns together is now an
+  // ordinary edit, and what carries the durability is that nothing is *named* for it: the skill's
+  // own prose, asserted below, and the absence of an un-retire tool on the surface.
+  assert.equal(
+    raw.update_observation({
+      id: fixture.spent.id, retired_at: null, retired_reason: null,
+    }).retired_at,
+    null,
+    'the ordinary update path could not clear a nullable pair',
+  );
+  assert.equal(raw.list_observation({ story_id: fixture.stories[1].id }).items.length, 2,
+    'and the row is live again, which is what clearing the columns means');
+
+  assert.equal(tools.some((tool) => /unretire|un_retire|restore_/.test(tool.name)), false,
+    'the surface grew a tool named for lifting a retirement');
 
   const durable = prose(source, 'Lesson retirement (`retire`)');
   assert.match(durable, /Retiring is durable and this skill does not undo it/);

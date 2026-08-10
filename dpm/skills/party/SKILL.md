@@ -9,7 +9,8 @@ Several specialists in one conversation, chosen per turn from what was just said
 a room you staff, this is a room that staffs itself.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Session Startup**, **Library Check** and **Conversational Output** from it.
+This skill uses **Session Startup**, **Library Check**, **Conversational Output** and
+**Cross-References** from it.
 
 ## Startup
 
@@ -110,13 +111,18 @@ On exit, acknowledge in one sentence and write it down:
 2. One `mcp__dpm__create_document_section` per part of the record — the key points, the decisions
    with their reasoning, the direction the room arrived at, and anything still open — at the
    positions they should read in.
-3. `mcp__dpm__update_session` to close the run.
+3. `mcp__dpm__create_document_agent` per agent who spoke, with `document_kind` set to `discussion`
+   and the `agent` name — the whole room, not the ones quoted in the record.
+4. `mcp__dpm__update_session` to close the run.
 
 **Write the substance, not a summary of it.** A discussion is worth keeping for the reasoning behind
 the direction, and a record compressed to bullets keeps the direction and throws away the reasoning.
 
-**A discussion records no participants**, because there is no join for it. Name the agents in the
-prose where it matters to a reader; do not invent a field for them.
+**Who was in the room is a row, and naming them in the prose is not the same fact.** A reader can
+see the names either way; nothing else can. A run asking which discussions an agent took part in
+reads rows, and a persona mentioned in a paragraph is invisible to it — which is why the row goes in
+for an agent whose contribution did not survive the edit. The prose still reads however it needs to;
+it is not the record.
 
 Then **offer, and do not run**: `/dpm:discover`, `/dpm:spec` or `/dpm:epics` with this discussion as
 their starting context, or nothing.
@@ -132,8 +138,8 @@ their starting context, or nothing.
 
 ## Output
 
-A `discussion` document and its sections, plus the session row. **Nothing else is written**, and no
-file is composed by hand.
+A `discussion` document, its sections and one `document_agent` row per participant, plus the session
+row. **Nothing else is written**, and no file is composed by hand.
 
 ## Next Action
 

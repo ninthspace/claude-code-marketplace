@@ -8,8 +8,8 @@ sections — a skill names the file and reads it, which costs one read per run r
 sections repeated in twenty-two files.
 
 **What earns a place here.** A section belongs in this file when several skills reference it. One
-referenced by a single skill belongs in that skill; one referenced by none is documentation and
-belongs in `docs/`.
+referenced by a single skill belongs in that skill; one referenced by none is documentation rather
+than context, and belongs wherever the project keeps its documentation.
 
 **Nothing here describes what a tool already does.** Prose restating a tool's behaviour is a second
 specification of it, and the two drift — the prose being the copy that no test holds to account.
@@ -30,7 +30,7 @@ changes — and the skill states that part and nothing else.
 
 ## Session Startup
 
-Every skill's run is one `session` row. There is no progress file.
+Every skill's run is one `session` row, and nothing else on disk records where it reached.
 
 1. `mcp__dpm__list_session` for what is open. A row whose `updated_at` is more than three days old
    is stale; present those and let the user decide, deleting nothing that was not named.
@@ -103,9 +103,11 @@ layout variant. They are transient and easy to miss, so nothing the user needs t
 
 Some sections invite agent personas to weigh in before the user decides.
 
-1. **Load the roster** with `mcp__dpm__list_agent`. Its rows carry `display_name`, `icon`, `role`,
-   `personality` and `communication_style`. A project that added a persona has it in that list;
-   nothing is read from a file and nothing is invented beyond the row.
+1. **Load the roster** with `mcp__dpm__list_agent`, passing `include_body`. Its rows carry
+   `display_name`, `icon`, `role`, `personality` and `communication_style` — **the last two are body
+   columns**, so without that argument the list comes back with names and roles and the voices below
+   are woven from nothing. A project that added a persona has it in that list; nothing is read from
+   a file and nothing is invented beyond the row.
 2. **Select two or three** whose `role` and `personality` bear on the decision at hand.
 3. **Each gives one or two sentences in character**, formatted `{icon} **{display_name}**:
    {perspective}`. Let `communication_style` and `personality` drive tone and framing so the voices
@@ -146,6 +148,28 @@ Leave out padding that restates a point because a section looked thin, closing r
 reader has just read, and headings kept because a template offered them and then filled with "N/A".
 
 This is calibration, not a budget. No artefact carries a fixed word or section count.
+
+## Cross-References
+
+A sentence in one artefact naming another — an epic's notes saying which epic holds the other half,
+an observation citing the spec it came from — is written `{{ref:<id>}}`, carrying the target's id.
+The renderer resolves the marker to that document's current human identifier.
+
+**Never write the number.** It is correct on the day it is written and stops being correct the
+moment anything renumbers its target, and by then nothing can find it to repair: a number inside a
+sentence is indistinguishable from every other number in that sentence. The id is already in hand —
+it is what the list or read tool that found the artefact returned — so the marker costs nothing that
+the number does not.
+
+**A structural reference is not this.** Where the relationship is a column — an epic's spec, a
+coverage row's requirement, an artifact's document — write the foreign key and leave the prose
+alone. A marker beside a foreign key is one fact recorded twice, and the two disagree the first time
+either is edited.
+
+**Something that is not a document gets no marker.** A commit, a ticket, a URL, a file in the
+repository: none has an id, so each is named plainly in the prose as what it is. A marker naming
+something that cannot be resolved is refused at render time, so inventing one to look consistent
+turns a loose reference into a projection that will not build.
 
 ## Artifact Publishing
 

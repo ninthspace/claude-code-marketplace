@@ -11,8 +11,8 @@ communications — an executive memo and an onboarding guide are different refra
 rows, not different documents.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Conversational Output**, **Gate Presentation**, **Written Deliverable Length** and
-**Artifact Publishing** from it.
+This skill uses **Conversational Output**, **Gate Presentation**, **Written Deliverable Length**,
+**Cross-References** and **Artifact Publishing** from it.
 
 ## Input
 
@@ -136,11 +136,25 @@ source that has been deleted fails here rather than surviving as a link a reader
 nothing. The index of what has been published and the backlinks inside each source are both renders
 of these rows, so the two cannot disagree.
 
-**Where publishing is declined or refused, the draft in the conversation is the deliverable and
-nothing is stored.** Say so — a run that ends quietly reads as one that saved something. This is
-the case to expect when a communication presents itself as issued by an organisation the user does
-not represent: keep it local, do not offer publishing, and do not look for another way to put it
-somewhere.
+**Where publishing is declined or refused, the draft is kept as a `communication`.** Call
+`mcp__dpm__create_communication` with the title the draft was gated under, then one
+`mcp__dpm__create_document_section` per section of it, each with its `heading`, its `body` and its
+`position`. Say that it was stored and not published — a run that ends quietly reads as one that
+did neither. This is the case to expect when a communication presents itself as issued by an
+organisation the user does not represent: keep it local, do not offer publishing, and do not look
+for another way to put it somewhere.
+
+**A communication takes no parent, and an unpublished one has no source join.** An audience is not
+a lineage, and `artifact_document` hangs off an artifact that this branch deliberately does not
+write. The source ids stay on the session `state` where step 1 put them; they are not recorded as
+an edge, and the honest answer to "what was this drafted from" for a local communication is that
+the run said so in conversation.
+
+**Never write an `artifact` row for a communication that was not published.** `url` is the
+artifact's identity, so recording one means inventing a URL — a placeholder, a `pending` marker, a
+repository path that is not a link — and every one of those is something a reader will click. The
+absence of an artifact is how the corpus says this was never published, and it says it only while
+nothing fills the gap.
 
 ## Degradation
 
@@ -148,17 +162,20 @@ somewhere.
 |---|---|
 | The corpus is empty | Say so and stop. There is nothing to derive from, and a communication written without sources is the one thing this skill does not do. |
 | A chosen source has no sections | Report it by name and offer to continue without it. Do not pad the draft to cover the hole. |
-| The Artifact tool is absent | Say so. The draft stands as the deliverable; no artifact row is written, because there is no URL for one to carry. |
+| The Artifact tool is absent | Say so, and take the local branch: the draft is stored as a `communication`, and no artifact row is written because there is no URL for one to carry. |
 | An existing artifact's URL no longer resolves | Report it and let the user decide between republishing to it and starting a new one. Do not silently mint a second. |
 | A source was deleted after selection | The join write fails as a foreign-key error. Say which source, and re-run step 1 rather than dropping it. |
 
 ## Output
 
-The draft in conversation and, on publication, an `artifact` row with one `artifact_document` per
-source. **This skill writes no document row of its own.** A communication is a rendering of rows
-that already exist, and storing it as a document would be a second copy of their content that goes
-stale the moment any of them changes — which is the same reason the sources are an edge and not a
-list of paths written into the text.
+The draft in conversation, and then one record or the other. On publication, an `artifact` row with
+one `artifact_document` per source and **no document row**: the page at the URL is the
+communication, and a second copy of its content in `document_section` goes stale the moment a
+source moves — which is the same reason the sources are an edge and not a list of paths written
+into the text. Where publishing was declined, a `communication` document and its sections, and no
+artifact.
+
+**The two are exclusive, and which one exists is the answer to whether this went out.**
 
 ## Next Action
 

@@ -11,18 +11,20 @@ Everything this skill records is a typed tool call. It composes no markdown, nam
 never reads back what it or another skill wrote.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Gate Presentation**, **Conversational Output** and **Implementation Guidelines**
-from it.
+This skill uses **Gate Presentation**, **Conversational Output**, **Cross-References** and
+**Implementation Guidelines** from it.
 
 ## Input
 
 1. If `$ARGUMENTS` names an epic id, work that epic.
-2. Otherwise `mcp__dpm__list_epic` with `ready: true`. That is the epics with nothing incomplete
-   blocking them — a query over the edges, not a status anyone maintains. One result is
-   auto-selected; several go to `AskUserQuestion` showing each title.
-3. An empty result means every epic is either complete or waiting on something. Say which, from
-   `mcp__dpm__list_epic` unfiltered and `mcp__dpm__list_dependency` on the ones that are not
-   complete, and stop.
+2. Otherwise `mcp__dpm__list_epic` with `ready: true`. That is the epics still `pending` with no
+   blocker short of `complete` — a query over the edges, not a status anyone maintains. One result
+   is auto-selected; several go to `AskUserQuestion` showing each title.
+3. An empty result means every epic is complete, retired, or waiting on something — **three
+   answers, and saying the wrong one is how a project loses track of what it decided to stop**. Say
+   which, from `mcp__dpm__list_epic` unfiltered and `mcp__dpm__list_dependency` on the ones still
+   `pending`, and stop. Report a `superseded` or `withdrawn` epic as retired, with its
+   `status_note` where it carries one: it is neither work outstanding nor work delivered.
 
 The epic, once resolved, holds for the whole loop.
 
@@ -83,10 +85,16 @@ in the session `state`. Nothing else is detected here yet.
 
 ## Story selection
 
-`mcp__dpm__list_story` with this `epic_id` and `ready: true`. That is the stories that are not
-complete and have no incomplete blocker over an edge whose kind gates work — **the same query that
+`mcp__dpm__list_story` with this `epic_id` and `ready: true`. That is the stories still `pending`
+with no blocker short of `complete` over an edge whose kind gates work — **the same query that
 answers the same question for epics**, and the reason blocking is an edge rather than a status.
 Take the lowest `number`.
+
+**The two halves read `status` differently, and both lean the safe way.** A story is workable only
+while `pending`, so a `superseded` or `withdrawn` one is never offered — it is not work this run
+left undone. A *blocker* clears only on `complete`, so a story retired halfway goes on gating what
+was waiting on it exactly as a pending one does: being stopped is not having delivered. Neither is
+applied here — both are in the query — but a run that reports the absence has to say which.
 
 When a story you expected is missing from that list, `mcp__dpm__list_dependency` with it as
 `target_story_id` names the edges into it; each blocker's own row says whether it is done. That is
@@ -115,7 +123,11 @@ verification task blocked by them. That list is a view of the rows and never the
 is `task.status`, and the mirror is rebuilt from `mcp__dpm__list_task` rather than reconciled
 against itself.
 
-When no ready story remains, the epic is done — go to Step 8.
+When no ready story remains, go to Step 8 — **and no ready story is not the same as a finished
+epic**. Read the epic's stories unfiltered: complete throughout is done, and anything `superseded`
+or `withdrawn` is reported as retired beside the rest rather than counted into either column. A
+story still `pending` and held by a blocker is neither, and `mcp__dpm__list_dependency` on it says
+by what.
 
 ## Per-task workflow
 
@@ -133,8 +145,14 @@ Explore the code the task touches before planning it, carrying the applied retro
 
 **Being in flight is the session's `phase`, not a status.** `mcp__dpm__update_session` names the
 task about to start; the row itself moves from pending to complete in one step at Step 6, because
-that is the set its `CHECK` admits. One place says what is happening now, and it is the place a
-resumed run reads.
+there is no value between them. One place says what is happening now, and it is the place a resumed
+run reads.
+
+**The other two values this run does not set.** `superseded` says the work was replaced and
+`withdrawn` says it was dropped — both terminal, and both a decision rather than an outcome of
+doing the work. Set either only where the user asks for it. A task that could not be finished stays
+short of complete with an observation saying why; closing it as retired would report a judgement
+nobody made, in the one column a later run trusts without reading around it.
 
 Where a status needs qualifying — folded into another story, partly superseded — that is
 `status_note` on the same call that sets the status. **There is no token to parse and no tail to

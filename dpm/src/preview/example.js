@@ -218,8 +218,10 @@ const RECIPES = {
     });
 
     sections(call, review.id, [['Summary', BODY]]);
-    call.create_review_agent({ document_id: review.id, agent: 'architect' });
-    call.create_review_agent({ document_id: review.id, agent: 'dev' });
+    const panel = { document_id: review.id, document_kind: 'review' };
+
+    call.create_document_agent({ ...panel, agent: 'architect' });
+    call.create_document_agent({ ...panel, agent: 'dev' });
 
     // Two severities, because they are what a reader scans the table by.
     call.create_finding({
@@ -318,10 +320,11 @@ const RECIPES = {
   problem_brief: (call) => prose(call, 'create_problem_brief', 'Example Problem Brief'),
   product_brief: (call) => prose(call, 'create_product_brief', 'Example Product Brief'),
   discussion: (call) => prose(call, 'create_discussion', 'Example Discussion'),
+  communication: (call) => prose(call, 'create_communication', 'Example Communication'),
   runbook: (call) => prose(call, 'create_runbook', 'Example Runbook'),
 };
 
-/** The four kinds whose whole structure is their sections. */
+/** The five kinds whose whole structure is their sections. */
 function prose(call, tool, title) {
   const document = call[tool]({ slug: 'example', title });
 

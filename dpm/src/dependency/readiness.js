@@ -59,10 +59,20 @@ const ENDS = {
  * release the work that edges of that kind were already holding up. That is why `retired_at`
  * appears nowhere below.
  *
- * The predicate is the whole of readiness and not the blocker half alone — being incomplete, and
- * for a document not being archived, are as much a part of "can be worked on now" as having no
- * blocker. Returning the whole of it is what keeps a second consumer from adding its own idea of
- * the other conditions.
+ * The predicate is the whole of readiness and not the blocker half alone — being open, and for a
+ * document not being archived, are as much a part of "can be worked on now" as having no blocker.
+ * Returning the whole of it is what keeps a second consumer from adding its own idea of the other
+ * conditions.
+ *
+ * **The two halves read the status differently, and they have to.** A *blocker* clears only on
+ * `complete` — FR22 says so in those words, and it is the whole point: an epic abandoned halfway
+ * has not delivered what the work waiting on it was waiting for, so `superseded` and `withdrawn`
+ * go on gating exactly as `pending` does. A *blocked row* is workable only while `pending` — the
+ * other three are all terminal, and offering an abandoned story as ready is the same false pass
+ * pointed the other way. Under the two-value enum the two readings were the same clause spelled
+ * differently, which is why `020-status-lifecycle.sql` widens the enum and this file changes in the
+ * same commit: widening alone turns `<> 'complete'` on the row's own status into "abandoned work is
+ * still on the board".
  *
  * @param {'document'|'story'} table The blocked table, and the alias the clause correlates to.
  * @returns {string} A SQL fragment, safe to splice: every part comes from `ENDS`.
@@ -79,7 +89,7 @@ export function readyClause(table) {
          )`);
 
   return [
-    `${table}.status <> 'complete'`,
+    `${table}.status = 'pending'`,
     // A story has no archive of its own; archiving the epic takes its stories with it.
     ...(table === 'document' ? [`${table}.archived_at IS NULL`] : []),
     ...blockers,

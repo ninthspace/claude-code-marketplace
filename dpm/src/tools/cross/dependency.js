@@ -56,9 +56,21 @@ const endOf = (args, side) => args[`${side}_document_id`] ?? args[`${side}_story
  * @returns {object[]}
  */
 export function dependencyTools({ db, newId = ulid }) {
+  // **The "exactly one of" rule is in the description because `required` cannot hold it.** All four
+  // of these are optional in JSON Schema terms and none of them is optional in practice: an edge
+  // needs one end on each side. A caller reading the schema alone sees four fields it may leave out
+  // and no hint that leaving out a whole side is refused.
   const end = (side) => ({
-    [`${side}_document_id`]: { type: 'string', minLength: 1 },
-    [`${side}_story_id`]: { type: 'string', minLength: 1 },
+    [`${side}_document_id`]: {
+      type: 'string',
+      minLength: 1,
+      description: `the ${side} when it is a document; give exactly one of ${side}_document_id or ${side}_story_id`,
+    },
+    [`${side}_story_id`]: {
+      type: 'string',
+      minLength: 1,
+      description: `the ${side} when it is a story; give exactly one of ${side}_document_id or ${side}_story_id`,
+    },
   });
 
   return [
@@ -86,6 +98,7 @@ export function dependencyTools({ db, newId = ulid }) {
       table: 'dependency',
       description:
         'Link two documents or stories with a typed edge, reading source-blocks-target. '
+        + 'On a supersedes edge the source is the superseded end and the target replaces it. '
         + 'Refuses an edge that would close a cycle over a kind that gates work.',
       reads: ['dependency'],
       mutates: true,

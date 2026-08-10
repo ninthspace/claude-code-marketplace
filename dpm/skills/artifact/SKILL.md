@@ -19,7 +19,7 @@ skill is for, and the reason it writes neither.
 step to resume, and a resumable run that cannot be resumed is worse than none.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Conversational Output** and **Gate Presentation** from it.
+This skill uses **Conversational Output**, **Gate Presentation** and **Cross-References** from it.
 
 ## Startup
 

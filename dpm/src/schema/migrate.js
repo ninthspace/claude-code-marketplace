@@ -60,6 +60,32 @@ function readMigration(filename) {
 }
 
 /**
+ * The marker a migration writes to say it rebuilds a table, and so needs foreign keys out of the
+ * way — SQLite's own documented procedure for changing a table-level `CHECK`.
+ *
+ * **`PRAGMA foreign_keys` is silently ignored inside a transaction**, so a rebuild migration cannot
+ * turn enforcement off for itself. `017-observation-quick.sql` worked around that by copying its one
+ * cascading child aside and putting it back, which is tractable for a leaf table and is not for
+ * `document`: with enforcement on, `DROP TABLE document` runs an implicit `DELETE FROM` whose
+ * cascades reach roughly every table in the schema, so the rescue would have to cover all of them
+ * and its failure mode is silent row loss.
+ *
+ * So the pragma goes **outside** the per-migration transaction and the DDL stays inside it, which is
+ * step 1 and step 2 of SQLite's twelve. The rollback guarantee is unchanged — a rebuild that throws
+ * still leaves the database at the previous version — and the enforcement that is off for the
+ * duration is replaced by `PRAGMA foreign_key_check` before the commit rather than dropped. That
+ * check is the whole of what makes this safe, which is why a failing one throws rather than warns
+ * (NFR6): a rebuild that loses a parent row and commits is a corrupt database reporting success.
+ *
+ * Declared per file rather than applied to every migration, because enforcement being on is what
+ * catches an ordinary additive migration writing a row it should not.
+ */
+const REBUILD = /^-- dpm:rebuild\b/m;
+
+/** Whether this connection is enforcing foreign keys, so a rebuild restores what it found. */
+const enforcing = (db) => db.prepare('PRAGMA foreign_keys').get().foreign_keys === 1;
+
+/**
  * Apply every migration this database has not seen, in order.
  *
  * Runs on server start with no user action, which is the requirement — so it is safe to call
@@ -93,18 +119,40 @@ export function migrate(db, { now = new Date().toISOString() } = {}) {
 
   for (const name of pending) {
     const version = versionOf(name);
+    const sql = readMigration(name);
+
+    // Read before the pragma is touched, and restored after, so a caller that had enforcement off
+    // for its own reasons — `merge` and `restore` both do — does not have it switched on underneath.
+    const rebuild = REBUILD.test(sql);
+    const enforced = rebuild && enforcing(db);
+
+    if (rebuild) db.exec('PRAGMA foreign_keys = OFF');
 
     db.exec('BEGIN');
 
     try {
-      db.exec(readMigration(name));
+      db.exec(sql);
+
+      // In place of the enforcement that is off. Every violation is reported rather than the first,
+      // because a rebuild that missed two tables is not fixed by hearing about one of them.
+      if (rebuild) {
+        const violations = db.prepare('PRAGMA foreign_key_check').all();
+
+        if (violations.length > 0) {
+          throw new Error(`${violations.length} foreign key violation(s) after the rebuild: `
+            + violations.map((row) => `${row.table} row ${row.rowid} → ${row.parent}`).join(', '));
+        }
+      }
+
       db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(version, now);
     } catch (error) {
       db.exec('ROLLBACK');
+      if (enforced) db.exec('PRAGMA foreign_keys = ON');
       throw new Error(`migration ${name} failed and was rolled back: ${error.message}`, { cause: error });
     }
 
     db.exec('COMMIT');
+    if (enforced) db.exec('PRAGMA foreign_keys = ON');
     applied.push(version);
   }
 

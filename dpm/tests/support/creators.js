@@ -100,7 +100,7 @@ const CREATORS = {
   criterion_approach: writes('criterion_approach'),
   story_criterion_approach: writes('story_criterion_approach'),
 
-  review_agent: writes('review_agent'),
+  document_agent: writes('document_agent', () => ({ document_kind: 'review' })),
 
   // Every end defaults to NULL so a test can name exactly the two it means, including the
   // combinations the CHECKs are there to refuse.

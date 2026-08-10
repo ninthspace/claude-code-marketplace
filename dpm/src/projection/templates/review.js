@@ -30,7 +30,7 @@ export function renderReview(db, tree, identifiers, where) {
   const ref = (text) => resolve(text, identifiers, where);
   const id = tree.document.id;
   const detail = detailOf(db, 'review', id);
-  const agents = collection(db, 'reviewAgents', id);
+  const agents = collection(db, 'documentAgents', id);
   const findings = collection(db, 'findings', id);
 
   const scope = detail && detail.scope === 'story'

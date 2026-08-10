@@ -9,8 +9,8 @@ A one-to-one conversation with an expert persona, which becomes a panel only whe
 You lead by default and can hand the lead to an agent when you want them to drive.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Session Startup**, **Library Check**, **Conversational Output** and
-**Gate Presentation** from it.
+This skill uses **Session Startup**, **Library Check**, **Conversational Output**,
+**Gate Presentation** and **Cross-References** from it.
 
 ## Startup
 
@@ -97,14 +97,19 @@ On exit, acknowledge in one sentence and write it down:
 2. One `mcp__dpm__create_document_section` per part of the record — the key points, the decisions
    with their reasoning, and the thread that was open when it ended — at the positions they should
    read in.
-3. `mcp__dpm__update_session` to close the run.
+3. `mcp__dpm__create_document_agent` per agent who took part, with `document_kind` set to
+   `discussion` and the `agent` name — everyone who was in the room, including any dismissed
+   before the end.
+4. `mcp__dpm__update_session` to close the run.
 
 **Write the substance, not a summary of it.** The session state has been carrying decisions with
 their reasoning; a discussion record that compresses them to bullets throws away the thing it exists
 to keep. Length is the wrong economy here.
 
-**A discussion records no participants**, because there is no join for it. Name the agents in the
-prose where it matters to a reader; do not invent a field for them.
+**Who was in the room is a row, and naming them in the prose is not the same fact.** A reader can
+see the names either way; nothing else can. A run asking which discussions an agent took part in
+reads rows, and a persona mentioned in a paragraph is invisible to it — which is also why a
+dismissal is not a deletion here. The prose still reads however it needs to; it is not the record.
 
 Then **offer, and do not run**: `/dpm:discover`, `/dpm:spec` or `/dpm:epics` with this discussion as
 their starting context, or nothing.
@@ -120,8 +125,8 @@ their starting context, or nothing.
 
 ## Output
 
-A `discussion` document and its sections, plus the session row. **Nothing else is written**, and no
-file is composed by hand.
+A `discussion` document, its sections and one `document_agent` row per participant, plus the session
+row. **Nothing else is written**, and no file is composed by hand.
 
 ## Next Action
 

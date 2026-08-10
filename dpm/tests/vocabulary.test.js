@@ -27,7 +27,7 @@ import { childDocument, retroDocument, rootDocument } from './fixtures/planning.
  */
 const PARITY_ENUMERATION = [
   'problem_brief', 'product_brief', 'spec', 'epic', 'coverage_matrix', 'review', 'retro',
-  'quick', 'discussion', 'audit', 'runbook', 'library', 'adr',
+  'quick', 'discussion', 'communication', 'audit', 'runbook', 'library', 'adr',
 ];
 
 /** A spec, and a review and an audit hanging off it — what `finding` and `audit_finding` need. */
@@ -48,7 +48,7 @@ test('the seeded kinds and the parity enumeration name each other, in both direc
     [...PARITY_ENUMERATION].sort(),
     'a kind in one and not the other is a parity claim the schema does not keep',
   );
-  assert.equal(seeded.length, 13, 'and the count the spec derives is the count that landed');
+  assert.equal(seeded.length, 14, 'and the count the spec derives is the count that landed');
 
   // The one kind that produces no file of its own. Asserted separately because a seed that
   // gave every kind a dir would still satisfy the enumeration above.
@@ -240,7 +240,10 @@ test('a persona no agent row carries is rejected on both columns that name one',
   const { spec, review } = reviewedSpec(db);
   create(db, 'review', { document_id: review.id, scope: 'whole' });
 
-  assert.ok(create(db, 'review_agent', { document_id: review.id, agent: 'qa' }), 'a seeded persona');
+  assert.ok(
+    create(db, 'document_agent', { document_id: review.id, agent: 'qa' }),
+    'a seeded persona',
+  );
   assert.ok(
     create(db, 'finding', {
       review_id: review.id, agent: 'architect',
@@ -250,9 +253,9 @@ test('a persona no agent row carries is rejected on both columns that name one',
   );
 
   assert.throws(
-    () => create(db, 'review_agent', { document_id: review.id, agent: 'security' }),
+    () => create(db, 'document_agent', { document_id: review.id, agent: 'security' }),
     /FOREIGN KEY constraint failed/,
-    'review_agent.agent rejects a plausible persona the roster does not carry',
+    'document_agent.agent rejects a plausible persona the roster does not carry',
   );
   assert.throws(
     () => create(db, 'finding', {

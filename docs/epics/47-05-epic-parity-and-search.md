@@ -622,9 +622,12 @@ enumeration rather than a count.
 
 Epic 47-03 said "the remaining fifteen" against this epic's "sixteen" until review 05. Both
 are now sixteen — the Data Model's
-*thirteen document kinds, eight child tables and two standalone tables*, less the spine's
+*fourteen document kinds, nine child tables and two standalone tables*, less the spine's
 seven — with the `session` qualification stated in 47-03 where the number appears, rather
-than left to a reader to reconcile from a third note.
+than left to a reader to reconcile from a third note. **The phrase read *thirteen, eight and
+two* when that reconciliation was done**, and the sixteen is the figure this epic delivered
+against; the two types the pivot of 2026-08-10 added are Epic 47-09's to build, so the
+subtraction is quoted here for its source rather than recomputed.
 
 The pivot of 2026-08-08 removed the count from Story 1's criterion altogether: it now reads
 the table list from `sqlite_master` and compares it against the registered tools, so no

@@ -1,10 +1,17 @@
 /**
- * The thirteen document kinds and the parentage allow-list.
+ * The fourteen document kinds and the parentage allow-list.
  *
- * The thirteen are the spec's parity contract — "thirteen document kinds, eight child tables
- * and two standalone tables" — and the list is what gives FR10's acceptance criterion
- * something to check. Without it the criterion passes by construction, because an empty
- * `document_kind` table names nothing that the enumeration does not name either.
+ * They are the spec's parity contract — "fourteen document kinds, eight child tables and two
+ * standalone tables" — and the list is what gives FR10's acceptance criterion something to check.
+ * Without it the criterion passes by construction, because an empty `document_kind` table names
+ * nothing that the enumeration does not name either.
+ *
+ * **`communication` is the one kind not derived from a real `docs/` tree**, because CPM has no file
+ * for it. `present` drafts content for an audience and then either publishes it — producing an
+ * `artifact` row and nothing else — or is told to keep it local, at which point the draft had
+ * nowhere to go. Parity with a gap is still a gap. It takes no parent: an audience is not a
+ * lineage, and the thing a communication was drafted *from* is recorded by the `artifact_document`
+ * join when it is published rather than by parentage when it is not.
  *
  * `dir` is the projection directory under `docs/`. Exactly one kind has none: an ADR renders
  * inside the document that prompted it, which is what keeps its `decision_status` and its
@@ -24,6 +31,7 @@ export const DOCUMENT_KINDS = [
   { kind: 'retro', dir: 'retros', numbering: 'root' },
   { kind: 'quick', dir: 'quick', numbering: 'root' },
   { kind: 'discussion', dir: 'discussions', numbering: 'root' },
+  { kind: 'communication', dir: 'communications', numbering: 'root' },
   { kind: 'audit', dir: 'audits', numbering: 'root' },
   { kind: 'runbook', dir: 'runbooks', numbering: 'root' },
   { kind: 'library', dir: 'library', numbering: 'root' },

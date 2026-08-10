@@ -11,8 +11,8 @@ this collection different from a folder of useful files — and what makes its *
 that has to be exactly right.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Conversational Output**, **Gate Presentation** and **Written Deliverable Length**
-from it.
+This skill uses **Conversational Output**, **Gate Presentation**, **Written Deliverable Length** and
+**Cross-References** from it.
 
 ## Input
 
@@ -60,10 +60,15 @@ thing was read.
 
 ### 2. Derive what the library needs, and confirm it
 
-Four things, derived from the content and **all four presented together before anything is written**:
+Five things, derived from the content and **all five presented together before anything is written**:
 
 - **`title`** — what a reader would call it.
 - **`slug`** — short, kebab-case.
+- **`source`** — where the document came from, for one brought in from outside this project: the URL
+  fetched, or the path it was copied from. **Left unset for a document written here**, and that
+  absence is the answer rather than a field nobody filled in. A URL is its own provenance and is
+  recorded as read; a file path is the case worth asking about, because a file inside the project
+  may equally be one the team wrote and one somebody dropped in last year.
 - **`doc_type`** — `architecture`, `coding-standards`, `domain`, and so on. It is free text, so look
   at `mcp__dpm__list_library` first and reuse a value the project already has rather than minting a
   synonym. Two spellings of one type is the same defect as two words for one scope.
@@ -84,14 +89,14 @@ Four things, derived from the content and **all four presented together before a
 error is silent in both directions: too narrow and the document is never loaded by the skill that
 needed it, too broad and it is loaded by every skill that did not. Neither shows up as a failure.
 
-Render the four in the message body and gate them: accept, adjust, or stop.
+Render the five in the message body and gate them: accept, adjust, or stop.
 
 ### 3. Write it
 
 On approval, and in this order:
 
-1. `mcp__dpm__create_library` with the `slug`, `title` and `doc_type`. That call allocates the
-   number, which nothing here works out.
+1. `mcp__dpm__create_library` with the `slug`, `title`, `doc_type` and, for an imported document,
+   `source`. That call allocates the number, which nothing here works out.
 2. `mcp__dpm__create_library_scope` per scope value — one call each, because scope is a set of rows
    and a document scoped to three skills is three rows.
 3. `mcp__dpm__create_document_section` with a `Summary` heading at `position` 0, then the source's
@@ -104,6 +109,13 @@ the document is a paragraph nothing can act on.
 
 **Keep the source's own content intact.** One source, one document; sections follow its structure
 rather than a shape imposed here.
+
+**Provenance is the column and never a section.** Do not open the document with a bolded source
+line, a *Provenance* heading, or a sentence in the summary saying where it came from — each is the
+field written into the prose it describes, and a second copy that disagrees with `source` the first
+time either is edited. The facts that sit next to it are prose or are already held: the summary is
+the section at `position` 0, and when the document arrived and when it was last touched are
+`created_at` and `updated_at`.
 
 ## Consolidation
 
@@ -152,6 +164,7 @@ and the amendment it absorbed are no longer both part of the document.
 |---|---|
 | The source file or URL cannot be read | Say which and stop. There is nothing to import, and an empty document is worse than none. |
 | No `doc_type` fits | Mint one, and say that it is new. A wrong reuse is harder to find later than an extra value. |
+| Where the document came from cannot be established | Leave `source` unset and say so. An unset column reads as "written here", which is wrong but recoverable; a guessed URL reads as a citation. |
 | The user wants no scope at all | Refuse, and say why: a document scoped to nothing is never loaded, which is the same as not importing it. |
 | The document to consolidate has no amendments | Say so and stop. |
 | An amendment cannot be reconciled | Leave it un-superseded and name it. A section that still says something the body does not is still doing its job. |
@@ -159,7 +172,8 @@ and the amendment it absorbed are no longer both part of the document.
 
 ## Output
 
-A `library` document row, its `library_scope` rows, and its sections — or, on consolidation, the same
+A `library` document row carrying its `doc_type` and, where it was imported, its `source`; its
+`library_scope` rows; and its sections — or, on consolidation, the same
 document with its body updated and its absorbed amendments superseded. **What is written is rows, and
 the file a reader opens is a render of them** — which is why nothing here constructs a filename, and
 why the scope filter every other skill runs is a `WHERE` clause rather than a parse of the file.

@@ -132,6 +132,17 @@ export function fullCorpus(db, call) {
   });
   insertSections(db, 'doc-disc', [{ heading: 'Positions', body: 'Parity from the outset.' }]);
 
+  // The one kind with no CPM file behind it: a `present` run told to keep its output local. It
+  // takes no parent, so it is also the corpus's check that a parentless root kind renders.
+  documents.communication = insertDocument(db, {
+    id: 'doc-comm', kind: 'communication', numbering: 'root', number: 1,
+    slug: 'launch-note', title: 'What the persistence work changes',
+  });
+  insertSections(db, 'doc-comm', [
+    { heading: 'Audience', body: 'Everyone who runs a planning skill.' },
+    { heading: 'What changes', body: 'Artefacts are rows; the files are a projection.' },
+  ]);
+
   documents.runbook = insertDocument(db, {
     id: 'doc-run', kind: 'runbook', numbering: 'root', number: 1,
     slug: 'restore', title: 'Restoring from the dump',
@@ -145,7 +156,8 @@ export function fullCorpus(db, call) {
   });
   db.prepare(`INSERT INTO review (document_id, scope, scope_story_id) VALUES ('doc-review', ?, ?)`)
     .run('story', story.id);
-  db.prepare("INSERT INTO review_agent (document_id, agent) VALUES ('doc-review', 'architect')")
+  db.prepare(`INSERT INTO document_agent (document_id, document_kind, agent)
+      VALUES ('doc-review', 'review', 'architect')`)
     .run();
   db.prepare(`INSERT INTO finding
       (id, review_id, position, agent, category_id, severity_id, summary, status)

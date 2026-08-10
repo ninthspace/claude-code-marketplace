@@ -79,13 +79,17 @@ export function entityTools({ db, newId }, {
   const columns = Object.keys(fields);
   const changeable = mutable ?? columns.filter((column) => !keys.includes(column));
 
+  // On create there is nothing to leave alone, so a derived column the caller gave nothing to
+  // derive from is NULL — which is what `undefined` and an explicit clear both come to here.
   const values = (args) => ({
     ...Object.fromEntries(
       columns
         .filter((column) => args[column] !== undefined)
         .map((column) => [column, toColumn(args[column])]),
     ),
-    ...(derive ? derive(args) : {}),
+    ...Object.fromEntries(
+      Object.entries(derive ? derive(args) : {}).map(([column, value]) => [column, value ?? null]),
+    ),
   });
 
   const readKey = (args) => Object.fromEntries(keys.map((column) => [column, args[column]]));
@@ -171,10 +175,16 @@ export function entityTools({ db, newId }, {
         // **The derived columns come along with whatever they are derived from, and only then.**
         // Setting `retro_id` without `retro_kind` fails a `CHECK` that pairs them; setting neither
         // must leave both alone, which is the story's "must not clear one to set the other".
+        //
+        // Three states, not two, since a caller may now clear the reference as well as set it:
+        // `undefined` from `derive` is *nothing to do*, and a `null` is a clear that has to be
+        // written. Skipping nulls here — as this did while a clear could not reach a handler at all
+        // — would clear `retro_id` and leave `retro_kind` saying 'retro', which is the paired
+        // `CHECK` refusing a call the caller had every right to make.
         const derived = derive ? derive(args) : {};
 
         for (const [column, value] of Object.entries(derived)) {
-          if (value !== null && value !== undefined) changes[column] = value;
+          if (value !== undefined) changes[column] = value;
         }
 
         // The stored row with the changes over it, so the guard sees the state this call would

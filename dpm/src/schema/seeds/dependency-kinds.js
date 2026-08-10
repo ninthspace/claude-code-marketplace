@@ -18,5 +18,10 @@ export const DEPENDENCY_KINDS = [
   { kind: 'builds_on', gates_work: 0, position: 2, retired_at: null },
   // ADR-to-ADR, which CPM does define and which is directional and distinct from blocking.
   { kind: 'constrains', gates_work: 0, position: 3, retired_at: null },
+  // **The superseded document is the *source*.** Read "source is superseded, target replaces it" —
+  // which is the opposite of what the name suggests on a first reading, and the direction integrity
+  // register entry 6 enforces when it requires an edge *out of* an ADR whose `decision_status` is
+  // `superseded`. Stated here because the register's `WHERE` clause was the only place it was
+  // written down, and a corpus written against the name rather than the clause got it backwards.
   { kind: 'supersedes', gates_work: 0, position: 4, retired_at: null },
 ];

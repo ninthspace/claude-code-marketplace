@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-dpm-sqlite-persistence.md  
 **Date**: 2026-08-08  
-**Status**: Complete — all six stories; 24 of 24 coverage rows verified  
+**Status**: Complete — all six stories and all 24 coverage rows verified. Row 6's ✓ was cleared by the pivot of 2026-08-10 when FR10's template criterion stopped carrying a count and a fourteenth `document_kind` was added, and restored on 2026-08-10 against `templates.test.js`, which enumerates the registry against `document_kind` in both directions and carries no count  
 **Blocked by**: Epic 47-02-epic-dump-and-restore, Epic 47-03-epic-server-and-spine-tools
 
 Milestones M2 and M4 (AD6) — the projection and its guard are M2, the merge tool is M4. An
@@ -75,7 +75,7 @@ projection file and this is where projection filenames are decided.
 
 **Acceptance Criteria**:
 
-- Each of the thirteen `document_kind` rows has a projection template; the nine projectable non-document types and the ADR render inside a parent's template and are asserted to appear in one, with any type that reaches no template named by the same assertion rather than excluded from it [integration]
+- Every seeded `document_kind` row has a projection template, enumerated against the live table in both directions; the projectable non-document types and the ADR render inside a parent's template and are asserted to appear in one, with any type that reaches no template named by the same assertion rather than excluded from it [integration]
 - The template registry is enumerated against the seeded `document_kind` rows, so a kind seeded without a template fails rather than rendering [unit]
 - must NOT — a missing template falls back to a generic renderer, so an untyped dump ships in place of a failure [unit]
 

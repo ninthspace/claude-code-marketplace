@@ -342,11 +342,13 @@ test('must NOT — the skill recovers an entity by reading a generated markdown 
   // like the corpus reads around it.
   assert.match(prose(source, 'Input'), /External, so it is read rather than queried/);
 
-  // The participant gap is stated rather than worked around — a run that invented a field for it
-  // would be recording a relationship in prose, which is the defect FR1 opens the spec with.
+  // Participants are a row. Story 9 gave this the join it had been stating the absence of, and the
+  // rule the file carries is the one that survives either way: a relationship named in prose is not
+  // recorded, which is the defect FR1 opens the spec with.
   assert.match(prose(source, 'Saving the discussion'),
-    /\*\*A discussion records no participants\*\*, because there is no join for it/);
-  assert.match(prose(source, 'Saving the discussion'), /do not invent a field for them/);
+    /\*\*Who was in the room is a row, and naming them in the prose is not the same fact\.\*\*/);
+  assert.match(prose(source, 'Saving the discussion'),
+    /a persona mentioned in a paragraph is invisible to it/);
 
   // The control: CPM's own exit flow trips the sweep in four places at once.
   const regressed = `${source}\n\nLoad the roster from agents/roster.yaml. On a file path, read the `

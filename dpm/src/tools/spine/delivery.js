@@ -18,8 +18,8 @@
 import { defineTool, SUPPLIED } from '../convention.js';
 import { insert, readById, update } from '../crud.js';
 
-/** Copied by hand from `004-delivery.sql`; both tables declare the same set. */
-const STATUS = ['pending', 'complete'];
+/** Copied by hand from `020-status-lifecycle.sql`; both tables declare the same set as `document`. */
+const STATUS = ['pending', 'complete', 'superseded', 'withdrawn'];
 
 /**
  * Build create, read and update for one delivery table.

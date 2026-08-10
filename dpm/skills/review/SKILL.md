@@ -13,8 +13,8 @@ Everything this skill records is a typed tool call. It composes no markdown, all
 names no files, and never reads back what it or another skill wrote.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Gate Presentation**, **Conversational Output**, **Written Deliverable Length** and
-**Artifact Publishing** from it.
+This skill uses **Gate Presentation**, **Conversational Output**, **Written Deliverable Length**,
+**Cross-References** and **Artifact Publishing** from it.
 
 ## Input
 
@@ -44,13 +44,14 @@ resumed after it has no other way back to what the personas said.
 
 ### Roster
 
-`mcp__dpm__list_agent` — this is the review panel, and it is the whole of it.
+`mcp__dpm__list_agent` with `include_body` — this is the review panel, and it is the whole of it.
+The personality and communication style are body columns, so without that argument each persona
+arrives as a name and a role and every lens below is the same lens.
 
 **The roster is rows, so a project can add to it.** A persona this plugin never shipped joins the
 selection because it is in the table, with no plugin change and no file edit; a retired one is
 skipped because the row says so. Use only what the row carries — name, display name, icon, role,
-and, where the read returns them, personality and communication style. Do not invent a trait to fill
-a persona out.
+personality and communication style. Do not invent a trait to fill a persona out.
 
 ### Library
 
@@ -97,7 +98,7 @@ technical writer.
 approach*, so every review carries both a "should we?" and a "can we?". A panel of four technical
 reviewers is a panel with one question.
 
-Record each as `mcp__dpm__create_review_agent` once the review row exists in Step 4 — the row
+Record each as `mcp__dpm__create_document_agent` once the review row exists in Step 4 — the row
 references the `agent` by name rather than copying the persona into the finding, which is what lets
 a project rename a persona without orphaning its past reviews.
 
@@ -134,7 +135,8 @@ Gate first: "Record this review?" with `Approve` / `Request changes` / `Stop`. O
 1. `mcp__dpm__create_review` with the epic as `parent_id`, a short kebab-case `slug`, a `title`, and
    — for a story-scoped review — `scope: 'story'` with `scope_story_id`. That call assigns the
    number, which nothing here works out.
-2. `mcp__dpm__create_review_agent` per panel member, naming the `agent`.
+2. `mcp__dpm__create_document_agent` per panel member, with `document_kind: 'review'` and the
+   `agent`.
 3. `mcp__dpm__create_finding` per surviving finding, with the review, its `position`, its `summary`,
    the `agent` who raised it, and `category_id` and `severity_id`.
 

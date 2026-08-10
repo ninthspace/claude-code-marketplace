@@ -1,5 +1,5 @@
 /**
- * The three statements every entity tool is built from.
+ * The statements every entity tool is built from.
  *
  * Table and column names are interpolated rather than bound, because SQLite binds values and not
  * identifiers. That is safe here and only here: every name reaching these functions comes from a
@@ -214,4 +214,36 @@ export function updateByKey(db, table, key, values, where) {
   }
 
   return readByKey(db, table, key, where);
+}
+
+/**
+ * Delete one row, having read it first, and hand back what was removed.
+ *
+ * **Read before, not after.** Every other statement here reads back what it wrote, and this one
+ * cannot — so the row is fetched while it still exists and returned from that. It is also what
+ * makes the absent case a refusal rather than a silent success: `DELETE` matching nothing reports
+ * zero changes and no error, the same shape `update` guards against, and a caller told "deleted"
+ * about a row that was never there has been told something false about their own database.
+ *
+ * **The row is returned because a delete is the one operation with nothing left to look at.** A
+ * caller that wants to report what it removed, or to undo it, has no second chance to ask.
+ *
+ * A reference from elsewhere surfaces through `attempt` as a refusal, which is the intended
+ * behaviour rather than an obstacle to route around: a foreign key that would be left pointing at
+ * nothing is exactly the row that must not go.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} table
+ * @param {string} id
+ * @param {string} where
+ * @param {string} [key]
+ * @returns {object} The row as it was immediately before deletion.
+ * @throws {ToolError} If there is no such row, or if something still references it.
+ */
+export function deleteById(db, table, id, where, key = 'id') {
+  const row = readById(db, table, id, where, key);
+
+  attempt(where, () => db.prepare(`DELETE FROM ${table} WHERE ${key} = ?`).run(id));
+
+  return row;
 }

@@ -12,8 +12,8 @@ Everything this skill records is a typed tool call. It composes no markdown, all
 names no files, and never reads back what it or another skill wrote.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Gate Presentation**, **Conversational Output**, **Written Deliverable Length** and
-**Artifact Publishing** from it.
+This skill uses **Gate Presentation**, **Conversational Output**, **Written Deliverable Length**,
+**Cross-References** and **Artifact Publishing** from it.
 
 ## Input
 

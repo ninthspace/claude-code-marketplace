@@ -172,8 +172,13 @@ export function validate(schema, args, where) {
 
   for (const name of required) {
     // `undefined` and absent are the same thing here, and both are the must-NOT's shape: a
-    // caller that omits `class` must be refused, not defaulted into one.
-    if (args[name] === undefined) throw new ToolError(`${where}: '${name}' is required`);
+    // caller that omits `class` must be refused, not defaulted into one. An explicit `null` is
+    // refused with them: below it means *clear this column*, and a required column is one there
+    // is no legal way to clear — caught here, naming the argument, rather than arriving as a
+    // `NOT NULL` failure that names a column the caller never wrote.
+    if (args[name] === undefined || args[name] === null) {
+      throw new ToolError(`${where}: '${name}' is required`);
+    }
   }
 
   for (const [name, rule] of Object.entries(properties)) {
@@ -185,7 +190,22 @@ export function validate(schema, args, where) {
     // carrying `polarity: 'must'` and reset a `must_not` criterion nobody asked to change.
     const value = args[name];
 
-    if (value === undefined || value === null) continue;
+    if (value === undefined) continue;
+
+    // **An explicit `null` is a value, and it means clear this column.** Dropped here, as it was,
+    // it reached the handler as an argument the caller had never sent: `update_x({id, title: 'New',
+    // note: null})` moved the title, ignored the clear, and returned the updated row — success
+    // reported, the field still holding what it held, and no error at any point. That is entry #15
+    // of the false-pass register, and it is closed by carrying the null through rather than by a
+    // check further down, because every check further down is reading arguments this function
+    // decides the shape of. Type, enum, length and minimum are all skipped for it: none of them
+    // describes a clear, and a `null` failing `type: 'string'` would refuse the very call this
+    // exists to allow. What a clear may *not* do is empty a required argument — refused above —
+    // or a `NOT NULL` column, which the database refuses by name.
+    if (value === null) {
+      checked[name] = null;
+      continue;
+    }
 
     if (rule.type && !TYPES[rule.type](value)) {
       throw new ToolError(`${where}: '${name}' must be ${rule.type}, got ${typeof value}`);

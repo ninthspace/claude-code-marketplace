@@ -27,6 +27,19 @@ const FINDING_STATUS = ['open', 'accepted', 'rejected', 'remediated'];
 const DISPOSITION = ['applied', 'not_applicable', 'deferred'];
 
 /**
+ * The kind column beside an optional reference, tracking the reference's own three states.
+ *
+ * @param {unknown} reference What the caller sent: absent, a value, or an explicit clear.
+ * @param {string} kind The value the schema's `CHECK` admits.
+ * @returns {string|null|undefined} The same three states, for `derive` to hand to the tools.
+ */
+const pinned = (reference, kind) => {
+  if (reference === undefined) return undefined;
+
+  return reference === null ? null : kind;
+};
+
+/**
  * @param {object} context
  * @returns {object[]}
  */
@@ -56,10 +69,10 @@ export function reviewRetroTools(context) {
       table: 'observation',
       noun: 'one retro observation',
       fields: {
-        retro_id: { type: 'string', minLength: 1, description: 'the grouping; set when the retro is written' },
-        story_id: { type: 'string', minLength: 1, description: 'the origin; survives promotion into a retro' },
-        quick_id: { type: 'string', minLength: 1, description: 'the origin, on the quick path; survives promotion into a retro' },
-        position: { type: 'integer', minimum: 0 },
+        retro_id: { type: 'string', minLength: 1, description: 'the grouping; set when the retro is written. At least one of retro_id, story_id or quick_id is required' },
+        story_id: { type: 'string', minLength: 1, description: 'the origin; survives promotion into a retro. At least one of retro_id, story_id or quick_id is required' },
+        quick_id: { type: 'string', minLength: 1, description: 'the origin, on the quick path; survives promotion into a retro. At least one of retro_id, story_id or quick_id is required' },
+        position: { type: 'integer', minimum: 0, description: 'projection order. Defaults to 0 rather than allocating, and is unique per retro, so the second and later observations under one retro_id must each set it' },
         text: { type: 'string', minLength: 1 },
         synthesis: { type: 'string', description: 'written when grouped into a retro' },
         note: { type: 'string', description: 'qualifiers, caveats, scope' },
@@ -70,6 +83,12 @@ export function reviewRetroTools(context) {
       // Only `text` is required. Which of `retro_id`, `story_id` and `quick_id` must be present is
       // a `CHECK`, and restating it here would be a second copy of a rule the database already
       // holds.
+      //
+      // **But the caller has to be able to see it.** `required` cannot express "at least one of
+      // these", so a caller reading this schema sees three optional references and nothing saying
+      // one is mandatory — the refusal arrives at the write, from a constraint name. The rule stays
+      // in the database and the three field descriptions carry it, which is the copy that costs
+      // nothing to keep true: it is prose about the same column, not a second enforcement point.
       required: ['text'],
       mutable: ['retro_id', 'story_id', 'quick_id', 'position', 'text', 'synthesis', 'note',
         'library_doc_id', 'retired_at', 'retired_reason'],
@@ -79,10 +98,14 @@ export function reviewRetroTools(context) {
         quick_kind: SUPPLIED.derived('quick_id'),
         library_doc_kind: SUPPLIED.derived('library_doc_id'),
       },
+      // Three answers, because a reference may be omitted, set, or cleared, and the kind column
+      // has to move with it in all three: `undefined` is *leave it alone*, `null` is *clear it*,
+      // and a value pins the kind. Collapsing the first two makes clearing `retro_id` leave
+      // `retro_kind` behind, which the `CHECK` that pairs them then refuses.
       derive: (args) => ({
-        retro_kind: args.retro_id === undefined ? null : 'retro',
-        quick_kind: args.quick_id === undefined ? null : 'quick',
-        library_doc_kind: args.library_doc_id === undefined ? null : 'library',
+        retro_kind: pinned(args.retro_id, 'retro'),
+        quick_kind: pinned(args.quick_id, 'quick'),
+        library_doc_kind: pinned(args.library_doc_id, 'library'),
       }),
     }),
 

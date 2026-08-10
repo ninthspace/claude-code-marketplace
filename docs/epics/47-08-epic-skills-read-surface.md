@@ -616,6 +616,32 @@ any independence claim: assert the dependent thing breaks under the same operati
 
 ## Notes
 
+### Where the eight carried findings went
+
+Added on 2026-08-10 by `/cpm:pivot`, after this epic completed. **No story, criterion or status
+above is changed by it** — the record of what shipped stands; this says only where the questions it
+raised were answered, so that the answer is not reachable solely through a deleted progress file.
+
+Each of the eight came out of a conversion reaching for something the schema did not hold. Five
+became spec amendments and are built by **Epic 47-09 Stories 8 and 9**:
+
+| Finding | Raised by | Closed as |
+|---|---|---|
+| `document.status` admits only `pending`/`complete` | Story 1 (`status`), and retro 36's first recommendation | `superseded` and `withdrawn` on `document`, `story` and `task`, plus FR22 readiness treating them as unsatisfied |
+| No `communication` document kind | Story 3 (`present`) | A fourteenth `document_kind`, so a local-only run has a store rather than a prohibition |
+| `artifact.url` and `published_at` are both `NOT NULL` | Story 5 (`artifact`) | No schema change: `artifact` means *published*, and a draft is a `communication` |
+| `library_document` has no `source` | Story 4 (`library`) | A nullable column, because the alternative is a `**Source**:` line parsed back out of prose |
+| `review_agent` is kind-pinned to `review` | Story 7 (`consult`), unchanged by Story 8 (`party`) | `document_agent`, pinned by `CHECK` to `review` and `discussion` |
+
+Two are not spec questions and are **Epic 47-09 Story 9's** work directly: the shared
+**Perspectives** procedure loading the roster without `include_body`, and `documentTools`'s update
+accepting a clear that changes nothing — the latter also entering the spec's false-pass register as
+entry #15, since a call that reports success and changes nothing is the shape NFR6 exists to refuse.
+
+The eighth stands: **`artifact` stays out of `entry_fts`**, so its search is a bounded list and a
+match performed in the run. A register is tens of rows, and adding it to the index would be an FR9
+change with no consumer asking for it.
+
 ### Self-hosting register — entries in this epic's scope
 
 The register lives in Epic 47-01's Notes. **Entry 5** is in scope: `present` and `artifact`

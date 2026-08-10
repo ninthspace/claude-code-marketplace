@@ -63,13 +63,17 @@ export function claimHash(db, requirementId) {
  * Both columns are written together, which the `CHECK` on `requirement` also insists on: a row
  * holding one without the other is a claim state nothing can re-derive.
  *
+ * **A null `at` withdraws the claim, and takes the hash with it.** Hashing a withdrawal would
+ * leave a digest of the bound set beside a requirement claiming nothing — the pair the `CHECK`
+ * forbids, and the residue #18 is about read from the other end.
+ *
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} requirementId
- * @param {string} at
- * @returns {{coverage_claimed_at: string, coverage_claim_hash: string}}
+ * @param {string|null} at
+ * @returns {{coverage_claimed_at: string|null, coverage_claim_hash: string|null}}
  */
 export function claimComplete(db, requirementId, at) {
-  const hash = claimHash(db, requirementId);
+  const hash = at === null ? null : claimHash(db, requirementId);
 
   const changes = db
     .prepare('UPDATE requirement SET coverage_claimed_at = ?, coverage_claim_hash = ? WHERE id = ?')

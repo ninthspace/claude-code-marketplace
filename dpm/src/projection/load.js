@@ -73,7 +73,9 @@ export const COLLECTIONS = {
 
   // Review, retro and audit.
   findings: { table: 'finding', parent: 'review_id', order: ['position', 'id'] },
-  reviewAgents: { table: 'review_agent', parent: 'document_id', order: ['agent'] },
+  // Keyed by the document rather than by the review, because the table spans two kinds: a
+  // discussion's participants load through this same descriptor.
+  documentAgents: { table: 'document_agent', parent: 'document_id', order: ['agent'] },
   observations: { table: 'observation', parent: 'retro_id', order: ['position', 'id'] },
   storyObservations: { table: 'observation', parent: 'story_id', order: ['position', 'id'] },
   observationCategories: {

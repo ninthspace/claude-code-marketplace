@@ -1,7 +1,7 @@
 /**
  * AD7's four structured kinds — the detail their documents carry, and the rows beneath it.
  *
- * Four of the thirteen document kinds hold structure that `document_section` would flatten into
+ * Four of the fourteen document kinds hold structure that `document_section` would flatten into
  * prose: an ADR's decision status and its options against shared axes, a review's scope, a quick
  * record's close, a library document's machine-read `doc_type`. Each detail table's primary key
  * **is** its document's, which is what makes the one-to-one structural rather than a rule someone
@@ -113,15 +113,23 @@ export const DETAIL = {
         minLength: 1,
         description: "'architecture', 'coding-standards', 'domain' — what the Library Check reads",
       },
+      // Nullable, and the NULL is the answer rather than the absence of one: a document written
+      // in this project has no provenance, and one imported from elsewhere has one its readers
+      // need. Held as a `**Source**:` line under a heading it is a field parsed back out of prose.
+      source: {
+        type: 'string',
+        minLength: 1,
+        description: 'Where an imported document came from; omit for one written in this project',
+      },
     },
     required: ['doc_type'],
-    row: (args) => ({ doc_type: args.doc_type }),
+    row: (args) => ({ doc_type: args.doc_type, source: args.source ?? null }),
   },
 };
 
 /**
- * The rows beneath the detail: an ADR's options and their tradeoffs, a review's agents, a quick
- * record's criteria, a library document's scopes.
+ * The rows beneath the detail: an ADR's options and their tradeoffs, the participants in a review
+ * or a discussion, a quick record's criteria, a library document's scopes.
  *
  * @param {object} context
  * @returns {object[]}
@@ -204,14 +212,25 @@ export function detailChildTools(context) {
       body: ['assessment'],
     }),
 
+    // Not a detail table of `review`, because a discussion records the same fact: `party` and
+    // `consult` both convene personas and both write a `discussion`. `document_kind` is required
+    // and is not mutable — it is half of what the row *is*, and changing it is deleting one row
+    // and writing another, which `create_document_agent` already does.
     ...entityTools(context, {
-      table: 'review_agent',
-      noun: 'the record that one agent took part in a review',
+      table: 'document_agent',
+      noun: 'the record that one agent took part in a review or a discussion',
       key: ['document_id', 'agent'],
       fields: {
-        document_id: { type: 'string', minLength: 1, description: 'the review' },
+        document_id: { type: 'string', minLength: 1, description: 'the review or discussion' },
+        document_kind: {
+          type: 'string',
+          enum: ['review', 'discussion'],
+          description: 'the kind of the document above — a participant attaches to no other',
+        },
         agent: { type: 'string', minLength: 1, description: 'a seeded agent.name' },
       },
+      required: ['document_kind'],
+      mutable: [],
     }),
 
     ...entityTools(context, {
