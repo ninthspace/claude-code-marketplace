@@ -11,11 +11,12 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { openConnection } from '../db/connection.js';
-import { DIVERGENCE, describe as describeGuard, guard, DUMP_PATH } from '../guard/index.js';
-import { project } from '../projection/index.js';
+import { dump } from '../dump/index.js';
+import { describe as describeGuard, guard, DUMP_PATH } from '../guard/index.js';
+import { publish } from '../publish/index.js';
 import { restore } from '../restore/index.js';
 import { describe, merge } from './index.js';
 import { MergeError } from './rows.js';
@@ -164,27 +165,32 @@ export function run({ root = '.', location = DATABASE, streams } = {}) {
     return 2;
   }
 
-  // Written after the restore, never before. The dump is the committed artefact; a run that wrote
-  // it and then failed would leave a broken database in the commit and a working tree that looked
-  // resolved.
-  writeFileSync(join(root, DUMP_PATH), result.sql, 'utf8');
-
   const db = openConnection(target);
-  const removed = [];
+  let removed = [];
 
   try {
-    project(db, { root });
+    // **The merged dump has to survive its own restore, and this is where that was checked.** The
+    // merge used to write `result.sql` here and then let the guard compare `dump(db)` against it,
+    // so a merged file that restored into a database dumping differently failed. `publish` writes
+    // what the database dumps, which would make that comparison trivially true — so the check is
+    // stated rather than left to emerge from the order of two writes.
+    if (dump(db).sql !== result.sql) {
+      err(
+        'dpm: the merged dump did not survive its own restore — the database it produced dumps '
+        + 'differently, so committing it would commit a state nobody merged.\n',
+      );
 
-    // **The rename is the guard's orphan rule, acted on instead of reported.** A renumbered
-    // document's old file is on disk and no document produces it, which is exactly what Story 3
-    // already knows how to recognise; recomputing the old path here would be a second rule for one
-    // question, and the two would disagree the first time naming changed.
-    for (const file of guard(db, { root }).diverged) {
-      if (file.reason !== DIVERGENCE.orphaned) continue;
-
-      unlinkSync(join(root, file.path));
-      removed.push(file.path);
+      return 2;
     }
+
+    // **Both artefacts, one call, and the orphan rule is not restated here.** A renumbered
+    // document's old file is on disk and no document produces it, which is what the guard already
+    // knows how to recognise; `publish` removes exactly what the guard would report, so the two
+    // cannot disagree the first time naming changes. The dump still lands after the restore for
+    // the reason it always did — it is the committed artefact, and a run that wrote it and then
+    // failed would leave a broken database in the commit and a tree that looked resolved — but
+    // that ordering is now a property of `publish` rather than of this call site.
+    ({ removed } = publish(db, { root }));
 
     const after = guard(db, { root });
 

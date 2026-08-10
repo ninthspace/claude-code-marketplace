@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, and Filament v5 admin mockups. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (dpm), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, and Filament v5 admin mockups. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -15,12 +15,18 @@ This marketplace contains plugins for facilitated planning (CPM), note searching
 /plugin marketplace add ninthspace/claude-code-marketplace
 
 # Install individual plugins
-/plugin install noteplan@claude-code-marketplace
-/plugin install php-lsp@claude-code-marketplace
-/plugin install cpm@claude-code-marketplace
-/plugin install js-simplifier@claude-code-marketplace
-/plugin install filament-mockup@claude-code-marketplace
+/plugin install noteplan@ninthspace-marketplace
+/plugin install php-lsp@ninthspace-marketplace
+/plugin install cpm@ninthspace-marketplace
+/plugin install dpm@ninthspace-marketplace
+/plugin install js-simplifier@ninthspace-marketplace
+/plugin install filament-mockup@ninthspace-marketplace
 ```
+
+**The suffix is the marketplace's name, not the repository's.** `marketplace.json` declares
+`ninthspace-marketplace`, and that is what every installed plugin is keyed by — so
+`cpm@claude-code-marketplace` resolves to nothing however the repository is spelled in the
+`marketplace add` line above it.
 
 ### Also needed for `/cpm:ralph` — the ralph-loop fork
 
@@ -273,6 +279,36 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
+### dpm — Data-Modelled Planning Method (v0.1.0)
+
+**Planning artefacts as database rows, with markdown as a generated projection**
+
+CPM's pipeline with a different substrate. Every artefact — spec, epic, story, requirement, coverage row — is a row with typed columns, and every cross-artefact reference is a foreign key rather than a path in prose. The markdown under `docs/` is a generated, one-way projection: it is committed so pull requests still show a readable diff, but it is never read back. Skills write exclusively through typed MCP tools, so no skill contains SQL and nothing parses prose.
+
+**What the substrate buys:**
+- **Referential integrity** — a story cannot point at an epic that does not exist, and a renumber updates every reference by construction rather than by search-and-replace
+- **Queryable state** — "which requirements have no covering criterion" is a query, not a grep across four hundred files
+- **A guard that cannot be fooled** — a pre-commit hook regenerates both artefacts and refuses a commit that disagrees with the database, so a hand-edit to a generated file is caught rather than silently overwritten at the next render
+- **Restorable from text** — `.dpm/dpm.sql` is the committed form; the binary database is derived and gitignored
+
+**Quick Start:**
+```bash
+# After installing, in each repository dpm keeps artefacts in:
+ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+echo '.dpm/dpm.db*' >> .gitignore
+
+# Then, after any skill run that wrote something:
+/dpm:publish
+```
+
+**Requires:** Node 22.5.0 or later. dpm reaches SQLite through `node:sqlite` in the standard library — no native module, no `node-gyp`, no build step.
+
+**Status:** under construction. The skill corpus and the tool surface are in place; the spec is `docs/specifications/47-spec-dpm-sqlite-persistence.md` and the work is broken down across `docs/epics/47-*`.
+
+[View full documentation](./dpm/README.md)
+
+---
+
 ### JS/TS Simplifier (v1.0.0)
 
 **Simplify and improve JavaScript and TypeScript code across an entire codebase**
@@ -349,11 +385,12 @@ mock up the admin panel for this PRD
 
 ```bash
 # Uninstall individual plugins
-/plugin uninstall noteplan@claude-code-marketplace
-/plugin uninstall php-lsp@claude-code-marketplace
-/plugin uninstall cpm@claude-code-marketplace
-/plugin uninstall js-simplifier@claude-code-marketplace
-/plugin uninstall filament-mockup@claude-code-marketplace
+/plugin uninstall noteplan@ninthspace-marketplace
+/plugin uninstall php-lsp@ninthspace-marketplace
+/plugin uninstall cpm@ninthspace-marketplace
+/plugin uninstall dpm@ninthspace-marketplace
+/plugin uninstall js-simplifier@ninthspace-marketplace
+/plugin uninstall filament-mockup@ninthspace-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace

@@ -19,6 +19,7 @@ import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
 import { integrityTools } from './cross/integrity.js';
 import { numberingTools } from './cross/numbering.js';
+import { publishTools } from './cross/publish.js';
 import { templateTools } from './cross/template.js';
 import { artifactTools } from './entity/artifacts.js';
 import { milestoneTools } from './entity/milestones.js';
@@ -46,6 +47,9 @@ import { vocabularies, vocabularyJoins } from './vocabulary.js';
  * @param {object} [options]
  * @param {() => string} [options.now] ISO 8601.
  * @param {() => string} [options.newId]
+ * @param {string} [options.root] The repository root `publish` writes into — the server's own
+ *   working directory in life, and injected for the same reason `now` is: a test that cannot pin
+ *   it publishes a corpus into whichever directory the test runner happened to start in.
  * @returns {object[]} Every tool, in a stable order.
  */
 /**
@@ -77,8 +81,8 @@ export function readOnlyTools(tools, { found, supported }) {
     : tool));
 }
 
-export function spineTools(db, { now = () => new Date().toISOString(), newId = ulid } = {}) {
-  const context = { db, now, newId };
+export function spineTools(db, { now = () => new Date().toISOString(), newId = ulid, root = '.' } = {}) {
+  const context = { db, now, newId, root };
 
   // **The kinds come from `document_kind`, not from a list here.** A hand-kept enumeration in this
   // file is what left eleven kinds without tools through Epic 47-03 and had the breakdown that
@@ -156,8 +160,10 @@ export function spineTools(db, { now = () => new Date().toISOString(), newId = u
     // conversion. The epic's Notes carry the reasoning.
     ...sessionTools(context),
 
-    // The two that belong to no single entity: a number, and the sweep over everything.
+    // The three that belong to no single entity: a number, the sweep over everything, and the one
+    // that writes the tree rather than a row (AD11).
     ...numberingTools(context),
     ...integrityTools(context),
+    ...publishTools(context),
   ];
 }

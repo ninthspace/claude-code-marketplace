@@ -25,9 +25,25 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { dump } from '../dump/index.js';
 import { project } from '../projection/index.js';
+
+/**
+ * The executable that resolves what this module reports (AD11).
+ *
+ * **Resolved from this module's own location rather than written as a sentence.** A diagnostic
+ * naming a command is only useful while the command is where it says, and a hard-coded
+ * `bin/dpm-publish.js` in a string is correct today and silently wrong the day the file moves — a
+ * message that looks like help and sends the reader nowhere, which is the failure class NFR6 names.
+ * Derived, it is checkable: a test asserts the path exists, and a rename that misses this line
+ * fails here rather than in someone's terminal.
+ *
+ * Absolute on purpose. The hook runs from the repository root and the plugin lives somewhere else
+ * entirely, so a relative path would be relative to the wrong tree.
+ */
+export const PUBLISH_COMMAND = fileURLToPath(new URL('../../bin/dpm-publish.js', import.meta.url));
 
 /** The committed text form of the database (AD4). Generated; `.dpm/dpm.db` is not committed. */
 export const DUMP_PATH = '.dpm/dpm.sql';
@@ -39,8 +55,14 @@ export const DIVERGENCE = {
   orphaned: 'is on disk and no document produces it',
 };
 
-/** The file's bytes, or `null` when it is not there. Absence is a finding, not an error. */
-function contents(path) {
+/**
+ * The file's bytes, or `null` when it is not there. Absence is a finding, not an error.
+ *
+ * Exported because `publish` classifies the same way this does — a rendered file that matches disk
+ * is left alone, one that differs or is absent is written — and two readings of "is this file
+ * already current" would answer differently the first time one of them grew a normalisation.
+ */
+export function contents(path) {
   try {
     return readFileSync(path, 'utf8');
   } catch (error) {
@@ -75,8 +97,15 @@ function entries(directory) {
  * in `docs/epics/`, a maintenance note — and reporting those would make the guard unusable. Only a
  * file whose name carries a *seeded kind* in the position the projection puts it is considered,
  * because that is a name only this renderer produces.
+ *
+ * **Exported because `publish` deletes what this reports, and there must be exactly one rule.** The
+ * guard names an orphan and `publish` removes it, so a second implementation would not merely
+ * duplicate this one — it would let the tool that deletes files and the tool that checks them
+ * disagree about which files those are, and the disagreement is silent in both directions: a file
+ * the remover misses is reported forever, and one only the remover recognises is deleted with
+ * nothing having reported it. The narrowness above is the whole safety of the delete.
  */
-function orphans(db, root, produced) {
+export function orphans(db, root, produced) {
   const kinds = db.prepare('SELECT kind, dir FROM document_kind WHERE dir IS NOT NULL').all();
   const directories = new Map();
 
@@ -165,6 +194,15 @@ export function describe(result) {
     '',
     'Nothing was written. The projection is generated from the database and is not an input:',
     'an edit made here is lost at the next regeneration, so it has been left in place for you',
-    'to move into the database. Regenerate both artefacts to resolve.',
+    'to move into the database.',
+    '',
+    // **Both, because the reader is in one of two situations and they cannot both be served by
+    // one line.** A commit refused at a terminal wants a command to run; a run already inside a
+    // session wants the skill, which gates before it removes anything. Naming only the binary
+    // sends the second reader out of the session they are in, and naming only the skill leaves the
+    // first with nothing they can type.
+    'Regenerate both artefacts:',
+    `  node ${PUBLISH_COMMAND}`,
+    'or run /dpm:publish if you are already in a session.',
   ].join('\n');
 }

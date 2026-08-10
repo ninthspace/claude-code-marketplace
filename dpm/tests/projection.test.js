@@ -528,13 +528,21 @@ test('nothing outside the projection writes under docs/', () => {
   // same authority as rewriting one.
   const WRITES = /\bwriteFileSync\b|\bappendFileSync\b|\bunlinkSync\b|\brmSync\b|\brenameSync\b/;
 
-  // **One module outside `src/projection/` writes files, and it is named with what it may write.**
-  // `src/merge/main.js` writes `.dpm/dpm.sql` and the merged database — neither under `docs/` — and
-  // removes exactly the files Story 3's guard reports as orphaned, which is the renumber's rename
-  // half. What it must never do is *produce* markdown: every file under `docs/` still comes from
-  // `project()`, so the merge tool re-renders through the projection and then deletes what the
-  // guard says nothing produces.
-  const ALLOWED = new Set(['src/merge/main.js']);
+  // **Two modules outside `src/projection/` write files, and each is named with what it may write.**
+  //
+  // `src/publish/index.js` is the one that writes under `docs/` (AD11). That does not weaken the
+  // rule this test exists for, because the rule is about *producing* markdown and publish produces
+  // none: it calls `project(db, { write: false })` and writes back the text it was handed, so every
+  // byte under `docs/` still comes from the projection. What publish adds is *whether* and *when* a
+  // file is written — the classification against disk, and the orphan delete — never *what* is in
+  // it. A publish that rendered anything itself would be a second renderer, and the assertion that
+  // catches it is behavioural rather than a sweep: `publish.test.js` compares every byte it wrote
+  // against what `project` returned for the same database.
+  //
+  // `src/merge/main.js` renames and removes the staging *database* — `.dpm/dpm.db.merging`, never
+  // anything under `docs/`. It used to write the dump and unlink orphans too; both moved to publish
+  // when the orphan rule stopped being restated at its call site.
+  const ALLOWED = new Set(['src/merge/main.js', 'src/publish/index.js']);
 
   const offenders = [];
   let spent = 0;

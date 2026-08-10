@@ -44,7 +44,7 @@ Once set up, Claude Code can use 24 LSP tools for PHP files:
 
 ```bash
 /plugin marketplace add ninthspace/claude-code-marketplace
-/plugin install php-lsp@claude-code-marketplace
+/plugin install php-lsp@ninthspace-marketplace
 ```
 
 ### Manual

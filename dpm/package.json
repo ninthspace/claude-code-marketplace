@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Database Planning Method — SQLite-backed persistence for planning artefacts.",
+  "description": "Data-Modelled Planning Method — SQLite-backed persistence for planning artefacts.",
   "license": "MIT",
   "engines": {
     "node": ">=22.5.0"

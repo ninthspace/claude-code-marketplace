@@ -1,4 +1,4 @@
-# dpm — Database Planning Method
+# dpm — Data-Modelled Planning Method
 
 SQLite-backed persistence for planning artefacts. Every artefact is a row with typed
 columns; every cross-artefact reference is a foreign key. Markdown under `docs/` is a
@@ -10,9 +10,93 @@ dpm parses prose.
 ## Requirements
 
 - **Node 22.5.0 or later.** dpm uses `node:sqlite` from the standard library, so there is
-  no native module, no `node-gyp`, and no build step at install time.
+  no native module, no `node-gyp`, and no build step at install time. Below the floor,
+  each of dpm's four executables refuses with a message naming the version rather than
+  failing on a missing module.
 
-Installs by clone or marketplace fetch. Nothing needs compiling.
+## Installation
+
+Inside Claude Code:
+
+```
+/plugin marketplace add ninthspace/claude-code-marketplace
+/plugin install dpm@ninthspace-marketplace
+```
+
+The suffix is the marketplace's name rather than the repository's — they differ, and only
+the former resolves.
+
+To work on dpm itself, clone the repository and add the clone as a marketplace instead, so
+the plugin points at your working tree rather than a cached copy:
+
+```sh
+git clone git@github.com:ninthspace/claude-code-marketplace.git
+```
+
+then `/plugin marketplace add <path to the clone>`.
+
+Installing registers the MCP server, so the tools and skills are available immediately.
+There is nothing to compile either way.
+
+## First run
+
+Two steps, in a repository dpm is going to keep planning artefacts in.
+
+**1. Install the pre-commit hook.** It regenerates both artefacts and refuses a commit
+that disagrees with the database. From the repository root:
+
+```sh
+ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+echo '.dpm/dpm.db*' >> .gitignore
+```
+
+The database itself is not committed — `.dpm/dpm.sql` is its committed text form, and it
+is what a checkout restores from.
+
+**2. Publish before committing.** The markdown under `docs/` is generated, and nothing
+generates it as a side effect of writing. After a skill run that changed anything:
+
+```sh
+node <plugin path>/dpm/bin/dpm-publish.js
+```
+
+or run `/dpm:publish` if you are already in a session. Then commit — both the projection
+and `.dpm/dpm.sql` go in the same commit.
+
+Skip step 2 and the hook refuses the commit and names this command; nothing is lost, and
+nothing is written behind you.
+
+## Coming from CPM
+
+**There is no importer, and that is a decision rather than a gap** (AD8). dpm never reads a
+CPM `docs/` tree. New and existing projects alike begin with a blank database, so a project
+adopting dpm carries none of its history across — the artefacts stay exactly where they are,
+as CPM's files, and dpm neither converts nor repairs them.
+
+**But dpm will offer to delete them, so move them first.** The projection reclaims a file it
+did not write if the name looks like one it would have: anything matching
+`<number>-<kind>-<slug>.md` under a projected directory is treated as a document that no
+longer exists, because that is a name only this renderer produces. It is also exactly how CPM
+names its artefacts. So in a repository that used CPM, the first publish reports the entire
+existing corpus as orphaned.
+
+The fix is to put them somewhere the rule does not look. Only the seeded projection
+directories are walked — `plans`, `briefs`, `specifications`, `epics`, `reviews`, `retros`,
+`quick`, `discussions`, `communications`, `audits`, `runbooks`, `library` — so a corpus moved
+under `docs/archive/` is out of reach and stays readable:
+
+```sh
+mkdir -p docs/archive
+git mv docs/specifications docs/epics docs/retros docs/archive/   # and any others in use
+```
+
+A directory the rule does walk is still safe for files it cannot mistake for its own: a
+hand-kept `docs/epics/README.md` is never a candidate.
+
+**Preview before the first publish either way.** `/dpm:publish` lists every removal and asks
+before it removes anything. `bin/dpm-publish.js` does not — it is the non-interactive form,
+and it is also the command the pre-commit guard names when it refuses a commit. In a
+repository with a CPM corpus still in place, reach for the skill.
 
 ## Status
 

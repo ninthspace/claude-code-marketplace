@@ -52,7 +52,10 @@ None of this is bad engineering. It is the necessary consequence of choosing a s
 - **FR22 — Relationships between artefacts are typed edges, not status values.** Blocking, spec-to-spec lineage, and ADR constraint are rows in one edge table with a kind, so "which epics are ready" is a query, a blocker's completion is visible to everything downstream, and a new relationship kind is data rather than a migration. Source and target may each be a document or a story. **Only completion clears a blocker**: a blocker that is `superseded` or `withdrawn` is terminal but undelivered, so readiness treats it as unsatisfied rather than as done. Reading every non-pending state as satisfaction is what makes abandoned work look like finished work, and it starts the thing that was waiting on it.
 - **FR24 — Every controlled vocabulary is a table, and projects may edit it.** Observation categories, finding categories, audit dimensions, severities, test approaches and **agent personas** are rows referenced by foreign key — seeded with defaults, extensible per project, and retirable without invalidating rows that already use them. An item may carry more than one category where the work genuinely spans two. A vocabulary default the plugin later adds or retires reaches an existing project through **FR12's migration channel, never a re-seed**: a migration may *insert a term that is absent* and *retire a term that is live*, and may **not** rewrite the text of a term that rows already reference. Both permitted operations are idempotent and neither reads project state, so a project's own additions, edits and retirements survive every upgrade without the schema having to record which rows it touched.
 - **FR23 — Two-level numbering.** Root-numbered kinds (a spec) and child-numbered kinds (an epic, numbered within its spec and restarting at 1 per parent) are both allocated monotonically and never reused.
-- **FR25 — The skill corpus is twenty-two files, enumerated here, each rewritten against the tool surface.** Naming them is what makes AD6's largest line item plannable and testable. The corpus mirrors CPM's, one for one: `architect`, `archive`, `artifact`, `audit`, `brief`, `clean`, `consult`, `discover`, `do`, `epics`, `inspect`, `library`, `party`, `pivot`, `present`, `quick`, `ralph`, `retro`, `review`, `spec`, `status`, `templates`. **What makes a dpm skill different from its CPM counterpart is subtraction, and it is the same subtraction in every file**: no filename construction, no glob, no number allocation, no markdown parsing, no progress-file lifecycle, and no procedure that recovers an entity by reading what an earlier skill wrote. Each of those is a tool call. What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business.
+- **FR25 — The skill corpus is twenty-three files, enumerated here, each written against the tool surface.** Naming them is what makes AD6's largest line item plannable and testable. Twenty-two mirror CPM's pipeline one for one: `architect`, `archive`, `artifact`, `audit`, `brief`, `clean`, `consult`, `discover`, `do`, `epics`, `inspect`, `library`, `party`, `pivot`, `present`, `quick`, `ralph`, `retro`, `review`, `spec`, `status`, `templates`. **What makes one of those different from its CPM counterpart is subtraction, and it is the same subtraction in every file**: no filename construction, no glob, no number allocation, no markdown parsing, no progress-file lifecycle, and no procedure that recovers an entity by reading what an earlier skill wrote. Each of those is a tool call. What remains is the facilitation — the questions, the gates, the judgement — which is the part that was never the storage layer's business. **The twenty-third, `publish`, is dpm's own** (AD11): CPM's artefacts *are* its files, so it has nothing to regenerate, while dpm's are rows and the files are a render that something has to write. It is defined by what it adds rather than by what it subtracts, and it needs no counterpart to justify it.
+
+**The mirroring is a one-time parity commitment, not a standing constraint.** AD6 requires dpm to reach CPM's pipeline before it ships, which is what the twenty-two are; it does not make CPM the definition of dpm's corpus, and nothing about a dpm capability has to be argued back to a CPM equivalent. **Where dpm needs a skill CPM has no reason to have, it has one.** So the two checks over this list are different in kind and neither subsumes the other: **FR25's enumeration is the oracle for dpm's own corpus** — every name here exists and no skill exists that is not named here, in both directions — while **CPM's `skills/` directory is only ever an oracle for the conversions**, catching a hand-kept list that has gone short of a stage a CPM user can reach. A dpm skill CPM lacks is not a failure of either check, and never becomes one.
+
 - **FR29 — The server is declared by the plugin, and the name a skill writes is the name the harness dispatches.** FR3 says dpm *ships* an MCP server; shipping one is not the same as reaching one. A server that nothing declares is never launched, so its tools are absent from the session and every skill written against them calls into nothing — a failure that no test spawning the server over stdio can see, because that test supplies the launch the session does not. The plugin manifest therefore declares the server, and a test asserts the declaration names an entry point that exists. **Because the harness namespaces an MCP server's tools as `mcp__<server>__<tool>`, the exported name and the callable name are not the same string, and the callable one is the contract**: tools are exported unprefixed (`create_spec`, `list_requirement`) and called as `mcp__dpm__create_spec`. That is what an FR25 skill writes and what NFR5 is checked against. Carrying the prefix in the export as well would yield `mcp__dpm__dpm_create_spec` — the server's identity stated twice, once by the harness and once by hand.
 
 ### Should Have
@@ -149,9 +152,9 @@ It loads with no flag and needs no native module. `better-sqlite3` was rejected 
 | Cross-cutting tools | ~9 | link, search, integrity, migrate, dump, restore, merge-renumber, allocate-number, claim-coverage |
 | Projection templates | 14 | One per document kind — the eleven child entity types render inside their parent's template, as does the ADR, which is why 14 is right here and wrong above |
 | Triggers | 22 | 3 FTS on `document_section`, 12 FTS on the four indexed child tables, 3 coverage unverify, 4 coverage-claim unclaim. Thirteen are written out in the Data Model; the other nine are the same three-trigger pattern on the remaining indexed tables, and FR9's completeness criterion is what asserts they exist |
-| Skill files | 22 | The corpus enumerated in FR25 |
+| Skill files | 23 | The corpus enumerated in FR25 — CPM's twenty-two stages plus `publish`, which has no counterpart (AD11) |
 
-Roughly **84 tools** rather than 45–55, against 41 tables and 22 skills. **The table count does not move with the two entity types added on 2026-08-10**, which is worth a sentence because it looks like an error: `communication` is a `document_kind` row and needs no table of its own, and `document_agent` is `review_agent` widened rather than a new join. Both need their three typed tools all the same, which is the count this paragraph is about. AD6 asserts this is affordable; a decision that expensive should carry its own number, and the number is larger than the first draft of this paragraph claimed.
+Roughly **84 tools** rather than 45–55, against 41 tables and 23 skills. **The table count does not move with the two entity types added on 2026-08-10**, which is worth a sentence because it looks like an error: `communication` is a `document_kind` row and needs no table of its own, and `document_agent` is `review_agent` widened rather than a new join. Both need their three typed tools all the same, which is the count this paragraph is about. AD6 asserts this is affordable; a decision that expensive should carry its own number, and the number is larger than the first draft of this paragraph claimed.
 
 **Build order, which is not a release plan.** AD6 is unchanged — nothing releases until all of it works — but the order in which it is built is a real constraint and leaving it unstated hands the decision to whoever decomposes the spec:
 
@@ -160,7 +163,8 @@ Roughly **84 tools** rather than 45–55, against 41 tables and 22 skills. **The
 | M1 | Substrate | Schema, migrations, dump and restore, integrity check. Nothing user-facing. |
 | M2 | Core spine | spec → requirement → epic → story → task → coverage: tools and projection, plus the server declaration that makes them reachable from a session (FR29). The first point at which a project could actually be planned. |
 | M3 | Parity | The remaining ten kinds, the four detail tables, taxonomy seeds, both FTS5 indexes. |
-| M4 | Pipeline | The 22 skill files (FR25), and the pre-commit divergence guard. |
+| M4 | Pipeline | The 22 conversions of FR25, and the pre-commit divergence guard. |
+| M5 | Publishing | The regeneration path FR6 and FR7 both assume and neither provides: one implementation, the CLI, the MCP tool, and the `publish` skill that makes the corpus twenty-three (AD11). |
 
 **This table is seeded data, not prose.** FR27 makes a spec's build order rows, and this
 spec's four milestones are the first four. The distinction matters because the table above
@@ -230,6 +234,20 @@ The two systems coexist by not touching. A project runs CPM or dpm, and the choi
 **Rejected**: doing both from the outset — the generator plus the test that guards it. Correct and unaffordable at the same time as AD6's parity commitment.
 
 **Consequence**: the correspondence is checked, not enforced, so it can be broken between test runs. That is acceptable because the window is a test run rather than a release, and unacceptable to leave unstated: this is the one seam in the system where two descriptions of the same rule are maintained by hand, which is the shape of exactly the drift the rest of the spec removes structurally.
+
+### AD11 — Regeneration is an explicit operation, not a side effect
+
+**Decision**: writing the two generated artefacts — the markdown projection under `docs/` and `.dpm/dpm.sql` — is one implementation behind three entry points: a CLI (`bin/dpm-publish.js`), an MCP tool (`mcp__dpm__publish`), and the `publish` skill of FR25 that calls it. All three return the same record of what was written, rewritten, left unchanged and removed as orphaned. One implementation because two would disagree about orphan removal the first time naming changed, and that disagreement is silent.
+
+**Why this decision exists at all, stated plainly.** FR6 requires the projection to be generated and committed, and FR7 requires a guard that regenerates both artefacts and refuses a commit on divergence. Both were delivered; neither writes anything. FR7's own prose hands regeneration to the pre-commit hook, and the hook was deliberately built to refuse and fix nothing — for the reason immediately below — which left the operation with no home at all. A fresh project could reach a state where every commit was refused with an instruction no command could carry out. It was found by running the guard on an empty repository after the build closed, not by reading either requirement.
+
+**Rejected**: the pre-commit hook regenerating and staging the result. A hook that regenerates silently overwrites a hand-edit — the exact loss FR7 exists to prevent, arriving through the guard built to prevent it. The hook stays refusal-only, and the edit stays where its author left it.
+
+**Rejected**: the server regenerating after every write. It is the only option under which the tree is never stale and nobody has to remember anything, and it was rejected on behaviour rather than on cost: a full projection on every create and update rewrites the working tree while a skill is still mid-facilitation, so files appear and change under a user who is answering a question and has not decided anything yet. A skill's writes are provisional until its run closes; the projection is not the place to discover that.
+
+**Rejected**: the MCP tool alone, with no CLI. A database reached outside a skill run — after a restore, a hand-run migration, or a merge resolved by hand — would have no way to bring its tree back into agreement, and the guard's diagnostic would name a fix reachable only by starting a session.
+
+**Consequence**: a tree can be stale between a write and a publish, and nothing prevents it. What makes that survivable rather than an instance of NFR6 is that the staleness is loud: the guard refuses the commit and names both artefacts. This buys a working tree that holds still during a facilitation, at the price of a step that has to be taken before committing — and the step is named by the thing that blocks on it.
 
 ## Data Model
 
@@ -1281,7 +1299,8 @@ Every count in this document that describes a table in this document is checked 
 - The plugin manifest's declaration of that server, which is what makes the tool surface reachable from a session at all (FR29).
 - The markdown projection renderer and the pre-commit divergence guard.
 - The deterministic dump-and-restore path, and the merge tool that renumbers colliding human numbers after a branch merge (AD9).
-- The twenty-two dpm skill files enumerated in FR25, mirroring CPM's pipeline one for one, rewritten against the tool surface.
+- The twenty-three dpm skill files enumerated in FR25 — CPM's twenty-two stages mirrored one for one and rewritten against the tool surface, plus `publish`, which is dpm's own and needs no counterpart.
+- The regeneration path behind `publish`: one implementation, a CLI, and an MCP tool (AD11). FR6 and FR7 both assume it; until it exists neither is reachable.
 
 ### Out of Scope
 
@@ -1315,14 +1334,27 @@ Every count in this document that describes a table in this document is checked 
 Two criteria below reach outside dpm's own tree, and they are different in kind. Saying which
 is which is the difference between a declared dependency and an accidental one.
 
-**CPM's skill directory is a name oracle, and that is the whole of it.** FR25's list of
-twenty-two is hand-kept, and a hand-kept list can be short. The only thing that catches a
-short list is comparing it against CPM's own `skills/` directory — a set comparison over
-**directory names**, reading no file. CPM ships at `cpm/` in the same marketplace repository
-as dpm, so this is a sibling directory in the same commit: no version pin, no install step,
-no skew between what the suite reads and what the repository holds. When CPM gains a pipeline
-stage the comparison fails, and that failure is correct — dpm is short a skill and someone
-should find out from a test rather than from a user.
+**CPM's skill directory is a name oracle for the conversions, and that is the whole of it.**
+FR25's list is hand-kept, and a hand-kept list can be short. The only thing that catches a
+list short of a stage a CPM user can reach is comparing it against CPM's own `skills/`
+directory — a set comparison over **directory names**, reading no file. CPM ships at `cpm/`
+in the same marketplace repository as dpm, so this is a sibling directory in the same commit:
+no version pin, no install step, no skew between what the suite reads and what the repository
+holds. When CPM gains a pipeline stage the comparison fails, and that failure is correct —
+dpm is short a conversion and someone should find out from a test rather than from a user.
+
+**It is a subset check, and it must never become an equality check.** dpm is independent of
+CPM for new functionality: a skill dpm needs and CPM has no reason to have is not an
+exception, an addition, or anything requiring justification against CPM — it is simply a dpm
+skill, and `publish` is the first. An equality comparison would make every future dpm
+capability a test failure until CPM grew a matching directory, which inverts the dependency
+this spec exists to remove.
+
+**What keeps the list honest in the other direction is FR25 itself, not CPM.** The
+enumeration is the oracle for dpm's corpus — every name in FR25 has a directory, and every
+directory is named in FR25. That pair closes the undeclared-extra hole without reference to
+CPM at all, which is the point: the two checks answer different questions, and reading either
+as a version of the other reintroduces the coupling.
 
 **An absent fixture is a failure, not a skip.** A suite run from an extracted plugin copy has
 no `cpm/` beside it, and a name comparison against a directory that does not exist passes
@@ -1370,10 +1402,12 @@ is `[manual]` and belongs to whoever reviews the conversion.
 | FR29 | The plugin manifest declares an MCP server whose entry point exists on disk and starts | `[integration]` |
 | FR29 | must NOT — the declaration is absent or names a missing entry point, and the suite still passes because every server test supplies its own launch | `[unit]` |
 | FR29 | Every tool name a dpm SKILL.md writes is `mcp__dpm__` followed by an exported tool name, resolved against the live registry | `[unit]` |
-| FR25 | The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name | `[unit]` |
+| FR25 | The twenty-three skills named in FR25 all exist, and no skill exists that FR25 does not name | `[unit]` |
 | FR25 | No skill file contains a filename pattern under `docs/`, a glob, a number-allocation procedure, or a progress-file lifecycle — each is a tool call | `[unit]` |
 | FR25 | Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus against CPM's own skill directory | `[integration]` |
+| FR25 | The CPM comparison is a subset check — a dpm skill CPM has no counterpart for passes it, and dpm's corpus is bounded by FR25's enumeration rather than by CPM's directory | `[integration]` |
 | FR25 | must NOT — the pipeline-stage comparison reports success because CPM's `skills/` directory was absent, rather than failing on a fixture it could not read | `[integration]` |
+| FR25 | must NOT — the pipeline-stage comparison is an equality check, so a capability dpm adds fails a test that is about CPM's completeness and not about dpm's | `[integration]` |
 | FR25 | must NOT — a skill recovers an entity by reading a generated markdown file rather than by calling a read tool | `[integration]` |
 | FR25 | Each converted skill still performs its counterpart's gates, questions and refusals — the behaviours named in that skill's own criterion, asserted **per skill** by driving the dpm skill and never by reading CPM's `SKILL.md` | `[feature]` |
 | FR25 | must NOT — a skill satisfies every subtraction sweep while retaining none of its counterpart's facilitation, so a corpus of twenty-two files each carrying a title and a single tool call passes | `[unit]` |
@@ -1389,6 +1423,11 @@ is `[manual]` and belongs to whoever reviews the conversion.
 | FR6 | A value written through a create tool appears in the rendered markdown for its document — determinism without this is satisfied by a renderer that emits nothing | `[integration]` |
 | FR6 | Two databases holding identical logical content, with child rows inserted in different orders, render byte-identical markdown | `[integration]` |
 | FR6 | must NOT — a projected collection has no ordering column and no declared tiebreak, so its render order is whatever the query returns | `[unit]` |
+| FR6 | Publishing an empty tree writes every document the database produces and the dump beside it, and publishing again from the same state rewrites nothing and reports no change | `[integration]` |
+| FR6 | A document whose file no longer belongs — renamed by a renumber, or removed from the database — is deleted by the publish, so the tree holds what the database produces and nothing else | `[integration]` |
+| FR6 | must NOT — publishing writes a partial tree when one document cannot render, leaving files the guard then diffs clean | `[unit]` |
+| FR7 | A write, then a publish, leaves the guard passing; the same write without the publish leaves it naming both artefacts | `[feature]` |
+| FR7 | must NOT — the pre-commit hook regenerates and stages the result, overwriting a hand-edit rather than refusing the commit | `[feature]` |
 | FR7 | A hand-edited generated file causes the pre-commit guard to exit non-zero, naming the file | `[feature]` |
 | FR7 | must NOT — a hand-edit is silently overwritten with no diagnostic | `[feature]` |
 | FR7 | A write made since the last commit leaves `.dpm/dpm.sql` stale, and the guard regenerates it and fails, naming it | `[feature]` |

@@ -1,35 +1,27 @@
 /**
- * Epic 47-09 Story 5 — the twenty-two skills as one corpus.
+ * The skills as one corpus — Epic 47-09 Story 5, separated into two bounds by Epic 47-10 Story 5.
  *
- * - "The twenty-two skills named in FR25 all exist, and no skill exists that FR25 does not name"
- *   [integration]
- * - "No skill writes a literal artefact number into a prose column; a reference to another
- *   artefact is written `{{ref:<id>}}` — swept across all twenty-two" [unit]
- * - "Every pipeline stage a CPM user can reach has a dpm skill, asserted by comparing the corpus
- *   against CPM's own skill directory" [integration]
- * - "must NOT — the pipeline-stage comparison reports success because CPM's `skills/` directory was
- *   absent, rather than failing on a fixture it could not read" [integration]
- * - "No skill file contains a filename pattern under `docs/`, a glob, a number-allocation
- *   procedure, or a progress-file lifecycle — swept across all twenty-two" [unit]
- * - "Every dpm SKILL.md contains no SQL keyword and no `sqlite3` invocation — swept across all
- *   twenty-two" [unit]
- * - "must NOT — a skill recovers an entity by reading a generated markdown file rather than by
- *   calling a read tool, swept across all twenty-two" [unit]
- * - "Every one of the twenty-two carries a passing facilitation criterion on its own story, checked
- *   here as a roll-up" [integration]
+ * The sweeps: no literal artefact number in a prose column, no filename pattern or glob or
+ * number-allocation procedure or progress-file lifecycle, no SQL keyword or `sqlite3` invocation,
+ * and no recovery of an entity by reading a generated file. Then the two bounds, and the roll-up.
  *
  * **Each conversion epic already swept its own files, and that is why this exists.** A sweep run at
  * conversion time reports on a file as it was that afternoon; every one of these skills has been
- * edited since, three of them by Story 9 of this epic. The corpus sweep is the one that catches a
- * pattern reintroduced by a later edit to an earlier skill, which is precisely the edit no story
- * owns.
+ * edited since. The corpus sweep is the one that catches a pattern reintroduced by a later edit to
+ * an earlier skill, which is precisely the edit no story owns.
  *
- * **Five of the eight criteria are sweeps for something absent, and the eighth is why that is not
- * enough.** Twenty-two files each holding a title and a single tool call would satisfy every
- * negative check here. The retention criteria cannot be written corpus-wide — what facilitation
- * means differs per skill — so they live on the twenty-two conversion stories, and what belongs
- * here is the roll-up that fails when one of them has no such criterion or has one that never
- * passed.
+ * **Most of what is here is a sweep for something absent, and the roll-up is why that is not
+ * enough.** Twenty-odd files each holding a title and a single tool call would satisfy every
+ * negative check. What facilitation means differs per skill, so the retention criteria live on the
+ * conversion stories and what belongs here is the roll-up that fails when one of them has no such
+ * criterion or has one that never passed.
+ *
+ * **Two bounds, not one, and the distinction is the point.** `corpusProblems` bounds what dpm
+ * ships, against FR25's enumeration, reading nothing outside dpm. `conversionProblems` asks the
+ * separate question of whether every stage CPM offers has been converted, and asks it in one
+ * direction only. Written as one equality check they read as a single fact while the sets happen to
+ * match — and then dpm adds a skill CPM has no counterpart for, and a test about CPM's completeness
+ * fails on a dpm capability. `publish` is what exposed it; the separation is what it is worth.
  */
 
 import { test } from 'node:test';
@@ -56,9 +48,16 @@ const EPICS = join(REPO, 'docs', 'epics');
  */
 const NAMED = [
   'architect', 'archive', 'artifact', 'audit', 'brief', 'clean', 'consult', 'discover', 'do',
-  'epics', 'inspect', 'library', 'party', 'pivot', 'present', 'quick', 'ralph', 'retro', 'review',
-  'spec', 'status', 'templates',
+  'epics', 'inspect', 'library', 'party', 'pivot', 'present', 'publish', 'quick', 'ralph', 'retro',
+  'review', 'spec', 'status', 'templates',
 ];
+
+/**
+ * How many of the corpus are conversions of a CPM stage. `publish` is the one that is not (AD11) —
+ * it regenerates the artefacts, which CPM has no equivalent of because CPM's artefacts are the
+ * originals rather than a projection.
+ */
+const ORIGINAL = ['publish'];
 
 /**
  * The directories under a skills root, or a failure naming the root.
@@ -87,18 +86,60 @@ function stageDirectories(root) {
 
 const installed = stageDirectories(SKILLS);
 
+/**
+ * **The corpus bound.** FR25's enumeration against the directories, in both directions, reading
+ * nothing outside dpm.
+ *
+ * Both directions and reported separately: a corpus short of a skill and a corpus holding one FR25
+ * does not name are different failures with different fixes, and a symmetric-difference count tells
+ * the reader which of the two it is only by accident.
+ *
+ * **The bound is the enumeration and never the total.** A count is satisfied by any corpus of the
+ * right size, so a skill renamed — or one directory swapped for another — passes a check on the
+ * number and fails this one. Written as a function so that exact substitution can be driven rather
+ * than described, which is what the second must-NOT below asks for.
+ *
+ * @param {string[]} named FR25's list.
+ * @param {string[]} directories What ships.
+ * @returns {string[]}
+ */
+function corpusProblems(named, directories) {
+  return [
+    ...named.filter((name) => !directories.includes(name))
+      .map((name) => `FR25 names ${name} and the corpus does not ship it`),
+    ...directories.filter((name) => !named.includes(name))
+      .map((name) => `the corpus ships ${name} and FR25 does not name it`),
+  ];
+}
+
+/**
+ * **The conversion check, and it is a subset in one direction only.** Every pipeline stage a CPM
+ * user can reach has a dpm skill; what else dpm ships is not its business.
+ *
+ * **Equality here would make CPM's feature set a precondition for dpm's.** The two jobs read as one
+ * while the sets happen to match, and they are not one: catching a conversion nobody wrote is CPM's
+ * to do, and bounding dpm's corpus is FR25's. Left as equality the check fails the moment dpm adds
+ * anything — which is a test about CPM's completeness failing on a dpm capability, and the fix a
+ * reader reaches for is to delete the capability or to add a CPM skill that has no reason to exist.
+ *
+ * It takes no `named` argument on purpose. There is nothing to pass it that would not be a dpm-side
+ * expectation, and an expectation it cannot express is one it cannot grow.
+ *
+ * @param {string[]} stages CPM's skill directories.
+ * @param {string[]} directories What dpm ships.
+ * @returns {string[]}
+ */
+function conversionProblems(stages, directories) {
+  return stages.filter((stage) => !directories.includes(stage))
+    .map((stage) => `CPM offers ${stage} and the dpm corpus has no skill for it`);
+}
+
 // --- Criterion 1: the corpus is exactly FR25's list, both directions -----------------------------
 
-test('the corpus is exactly the twenty-two skills FR25 names', () => {
-  assert.equal(NAMED.length, 22, 'FR25\'s list was transcribed with the wrong number of names');
+test('the corpus is exactly the skills FR25 names', () => {
+  assert.equal(NAMED.length, 23, 'FR25\'s list was transcribed with the wrong number of names');
 
-  // Both directions, and reported separately. A corpus short of one skill and a corpus holding an
-  // unnamed twenty-third are different failures with different fixes, and a symmetric-difference
-  // count tells the reader which of the two it is only by accident.
-  assert.deepEqual(NAMED.filter((name) => !installed.includes(name)), [],
-    'FR25 names a skill the corpus does not ship');
-  assert.deepEqual(installed.filter((name) => !NAMED.includes(name)), [],
-    'the corpus ships a skill FR25 does not name');
+  assert.deepEqual(corpusProblems(NAMED, installed), []);
 
   // A directory is not a skill. Each carries a SKILL.md whose front matter names itself, which is
   // what the harness dispatches on — a directory renamed without its front matter is a skill that
@@ -109,15 +150,70 @@ test('the corpus is exactly the twenty-two skills FR25 names', () => {
   }
 });
 
-// --- Criteria 3 and 4: every stage CPM offers, and the comparison failing on an absent fixture ---
+test('must NOT — the corpus bound is a count, so any extra directory satisfies it', () => {
+  // **The exact substitution a count cannot see**: one name swapped for another, the total
+  // unchanged. Both directions fire, which is also the evidence the bound is reporting *which*
+  // skill rather than *how many*.
+  const swapped = [...installed.filter((name) => name !== 'publish'), 'publushed'].sort();
+
+  assert.equal(swapped.length, installed.length, 'the substitution changed the total, so a count '
+    + 'would have caught it and this proves nothing about the enumeration');
+
+  assert.deepEqual(corpusProblems(NAMED, swapped), [
+    'FR25 names publish and the corpus does not ship it',
+    'the corpus ships publushed and FR25 does not name it',
+  ]);
+
+  // And the same reading over a corpus that is genuinely short, so the bound is not merely
+  // sensitive to substitution.
+  assert.deepEqual(corpusProblems(NAMED, installed.filter((name) => name !== 'spec')),
+    ['FR25 names spec and the corpus does not ship it']);
+});
+
+// --- Criteria 2, 3 and 4: every stage CPM offers, and what the comparison must not say -----------
 
 test('every pipeline stage CPM offers has a dpm skill', () => {
   const stages = stageDirectories(join(REPO, 'cpm', 'skills'));
 
   // FR25's list could itself be short, which is the reason this comparison is not against `NAMED`.
   // CPM's directory is the population of stages a user can reach; the corpus has to cover it.
-  assert.deepEqual(stages.filter((stage) => !installed.includes(stage)), [],
-    'CPM offers a pipeline stage the dpm corpus has no skill for');
+  assert.deepEqual(conversionProblems(stages, installed), []);
+});
+
+test('a dpm skill with no CPM counterpart passes the conversion check', () => {
+  const stages = stageDirectories(join(REPO, 'cpm', 'skills'));
+
+  // **This is the story, and it is not hypothetical**: `publish` is a skill dpm ships and CPM has
+  // no stage for, so the real sets already differ and the check already has to tolerate it.
+  assert.ok(!stages.includes('publish'), 'CPM has a publish stage, so the separation is untested '
+    + 'against the case it exists for');
+  assert.deepEqual(conversionProblems(stages, installed), []);
+
+  // A planted second one, so the tolerance is a property of the check rather than an accident of
+  // there being exactly one extra today.
+  assert.deepEqual(conversionProblems(stages, [...installed, 'something-dpm-only']), []);
+});
+
+test('must NOT — the conversion check is equality, so a dpm capability fails a CPM test', () => {
+  const stages = stageDirectories(join(REPO, 'cpm', 'skills'));
+
+  // The old shape, written out and driven against the live sets. It fails — on `publish`, a skill
+  // that is not CPM's business — and that failure is the whole evidence that the separation
+  // happened rather than being described. A test asserting the new shape passes says nothing about
+  // whether the old one would have.
+  const asEquality = [
+    ...conversionProblems(stages, installed),
+    ...installed.filter((name) => !stages.includes(name))
+      .map((name) => `the dpm corpus ships ${name} and CPM has no stage for it`),
+  ];
+
+  assert.deepEqual(asEquality, ['the dpm corpus ships publish and CPM has no stage for it'],
+    'equality no longer fails on the live sets, so this must-NOT has lost its subject');
+
+  // And the check as it actually is says nothing of the kind. Asserted against the *reported
+  // problems* rather than against the source, because a comparison can grow a dpm-side expectation
+  // without the word "equality" appearing anywhere.
+  assert.deepEqual(conversionProblems(stages, installed), []);
 });
 
 test('must NOT — the pipeline comparison reports success on a directory it could not read', () => {
@@ -138,13 +234,13 @@ test('must NOT — the pipeline comparison reports success on a directory it cou
 
   // The control, and the reason the two above mean anything: the same reading of a root that *is*
   // populated returns the corpus. Without it a function that threw unconditionally would pass both.
-  assert.equal(stageDirectories(SKILLS).length, 22);
+  assert.equal(stageDirectories(SKILLS).length, 23);
 });
 
 // --- Criteria 5, 6 and 7: the subtractions and SQL, across all twenty-two ------------------------
 
 test('no skill in the corpus names a path, a glob, an allocation, a progress file or SQL', () => {
-  assert.equal(installed.length, 22, 'the sweep is not running over the whole corpus');
+  assert.equal(installed.length, 23, 'the sweep is not running over the whole corpus');
 
   for (const name of installed) {
     const source = skillSource(name);
@@ -331,14 +427,28 @@ function facilitation() {
   return found;
 }
 
-test('every one of the twenty-two carries a facilitation criterion that passed', () => {
+test('every conversion in the corpus carries a facilitation criterion that passed', () => {
   const rolled = facilitation();
 
-  // The roll-up's own subject: a skill converted with no facilitation criterion at all. This is the
-  // failure the story names — a conversion that succeeds at the subtraction and quietly discards
-  // the part FR25 says is the reason for keeping the skill.
-  assert.deepEqual(installed.filter((name) => !rolled.has(name)), [],
-    'a skill in the corpus has no conversion story, so nothing asserts its facilitation survived');
+  // **The population is the conversions, not the corpus**, and the two stopped being the same set
+  // when `publish` arrived. The risk this roll-up exists for is specific to a conversion: a skill
+  // rewritten against the tool surface can pass every subtraction while quietly discarding the
+  // judgement FR25 says is the reason for keeping it, and only its own story would have noticed.
+  // A skill dpm originated has nothing to have discarded — there is no prior version it could
+  // differ from — so its facilitation is asserted by the story that wrote it, and requiring a
+  // conversion story it can never have would fail on the absence of a thing that should not exist.
+  const conversions = installed.filter((name) => !ORIGINAL.includes(name));
+
+  assert.deepEqual(conversions.filter((name) => !rolled.has(name)), [],
+    'a converted skill has no conversion story, so nothing asserts its facilitation survived');
+
+  // And the exemption is bounded rather than open: every name taking it has to be a skill that is
+  // actually installed, so a stale entry cannot excuse a conversion from the roll-up by naming a
+  // directory that is no longer there.
+  assert.deepEqual(ORIGINAL.filter((name) => !installed.includes(name)), [],
+    'a name is exempted from the roll-up and is not in the corpus');
+  assert.deepEqual(ORIGINAL.filter((name) => rolled.has(name)), [],
+    'a skill exempted as dpm\'s own has a conversion story after all');
 
   assert.deepEqual([...rolled.keys()].filter((name) => !installed.includes(name)), [],
     'a conversion story converts a skill the corpus does not ship');
@@ -350,5 +460,7 @@ test('every one of the twenty-two carries a facilitation criterion that passed',
   assert.deepEqual(unverified, [],
     'a skill\'s facilitation criterion is unverified, or its story has no facilitation row at all');
 
-  assert.equal(rolled.size, 22, 'the roll-up did not reach twenty-two skills');
+  assert.equal(rolled.size, conversions.length,
+    `the roll-up reached ${rolled.size} skills and the corpus holds ${conversions.length} conversions`);
+  assert.equal(conversions.length, 22, 'the conversion count moved without the epic saying so');
 });

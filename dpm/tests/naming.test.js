@@ -101,13 +101,19 @@ test('every tool name is a searchable word built from the live schema', (t) => {
 
   assert.deepEqual(unmatched, [], 'a tool is named for something the schema does not hold');
 
-  // The tools taking the exemption are named, one line each. A third one appearing here is a
-  // decision, not a detail — the exemption is meant to cover tools that sweep everything, and
-  // both of these do: `check_integrity` reads `sqlite_schema`, and `search` reads two FTS indexes
-  // covering six tables between them. Neither is named for an entity type because neither has one.
+  // The tools taking the exemption are named, one line each. A fourth one appearing here is a
+  // decision, not a detail — the exemption is meant to cover tools that sweep everything, and all
+  // three do: `check_integrity` reads `sqlite_schema`, `search` reads two FTS indexes covering six
+  // tables between them, and `publish` renders every document there is. None is named for an
+  // entity type because none has one.
+  //
+  // `publish` is the first to take the exemption while declaring `mutates: true`, and the
+  // combination is deliberate rather than an oversight in the rule: what it writes is a working
+  // tree, so it belongs to no table in the direction the rule reaches. Its module records why the
+  // declaration is what it is.
   assert.deepEqual(
     tools.filter((tool) => !tables.has(tool.table)).map((tool) => tool.name).sort(),
-    ['check_integrity', 'search'],
+    ['check_integrity', 'publish', 'search'],
   );
 
   // The control: the vocabulary is not so wide that any name passes. Three plausible names built
