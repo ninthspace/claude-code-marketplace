@@ -69,8 +69,9 @@ Work through the phases **one at a time**, one gate per turn, each with `AskUser
 Summarise the problem from the resolved input and confirm it. From a problem brief this is quick:
 verify nothing has changed.
 
-Read its constraints with `mcp__plugin_dpm_dpm__list_document_section` and `mcp__plugin_dpm_dpm__read_document_section`, and
-restate them for confirmation rather than asking again. Add whatever has changed since.
+Read its constraints with `mcp__plugin_dpm_dpm__list_document_section` and `mcp__plugin_dpm_dpm__read_document_section` with
+`include_body`, and restate them for confirmation rather than asking again — a restatement is a
+quotation, and the body it quotes is withheld unless asked for. Add whatever has changed since.
 
 **Constraints are collected here and nowhere else in this skill**, so anything not surfaced now is
 lost to the product brief.

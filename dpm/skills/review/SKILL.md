@@ -72,13 +72,15 @@ of this artefact is one to leave.
 ### Step 1: Read what is under review
 
 The epic through its own rows: `mcp__plugin_dpm_dpm__list_story`, then `mcp__plugin_dpm_dpm__list_task`,
-`mcp__plugin_dpm_dpm__list_story_criterion` and `mcp__plugin_dpm_dpm__list_story_criterion_approach` per story, and
+`mcp__plugin_dpm_dpm__list_story_criterion` — both with `include_body`, a task being its `description` and a
+criterion its `text` — and `mcp__plugin_dpm_dpm__list_story_criterion_approach` per story, and
 `mcp__plugin_dpm_dpm__list_dependency` for what blocks what. On a story-scoped review, read every story anyway —
 a story is reviewed in the epic it sits in, and its dependencies point at siblings.
 
 Then its lineage. The epic's `parent_id` is the spec, so `mcp__plugin_dpm_dpm__read_spec`,
-`mcp__plugin_dpm_dpm__list_requirement` and `mcp__plugin_dpm_dpm__list_acceptance_criterion` give what the epic is supposed
-to satisfy, and `mcp__plugin_dpm_dpm__list_coverage` gives what it claims to. `mcp__plugin_dpm_dpm__list_adr` and
+`mcp__plugin_dpm_dpm__list_requirement` and `mcp__plugin_dpm_dpm__list_acceptance_criterion`, both with `include_body`,
+give what the epic is supposed to satisfy — which is their text and not their count — and
+`mcp__plugin_dpm_dpm__list_coverage` gives what it claims to. `mcp__plugin_dpm_dpm__list_adr` and
 `mcp__plugin_dpm_dpm__read_adr` on the spec give the decisions the stories have to respect.
 
 **Nothing here is discovered.** The spec is the epic's parent, the coverage rows name their own

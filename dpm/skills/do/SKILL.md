@@ -136,8 +136,9 @@ cannot be evaluated goes to `AskUserQuestion`, then the task is skipped and the 
 
 ### 1. Load context
 
-`mcp__plugin_dpm_dpm__read_task` for the task, and the story's criteria already read above. A task's
-`description` says what it contributes; the criteria it serves belong to the story, not to it.
+`mcp__plugin_dpm_dpm__read_task` with `include_body` for the task, and the story's criteria already read above. A
+task's `description` says what it contributes and is withheld unless asked for; the criteria it
+serves belong to the story, not to it.
 
 Explore the code the task touches before planning it, carrying the applied retro lessons as the lens.
 
@@ -249,8 +250,10 @@ Silent. The next pending task under this story, or — when there is none — th
 ### 8. Epic summary
 
 **Roll up the coverage.** `mcp__plugin_dpm_dpm__list_requirement` on the epic's source spec, and
-`mcp__plugin_dpm_dpm__list_coverage` on each. A requirement whose rows are all verified is discharged as far as
-the rows go; where the run judges the bound fragments account for the requirement whole, say so with
+`mcp__plugin_dpm_dpm__list_coverage` on each, both with `include_body` — the judgement below weighs bound
+`spec_fragment`s against the requirement's own `text`, and both are withheld by default. A
+requirement whose rows are all verified is discharged as far as the rows go; where the run judges
+the bound fragments account for the requirement whole, say so with
 `mcp__plugin_dpm_dpm__update_requirement` and `coverage_claimed_at`. **That is a claim and not a computation**,
 which is why a human makes it: connective prose carries no obligation, and two obligations in one
 sentence can be discharged by a fragment covering either. Leave it unclaimed rather than guess.
@@ -259,7 +262,8 @@ sentence can be discharged by a fragment covering either. Leave it unclaimed rat
 the summary reports what this run claimed, added up. "Nine of nine rows marked verified by this run"
 is what happened; "nine of nine requirements verified" reads as something someone else confirmed.
 
-**Retro.** Gather the epic's story observations with `mcp__plugin_dpm_dpm__list_observation`. Synthesis is
+**Retro.** Gather the epic's story observations with `mcp__plugin_dpm_dpm__list_observation` and `include_body`,
+without which the rows carry their categories and not what was observed. Synthesis is
 mandatory when any signal fired during the loop — a gate resolved unmet-but-continued, a `tdd` cycle
 that needed more than one red, a test command that returned failures, a story left unfinished, or a
 change moment resolved by amending a row. With no signal, skipping is permitted and the skip is **stated with

@@ -16,7 +16,7 @@
  * stale.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SKILLS = join(import.meta.dirname, '..', '..', 'skills');
@@ -32,6 +32,23 @@ export function skillSource(name) {
 /** The shared conventions, which a skill reaches by naming the file and reading it at startup. */
 export function conventions() {
   return readFileSync(join(SKILLS, '..', 'shared', 'skill-conventions.md'), 'utf8');
+}
+
+/**
+ * Every skill in the plugin, by directory name — **read from the tree, never listed**.
+ *
+ * The per-epic corpora are named lists because each epic's scope genuinely is its own handful of
+ * conversions. A claim about *the corpus* is the opposite: a skill added after the check was
+ * written is precisely the one nobody thought about, and a named list is how it goes unchecked
+ * while the suite reports the property holding everywhere.
+ *
+ * @returns {string[]}
+ */
+export function skillNames() {
+  return readdirSync(SKILLS, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 }
 
 /**

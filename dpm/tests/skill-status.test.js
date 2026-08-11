@@ -402,7 +402,8 @@ test('an unreadable status is flagged rather than guessed, and the page is never
   // read off the whole file rather than a section, being the preamble that precedes every heading.
   assert.match(source, /This skill writes nothing at all/);
   assert.match(source, /would be a resumable run that cannot be resumed/);
-  assert.match(prose(source, 'Startup'), /There is no session to open, no retro to consume/);
+  assert.match(prose(source, 'Startup'), /\*\*No session\*\*: a report reads the rows and prints/);
+  assert.match(prose(source, 'Startup'), /No retro to consume either/);
 });
 
 // --- Criterion 4 (must NOT): no recovery by reading what was written -------------------------------

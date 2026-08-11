@@ -27,6 +27,10 @@ Follow the shared **Library Check** procedure with scope keyword `artifact`. A n
 a house style bears on what an entry is called, and this is the collection whose names leave the
 project.
 
+**No session**: each action here is one write — register an entry, or retire one — settled in the
+call that makes it. There is no accumulated state a later run could adopt, and a session row opened
+for a single write is one more thing to close than the work itself.
+
 **No retro awareness.** A lesson changes how work is done; a register entry is a record of what was
 published, and there is nothing in it for a lesson to inform.
 
@@ -38,7 +42,9 @@ published, and there is nothing in it for a lesson to inform.
 - **`list`** — print the register and stop. Read-only.
 - **Nothing** — show the register and offer to add, amend or retire an entry.
 - **Anything else** — a search term. `mcp__plugin_dpm_dpm__list_artifact` with a `limit` above what the project
-  plausibly holds, then match the term against title and description over the rows returned.
+  plausibly holds and `include_body`, then match the term against title and description over the
+  rows returned — `description` is withheld by default, so without it the match runs against titles
+  alone and reports the miss as an absence.
   **That is a scan, not a query, and it is worth saying so**: the search index does not cover this
   table, so the match happens in the run. Honest at a register's size and not at a corpus's.
 

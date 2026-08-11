@@ -53,8 +53,9 @@ For each message: check for a command first, then respond.
 ### Commands
 
 - **Invite** — *"bring in the architect"*. Resolve against the roster by `display_name` or `role`,
-  `mcp__plugin_dpm_dpm__read_agent` for their traits, append them to the active list, and have them introduce
-  themselves and respond. Already present is a no-op, said once.
+  `mcp__plugin_dpm_dpm__read_agent` with `include_body` for their traits — `personality` and
+  `communication_style` are withheld by default, and they are the traits — append them to the active
+  list, and have them introduce themselves and respond. Already present is a no-op, said once.
 - **Dismiss** — *"thanks Priya, you can go"*. Remove them. If they held the lead it returns to the
   user, said aloud. **Dismissing the last agent does not end the consultation** — ask who to bring
   in instead.

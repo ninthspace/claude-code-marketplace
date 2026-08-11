@@ -42,8 +42,11 @@ No arguments produces the whole-project report, and offers neither page.
 Follow the shared **Library Check** procedure with scope keyword `status`. A project that has
 recorded what it counts as done, or which epics are its own, says so there.
 
-Nothing else runs at startup. There is no session to open, no retro to consume — a report changes no
-decision, so a lesson has nothing here to change — and no roster.
+Nothing else runs at startup. **No session**: a report reads the rows and prints, so there is no
+step a later run could resume from — and a run that recorded one would leave a row in flight for
+every glance at the board. The session read in Phase 1 reports *other* skills' runs and is not this
+one's own. No retro to consume either — a report changes no decision, so a lesson has nothing here
+to change — and no roster.
 
 ## Process
 

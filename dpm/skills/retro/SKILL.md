@@ -62,8 +62,10 @@ Synthesis. The three other modes are below.
 
 ### Step 1: Gather the observations
 
-`mcp__plugin_dpm_dpm__list_story` on the epic, then `mcp__plugin_dpm_dpm__list_observation` with each `story_id`. On a
-quick record, `mcp__plugin_dpm_dpm__list_observation` scoped to its `quick_id`.
+`mcp__plugin_dpm_dpm__list_story` on the epic, then `mcp__plugin_dpm_dpm__list_observation` with each `story_id` and
+`include_body`. On a quick record, `mcp__plugin_dpm_dpm__list_observation` scoped to its `quick_id`, again with
+`include_body`. Step 2 writes what a group of observations says that no one of them says; over rows
+whose `text` was withheld it is a synthesis of their categories.
 
 **The two scopes are the two places work happens, and neither is the retro.** A `do` run writes an
 observation against the story it was working; a `quick` run writes one against the quick record. Both
@@ -139,9 +141,9 @@ rather than in the retro layer where it is re-judged every time.
 
 ### Step L1: Select
 
-`mcp__plugin_dpm_dpm__list_observation` with no scope for the whole corpus, then
+`mcp__plugin_dpm_dpm__list_observation` with no scope and `include_body` for the whole corpus, then
 `mcp__plugin_dpm_dpm__list_observation_category` on each. Where `$ARGUMENTS` carried text after `learn`, narrow
-to it.
+to it. The candidates are presented for a user to choose a lesson from, and a candidate is its text.
 
 **The candidates are what the list returns, and a promoted lesson is not among them.** Promotion
 retires at the source, and the list omits retired rows — so a lesson cannot be offered twice, and
@@ -204,8 +206,9 @@ to record that so it stops being asked.
 
 `mcp__plugin_dpm_dpm__list_epic`, then for each whose `status` is `complete`: `mcp__plugin_dpm_dpm__list_retro` scoped by
 `parent_id` to that epic for the retros already written, and `mcp__plugin_dpm_dpm__list_story` with
-`mcp__plugin_dpm_dpm__list_observation` per story for what it holds. Archived epics do not come back and are
-not classified — an epic that was swept is not one waiting on a decision.
+`mcp__plugin_dpm_dpm__list_observation` and `include_body` per story for what it holds — the waivable outcome is
+*no observations worth synthesising*, which is a judgement about what they say. Archived epics do not
+come back and are not classified — an epic that was swept is not one waiting on a decision.
 
 Three outcomes, and only one of them is actionable:
 

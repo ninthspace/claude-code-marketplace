@@ -55,7 +55,8 @@ the file.
   `artifact.url` and `published_at` are both `NOT NULL`. `review_agent` is kind-pinned to  
   `review`. `document_kind` was neither readable nor listable. The shared `Perspectives`  
   procedure loads a roster without `include_body` and renders voices off nothing. Every one was  
-  found by a consumer reaching for it; none by reading the schema.
+  found by a consumer reaching for it; none by reading the schema.  
+  **Retired 2026-08-11**: promoted to docs/library/lessons-learned.md
 - **Shared machinery encodes an assumption, and the first case that breaks it looks like it  
   works.** A `live` column is three changes (tool list, projection descriptor, pinned version),  
   not one. `retired_at` on a *record* is not `retired_at` on a *vocabulary*, so the retire-verb  

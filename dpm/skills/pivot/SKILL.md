@@ -112,7 +112,9 @@ Two kinds reach further than their own row:
   `story_criterion_id`, and `mcp__plugin_dpm_dpm__read_story_criterion` opens it. That is the join from an
   amended requirement to the criteria written against it — the reach a cascade comparing prose
   never had, and the reason an amendment here can be specific about what it breaks.
-- **An epic.** `mcp__plugin_dpm_dpm__list_story` on it, then `mcp__plugin_dpm_dpm__list_story_criterion` per story.
+- **An epic.** `mcp__plugin_dpm_dpm__list_story` on it, then `mcp__plugin_dpm_dpm__list_story_criterion` with
+  `include_body` per story — each criterion is compared against what Phase 2 changed, which is a
+  comparison of texts.
 
 #### Before the walk
 

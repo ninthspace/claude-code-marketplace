@@ -70,13 +70,21 @@ provisional in the session `state`; it can be revised before execution begins.
 
 ### Step 1: Read the source
 
-Read the spec and its parts: `mcp__plugin_dpm_dpm__read_spec`, `mcp__plugin_dpm_dpm__list_requirement` with a `limit`
-above the spec's requirement count, and `mcp__plugin_dpm_dpm__list_document_section` for the scope boundary and
-the integration boundaries. Summarise the work areas back to the user.
+Read the spec and its parts: `mcp__plugin_dpm_dpm__read_spec`, `mcp__plugin_dpm_dpm__list_requirement` with `include_body`
+and a `limit` above the spec's requirement count, and `mcp__plugin_dpm_dpm__list_document_section` with `include_body`
+for the scope boundary and the integration boundaries. Summarise the work areas back to the user.
 
 **The `limit` is the difference between a breakdown and a partial one.** Requirements left on a
 second page are not visible as missing here — they are visible three steps later as coverage rows
 that were never written, against requirements this run never saw.
+
+**`include_body` is the difference between a breakdown and a guess**, and it fails one step further
+on than the bound does. `text` on a requirement and `body` on a section are withheld unless asked
+for, so without it every requirement arrives as a label with a class and a band and no statement of
+what it requires. Step 3d then has to bind each coverage row to a **verbatim fragment of that
+requirement's own text**, which there is no way to produce from a label. A fragment that is not a
+substring of its requirement is not refused at the write — it is stored, and the integrity register
+reports it afterwards as a broken invariant, at a distance from the step that caused it.
 
 ### Step 2: Identify epics
 
@@ -144,8 +152,10 @@ other.
 words "must NOT" at the front of the text.
 
 **Carry every rejection the spec already states.** For each requirement this story delivers, read
-`mcp__plugin_dpm_dpm__list_acceptance_criterion` and give every criterion whose `polarity` is `must_not` a
-story criterion of its own with the same polarity. These are boundaries someone already argued for;
+`mcp__plugin_dpm_dpm__list_acceptance_criterion` with `include_body` and give every criterion whose `polarity` is
+`must_not` a story criterion of its own with the same polarity and the same text — which is the
+argument for `include_body`, there being nothing to transcribe from a row whose `text` was withheld.
+These are boundaries someone already argued for;
 propagating one is transcription, and dropping one is a decision nobody made.
 
 Where the story goes beyond what the spec rejects and touches authentication, session or credential
@@ -257,8 +267,8 @@ cannot outlive the text that earned it.
 ### Step 4: Confirm
 
 **The gap check is a query over the spec, not a sum of what was just written.** For each requirement
-from `mcp__plugin_dpm_dpm__list_requirement`, call `mcp__plugin_dpm_dpm__list_coverage` on it. A requirement with no
-coverage row is a gap when it is either:
+from `mcp__plugin_dpm_dpm__list_requirement` with `include_body`, call `mcp__plugin_dpm_dpm__list_coverage` on it. A
+requirement with no coverage row is a gap when it is either:
 
 - **must have** — the system fails without it; or
 - **environmental** — its `class` is `environmental_requirement` or `environmental_restriction`,
@@ -272,6 +282,14 @@ bound, the stories are honest, and nobody owns the way in. It blocks on the same
 uncovered one — this is the only gate that asks whether the delivered system can be used, because
 everything downstream verifies criteria as written.
 
+**Both texts have to be in hand for that, and both are withheld by default.** Whether a requirement
+names an action a user takes is in its `text`, not in its `class` or its band; whether a criterion
+names the affordance or only the response is in the criterion's. So the requirement read above
+carries `include_body`, and each covering criterion is reached with
+`mcp__plugin_dpm_dpm__read_story_criterion` and `include_body` through the `story_criterion_id` its coverage row
+names. Run over labels and counts, the gate returns a verdict computed against text it never saw —
+and it returns it in the same shape as a real one.
+
 Resolve each gap before finishing: add it to an existing epic, raise a story for it, or defer it
 with a stated reason. Should-have requirements with no cover are warnings rather than blockers.
 
@@ -279,9 +297,11 @@ Then present the whole tree — epics, their stories, their tasks, the dependenc
 suggested order, and the gap-check result — and gate it. Approval ends the run.
 
 **Read the tree back rather than repeating what was sent.** `mcp__plugin_dpm_dpm__list_story` per epic,
-`mcp__plugin_dpm_dpm__list_task` and `mcp__plugin_dpm_dpm__list_story_criterion` per story. A value that never reached a
-row is absent from the rows and present in the summary, and an absence read from a summary reads as
-something that was not needed.
+`mcp__plugin_dpm_dpm__list_task` and `mcp__plugin_dpm_dpm__list_story_criterion` per story, both with `include_body`. A
+value that never reached a row is absent from the rows and present in the summary, and an absence
+read from a summary reads as something that was not needed — and a task's `description` and a
+criterion's `text` are the values most worth reading back, being the ones a read that did not ask
+for them returns as absent whether they were written or not.
 
 ## Autonomous mode
 

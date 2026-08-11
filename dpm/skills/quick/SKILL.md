@@ -107,8 +107,9 @@ Gate: "Ready to execute?" with `Execute` / `Adjust`. Iterate until confirmed. Th
 
 **The written record is a hard gate on Step 3, and it is the row that makes it one.** Implementation
 does not begin until `mcp__plugin_dpm_dpm__read_quick` returns the record and `mcp__plugin_dpm_dpm__list_quick_criterion`
-returns its criteria. Those criteria are what Step 4 decides against — read them back rather than
-working from the conversation, which is the only copy that can drift.
+with `include_body` returns its criteria. Those criteria are what Step 4 decides against — read them
+back rather than working from the conversation, which is the only copy that can drift. Read without
+`include_body`, the rows are a count of criteria and the conversation is again the only copy.
 
 ### Step 3: Execute
 

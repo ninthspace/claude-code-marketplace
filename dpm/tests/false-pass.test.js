@@ -16,15 +16,13 @@
  *   epic does not build. Six of the first twenty were like that, and pretending otherwise would
  *   have made this file the thing it exists to prevent.
  *
- * **As of Epic 47-05 Story 6 the second disposition is unused, and that is the register being
- * satisfied rather than the mechanism being retired.** The six deferrals named four epics —
- * 47-02's dump path, 47-03's tool boundary, 47-04's projection guard, and this epic's search
- * index — and this story is the first point in the build order at which all four are complete.
- * The `closedIn` branch stays because the register outlives this epic: a later condition whose
- * mechanism nobody has built yet needs somewhere honest to sit, and the assertion below now
- * passes over an empty set precisely because nothing is deferred, not because nothing checks.
- * Three such conditions have arrived since — #21 with FR29, and #22 and #23 with the amendments
- * of 2026-08-10 — and each landed with its mechanism built, so the branch is still unused.
+ * **The second disposition is unused as it stands, and that is the register being satisfied rather
+ * than the mechanism being retired.** The branch stays because the register outlives any one epic:
+ * a condition whose mechanism nobody has built yet needs somewhere honest to sit rather than a
+ * citation to a test that does not exist. #25 is the round trip it exists for — deferred to 47-12
+ * while FR13's corpus check was unbuilt, converted to a citation once that epic built it. The
+ * assertion below passes over an empty set precisely because nothing is deferred, not because
+ * nothing checks, so it is driven on planted deferrals rather than left to say so.
  *
  * **A citation resolves a name and cannot read what the test asserts.** That gap is entry #18's
  * own shape turned on the register — a claim outliving what makes it true — and no assertion in
@@ -32,85 +30,70 @@
  * source: the guard the condition names was broken, the cited test was confirmed to fail, and the
  * source reverted. The record is in Epic 47-05's Notes.
  *
- * **The register is itself under test.** The count, the numbering and the condition summaries
- * are transcribed from the spec's table rather than derived from anything here, so a condition
- * added to the spec fails this file until it has a disposition.
+ * **The register is itself under test, and now actually is.** The count, the numbering and the
+ * conditions are read from the spec's table at test time rather than transcribed here, so a
+ * condition added to the spec fails this file until it has a disposition. Until Epic 47-11 they
+ * were a hand-kept array: it asserted count and contiguity over its own copy, stayed internally
+ * consistent, and said twenty-three while the spec said twenty-five.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { javascriptFilesUnder } from './support/sources.js';
+import { register } from './support/register.js';
 
 const TESTS_DIRECTORY = new URL('.', import.meta.url).pathname;
 
+/** Where a `closedIn` deferral has to resolve to, so "later" cannot name an epic nobody wrote. */
+const EPICS = join(import.meta.dirname, '..', '..', 'docs', 'epics');
+
 /**
- * The twenty-three conditions, transcribed from the spec's false-pass register.
+ * What the spec cannot say: which test closes each condition, keyed by the register's number.
  *
- * `condition` is a short phrase rather than the register's full sentence: the criterion is
- * that every numbered condition has a disposition, and copying the prose verbatim would make
- * this fail on a rewording, which is not what it is watching for.
- *
- * **A new condition is appended and its number is never reused**, which the spec's table now says
- * in as many words. The amendments of 2026-08-10 first inserted #22 and #23 after #14, giving them
- * numbers two conditions already had — and since the number is the join key this file resolves
- * against, an entry list transcribed from that table would have carried two collisions the
- * contiguity assertion below could not have expressed.
+ * The number is the join key — "a new condition is appended, and the number it gets is never
+ * reused", which the spec's table says in as many words — so this map resolves against the parse
+ * in both directions. A condition with no disposition fails, and a disposition naming no condition
+ * fails, which is what makes the pair a reconciliation rather than a lookup.
  */
-const FALSE_PASSES = [
-  { entry: 1, condition: 'A binding stored twice',
-    test: 'coverage identity is the fragment, and position is no part of it' },
-  { entry: 2, condition: 'A ✓ outliving the text it verified',
-    test: 'editing a story criterion clears the ✓ on every coverage row bound to it' },
-  { entry: 3, condition: 'Search index behind the data',
-    test: 'a row written in the same call sequence is searchable immediately' },
-  { entry: 4, condition: 'A hand-edit to a generated file',
-    test: 'a hand-edited generated file fails the guard, naming the file' },
-  { entry: 5, condition: 'Number allocation matching no row',
-    test: 'an allocation never reports success without a number' },
-  { entry: 6, condition: 'A cycle among gates_work edges',
-    test: 'entry 1 — a cycle among gates_work edges' },
-  { entry: 7, condition: 'foreign_keys defaulting off on a connection',
-    test: 'a connection dpm opens enforces foreign keys, whatever the default was' },
-  { entry: 8, condition: 'A wrong-domain taxonomy reference',
-    test: 'a term from the wrong domain is rejected in every slot that draws from taxonomy' },
+const DISPOSITIONS = new Map(Object.entries({
+  1: { test: 'coverage identity is the fragment, and position is no part of it' },
+  2: { test: 'editing a story criterion clears the ✓ on every coverage row bound to it' },
+  3: { test: 'a row written in the same call sequence is searchable immediately' },
+  4: { test: 'a hand-edited generated file fails the guard, naming the file' },
+  5: { test: 'an allocation never reports success without a number' },
+  6: { test: 'entry 1 — a cycle among gates_work edges' },
+  7: { test: 'a connection dpm opens enforces foreign keys, whatever the default was' },
+  8: { test: 'a term from the wrong domain is rejected in every slot that draws from taxonomy' },
   // **Not `dumping the same state twice from independent databases is byte-stable`**, which is
   // the obvious citation and is the *claim* rather than the guard. Dropping the `ORDER BY` from
   // the row select leaves it green — two databases built by the same statements in the same order
   // hand back the same unordered scan — while the ordering test below fails at once. Determinism
   // is only observable where the inputs differ, so the citation has to be the test that varies
   // them. Found by driving the mutation; nothing about the two names says which is which.
-  { entry: 9, condition: 'A non-deterministic dump',
-    test: 'rows are emitted in primary-key order regardless of the order they were written' },
-  { entry: 10, condition: 'A class inferred from a label',
-    test: 'a label of any shape is stored against the class it was given, never one read off it' },
-  { entry: 11, condition: "Coverage joining one spec's requirement to another spec's criterion",
-    test: "entry 3 — coverage joining one spec's requirement to another spec's criterion" },
-  { entry: 12, condition: 'A document referenced as the wrong kind of document',
-    test: 'every foreign key into document is kind-pinned, except the ones the Data Model names' },
-  { entry: 13, condition: 'A ✓ surviving an edit to coverage.spec_fragment',
-    test: 'editing the coverage fragment clears the ✓ on that row' },
-  { entry: 14, condition: 'A row referencing a retired vocabulary item',
-    test: 'retiring a term leaves the rows that reference it intact and stops new ones arriving' },
-  { entry: 15, condition: 'A search covering document_section only',
-    test: 'a search covering sections alone misses five of the six, and says nothing about it' },
-  { entry: 16, condition: 'An FTS trigger absent for one indexed table',
-    test: 'every table entry_fts indexes has all three triggers, and none has fewer' },
-  { entry: 17, condition: 'A requirement with one of five obligations bound',
-    test: 'a claimed requirement is distinguishable by query from an identically bound unclaimed one' },
-  { entry: 18, condition: 'A completeness claim outliving its binding set',
-    test: 'a completeness claim is cleared when a bound fragment or the requirement text is edited' },
-  { entry: 19, condition: 'A {{ref:}} marker naming a deleted document',
-    test: 'entry 13 — a {{ref:}} marker naming a document that is not there' },
-  { entry: 20, condition: 'A document_milestone row pairing across specs',
-    test: 'entry 12 — a document assigned to a milestone belonging to another spec' },
-  { entry: 21, condition: 'A server nothing declares',
-    test: 'the plugin manifest declares a server whose entry point exists' },
-  { entry: 22, condition: 'An update that clears a field and changes nothing',
-    test: 'an update clears a nullable column when told to, and leaves it alone when not' },
-  { entry: 23, condition: 'A superseded or withdrawn blocker read as satisfied',
-    test: 'a retired blocker goes on blocking, where the same blocker completed does not' },
-];
+  9: { test: 'rows are emitted in primary-key order regardless of the order they were written' },
+  10: { test: 'a label of any shape is stored against the class it was given, never one read off it' },
+  11: { test: "entry 3 — coverage joining one spec's requirement to another spec's criterion" },
+  12: { test: 'every foreign key into document is kind-pinned, except the ones the Data Model names' },
+  13: { test: 'editing the coverage fragment clears the ✓ on that row' },
+  14: { test: 'retiring a term leaves the rows that reference it intact and stops new ones arriving' },
+  15: { test: 'a search covering sections alone misses five of the six, and says nothing about it' },
+  16: { test: 'every table entry_fts indexes has all three triggers, and none has fewer' },
+  17: { test: 'a claimed requirement is distinguishable by query from an identically bound unclaimed one' },
+  18: { test: 'a completeness claim is cleared when a bound fragment or the requirement text is edited' },
+  19: { test: 'entry 13 — a {{ref:}} marker naming a document that is not there' },
+  20: { test: 'entry 12 — a document assigned to a milestone belonging to another spec' },
+  21: { test: 'the plugin manifest declares a server whose entry point exists' },
+  22: { test: 'an update clears a nullable column when told to, and leaves it alone when not' },
+  23: { test: 'a retired blocker goes on blocking, where the same blocker completed does not' },
+  24: { test: 'all four binaries refuse to open a database on a runtime without FTS5' },
+  // **A deferral converted, which is the branch working rather than the branch being retired.**
+  // #25 sat on `closedIn: '47-12'` while its mechanism was unbuilt; 47-12 Story 3 built it, so the
+  // disposition is now a citation like every other. The cited test reads the corpus against the
+  // live registry, so it fails on a skill that renders stored text from a read that never asked.
+  25: { test: 'every read of a withholding tool asks for the body or is recorded as not needing it' },
+}).map(([entry, disposition]) => [Number(entry), disposition]));
 
 /** Every `test('…')` name the suite declares, read from the files rather than from a list. */
 function declaredTests() {
@@ -128,19 +111,76 @@ function declaredTests() {
   return names;
 }
 
-test('the false-pass register is twenty-three conditions, each with a disposition', () => {
-  assert.equal(FALSE_PASSES.length, 23, 'the count the spec states, so a twenty-fourth fails here');
-  assert.deepEqual(
-    FALSE_PASSES.map((condition) => condition.entry),
-    Array.from({ length: 23 }, (unused, index) => index + 1),
-    'numbered contiguously — the number is the join key to the spec\'s table',
-  );
+/** The count below which a parse is not a short register but a broken read. */
+const FLOOR = 25;
 
-  const undisposed = FALSE_PASSES.filter((condition) => !condition.test && !condition.closedIn);
-  assert.deepEqual(undisposed, [], 'a condition with neither a test nor a home is an unregistered entry');
+/**
+ * Everything wrong with a register and its dispositions, as a list of complaints.
+ *
+ * A function rather than a run of assertions, so the controls can drive **this** on inputs written
+ * to be wrong instead of restating its rules in a second place. A control that reimplements what it
+ * guards tests the reimplementation — which is the shape of the very defect this story is closing.
+ *
+ * @param {ReturnType<typeof register>} conditions
+ * @param {Map<number, {test?: string, closedIn?: string}>} dispositions
+ * @returns {string[]} Empty when the register is fully and unambiguously disposed.
+ */
+function audit(conditions, dispositions) {
+  const complaints = [];
 
-  const both = FALSE_PASSES.filter((condition) => condition.test && condition.closedIn);
-  assert.deepEqual(both, [], 'and one with both is a claim that has not decided what it is');
+  // **The non-vacuity guard, and it is the point rather than ceremony.** Every check below is over
+  // the parse, so a parse returning nothing satisfies all of them and an empty or unrecognised
+  // table reads as a fully disposed register. This is the complaint that arrives instead.
+  if (conditions.length < FLOOR) {
+    complaints.push(`the register parsed to ${conditions.length} conditions, below the ${FLOOR} it holds`);
+  }
+
+  const numbers = conditions.map((condition) => condition.entry);
+  const contiguous = Array.from({ length: conditions.length }, (unused, index) => index + 1);
+
+  if (numbers.join() !== contiguous.join()) {
+    complaints.push(`the numbering is not contiguous: ${numbers.join(', ')}`);
+  }
+
+  for (const condition of conditions) {
+    if (condition.condition.length <= 3) {
+      complaints.push(`#${condition.entry} parsed with an empty summary — the columns have moved`);
+    }
+
+    // The criterion: a condition added to the spec fails until it has a disposition.
+    if (!dispositions.has(condition.entry)) {
+      complaints.push(`#${condition.entry} has no disposition: ${condition.condition}`);
+    }
+  }
+
+  const registered = new Set(numbers);
+
+  for (const [entry, disposition] of dispositions) {
+    // The other direction, so a disposition cannot outlive the condition it was written for.
+    if (!registered.has(entry)) complaints.push(`#${entry} is disposed and the spec does not carry it`);
+
+    if (!disposition.test && !disposition.closedIn) {
+      complaints.push(`#${entry} has neither a test nor a home, which is not a disposition`);
+    }
+
+    if (disposition.test && disposition.closedIn) {
+      complaints.push(`#${entry} has both, which is a claim that has not decided what it is`);
+    }
+
+    // A deferral is a disposition only while it names somewhere that exists. `closedIn: ''` is what
+    // "we'll get to it" looks like written down, and falls to the complaint above; an epic nobody
+    // wrote is the same evasion with a number on it, and falls here.
+    if (disposition.closedIn
+      && !readdirSync(EPICS).some((file) => file.startsWith(`${disposition.closedIn}-epic-`))) {
+      complaints.push(`#${entry} defers to epic ${disposition.closedIn}, and no such epic exists`);
+    }
+  }
+
+  return complaints;
+}
+
+test('every condition the spec registers has a disposition, and every disposition a condition', () => {
+  assert.deepEqual(audit(register(), DISPOSITIONS), []);
 });
 
 test('every condition this epic closes names a test that exists', () => {
@@ -151,34 +191,118 @@ test('every condition this epic closes names a test that exists', () => {
   // nothing. A suite this size has far more than fifty.
   assert.ok(declared.size > 50, `only ${declared.size} tests found — the scan is not reading the suite`);
 
-  const unresolved = FALSE_PASSES
-    .filter((condition) => condition.test && !declared.has(condition.test))
-    .map((condition) => `#${condition.entry}: ${condition.test}`);
+  const cited = [...DISPOSITIONS].filter(([, disposition]) => disposition.test);
+
+  assert.ok(cited.length >= 25, `only ${cited.length} conditions cite a test, so this checks almost nothing`);
+
+  const unresolved = cited
+    .filter(([, disposition]) => !declared.has(disposition.test))
+    .map(([entry, disposition]) => `#${entry}: ${disposition.test}`);
 
   assert.deepEqual(unresolved, [], 'a citation nobody resolves is how a register goes stale unnoticed');
 });
 
-test('nothing is deferred any longer — every condition is closed by a test', () => {
-  const deferred = FALSE_PASSES.filter((condition) => condition.closedIn);
+test('nothing is deferred, and a deferral is still only a disposition where it lands somewhere', () => {
+  const deferred = [...DISPOSITIONS].filter(([, disposition]) => disposition.closedIn);
 
-  // Six of twenty were deferred when Epic 47-01 wrote this file: #9 to the dump path, #10 to the
-  // tool boundary, #4 to the projection guard, and #3, #15 and #16 to the search index. Four more
-  // had been deferred to that epic's own Story 7 and became citations at its gate. The claim
-  // "every condition capable of producing a false pass blocks rather than warns" is now made over
-  // the whole register rather than over fourteen twentieths of it. The three conditions added
-  // since — #21, #22 and #23 — each arrived with a test rather than with an epic to name.
-  assert.deepEqual(deferred.map((condition) => condition.entry), [],
-    'a condition is back to naming an epic instead of a test');
+  // **Empty, and #25 is why it is empty rather than why it was not.** Six of twenty were deferred
+  // when Epic 47-01 wrote this file; Epic 47-05 Story 6 closed the last of those, 47-11 deferred
+  // #25 to 47-12 because FR13's corpus check was unbuilt, and 47-12 built it. Every condition the
+  // spec registers now cites a test that runs.
+  assert.deepEqual(deferred.map(([entry]) => entry), [],
+    'the set of deferred conditions has changed — each one is a mechanism nobody has built');
 
-  assert.equal(FALSE_PASSES.filter((condition) => condition.test).length, FALSE_PASSES.length,
+  // Which leaves the branch asserted over nothing, so it is driven on planted deferrals instead.
+  // The distinction is the whole value of `closedIn`: a home that exists is a disposition, and one
+  // that does not is "later" with a number attached.
+  const lands = new Map([...DISPOSITIONS, [25, { closedIn: '47-12' }]]);
+  const nowhere = new Map([...DISPOSITIONS, [25, { closedIn: '47-99' }]]);
+
+  assert.deepEqual(audit(register(), lands), [],
+    'a deferral naming an epic that exists was refused');
+  assert.deepEqual(audit(register(), nowhere),
+    ['#25 defers to epic 47-99, and no such epic exists']);
+
+  // NFR6's criterion is over the register entire, so every condition is disposed one way or the
+  // other — the count below is the parse's, not this file's, which is what makes it a claim about
+  // the register rather than about the map.
+  assert.equal(DISPOSITIONS.size, register().length,
     'NFR6\'s criterion is over the register entire, so anything short of all of it fails');
+});
 
-  // The rule the empty set above is measured against, kept for the register's next entry rather
-  // than deleted with its last user: a deferral is a disposition only while it names where it
-  // closes. This passes vacuously today and would not the moment a condition arrives with
-  // `closedIn: ''` — which is the shape "we'll get to it" takes when it is written down.
-  assert.ok(
-    deferred.every((condition) => condition.closedIn.length > 0),
-    'every deferral names where, since "later" is not a disposition',
-  );
+// --- must NOT: a parse matching no rows reads as a satisfied register ----------------------------
+
+test('a register that failed to parse is refused, not read as fully disposed', () => {
+  const table = (...rows) => [
+    '### The false-pass register',
+    '',
+    '| # | Condition | Where it would look like success | Blocked by |',
+    '|---|---|---|---|',
+    ...rows,
+    '',
+    '### Integration Boundaries',
+  ].join('\n');
+
+  const every = Array.from({ length: FLOOR }, (unused, index) =>
+    `| ${index + 1} | Condition ${index + 1} | Somewhere | Something |`);
+
+  // The premise: a well-formed table of the right size, fully disposed, produces no complaint.
+  // Without this the assertions below could be satisfied by an `audit` that complains about
+  // everything, and each of them would still read as a control.
+  const disposed = new Map(every.map((unused, index) => [index + 1, { test: 'a name' }]));
+
+  assert.deepEqual(audit(register(table(...every)), disposed), []);
+
+  // **The must-NOT itself.** Each of these parses to nothing, and each would satisfy every check in
+  // `audit` that iterates the register — which is all of them but the floor.
+  for (const [what, source] of [
+    ['an empty document', ''],
+    ['a document with no register heading', '## Something else\n\n| 1 | A condition | x | y |\n'],
+    ['a heading whose table has been reworded away', table('The conditions are listed in prose now.')],
+    ['a table whose rows lost their numbers', table('| — | A condition | Somewhere | Something |')],
+  ]) {
+    assert.deepEqual(register(source), [], `${what} parsed to rows it does not have`);
+
+    const complaints = audit(register(source), disposed);
+
+    assert.ok(complaints.some((complaint) => complaint.includes('parsed to 0 conditions')),
+      `${what} read as a satisfied register — the floor did not fire`);
+  }
+
+  // **The blank line inside the table is the live hazard, not a hypothetical one.** #25 was
+  // appended after a paragraph break, so a parse bounded by the first blank line returns twenty-four
+  // rows, is internally consistent, and hides the newest condition — this story's own defect, one
+  // layer down. Driven here because the real spec would still pass a parser that got this wrong on
+  // the day before #25 was added.
+  const split = register(table(...every.slice(0, -1), '', every.at(-1)));
+
+  assert.equal(split.length, FLOOR, 'a blank line inside the table truncated the parse');
+  assert.equal(split.at(-1).entry, FLOOR);
+});
+
+// --- must NOT: a condition in the spec with no disposition ---------------------------------------
+
+test('a condition the spec adds fails until it has a disposition', () => {
+  const conditions = register();
+
+  // Drop #25's disposition and nothing else: the register is unchanged and the map is one short,
+  // which is exactly the state the spec's amendment of 2026-08-11 left this suite in.
+  const short = new Map([...DISPOSITIONS].filter(([entry]) => entry !== 25));
+  const complaints = audit(conditions, short);
+
+  assert.equal(complaints.length, 1, `expected one complaint, got: ${complaints.join(' / ')}`);
+  assert.match(complaints[0], /^#25 has no disposition:/);
+
+  // And the other direction — a disposition for a condition the spec does not carry.
+  const extra = new Map([...DISPOSITIONS, [99, { test: 'a name' }]]);
+
+  assert.deepEqual(audit(conditions, extra).filter((complaint) => complaint.startsWith('#99')),
+    ['#99 is disposed and the spec does not carry it']);
+
+  // And a disposition that has not decided what it is, in both of its shapes.
+  const undecided = new Map([...DISPOSITIONS, [25, { test: 'a name', closedIn: '47-12' }]]);
+  const empty = new Map([...DISPOSITIONS, [25, {}]]);
+
+  assert.ok(audit(conditions, undecided).some((complaint) => complaint.includes('#25 has both')));
+  assert.ok(audit(conditions, empty).some((complaint) => complaint.includes('#25 has neither')));
 });

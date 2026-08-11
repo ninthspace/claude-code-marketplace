@@ -61,8 +61,9 @@ Constraints are captured once, in the problem brief, and Step 3a facilitates onl
    Do **not** substitute the most recent — recency answers a different question, and the two
    diverge the moment a project has more than one line of work. An empty list means there is no
    problem brief, which is not an error.
-3. `mcp__plugin_dpm_dpm__list_document_section` on the resolved brief and read the section headed *Constraints*,
-   along with the context and consequences of any decision bearing on the environment.
+3. `mcp__plugin_dpm_dpm__list_document_section` on the resolved brief with `include_body` and read the section
+   headed *Constraints*, along with the context and consequences of any decision bearing on the
+   environment. The heading is what the listing returns by default; the constraints are in the body.
 4. Carry both into Step 3a as entries already known.
 
 **The product brief is a waypoint, not the source** — its constraints are derived and lossy by the
@@ -274,14 +275,21 @@ to Step 3a. Refine before proceeding.
 
 Render the complete spec in the message body from the rows just written, reading them back with
 `mcp__plugin_dpm_dpm__read_spec`, `mcp__plugin_dpm_dpm__list_requirement`, `mcp__plugin_dpm_dpm__list_acceptance_criterion`, `mcp__plugin_dpm_dpm__list_adr` and
-`mcp__plugin_dpm_dpm__list_document_section`, each list carrying a `limit` above what the spec just wrote. Then
-gate: "Approve this spec?" with `Approve` / `Request changes` / `Stop`.
+`mcp__plugin_dpm_dpm__list_document_section`, each list carrying a `limit` above what the spec just wrote, and
+`include_body` wherever the tool takes it. Then gate: "Approve this spec?" with `Approve` /
+`Request changes` / `Stop`.
 
 On approval, `mcp__plugin_dpm_dpm__update_spec` sets `status` to `complete`. On *Request changes*, return to the
 section the change belongs to and leave the status alone.
 
 **Read the rows, not the rendered document.** A value that never reached a row renders as an
 absence, and an absence reads as a section that was not needed.
+
+**A withheld column reads exactly the same way, which is why the render asks for one.** A
+requirement's `text`, a criterion's `text` and a section's `body` are withheld by default, so a
+review rendered from a read that did not ask for them is every label, every count and every heading
+the spec has, with nothing underneath any of them — structurally complete, and saying nothing a user
+could approve.
 
 ## Output
 

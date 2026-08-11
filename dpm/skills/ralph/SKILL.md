@@ -139,9 +139,10 @@ skill, and did it finish?
    repeated measurements stalled rather than finished**, and that is the single most useful thing to
    know before arming another one.
 3. Present it and gate on **Resume** / **Start fresh**.
-4. On **Resume**, `mcp__plugin_dpm_dpm__adopt_session` with this session's id and the previous row's. It hands
-   back the state and points the old row at this one, so the chain has one live end and nothing has
-   to decide which of two rows is current.
+4. On **Resume**, `mcp__plugin_dpm_dpm__adopt_session` with this session's id, the previous row's, and
+   `include_body`. It hands back the state and points the old row at this one, so the chain has one
+   live end and nothing has to decide which of two rows is current. `state` is a withheld column, so
+   an adopt that does not ask for it resumes onto an empty state and reads as a fresh start.
 
 **Start fresh leaves the old row alone.** It is a decision about this run, not a deletion: nothing
 here removes a session row, and the stalled run stays readable for whoever comes to diagnose it.
@@ -185,7 +186,8 @@ work.
 There is no script and no exit code. The loop reads the rows:
 
 1. `mcp__plugin_dpm_dpm__list_story` scoped by `epic_id`, then `mcp__plugin_dpm_dpm__list_story_criterion` scoped by
-   `story_id` for each.
+   `story_id` for each, with `include_body` — the unverified ones are named back to the user below,
+   and a criterion has no title to name it by.
 2. `mcp__plugin_dpm_dpm__list_coverage` scoped by `story_criterion_id`. A row whose `verified_at` is set is
    verified; one where it is null is not.
 3. For every unverified row, `mcp__plugin_dpm_dpm__list_story_criterion_approach` scoped by

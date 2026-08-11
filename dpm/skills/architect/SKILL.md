@@ -33,8 +33,9 @@ any other, so the choice made now is the one checked at write time.
 
 Read the chosen document with the tool for its kind — `mcp__plugin_dpm_dpm__read_product_brief`,
 `mcp__plugin_dpm_dpm__read_problem_brief`, `mcp__plugin_dpm_dpm__read_spec` or `mcp__plugin_dpm_dpm__read_discussion` — and its prose
-with `mcp__plugin_dpm_dpm__list_document_section` and `mcp__plugin_dpm_dpm__read_document_section`. The constraints and
-success criteria it records are what makes a decision this product's rather than boilerplate.
+with `mcp__plugin_dpm_dpm__list_document_section` and `mcp__plugin_dpm_dpm__read_document_section` with `include_body`.
+The constraints and success criteria it records are what makes a decision this product's rather than
+boilerplate, and they are in the section body a read that does not ask for it leaves out.
 
 Then `mcp__plugin_dpm_dpm__list_adr` on that parent for decisions already recorded, and
 `mcp__plugin_dpm_dpm__read_adr` on each. Summarise them and ask whether they still hold. Facilitate only the

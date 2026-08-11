@@ -20,6 +20,10 @@ produces.
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
 This skill uses **Conversational Output** from it.
 
+**No session**: both actions are one read and one render, and neither carries anything from the
+call before it. There is no phase to move on and no state to accumulate, so a run has nothing a
+later one could adopt.
+
 ## Input
 
 `$ARGUMENTS` selects the action:
