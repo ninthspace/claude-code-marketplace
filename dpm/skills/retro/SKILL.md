@@ -31,8 +31,8 @@ was never anything to retire; synthesis creates the grouping the other three act
 
 For synthesis, resolve the subject:
 
-1. If `$ARGUMENTS` names a document id, `mcp__dpm__read_epic` or `mcp__dpm__read_quick` on it.
-2. Otherwise `mcp__dpm__list_epic` and `mcp__dpm__list_quick`, and offer them with `AskUserQuestion`,
+1. If `$ARGUMENTS` names a document id, `mcp__plugin_dpm_dpm__read_epic` or `mcp__plugin_dpm_dpm__read_quick` on it.
+2. Otherwise `mcp__plugin_dpm_dpm__list_epic` and `mcp__plugin_dpm_dpm__list_quick`, and offer them with `AskUserQuestion`,
    showing each title and status. **Ask which one; never take the most recent.**
 3. If there are none, say so and stop.
 
@@ -62,8 +62,8 @@ Synthesis. The three other modes are below.
 
 ### Step 1: Gather the observations
 
-`mcp__dpm__list_story` on the epic, then `mcp__dpm__list_observation` with each `story_id`. On a
-quick record, `mcp__dpm__list_observation` scoped to its `quick_id`.
+`mcp__plugin_dpm_dpm__list_story` on the epic, then `mcp__plugin_dpm_dpm__list_observation` with each `story_id`. On a
+quick record, `mcp__plugin_dpm_dpm__list_observation` scoped to its `quick_id`.
 
 **The two scopes are the two places work happens, and neither is the retro.** A `do` run writes an
 observation against the story it was working; a `quick` run writes one against the quick record. Both
@@ -74,8 +74,8 @@ The list omits them unless a caller passes `include_retired`, which synthesis ne
 is no marker to look for in the text and no rule here to remember. Pass it only when the question is
 the audit trail rather than the work.
 
-Then each one's categories: `mcp__dpm__list_observation_category` per observation, resolved against
-`mcp__dpm__list_taxonomy` in the `observation` domain, called with a `limit` above the seeded count
+Then each one's categories: `mcp__plugin_dpm_dpm__list_observation_category` per observation, resolved against
+`mcp__plugin_dpm_dpm__list_taxonomy` in the `observation` domain, called with a `limit` above the seeded count
 so a project that added terms of its own does not lose them to the default page — a category that
 falls off the end reads here as an observation with no category at all. An observation may carry
 more than one, and
@@ -95,16 +95,16 @@ grouping is worth doing rather than listing.
 observation and nothing to draw from it, leave `synthesis` unset rather than restating the text.
 
 Where there are no observations at all, the retro is still worth writing: the story outcomes are the
-content, read from `mcp__dpm__list_story` and its `status`. Say what completed, what did not, and
+content, read from `mcp__plugin_dpm_dpm__list_story` and its `status`. Say what completed, what did not, and
 what that implies.
 
 ### Step 3: Write the retro
 
 Gate first: "Record this retro?" with `Approve` / `Request changes` / `Stop`. On approval:
 
-1. `mcp__dpm__create_retro` with the epic or quick record as `parent_id`, a short kebab-case `slug`
+1. `mcp__plugin_dpm_dpm__create_retro` with the epic or quick record as `parent_id`, a short kebab-case `slug`
    and a `title`. That call assigns the number, which nothing here works out.
-2. `mcp__dpm__update_observation` per observation, setting `retro_id` to the new retro, `position`
+2. `mcp__plugin_dpm_dpm__update_observation` per observation, setting `retro_id` to the new retro, `position`
    for the order it reads in, and `synthesis` where Step 2 wrote one.
 
 **Setting `retro_id` is the gathering, and nothing else changes.** `story_id` and `quick_id` are
@@ -120,7 +120,7 @@ the existing ones at the retro would leave every count the same and every origin
 
 Where an observation bears on a library document already read at startup — a codebase discovery
 against an architecture entry, a criteria gap against a standards one — offer to amend it.
-`mcp__dpm__create_document_section` on that library document, with the observation as the body and a
+`mcp__plugin_dpm_dpm__create_document_section` on that library document, with the observation as the body and a
 heading naming the date. Present every proposed amendment before writing any, and write only what
 was approved.
 
@@ -139,8 +139,8 @@ rather than in the retro layer where it is re-judged every time.
 
 ### Step L1: Select
 
-`mcp__dpm__list_observation` with no scope for the whole corpus, then
-`mcp__dpm__list_observation_category` on each. Where `$ARGUMENTS` carried text after `learn`, narrow
+`mcp__plugin_dpm_dpm__list_observation` with no scope for the whole corpus, then
+`mcp__plugin_dpm_dpm__list_observation_category` on each. Where `$ARGUMENTS` carried text after `learn`, narrow
 to it.
 
 **The candidates are what the list returns, and a promoted lesson is not among them.** Promotion
@@ -160,13 +160,13 @@ is a lesson that has left the retro layer and cannot be found by looking there.
 
 On confirmation, per lesson, in this order:
 
-1. `mcp__dpm__create_library` with `slug`, `title` and `doc_type` — the kind of document it is, as
+1. `mcp__plugin_dpm_dpm__create_library` with `slug`, `title` and `doc_type` — the kind of document it is, as
    **Library Check** groups them.
-2. `mcp__dpm__create_library_scope` per scope, one row each. A lesson about testing scopes to `do`;
+2. `mcp__plugin_dpm_dpm__create_library_scope` per scope, one row each. A lesson about testing scopes to `do`;
    one about terminology may scope to `all`.
-3. `mcp__dpm__create_document_section` for the lesson, written as standalone guidance rather than as
+3. `mcp__plugin_dpm_dpm__create_document_section` for the lesson, written as standalone guidance rather than as
    a quotation of the observation.
-4. `mcp__dpm__update_observation` setting `library_doc_id` to the new document, with `retired_at` and
+4. `mcp__plugin_dpm_dpm__update_observation` setting `library_doc_id` to the new document, with `retired_at` and
    `retired_reason` **in the same call**.
 
 **The retirement travels with the link, which is what makes the pair atomic.** A lesson retired but
@@ -183,7 +183,7 @@ copy is one that will disagree.
 Same selection as L1, and the same reason it needs no marker scan.
 
 Ask for a one-line reason each lesson is spent — what changed so that it no longer holds — and
-preview the retirement before writing it. Then `mcp__dpm__update_observation` with `retired_at` and
+preview the retirement before writing it. Then `mcp__plugin_dpm_dpm__update_observation` with `retired_at` and
 `retired_reason`, and nothing else.
 
 **Retirement means the lesson is no longer true anywhere.** It is not the answer to "this does not
@@ -202,9 +202,9 @@ to record that so it stops being asked.
 
 ### Step T1: Classify
 
-`mcp__dpm__list_epic`, then for each whose `status` is `complete`: `mcp__dpm__list_retro` scoped by
-`parent_id` to that epic for the retros already written, and `mcp__dpm__list_story` with
-`mcp__dpm__list_observation` per story for what it holds. Archived epics do not come back and are
+`mcp__plugin_dpm_dpm__list_epic`, then for each whose `status` is `complete`: `mcp__plugin_dpm_dpm__list_retro` scoped by
+`parent_id` to that epic for the retros already written, and `mcp__plugin_dpm_dpm__list_story` with
+`mcp__plugin_dpm_dpm__list_observation` per story for what it holds. Archived epics do not come back and are
 not classified — an epic that was swept is not one waiting on a decision.
 
 Three outcomes, and only one of them is actionable:
@@ -217,7 +217,7 @@ Three outcomes, and only one of them is actionable:
 ### Step T2: Confirm and waive
 
 Present the waivable epics with the one-line reason each reads clean, and support waiving some of
-them rather than all. Then `mcp__dpm__update_epic` with `retro_waived_at` and `retro_waived_reason`
+them rather than all. Then `mcp__plugin_dpm_dpm__update_epic` with `retro_waived_at` and `retro_waived_reason`
 together.
 
 **Both or neither — the database refuses one without the other.** A waiver with a date and no reason
@@ -244,8 +244,8 @@ rather than as one bullet in one file. That judgement no single retro carries �
 only in the sequence. If you cannot write the one-line justification for what the visual carries
 that the prose cannot, it has not earned its place.
 
-Record it only once published, with `mcp__dpm__create_artifact` carrying its address, title and
-publication time, then `mcp__dpm__create_artifact_document` binding it to this retro.
+Record it only once published, with `mcp__plugin_dpm_dpm__create_artifact` carrying its address, title and
+publication time, then `mcp__plugin_dpm_dpm__create_artifact_document` binding it to this retro.
 
 ## Guidelines
 

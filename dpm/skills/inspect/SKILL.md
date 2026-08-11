@@ -122,16 +122,16 @@ Answer with figures actually measured:
 
 **Where the planning rows exist, they are the record**, and every one of them is a query:
 
-- The chain: `mcp__dpm__list_spec` and `mcp__dpm__read_spec`, `mcp__dpm__list_requirement`,
-  `mcp__dpm__list_epic`, `mcp__dpm__list_story`, `mcp__dpm__list_task` and
-  `mcp__dpm__list_story_criterion`.
-- The traceability: `mcp__dpm__list_coverage` scoped by `requirement_id` or by
+- The chain: `mcp__plugin_dpm_dpm__list_spec` and `mcp__plugin_dpm_dpm__read_spec`, `mcp__plugin_dpm_dpm__list_requirement`,
+  `mcp__plugin_dpm_dpm__list_epic`, `mcp__plugin_dpm_dpm__list_story`, `mcp__plugin_dpm_dpm__list_task` and
+  `mcp__plugin_dpm_dpm__list_story_criterion`.
+- The traceability: `mcp__plugin_dpm_dpm__list_coverage` scoped by `requirement_id` or by
   `story_criterion_id`. **Coverage is the join and it runs both ways**, which is what lets the gap
   queries below be asked from either end — "which requirement has nothing behind it" and "which
   criterion answers nothing" are the same rows read in opposite directions.
-- The rest of the pipeline: `mcp__dpm__list_retro` scoped by `parent_id` to the epic in hand,
-  `mcp__dpm__list_observation`, `mcp__dpm__list_quick`, `mcp__dpm__list_problem_brief`,
-  `mcp__dpm__list_product_brief`, `mcp__dpm__list_adr`, and `mcp__dpm__list_artifact` for what has
+- The rest of the pipeline: `mcp__plugin_dpm_dpm__list_retro` scoped by `parent_id` to the epic in hand,
+  `mcp__plugin_dpm_dpm__list_observation`, `mcp__plugin_dpm_dpm__list_quick`, `mcp__plugin_dpm_dpm__list_problem_brief`,
+  `mcp__plugin_dpm_dpm__list_product_brief`, `mcp__plugin_dpm_dpm__list_adr`, and `mcp__plugin_dpm_dpm__list_artifact` for what has
   been published.
 
 **Every one of these takes a `limit`, and the bound is a default with no ceiling** — so raise it
@@ -142,13 +142,13 @@ its whole output.
 
 The three gap queries worth running, each a comparison between two reads rather than a scan:
 
-- **A requirement with no coverage rows** — `mcp__dpm__list_coverage` on it comes back empty. The
+- **A requirement with no coverage rows** — `mcp__plugin_dpm_dpm__list_coverage` on it comes back empty. The
   breakdown missed it.
 - **A coverage row carrying `verified_at` with no automated approach behind it** —
-  `mcp__dpm__list_story_criterion_approach` says what the criterion was actually tagged, and
-  `mcp__dpm__list_criterion_approach` says what the spec asked for. A mark resting on `manual` or
+  `mcp__plugin_dpm_dpm__list_story_criterion_approach` says what the criterion was actually tagged, and
+  `mcp__plugin_dpm_dpm__list_criterion_approach` says what the spec asked for. A mark resting on `manual` or
   `target` is not a mark a test produced.
-- **A completed epic with no retro** — the scoped `mcp__dpm__list_retro` answers it directly. A
+- **A completed epic with no retro** — the scoped `mcp__plugin_dpm_dpm__list_retro` answers it directly. A
   retired epic is not one of these: asking what was learned from work that was dropped is asking
   about a decision to stop, and the gap query would report one for every such epic forever.
 

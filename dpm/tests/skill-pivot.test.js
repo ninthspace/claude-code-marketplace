@@ -441,7 +441,7 @@ test('a status change leaves the note, and each downstream change is gated on it
 
   // The completion branch still asks before it walks, and counts completion from the rows.
   const gate = prose(source, 'Before the walk');
-  assert.match(gate, /counted from `mcp__dpm__list_story`'s `status`, not from anything written in a document/);
+  assert.match(gate, /counted from `mcp__plugin_dpm_dpm__list_story`'s `status`, not from anything written in a document/);
   assert.match(gate, /Pivot forward/);
   assert.match(gate, /Raise a new spec/);
   assert.match(gate, /The second and third skip the walk entirely/);

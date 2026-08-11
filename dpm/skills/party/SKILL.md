@@ -17,7 +17,7 @@ This skill uses **Session Startup**, **Library Check**, **Conversational Output*
 1. **Session** — follow the shared **Session Startup** procedure with skill `dpm:party`. The
    session's `state` carries the topic, the key points, the live thread and who has spoken recently;
    without it a resumed discussion loses the rotation and repeats the same two voices.
-2. **Roster** — `mcp__dpm__list_agent` with `include_body` and a `limit` above what the project
+2. **Roster** — `mcp__plugin_dpm_dpm__list_agent` with `include_body` and a `limit` above what the project
    plausibly holds. **One call, and it must carry the body**: `display_name`, `icon` and `role` come
    back either way, but `personality` and `communication_style` are body columns, and they are the
    whole of what makes a voice a voice. **A persona this project added and the plugin never shipped
@@ -30,13 +30,13 @@ This skill uses **Session Startup**, **Library Check**, **Conversational Output*
 `$ARGUMENTS` is the opening topic.
 
 - **A description** — use it as the topic and go straight into the first round.
-- **A phrase naming something in the corpus** — `mcp__dpm__search` with it, and a `limit` above what
+- **A phrase naming something in the corpus** — `mcp__plugin_dpm_dpm__search` with it, and a `limit` above what
   the project plausibly holds. Hits come back as an `entity` and an `entity_id`; read each through
-  the tool for its entity, passing `include_body` — `mcp__dpm__read_document_section`,
-  `mcp__dpm__read_requirement`, `mcp__dpm__read_acceptance_criterion`,
-  `mcp__dpm__read_story_criterion`, `mcp__dpm__read_finding`, `mcp__dpm__read_observation` or
-  `mcp__dpm__read_task`. To put a whole document in front of the room rather than one hit, take the
-  `document_id` the read gave back and call `mcp__dpm__list_document_section` with it,
+  the tool for its entity, passing `include_body` — `mcp__plugin_dpm_dpm__read_document_section`,
+  `mcp__plugin_dpm_dpm__read_requirement`, `mcp__plugin_dpm_dpm__read_acceptance_criterion`,
+  `mcp__plugin_dpm_dpm__read_story_criterion`, `mcp__plugin_dpm_dpm__read_finding`, `mcp__plugin_dpm_dpm__read_observation` or
+  `mcp__plugin_dpm_dpm__read_task`. To put a whole document in front of the room rather than one hit, take the
+  `document_id` the read gave back and call `mcp__plugin_dpm_dpm__list_document_section` with it,
   `include_body` and a raised `limit`. **The artifact under discussion is read through those tools
   and through nothing else** — there is no path here that opens a file.
 - **A URL** — fetch it and use the content as context. External, so it is read rather than queried.
@@ -78,7 +78,7 @@ thing keeping these voices apart.
 - **Be opinionated.** Every agent says what they would do, not only what they observe. Analysis with
   no recommendation is half an answer.
 - **Stay short.** A few sentences each. The value is the spread of views, not the volume.
-- **Research before asking.** A question about the corpus is answered with `mcp__dpm__search` and the
+- **Research before asking.** A question about the corpus is answered with `mcp__plugin_dpm_dpm__search` and the
   read tools; a question about code is answered by reading it. Ask the user about intent, priorities
   and decisions — the things only they hold.
 
@@ -106,14 +106,14 @@ which would leave the discussion unsaved.
 
 On exit, acknowledge in one sentence and write it down:
 
-1. `mcp__dpm__create_discussion` with a `title` and a `slug` from the topic. The number is
+1. `mcp__plugin_dpm_dpm__create_discussion` with a `title` and a `slug` from the topic. The number is
    allocated; do not supply one.
-2. One `mcp__dpm__create_document_section` per part of the record — the key points, the decisions
+2. One `mcp__plugin_dpm_dpm__create_document_section` per part of the record — the key points, the decisions
    with their reasoning, the direction the room arrived at, and anything still open — at the
    positions they should read in.
-3. `mcp__dpm__create_document_agent` per agent who spoke, with `document_kind` set to `discussion`
+3. `mcp__plugin_dpm_dpm__create_document_agent` per agent who spoke, with `document_kind` set to `discussion`
    and the `agent` name — the whole room, not the ones quoted in the record.
-4. `mcp__dpm__update_session` to close the run.
+4. `mcp__plugin_dpm_dpm__update_session` to close the run.
 
 **Write the substance, not a summary of it.** A discussion is worth keeping for the reasoning behind
 the direction, and a record compressed to bullets keeps the direction and throws away the reasoning.

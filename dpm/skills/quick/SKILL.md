@@ -97,23 +97,23 @@ proves the specific failure cannot recur. The second is the one a happy-path che
 
 Gate: "Ready to execute?" with `Execute` / `Adjust`. Iterate until confirmed. Then:
 
-1. `mcp__dpm__create_quick` with a short kebab-case `slug` and a `title`. That call assigns the
+1. `mcp__plugin_dpm_dpm__create_quick` with a short kebab-case `slug` and a `title`. That call assigns the
    number, which nothing here works out. Leave `status` at its default and set `status_note` to say
    the record is confirmed and awaiting execution.
-2. `mcp__dpm__create_quick_criterion` per criterion, with its `text` and its `position`. Leave `met`
+2. `mcp__plugin_dpm_dpm__create_quick_criterion` per criterion, with its `text` and its `position`. Leave `met`
    unset — it is a tri-state, and unset means undecided rather than failed.
-3. `mcp__dpm__create_document_section` for the change summary and the files affected, so what was
+3. `mcp__plugin_dpm_dpm__create_document_section` for the change summary and the files affected, so what was
    agreed is readable next to what was decided.
 
 **The written record is a hard gate on Step 3, and it is the row that makes it one.** Implementation
-does not begin until `mcp__dpm__read_quick` returns the record and `mcp__dpm__list_quick_criterion`
+does not begin until `mcp__plugin_dpm_dpm__read_quick` returns the record and `mcp__plugin_dpm_dpm__list_quick_criterion`
 returns its criteria. Those criteria are what Step 4 decides against — read them back rather than
 working from the conversation, which is the only copy that can drift.
 
 ### Step 3: Execute
 
 Read the criteria back first, per the gate above. Then check whether the change touches an
-architectural decision: `mcp__dpm__list_adr` and `mcp__dpm__read_adr` on anything that bears on it.
+architectural decision: `mcp__plugin_dpm_dpm__list_adr` and `mcp__plugin_dpm_dpm__read_adr` on anything that bears on it.
 A decision already taken is a constraint on this change, not a suggestion.
 
 Break the confirmed work into tasks, do them in order, and write or update tests where the change
@@ -127,13 +127,13 @@ any; where they fail, report the output and let the user choose to fix, accept, 
 
 Then close it, in this order:
 
-1. `mcp__dpm__update_quick_criterion` per criterion, setting `met` and a `note` saying what settled
+1. `mcp__plugin_dpm_dpm__update_quick_criterion` per criterion, setting `met` and a `note` saying what settled
    it.
-2. `mcp__dpm__create_document_section` for what changed and how it was verified.
-3. `mcp__dpm__create_observation` with the quick record as `quick_id` and one sentence of `text`,
-   then `mcp__dpm__create_observation_category` with a term from `mcp__dpm__list_taxonomy` in the
+2. `mcp__plugin_dpm_dpm__create_document_section` for what changed and how it was verified.
+3. `mcp__plugin_dpm_dpm__create_observation` with the quick record as `quick_id` and one sentence of `text`,
+   then `mcp__plugin_dpm_dpm__create_observation_category` with a term from `mcp__plugin_dpm_dpm__list_taxonomy` in the
    `observation` domain.
-4. `mcp__dpm__update_quick` setting `status` to `complete` and `closed_at` to the time it closed.
+4. `mcp__plugin_dpm_dpm__update_quick` setting `status` to `complete` and `closed_at` to the time it closed.
 
 **The record is not replaced when it ships; its status moves.** The same row that was confirmed in
 Step 2 is the one that closes, so "what was agreed" and "what happened" are one artefact with a

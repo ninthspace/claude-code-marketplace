@@ -37,7 +37,7 @@ published, and there is nothing in it for a lesson to inform.
 - **A URL** — register it. Any text alongside is taken as the description and an association hint.
 - **`list`** — print the register and stop. Read-only.
 - **Nothing** — show the register and offer to add, amend or retire an entry.
-- **Anything else** — a search term. `mcp__dpm__list_artifact` with a `limit` above what the project
+- **Anything else** — a search term. `mcp__plugin_dpm_dpm__list_artifact` with a `limit` above what the project
   plausibly holds, then match the term against title and description over the rows returned.
   **That is a scan, not a query, and it is worth saying so**: the search index does not cover this
   table, so the match happens in the run. Honest at a register's size and not at a corpus's.
@@ -55,9 +55,9 @@ Every entry records four things, and **none of them is ever invented — ask**:
 4. **The sources** — the documents it was published from.
 
 For the sources, offer the candidates rather than asking for anything to be typed:
-`mcp__dpm__list_spec`, `mcp__dpm__list_epic`, `mcp__dpm__list_problem_brief`,
-`mcp__dpm__list_product_brief`, `mcp__dpm__list_adr`, `mcp__dpm__list_review`,
-`mcp__dpm__list_retro`, `mcp__dpm__list_quick` and `mcp__dpm__list_audit`, each with a `limit` above
+`mcp__plugin_dpm_dpm__list_spec`, `mcp__plugin_dpm_dpm__list_epic`, `mcp__plugin_dpm_dpm__list_problem_brief`,
+`mcp__plugin_dpm_dpm__list_product_brief`, `mcp__plugin_dpm_dpm__list_adr`, `mcp__plugin_dpm_dpm__list_review`,
+`mcp__plugin_dpm_dpm__list_retro`, `mcp__plugin_dpm_dpm__list_quick` and `mcp__plugin_dpm_dpm__list_audit`, each with a `limit` above
 what the project plausibly holds. Multi-select — an artifact drawing on several epics names all of
 them.
 
@@ -70,10 +70,10 @@ loosely-related spec is worse than none, because it sends a future reader to the
 
 Two questions, in this order:
 
-- **Is this URL already registered?** `mcp__dpm__list_artifact` and match on `url`, which is unique.
-- **Have these sources already produced an artifact?** `mcp__dpm__list_artifact_document` scoped by
+- **Is this URL already registered?** `mcp__plugin_dpm_dpm__list_artifact` and match on `url`, which is unique.
+- **Have these sources already produced an artifact?** `mcp__plugin_dpm_dpm__list_artifact_document` scoped by
   `document_id` for each source, and take the artifacts **common to all of them** —
-  `mcp__dpm__read_artifact` with `include_body` for the title and description of each.
+  `mcp__plugin_dpm_dpm__read_artifact` with `include_body` for the title and description of each.
 
 **Common to all, not held by any.** A source that appears in an earlier artifact alongside different
 company is a different artifact, and offering to overwrite it is the same mistake as registering a
@@ -85,9 +85,9 @@ Either hit means the same row, updated. One row per artifact.
 
 Render the four facts in the message body and gate them. On approval:
 
-- **A new entry** — `mcp__dpm__create_artifact` with the `url`, `title`, `description` and
-  `published_at`, then one `mcp__dpm__create_artifact_document` per source.
-- **An existing one** — `mcp__dpm__update_artifact` with whatever changed, including the `url` when
+- **A new entry** — `mcp__plugin_dpm_dpm__create_artifact` with the `url`, `title`, `description` and
+  `published_at`, then one `mcp__plugin_dpm_dpm__create_artifact_document` per source.
+- **An existing one** — `mcp__plugin_dpm_dpm__update_artifact` with whatever changed, including the `url` when
   a republish moved it. The row keeps its identity, so every link already shared goes on resolving
   to the entry a reader will find.
 
@@ -101,7 +101,7 @@ whoever followed it.
 ## Retiring
 
 An artifact that has been superseded or taken down is **retired, not removed** —
-`mcp__dpm__update_artifact` with `retired_at` and a `retired_reason`. It stops being offered and
+`mcp__plugin_dpm_dpm__update_artifact` with `retired_at` and a `retired_reason`. It stops being offered and
 stays readable; `include_retired` returns it, and the register renders it struck through with the
 reason. A register that silently drops entries cannot answer *"what happened to that page?"*, which
 is one of the questions it exists to answer.

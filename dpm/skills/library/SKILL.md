@@ -70,7 +70,7 @@ Five things, derived from the content and **all five presented together before a
   recorded as read; a file path is the case worth asking about, because a file inside the project
   may equally be one the team wrote and one somebody dropped in last year.
 - **`doc_type`** — `architecture`, `coding-standards`, `domain`, and so on. It is free text, so look
-  at `mcp__dpm__list_library` first and reuse a value the project already has rather than minting a
+  at `mcp__plugin_dpm_dpm__list_library` first and reuse a value the project already has rather than minting a
   synonym. Two spellings of one type is the same defect as two words for one scope.
 - **The scope**, one value per skill this document bears on, or `all` alone. Suggest from the
   content:
@@ -95,11 +95,11 @@ Render the five in the message body and gate them: accept, adjust, or stop.
 
 On approval, and in this order:
 
-1. `mcp__dpm__create_library` with the `slug`, `title`, `doc_type` and, for an imported document,
+1. `mcp__plugin_dpm_dpm__create_library` with the `slug`, `title`, `doc_type` and, for an imported document,
    `source`. That call allocates the number, which nothing here works out.
-2. `mcp__dpm__create_library_scope` per scope value — one call each, because scope is a set of rows
+2. `mcp__plugin_dpm_dpm__create_library_scope` per scope value — one call each, because scope is a set of rows
    and a document scoped to three skills is three rows.
-3. `mcp__dpm__create_document_section` with a `Summary` heading at `position` 0, then the source's
+3. `mcp__plugin_dpm_dpm__create_document_section` with a `Summary` heading at `position` 0, then the source's
    own content as the sections that follow it.
 
 **The summary is written for skills, not for a reader browsing.** Every Library Check triages on it,
@@ -125,9 +125,9 @@ one thing in its body and something later in an amendment.
 
 ### 1. Read what is there
 
-`mcp__dpm__list_library` for the document, `mcp__dpm__list_library_scope` for its scope, and
-`mcp__dpm__list_document_section` with a `limit` above what the document plausibly holds, each read
-with `mcp__dpm__read_document_section` and `include_body`.
+`mcp__plugin_dpm_dpm__list_library` for the document, `mcp__plugin_dpm_dpm__list_library_scope` for its scope, and
+`mcp__plugin_dpm_dpm__list_document_section` with a `limit` above what the document plausibly holds, each read
+with `mcp__plugin_dpm_dpm__read_document_section` and `include_body`.
 
 Amendments are the sections a retro added; the rest is the body. **If there are none, say so and
 stop** — there is nothing to reconcile, and a run that reconciled anyway would rewrite a document
@@ -146,14 +146,14 @@ finds, and resolving it in silence spends it.
 
 Gate the reconciled version first — save, adjust, or cancel — showing what changed. Then:
 
-1. `mcp__dpm__update_document_section` setting the new `body` on each body section the
+1. `mcp__plugin_dpm_dpm__update_document_section` setting the new `body` on each body section the
    reconciliation changed, and its `heading` where the reconciliation renamed one.
-2. `mcp__dpm__update_document_section` setting `superseded_at` on each amendment that was folded in.
-3. `mcp__dpm__update_library` where `doc_type` should change, which also moves the document's
+2. `mcp__plugin_dpm_dpm__update_document_section` setting `superseded_at` on each amendment that was folded in.
+3. `mcp__plugin_dpm_dpm__update_library` where `doc_type` should change, which also moves the document's
    `updated_at` — the answer to "when was this last reviewed".
 
 **A folded amendment is superseded, never removed.** It stays readable — `include_superseded` on
-`mcp__dpm__list_document_section` returns it — because it is the record of how the document came to
+`mcp__plugin_dpm_dpm__list_document_section` returns it — because it is the record of how the document came to
 say what it now says, and a reconciliation that erased its own inputs cannot be checked. What
 supersession buys is that the document stops rendering the same material twice: the reconciled body
 and the amendment it absorbed are no longer both part of the document.

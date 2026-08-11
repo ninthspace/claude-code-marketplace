@@ -203,7 +203,7 @@ test('a retro run gathers observations by setting retro_id and leaves story_id w
   assert.match(write, /Do not create a new observation on the retro/);
 
   const instruction = instructions(source, 'Step 3: Write the retro');
-  assert.match(instruction, /`mcp__dpm__update_observation` per observation, setting `retro_id`/);
+  assert.match(instruction, /`mcp__plugin_dpm_dpm__update_observation` per observation, setting `retro_id`/);
   assert.doesNotMatch(instruction, /create_observation/, 'the write step creates rather than gathers');
   assert.doesNotMatch(instruction, /`story_id`/, 'the write step touches the origin');
 

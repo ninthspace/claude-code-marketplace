@@ -202,9 +202,9 @@ test('an inspect run characterises a change against the planning graph through r
   // distinguishes a query from a join in the caller. Rewriting it to list every retro and match
   // parents survived every other check here.
   assert.match(prose(source, '3. Join the change set'),
-    /`mcp__dpm__list_retro` scoped by `parent_id` to the epic in hand/);
+    /`mcp__plugin_dpm_dpm__list_retro` scoped by `parent_id` to the epic in hand/);
   assert.match(prose(source, '3. Join the change set'),
-    /the scoped `mcp__dpm__list_retro` answers it directly/);
+    /the scoped `mcp__plugin_dpm_dpm__list_retro` answers it directly/);
 
   // **The same reads at the default page answer a different question**, and this is the assertion
   // the bound exists for: it is about the answer rather than about an argument being present. Read

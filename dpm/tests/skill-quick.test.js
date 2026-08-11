@@ -224,7 +224,7 @@ test('a quick run writes the record, its criteria and one categorised observatio
   // The numbered step asserted apart from the paragraph that explains it — the rule `instructions`
   // exists for, and this is the survivor that put it there.
   const instruction = instructions(source, 'Step 4: Close the record');
-  assert.match(instruction, /`mcp__dpm__create_observation` with the quick record as `quick_id`/);
+  assert.match(instruction, /`mcp__plugin_dpm_dpm__create_observation` with the quick record as `quick_id`/);
   assert.doesNotMatch(instruction, /create_retro/,
     'the close step opens a retro to hold the observation, which is the gathering it must not do');
 
@@ -325,7 +325,7 @@ test('a fix is diagnosed before it is proposed, and execution reads the record b
   const write = prose(source, 'Step 2: Propose, confirm, and write the record');
   assert.match(write, /`Execute` \/ `Adjust`/);
   assert.match(write, /The written record is a hard gate on Step 3/);
-  assert.match(write, /`mcp__dpm__read_quick` returns the record/);
+  assert.match(write, /`mcp__plugin_dpm_dpm__read_quick` returns the record/);
   assert.match(write, /read them back rather than\s+working from the conversation/);
 
   // The regression half of a fix's criteria, which a happy-path check misses.

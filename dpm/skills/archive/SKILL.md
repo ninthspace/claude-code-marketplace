@@ -51,9 +51,9 @@ chain's reach is decided.
 ### Phase 1: Survey
 
 Call the lists for the kinds a project archives, each with a `limit` above what it plausibly holds:
-`mcp__dpm__list_problem_brief`, `mcp__dpm__list_product_brief`, `mcp__dpm__list_spec`,
-`mcp__dpm__list_epic`, `mcp__dpm__list_adr`, `mcp__dpm__list_retro`, `mcp__dpm__list_quick`,
-`mcp__dpm__list_discussion`.
+`mcp__plugin_dpm_dpm__list_problem_brief`, `mcp__plugin_dpm_dpm__list_product_brief`, `mcp__plugin_dpm_dpm__list_spec`,
+`mcp__plugin_dpm_dpm__list_epic`, `mcp__plugin_dpm_dpm__list_adr`, `mcp__plugin_dpm_dpm__list_retro`, `mcp__plugin_dpm_dpm__list_quick`,
+`mcp__plugin_dpm_dpm__list_discussion`.
 
 **Leave `include_archived` alone.** It defaults to false, so what comes back is the working set and
 already-archived documents are excluded by a `WHERE` clause rather than by anything this run
@@ -67,10 +67,10 @@ library document is a reference rather than a record of work.
 
 A chain is a document and what hangs off it, read from parentage.
 
-`mcp__dpm__read_document_kind` on a surveyed document's kind returns `children` — the kinds that may
+`mcp__plugin_dpm_dpm__read_document_kind` on a surveyed document's kind returns `children` — the kinds that may
 hang off it. For each, call that kind's list scoped by `parent_id` to that document —
-`mcp__dpm__list_epic`, `mcp__dpm__list_coverage_matrix`, `mcp__dpm__list_adr`,
-`mcp__dpm__list_review`, `mcp__dpm__list_product_brief`, and `mcp__dpm__list_retro` again in its
+`mcp__plugin_dpm_dpm__list_epic`, `mcp__plugin_dpm_dpm__list_coverage_matrix`, `mcp__plugin_dpm_dpm__list_adr`,
+`mcp__plugin_dpm_dpm__list_review`, `mcp__plugin_dpm_dpm__list_product_brief`, and `mcp__plugin_dpm_dpm__list_retro` again in its
 scoped form — and repeat on what comes back. It terminates on its own: a kind nothing hangs off
 returns `children` empty.
 
@@ -94,7 +94,7 @@ the working set on the strength of one finished epic.
 Read the columns; do not infer. Every signal below is a value the project already holds, and a
 document that fires none is still offered — the user may have their own reason.
 
-1. **A finished epic.** `status` is `complete`, and `mcp__dpm__list_story` scoped to it returns
+1. **A finished epic.** `status` is `complete`, and `mcp__plugin_dpm_dpm__list_story` scoped to it returns
    stories that are all `complete`.
 2. **A delivered spec.** Every epic under it is *resolved* — `complete`, `superseded` or `withdrawn`.
    All three end the work; only the first delivers it.
@@ -121,8 +121,8 @@ the survey as a document nothing flagged.
 3. **Offer a retired epic under a spec with live siblings separately.** It is **its own unit**, not
    part of any chain, and it takes its coverage matrix and nothing else.
 4. **On approval, stamp every document in the unit**: call the kind's update tool with `archived_at`
-   and **nothing else** — `mcp__dpm__update_epic`, `mcp__dpm__update_spec`,
-   `mcp__dpm__update_coverage_matrix`, `mcp__dpm__update_retro`, and so on for whatever the
+   and **nothing else** — `mcp__plugin_dpm_dpm__update_epic`, `mcp__plugin_dpm_dpm__update_spec`,
+   `mcp__plugin_dpm_dpm__update_coverage_matrix`, `mcp__plugin_dpm_dpm__update_retro`, and so on for whatever the
    traversal reached. **Never pass `status` on an archive call**, and never pass `status_note`.
 
 A retired epic's spec is still owed the rest of its epics, so sweeping it out because one branch of

@@ -20,12 +20,12 @@ This skill uses **Gate Presentation**, **Conversational Output**, **Written Deli
 
 Resolve what is being reviewed, in this order.
 
-1. If `$ARGUMENTS` names a document id, `mcp__dpm__read_epic` on it.
-2. Otherwise `mcp__dpm__list_epic` and offer the results with `AskUserQuestion`, showing each title.
+1. If `$ARGUMENTS` names a document id, `mcp__plugin_dpm_dpm__read_epic` on it.
+2. Otherwise `mcp__plugin_dpm_dpm__list_epic` and offer the results with `AskUserQuestion`, showing each title.
    **Ask which one; never take the most recent.**
 3. If there are none, say so and stop — there is nothing to review.
 
-Then the scope. `mcp__dpm__list_story` on the epic and ask: the whole epic, or one story. A story
+Then the scope. `mcp__plugin_dpm_dpm__list_story` on the epic and ask: the whole epic, or one story. A story
 named in `$ARGUMENTS` skips the question.
 
 **Scope is a column pair, not a name.** A story-scoped review is the same kind of document as a
@@ -44,7 +44,7 @@ resumed after it has no other way back to what the personas said.
 
 ### Roster
 
-`mcp__dpm__list_agent` with `include_body` — this is the review panel, and it is the whole of it.
+`mcp__plugin_dpm_dpm__list_agent` with `include_body` — this is the review panel, and it is the whole of it.
 The personality and communication style are body columns, so without that argument each persona
 arrives as a name and a role and every lens below is the same lens.
 
@@ -71,15 +71,15 @@ of this artefact is one to leave.
 
 ### Step 1: Read what is under review
 
-The epic through its own rows: `mcp__dpm__list_story`, then `mcp__dpm__list_task`,
-`mcp__dpm__list_story_criterion` and `mcp__dpm__list_story_criterion_approach` per story, and
-`mcp__dpm__list_dependency` for what blocks what. On a story-scoped review, read every story anyway —
+The epic through its own rows: `mcp__plugin_dpm_dpm__list_story`, then `mcp__plugin_dpm_dpm__list_task`,
+`mcp__plugin_dpm_dpm__list_story_criterion` and `mcp__plugin_dpm_dpm__list_story_criterion_approach` per story, and
+`mcp__plugin_dpm_dpm__list_dependency` for what blocks what. On a story-scoped review, read every story anyway —
 a story is reviewed in the epic it sits in, and its dependencies point at siblings.
 
-Then its lineage. The epic's `parent_id` is the spec, so `mcp__dpm__read_spec`,
-`mcp__dpm__list_requirement` and `mcp__dpm__list_acceptance_criterion` give what the epic is supposed
-to satisfy, and `mcp__dpm__list_coverage` gives what it claims to. `mcp__dpm__list_adr` and
-`mcp__dpm__read_adr` on the spec give the decisions the stories have to respect.
+Then its lineage. The epic's `parent_id` is the spec, so `mcp__plugin_dpm_dpm__read_spec`,
+`mcp__plugin_dpm_dpm__list_requirement` and `mcp__plugin_dpm_dpm__list_acceptance_criterion` give what the epic is supposed
+to satisfy, and `mcp__plugin_dpm_dpm__list_coverage` gives what it claims to. `mcp__plugin_dpm_dpm__list_adr` and
+`mcp__plugin_dpm_dpm__read_adr` on the spec give the decisions the stories have to respect.
 
 **Nothing here is discovered.** The spec is the epic's parent, the coverage rows name their own
 requirement, the ADRs hang off the spec — there is no field to read out of prose and no file to
@@ -98,7 +98,7 @@ technical writer.
 approach*, so every review carries both a "should we?" and a "can we?". A panel of four technical
 reviewers is a panel with one question.
 
-Record each as `mcp__dpm__create_document_agent` once the review row exists in Step 4 — the row
+Record each as `mcp__plugin_dpm_dpm__create_document_agent` once the review row exists in Step 4 — the row
 references the `agent` by name rather than copying the persona into the finding, which is what lets
 a project rename a persona without orphaning its past reviews.
 
@@ -108,7 +108,7 @@ Two stages, and keeping them apart is the point of the step.
 
 **Find.** Each agent examines the artefact through their own lens and reports **everything** it
 surfaces. Not curated, not pre-ranked, not trimmed for seeming minor. Give each finding a category
-from `mcp__dpm__list_taxonomy` in the `finding` domain and a severity from the `severity` domain,
+from `mcp__plugin_dpm_dpm__list_taxonomy` in the `finding` domain and a severity from the `severity` domain,
 and a summary that names the story, task or criterion it is about — a reviewer who cannot point at
 what they are criticising is not being helpful.
 
@@ -132,12 +132,12 @@ Present the survivors grouped by category, severity-first within each.
 
 Gate first: "Record this review?" with `Approve` / `Request changes` / `Stop`. On approval:
 
-1. `mcp__dpm__create_review` with the epic as `parent_id`, a short kebab-case `slug`, a `title`, and
+1. `mcp__plugin_dpm_dpm__create_review` with the epic as `parent_id`, a short kebab-case `slug`, a `title`, and
    — for a story-scoped review — `scope: 'story'` with `scope_story_id`. That call assigns the
    number, which nothing here works out.
-2. `mcp__dpm__create_document_agent` per panel member, with `document_kind: 'review'` and the
+2. `mcp__plugin_dpm_dpm__create_document_agent` per panel member, with `document_kind: 'review'` and the
    `agent`.
-3. `mcp__dpm__create_finding` per surviving finding, with the review, its `position`, its `summary`,
+3. `mcp__plugin_dpm_dpm__create_finding` per surviving finding, with the review, its `position`, its `summary`,
    the `agent` who raised it, and `category_id` and `severity_id`.
 
 **The category and the severity come from different vocabularies and the tool knows which.** Each is
@@ -151,9 +151,9 @@ rather than remembering them: a project may have added or retired one.
 
 Findings at the top severities are work, and work belongs on the epic.
 
-Ask whether to raise them. On yes, `mcp__dpm__create_story` on the epic for the remediation, then
-`mcp__dpm__create_task` per finding — the finding's own words as its `description`, so the task
-carries what it is answering — then `mcp__dpm__update_finding` setting `remediation_task_id` to the
+Ask whether to raise them. On yes, `mcp__plugin_dpm_dpm__create_story` on the epic for the remediation, then
+`mcp__plugin_dpm_dpm__create_task` per finding — the finding's own words as its `description`, so the task
+carries what it is answering — then `mcp__plugin_dpm_dpm__update_finding` setting `remediation_task_id` to the
 task that will address it.
 
 **That link is the whole of the record, and it replaces both halves of what a file needed.** There
@@ -162,7 +162,7 @@ tasks — the finding points at its task, so "what is being done about this?" an
 exist?" are the same edge read from either end. A finding nobody will act on keeps `status: 'open'`
 and no task, which is a different state from one nobody looked at.
 
-Where the user declines, or a finding is judged not worth acting on, `mcp__dpm__update_finding` moves
+Where the user declines, or a finding is judged not worth acting on, `mcp__plugin_dpm_dpm__update_finding` moves
 `status` to `rejected` with the reason said aloud. Lowest-severity findings are informational and
 stay `open` unless the user says otherwise.
 
@@ -189,8 +189,8 @@ so a long review is triaged in one pass. The rows have to pick one ordering; the
 reader pick the other. If you cannot write the one-line justification for what the visual carries
 that the prose cannot, it has not earned its place.
 
-Record it only once published, with `mcp__dpm__create_artifact` carrying its address, title and
-publication time, then `mcp__dpm__create_artifact_document` binding it to this review.
+Record it only once published, with `mcp__plugin_dpm_dpm__create_artifact` carrying its address, title and
+publication time, then `mcp__plugin_dpm_dpm__create_artifact_document` binding it to this review.
 
 ## Guidelines
 

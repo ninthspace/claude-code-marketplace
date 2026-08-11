@@ -223,7 +223,7 @@ test('a clean run takes the stale rows by age and leaves the rest standing', (t)
   // The ordering rule against the step, its rationale against the section — the probe above proves
   // the database enforces it, and these prove the file is the reason a run gets it right.
   const removal = instructions(source, 'Step 4: Delete what was confirmed');
-  assert.match(removal, /`mcp__dpm__delete_session` once per confirmed row, oldest first/);
+  assert.match(removal, /`mcp__plugin_dpm_dpm__delete_session` once per confirmed row, oldest first/);
   assert.match(removal, /A refusal on one row is not a reason to stop/);
   assert.match(prose(source, 'Step 4: Delete what was confirmed'),
     /deleting the live end of a chain while its predecessor\s+survives is refused/);

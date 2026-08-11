@@ -52,16 +52,16 @@ and those rules bind the prompt this skill assembles.
 
 #### 1a. What the run will work
 
-**Epic mode.** `mcp__dpm__list_epic` with a `limit` above what the project holds. What comes back is
+**Epic mode.** `mcp__plugin_dpm_dpm__list_epic` with a `limit` above what the project holds. What comes back is
 the working set — archived epics are already excluded — so keep the ones whose `status` is `pending`.
 A `complete` epic has nothing to run, and a `superseded` or `withdrawn` one is work that will not be
 done; neither is a failure to report, and both are simply not in the list.
 
-**Spec mode.** `mcp__dpm__list_epic` scoped by `parent_id` to the spec. There is no source field to
+**Spec mode.** `mcp__plugin_dpm_dpm__list_epic` scoped by `parent_id` to the spec. There is no source field to
 read out of a file and nothing to compare it against: an epic's spec is its parent.
 
 **Zero epics means different things in the two modes.** In epic mode it is a stop — say so, and name
-the specs `mcp__dpm__list_spec` returns with one line: spec mode runs a spec from scratch. **Do not
+the specs `mcp__plugin_dpm_dpm__list_spec` returns with one line: spec mode runs a spec from scratch. **Do not
 offer spec mode and do not ask which to use**, because the mode comes from the argument and a gate
 that resolved one would move that decision into a question — and spec mode commits a loop to
 generating and delivering a whole epic set, which is much larger than the run that was asked for. In
@@ -74,8 +74,8 @@ found are a starting position rather than the run's scope.
 #### 1b. Clear the plan gates
 
 A story marked for formal planning opens an interactive approval gate, which stalls an unattended
-run. For each resolved epic, `mcp__dpm__list_story` scoped by `epic_id`, and for every story whose
-`plan` is 1, `mcp__dpm__update_story` with `plan` set to 0. Report one line per story cleared.
+run. For each resolved epic, `mcp__plugin_dpm_dpm__list_story` scoped by `epic_id`, and for every story whose
+`plan` is 1, `mcp__plugin_dpm_dpm__update_story` with `plan` set to 0. Report one line per story cleared.
 
 **This is a column, so there is nothing to find and nothing to leave behind.** Scan no headings and
 edit no text; a story either carries the flag or does not, and clearing it cannot damage the sentence
@@ -114,7 +114,7 @@ not, and nothing announces that. The failure it guards against is the silent one
 
 #### 1d. Test runner discovery
 
-**In spec mode, ask the spec first.** `mcp__dpm__list_requirement` scoped to it with `include_body`,
+**In spec mode, ask the spec first.** `mcp__plugin_dpm_dpm__list_requirement` scoped to it with `include_body`,
 and take the test tooling from the environmental requirements that name it. Report whether the spec
 named a *tool* or a *command* — a tool is what the run must install before it can have a command, so
 saying which was found matters more than finding something.
@@ -132,14 +132,14 @@ discovery consulting only those files cannot succeed in the case spec mode exist
 Startup asked what is open. This asks the narrower question — was there a previous run of *this*
 skill, and did it finish?
 
-1. `mcp__dpm__list_session` filtered by `skill`. The rows come back oldest first, so the last is the
+1. `mcp__plugin_dpm_dpm__list_session` filtered by `skill`. The rows come back oldest first, so the last is the
    most recent.
-2. On a hit, `mcp__dpm__read_session` with `include_body` for what it was carrying — how many
+2. On a hit, `mcp__plugin_dpm_dpm__read_session` with `include_body` for what it was carrying — how many
    iterations ran, what the last few measured, and whether they repeat. **A run that ended on
    repeated measurements stalled rather than finished**, and that is the single most useful thing to
    know before arming another one.
 3. Present it and gate on **Resume** / **Start fresh**.
-4. On **Resume**, `mcp__dpm__adopt_session` with this session's id and the previous row's. It hands
+4. On **Resume**, `mcp__plugin_dpm_dpm__adopt_session` with this session's id and the previous row's. It hands
    back the state and points the old row at this one, so the chain has one live end and nothing has
    to decide which of two rows is current.
 
@@ -184,11 +184,11 @@ work.
 
 There is no script and no exit code. The loop reads the rows:
 
-1. `mcp__dpm__list_story` scoped by `epic_id`, then `mcp__dpm__list_story_criterion` scoped by
+1. `mcp__plugin_dpm_dpm__list_story` scoped by `epic_id`, then `mcp__plugin_dpm_dpm__list_story_criterion` scoped by
    `story_id` for each.
-2. `mcp__dpm__list_coverage` scoped by `story_criterion_id`. A row whose `verified_at` is set is
+2. `mcp__plugin_dpm_dpm__list_coverage` scoped by `story_criterion_id`. A row whose `verified_at` is set is
    verified; one where it is null is not.
-3. For every unverified row, `mcp__dpm__list_story_criterion_approach` scoped by
+3. For every unverified row, `mcp__plugin_dpm_dpm__list_story_criterion_approach` scoped by
    `story_criterion_id`. **A row whose only approach is `target` is unverifiable from here** —
    checkable against the real deployment host and nowhere else.
 
@@ -198,7 +198,7 @@ target-only** — name them and keep working; **every remaining row target-only*
 because nothing in this environment can close them.
 
 **In spec mode there is a fourth reading, and it is the one epic scope cannot produce.**
-`mcp__dpm__list_requirement` scoped by `spec_id`, then `mcp__dpm__list_coverage` scoped by
+`mcp__plugin_dpm_dpm__list_requirement` scoped by `spec_id`, then `mcp__plugin_dpm_dpm__list_coverage` scoped by
 `requirement_id`: a requirement no row claims is **untraced**. Phase 1 is over when nothing is
 untraced. Epic scope has no requirement list to compare against, so an epic-mode run can say "the
 epics I was pointed at have no unverified rows left" and can never say a spec is delivered.
@@ -215,7 +215,7 @@ rather than the ones that existed at launch, which is what makes a resumed run c
 #### The iteration record, and the stall it makes visible
 
 Before anything else each iteration, the loop appends one entry to its session `state` with
-`mcp__dpm__update_session`: the iteration number, the counts it just read verbatim, the short commit
+`mcp__plugin_dpm_dpm__update_session`: the iteration number, the counts it just read verbatim, the short commit
 hash, and a fingerprint of the working tree. Then it reads the last three entries. **If all three
 carry the same counts, the same commit and the same tree, the run has stalled** — report it and stop.
 

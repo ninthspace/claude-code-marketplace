@@ -13,9 +13,18 @@
  * manifests with the declaration removed and broken — the control that makes a passing run mean
  * something, since a check that always passes is indistinguishable from one that works.
  *
- * The third is the other half of FR29. The harness dispatches `mcp__<server>__<tool>`, so the name
- * a skill writes is not the name the registry holds, and nothing in either language makes the two
- * agree. That is the fourth integration seam the spec names.
+ * The third is the other half of FR29. The harness dispatches `mcp__plugin_<plugin>_<server>__
+ * <tool>`, so the name a skill writes is not the name the registry holds, and nothing in either
+ * language makes the two agree. That is the fourth integration seam the spec names.
+ *
+ * **That form is the one thing here the suite cannot verify, and it was wrong for four epics.** The
+ * blind spot above has a second half: a test that supplies its own launch never meets a name the
+ * harness built, so the whole corpus can name a prefix no session dispatches and every check in
+ * this file still passes — including the one below, which used to assert the prefix equalled
+ * `mcp__` + the server key and was satisfied by two strings agreeing on the wrong rule. What can be
+ * held is that the prefix is *derived* from the manifest and not transcribed beside it, which is
+ * what the assertion below does now. The rule itself is external, and the comment naming its source
+ * is the only place it is written down.
  *
  * **What is deliberately not here.** The name *shape* rule and the refusal of an export carrying
  * the server's own identity are `naming.test.js`'s, asserted there against the live registry and
@@ -34,7 +43,7 @@ import { spineTools } from '../src/tools/index.js';
 const DPM = join(import.meta.dirname, '..');
 const MANIFEST = join(DPM, '.claude-plugin', 'plugin.json');
 
-/** The server key, which is what the harness puts between the `mcp__` markers. */
+/** The server key. The harness puts it after the plugin name, not on its own — see `CALLABLE`. */
 const SERVER = 'dpm';
 
 /**
@@ -76,15 +85,21 @@ test('the plugin manifest declares a server whose entry point exists', () => {
 
   assert.deepEqual(declarationProblems(manifest, DPM), []);
 
-  // The key is the namespace. `mcp__dpm__create_spec` is what every skill in FR25's corpus writes,
-  // so renaming this key renames 171 tools in one edit and no other assertion would notice.
+  // The key is half the namespace and the plugin's own name is the other half.
+  // `mcp__plugin_dpm_dpm__create_spec` is what every skill in FR25's corpus writes, so renaming
+  // either one renames 171 tools in one edit and no other assertion would notice.
   assert.deepEqual(Object.keys(manifest.mcpServers), [SERVER],
     'exactly one server, keyed by the name the callable form is built from');
+  assert.equal(manifest.name, 'dpm', 'and the plugin name, which the callable form also carries');
 
-  // And the prefix the corpus is read with is built from that key rather than agreeing with it by
-  // coincidence. Without this the two could drift: the manifest would declare one server and every
-  // skill sweep below would look for another's prefix, finding nothing and reporting nothing.
-  assert.equal(CALLABLE, `mcp__${SERVER}__`);
+  // And the prefix the corpus is read with is built from both rather than agreeing by coincidence.
+  //
+  // **Spelled here and computed there, which is the opposite of how this read before.** The old
+  // pairing recomputed the prefix from the same key `CALLABLE` was written against, so it compared
+  // one rule with itself and passed while both sides named a prefix no session dispatches. The two
+  // sides now differ in kind: `CALLABLE` reads the manifest, this is a literal, and only the
+  // external rule makes them equal.
+  assert.equal(CALLABLE, 'mcp__plugin_dpm_dpm__');
 });
 
 test('a manifest missing or misnaming its server is reported, not passed over', () => {

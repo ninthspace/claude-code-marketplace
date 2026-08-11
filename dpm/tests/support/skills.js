@@ -76,10 +76,36 @@ export function frontMatter(source) {
 }
 
 /**
- * The prefix the harness supplies. An MCP server's tools are dispatched as `mcp__<server>__<tool>`,
- * so a skill writes `mcp__dpm__create_spec` while the registry holds `create_spec` (FR29).
+ * The prefix the harness supplies, **derived from the plugin manifest rather than written down**.
+ *
+ * A plugin-bundled server's tools are dispatched as `mcp__plugin_<plugin>_<server>__<tool>`, so a
+ * skill writes `mcp__plugin_dpm_dpm__create_spec` while the registry holds `create_spec` (FR29).
+ * The two `dpm` parts are the plugin name and the server key, not one name said twice.
+ *
+ * **It is computed because the transcribed version was wrong for the whole of M4.** A constant
+ * spelling out a prefix is a second copy of what the manifest already states, and nothing in this
+ * repository can contradict it: every test here spawns the server itself, so none of them ever
+ * meets the name the harness builds. Reading the manifest is the closest a test in this suite can
+ * get to the thing that does the naming.
+ *
+ * The substitution follows the documented rule — any character outside `A-Z`, `a-z`, `0-9`, `_`
+ * and `-` becomes `_` — rather than assuming dpm's own names need none, so a rename to something
+ * with a dot or a space in it produces the prefix the harness would.
  */
-export const CALLABLE = 'mcp__dpm__';
+export const CALLABLE = (() => {
+  const manifest = JSON.parse(
+    readFileSync(join(SKILLS, '..', '.claude-plugin', 'plugin.json'), 'utf8'),
+  );
+  const keys = Object.keys(manifest.mcpServers ?? {});
+
+  if (keys.length !== 1) {
+    throw new Error(`expected exactly one declared server, found ${keys.length}`);
+  }
+
+  const safe = (part) => part.replaceAll(/[^A-Za-z0-9_-]/g, '_');
+
+  return `mcp__plugin_${safe(manifest.name)}_${safe(keys[0])}__`;
+})();
 
 /**
  * Every distinct tool the file names, given as **exported** names so they compare directly against
@@ -557,7 +583,7 @@ const READ_DECISIONS = [
  *
  * **The discriminator is optionality, not type.** A *required* argument is forced by the call: a
  * section has to say which document it is on, a tradeoff which option — so a file that says "each
- * option as `mcp__dpm__create_adr_option`" has already prescribed `adr_id`, and demanding it name
+ * option as `mcp__plugin_dpm_dpm__create_adr_option`" has already prescribed `adr_id`, and demanding it name
  * the column would push every file into writing the mechanics down. An *optional* argument is the
  * opposite: nothing makes the run supply it, so if the file does not ask for it, it does not
  * happen. That is precisely the set the three survivors came from — `chosen`, `scope_story_id`,

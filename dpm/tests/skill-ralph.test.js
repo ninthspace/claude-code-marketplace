@@ -295,7 +295,7 @@ test('the loop carries its state in a session row, and a resume adopts the prior
   assert.match(source, /a run resumed under a new session id adopts the old row\s+rather than starting over/);
 
   const resume = instructions(source, '1e. Resume detection');
-  assert.match(resume, /`mcp__dpm__adopt_session` with this session's id and the previous row's/);
+  assert.match(resume, /`mcp__plugin_dpm_dpm__adopt_session` with this session's id and the previous row's/);
   assert.match(resume, /It hands\s+back the state and points the old row at this one/);
 
   assert.deepEqual(bindings(source, tools, { used, passed }), []);

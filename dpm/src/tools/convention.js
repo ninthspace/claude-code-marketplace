@@ -241,7 +241,7 @@ export function validate(schema, args, where) {
  *
  * @param {object} tool
  * @param {string} tool.name The **exported** name, `create_spec` — the harness makes it callable as
- *   `mcp__dpm__create_spec` (FR29). Matches NFR5's `[a-z]{3,}(_[a-z]{3,})*`; the word rule, that
+ *   `mcp__plugin_dpm_dpm__create_spec` (FR29). Matches NFR5's `[a-z]{3,}(_[a-z]{3,})*`; the word rule, that
  *   every part after the verb is schema vocabulary, is asserted in `naming.test.js`.
  * @param {string} tool.table The table the tool writes, or the primary one it reads.
  * @param {string[]} [tool.writes] Every table this tool inserts into or updates, where that is
@@ -276,9 +276,10 @@ export function defineTool(tool) {
   const { name, table, description, reads, handler, body = [], paged = false, mutates } = tool;
   const writes = tool.writes ?? (tool.mutates ? [table] : []);
 
-  // Exported names carry no server prefix: the harness dispatches `mcp__dpm__create_spec`, and it
-  // supplies the `mcp__dpm__` itself (FR29). A `dpm` part here would be the server's identity said
-  // twice, so the shape check refuses one rather than merely not requiring it.
+  // Exported names carry no server prefix: the harness dispatches
+  // `mcp__plugin_dpm_dpm__create_spec`, and it supplies everything up to the last `__` itself
+  // (FR29) — the plugin name and the server key, which is why `dpm` appears in it twice. A `dpm`
+  // part here would be a third, so the shape check refuses one rather than merely not requiring it.
   if (!/^[a-z]{3,}(_[a-z]{3,})*$/.test(name ?? '')) throw new Error(`not a dpm tool name: ${name}`);
   if (name.split('_').includes('dpm')) {
     throw new Error(`${name}: exported names carry no 'dpm' part — the harness prefixes them`);

@@ -295,9 +295,9 @@ test('the scope is suggested rather than applied, and every derived field is con
 
   // The three writes happen in the order the file gives, because scope rows reference the document.
   assert.match(instructions(source, '3. Write it'),
-    /`mcp__dpm__create_library` with the `slug`, `title`, `doc_type`/);
+    /`mcp__plugin_dpm_dpm__create_library` with the `slug`, `title`, `doc_type`/);
   assert.match(instructions(source, '3. Write it'),
-    /`mcp__dpm__create_library_scope` per scope value/);
+    /`mcp__plugin_dpm_dpm__create_library_scope` per scope value/);
 });
 
 // --- Criterion 3 (must NOT): no recovery by reading what was written -----------------------------

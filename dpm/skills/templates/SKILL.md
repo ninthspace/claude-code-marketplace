@@ -8,7 +8,7 @@ description: Template discoverability. Lists every document kind this project ca
 Every document dpm produces is rendered from the database by one template per kind. This skill makes
 those templates readable: what the kinds are, where each one's file lands, and what one looks like.
 
-**A preview is a render, not a description.** `mcp__dpm__preview_document_kind` builds an example
+**A preview is a render, not a description.** `mcp__plugin_dpm_dpm__preview_document_kind` builds an example
 document of the kind and returns the bytes its own template produces. So a preview cannot be out of
 date, and this file carries no copy of any format — a format written down here would be right the day
 it was written and silently wrong after the next template change.
@@ -26,13 +26,13 @@ This skill uses **Conversational Output** from it.
 
 - **Nothing**, or **`list`** — list every kind. Read-only.
 - **`preview {kind}`** — render an example of that kind. Accept the kind with or without a `dpm:`
-  prefix, and match it against what `mcp__dpm__list_document_kind` returned rather than against a
+  prefix, and match it against what `mcp__plugin_dpm_dpm__list_document_kind` returned rather than against a
   list held here.
 - **Anything else** — say what the two actions are and stop.
 
 ## List
 
-`mcp__dpm__list_document_kind` with a `limit` above what the project plausibly holds, then a table:
+`mcp__plugin_dpm_dpm__list_document_kind` with a `limit` above what the project plausibly holds, then a table:
 
 | Kind | Output | Numbered |
 |---|---|---|
@@ -49,7 +49,7 @@ would be nothing to notice.
 
 ## Preview
 
-`mcp__dpm__preview_document_kind` with the `kind`. It returns the rendered markdown, and the `path`
+`mcp__plugin_dpm_dpm__preview_document_kind` with the `kind`. It returns the rendered markdown, and the `path`
 the example would have been written to — which is how the naming convention is shown rather than
 stated. Print both, and say the example is generated: a reader who takes it for a real document of
 theirs will go looking for it.

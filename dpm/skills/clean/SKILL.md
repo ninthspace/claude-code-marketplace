@@ -32,7 +32,7 @@ from it. It uses **Session Startup** for nothing, being stateless, and neither *
 
 ### Step 1: The inventory
 
-Call `mcp__dpm__list_session` with a `limit` above what the project plausibly holds and nothing else.
+Call `mcp__plugin_dpm_dpm__list_session` with a `limit` above what the project plausibly holds and nothing else.
 Every row comes back, whatever its age: this skill is the exhaustive counterpart to the staleness
 check every other skill runs at startup, and a filter here would make it a second copy of that
 instead of the thing it is.
@@ -44,7 +44,7 @@ needs the id, the skill, the phase and the age, and each of those is a column.
 
 ### Step 2: Which of them are stale
 
-Call `mcp__dpm__list_session` again with `updated_before` set to the cutoff — three days before now,
+Call `mcp__plugin_dpm_dpm__list_session` again with `updated_before` set to the cutoff — three days before now,
 unless `$ARGUMENTS` said otherwise. What comes back is the stale set, selected by a `WHERE` clause on
 `updated_at`.
 
@@ -66,13 +66,13 @@ Mark each row of the inventory:
 3. **Show the exact rows the selection came to and confirm those.** **Only what is named and
    confirmed is deleted**, and a row that was listed and not named stays.
 
-If the user wants to see what a row was carrying before it goes, `mcp__dpm__read_session` with
+If the user wants to see what a row was carrying before it goes, `mcp__plugin_dpm_dpm__read_session` with
 `include_body` returns its state. This is the last point at which anything can: the blob has no other
 home, and after the delete there is no row to ask.
 
 ### Step 4: Delete what was confirmed
 
-1. **Call `mcp__dpm__delete_session` once per confirmed row, oldest first.** It hands back the row it
+1. **Call `mcp__plugin_dpm_dpm__delete_session` once per confirmed row, oldest first.** It hands back the row it
    removed, which is what there is left to report it by.
 2. **A refusal on one row is not a reason to stop.** Report it and carry on with the rest.
 

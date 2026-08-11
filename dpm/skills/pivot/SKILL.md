@@ -47,8 +47,8 @@ having missed something informs Phase 2, where the amendment is drafted.
 ### Phase 1: Select
 
 Call the lists for the kinds a person pivots, each with a `limit` above what the project plausibly
-holds: `mcp__dpm__list_problem_brief`, `mcp__dpm__list_product_brief`, `mcp__dpm__list_spec`,
-`mcp__dpm__list_epic`, `mcp__dpm__list_adr`, `mcp__dpm__list_discussion`, `mcp__dpm__list_quick`.
+holds: `mcp__plugin_dpm_dpm__list_problem_brief`, `mcp__plugin_dpm_dpm__list_product_brief`, `mcp__plugin_dpm_dpm__list_spec`,
+`mcp__plugin_dpm_dpm__list_epic`, `mcp__plugin_dpm_dpm__list_adr`, `mcp__plugin_dpm_dpm__list_discussion`, `mcp__plugin_dpm_dpm__list_quick`.
 Present them and gate the selection.
 
 The selected row carries its own `kind`, which is what Phase 3 traverses from and the one thing an
@@ -60,20 +60,20 @@ assembled in advance for every artefact in the project.
 
 ### Phase 2: Amend
 
-1. **Read before proposing.** `mcp__dpm__list_document_section` on the artefact, then
-   `mcp__dpm__read_document_section` with `include_body` for the sections in question — a section
+1. **Read before proposing.** `mcp__plugin_dpm_dpm__list_document_section` on the artefact, then
+   `mcp__plugin_dpm_dpm__read_document_section` with `include_body` for the sections in question — a section
    listed without its body is a `heading` and a position, and a run amending from headings is
-   amending something it has not read. For a spec, `mcp__dpm__list_requirement` with `include_body`
+   amending something it has not read. For a spec, `mcp__plugin_dpm_dpm__list_requirement` with `include_body`
    as well.
 2. **Ask what to change**, in the user's own words.
 3. **Apply each change through the update tool of the thing being changed.** Prose is
-   `mcp__dpm__update_document_section`, which takes the new `body`. A document's own fields — its
-   `title`, its `slug`, its status — are its kind's tool: `mcp__dpm__update_spec`,
-   `mcp__dpm__update_epic`, `mcp__dpm__update_problem_brief`, `mcp__dpm__update_product_brief`,
-   `mcp__dpm__update_adr`, `mcp__dpm__update_discussion`, `mcp__dpm__update_quick`. A requirement's
-   `text` is `mcp__dpm__update_requirement` and its criteria `mcp__dpm__update_acceptance_criterion`;
-   a story is `mcp__dpm__update_story`, its criteria `mcp__dpm__update_story_criterion`, and a task
-   `mcp__dpm__update_task`.
+   `mcp__plugin_dpm_dpm__update_document_section`, which takes the new `body`. A document's own fields — its
+   `title`, its `slug`, its status — are its kind's tool: `mcp__plugin_dpm_dpm__update_spec`,
+   `mcp__plugin_dpm_dpm__update_epic`, `mcp__plugin_dpm_dpm__update_problem_brief`, `mcp__plugin_dpm_dpm__update_product_brief`,
+   `mcp__plugin_dpm_dpm__update_adr`, `mcp__plugin_dpm_dpm__update_discussion`, `mcp__plugin_dpm_dpm__update_quick`. A requirement's
+   `text` is `mcp__plugin_dpm_dpm__update_requirement` and its criteria `mcp__plugin_dpm_dpm__update_acceptance_criterion`;
+   a story is `mcp__plugin_dpm_dpm__update_story`, its criteria `mcp__plugin_dpm_dpm__update_story_criterion`, and a task
+   `mcp__plugin_dpm_dpm__update_task`.
 4. **A status change carries `status` and nothing else.** The token and the human qualifier are two
    columns: `status` is the value every other skill reads, and `status_note` is the sentence whoever
    set it wrote. Passing `status` alone leaves that note exactly where its author put it. Amend
@@ -93,10 +93,10 @@ for the documents below.
 
 #### Where the cascade reaches
 
-`mcp__dpm__read_document_kind` on the amended document's kind. Its `children` names the kinds that
+`mcp__plugin_dpm_dpm__read_document_kind` on the amended document's kind. Its `children` names the kinds that
 may hang off this one; for each, call that kind's list scoped by `parent_id` to the amended
-document — `mcp__dpm__list_epic`, `mcp__dpm__list_coverage_matrix`, `mcp__dpm__list_adr`,
-`mcp__dpm__list_retro`, `mcp__dpm__list_review`, `mcp__dpm__list_product_brief`. Repeat on each
+document — `mcp__plugin_dpm_dpm__list_epic`, `mcp__plugin_dpm_dpm__list_coverage_matrix`, `mcp__plugin_dpm_dpm__list_adr`,
+`mcp__plugin_dpm_dpm__list_retro`, `mcp__plugin_dpm_dpm__list_review`, `mcp__plugin_dpm_dpm__list_product_brief`. Repeat on each
 document found. It terminates on its own: a kind nothing hangs off comes back with `children`
 empty.
 
@@ -107,16 +107,16 @@ the same either way.
 
 Two kinds reach further than their own row:
 
-- **A spec.** `mcp__dpm__list_requirement` on it with `include_body`, then `mcp__dpm__list_coverage`
+- **A spec.** `mcp__plugin_dpm_dpm__list_requirement` on it with `include_body`, then `mcp__plugin_dpm_dpm__list_coverage`
   scoped by `requirement_id` for each requirement that changed. Every coverage row names a
-  `story_criterion_id`, and `mcp__dpm__read_story_criterion` opens it. That is the join from an
+  `story_criterion_id`, and `mcp__plugin_dpm_dpm__read_story_criterion` opens it. That is the join from an
   amended requirement to the criteria written against it — the reach a cascade comparing prose
   never had, and the reason an amendment here can be specific about what it breaks.
-- **An epic.** `mcp__dpm__list_story` on it, then `mcp__dpm__list_story_criterion` per story.
+- **An epic.** `mcp__plugin_dpm_dpm__list_story` on it, then `mcp__plugin_dpm_dpm__list_story_criterion` per story.
 
 #### Before the walk
 
-When every epic below is complete — counted from `mcp__dpm__list_story`'s `status`, not from
+When every epic below is complete — counted from `mcp__plugin_dpm_dpm__list_story`'s `status`, not from
 anything written in a document — the work has already been delivered, so ask what the amendment is
 for before touching it:
 
@@ -153,7 +153,7 @@ asserting a verification nobody performed. Both are the false pass this decay ex
 
 ### Phase 4: Tasks affected
 
-For each story whose criteria changed, `mcp__dpm__list_task` on it, and report which tasks are now
+For each story whose criteria changed, `mcp__plugin_dpm_dpm__list_task` on it, and report which tasks are now
 in doubt and why. **Change nothing.** What an amendment means for work already under way is the
 user's call; this skill's job is to make sure they are looking at it.
 

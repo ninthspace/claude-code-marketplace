@@ -21,23 +21,23 @@ Deliverable Length**, **Cross-References** and **Artifact Publishing** from it.
 Resolve the document these decisions belong to, in this order.
 
 1. If `$ARGUMENTS` names a document id, read it with the tool for its kind.
-2. Otherwise `mcp__dpm__list_product_brief`, and offer the results with `AskUserQuestion`. Fall back
-   to `mcp__dpm__list_problem_brief`, then `mcp__dpm__list_spec`, then `mcp__dpm__list_discussion`.
+2. Otherwise `mcp__plugin_dpm_dpm__list_product_brief`, and offer the results with `AskUserQuestion`. Fall back
+   to `mcp__plugin_dpm_dpm__list_problem_brief`, then `mcp__plugin_dpm_dpm__list_spec`, then `mcp__plugin_dpm_dpm__list_discussion`.
    **Ask which one; never take the most recent.**
 3. If none exist, ask the user to describe the system, and say that the decisions will need a
    document to hang off before they can be recorded.
 
 **An ADR is a child document, and the parent is chosen here rather than derived.** Four kinds may
-hold one — problem brief, product brief, spec and discussion — and `mcp__dpm__create_adr` refuses
+hold one — problem brief, product brief, spec and discussion — and `mcp__plugin_dpm_dpm__create_adr` refuses
 any other, so the choice made now is the one checked at write time.
 
-Read the chosen document with the tool for its kind — `mcp__dpm__read_product_brief`,
-`mcp__dpm__read_problem_brief`, `mcp__dpm__read_spec` or `mcp__dpm__read_discussion` — and its prose
-with `mcp__dpm__list_document_section` and `mcp__dpm__read_document_section`. The constraints and
+Read the chosen document with the tool for its kind — `mcp__plugin_dpm_dpm__read_product_brief`,
+`mcp__plugin_dpm_dpm__read_problem_brief`, `mcp__plugin_dpm_dpm__read_spec` or `mcp__plugin_dpm_dpm__read_discussion` — and its prose
+with `mcp__plugin_dpm_dpm__list_document_section` and `mcp__plugin_dpm_dpm__read_document_section`. The constraints and
 success criteria it records are what makes a decision this product's rather than boilerplate.
 
-Then `mcp__dpm__list_adr` on that parent for decisions already recorded, and
-`mcp__dpm__read_adr` on each. Summarise them and ask whether they still hold. Facilitate only the
+Then `mcp__plugin_dpm_dpm__list_adr` on that parent for decisions already recorded, and
+`mcp__plugin_dpm_dpm__read_adr` on each. Summarise them and ask whether they still hold. Facilitate only the
 gaps.
 
 ## Startup
@@ -52,7 +52,7 @@ agreed.
 
 ### Roster
 
-`mcp__dpm__list_agent` with `include_body`, for **Perspectives** in Phases 2 and 4. The traits are
+`mcp__plugin_dpm_dpm__list_agent` with `include_body`, for **Perspectives** in Phases 2 and 4. The traits are
 body columns, so without it the roster arrives as names and roles. Use only what the row carries.
 
 ### Library
@@ -142,16 +142,16 @@ independent. Flag any cycle or conflict and work it through with the user.
 One ADR per decision. Render it in the message body from what the phases settled, then gate:
 "Approve this decision?" with `Approve` / `Request changes` / `Stop`. On approval, write it:
 
-1. `mcp__dpm__create_adr` with the resolved parent as `parent_id`, a short kebab-case `slug`, a
+1. `mcp__plugin_dpm_dpm__create_adr` with the resolved parent as `parent_id`, a short kebab-case `slug`, a
    `title`, and the choice in one sentence as `decision`.
-2. Its context and its consequences as `mcp__dpm__create_document_section` rows against the id it
+2. Its context and its consequences as `mcp__plugin_dpm_dpm__create_document_section` rows against the id it
    returned, with headings and `position`: *Context*, *Consequences*.
-3. Each option as `mcp__dpm__create_adr_option` with `name`, `position`, and the reasoning as
+3. Each option as `mcp__plugin_dpm_dpm__create_adr_option` with `name`, `position`, and the reasoning as
    `rationale` — the rejected options carry theirs too, which is what makes the record worth having.
    `chosen` goes on the one taken.
-4. Each assessment as `mcp__dpm__create_adr_option_tradeoff` with the option, the `axis` and the
+4. Each assessment as `mcp__plugin_dpm_dpm__create_adr_option_tradeoff` with the option, the `axis` and the
    `assessment`.
-5. `mcp__dpm__update_adr` setting `decision_status` to `accepted`.
+5. `mcp__plugin_dpm_dpm__update_adr` setting `decision_status` to `accepted`.
 
 **The order matters and the tool enforces it.** An accepted ADR has exactly one chosen option, so
 the status is written last — an ADR has no options at the moment it is created, and a second
@@ -163,18 +163,18 @@ question was asked and answered no.
 is why the same axes can be compared down a column. Do not format a table — the projection renders
 one from the rows.
 
-Then the relationships from Phase 5: `mcp__dpm__create_dependency` with `kind: 'constrains'`, the
+Then the relationships from Phase 5: `mcp__plugin_dpm_dpm__create_dependency` with `kind: 'constrains'`, the
 constraining decision as `source_document_id` and the constrained one as `target_document_id`. Check
-the kinds available with `mcp__dpm__list_dependency_kind` rather than assuming this list is current.
+the kinds available with `mcp__plugin_dpm_dpm__list_dependency_kind` rather than assuming this list is current.
 
 **Write nothing until the decision is approved.** A half-written ADR is one a later run will read
 back as settled, and nothing on it says which of its options were real.
 
 #### Revisiting a decision
 
-When a decision replaces an earlier one, three calls in this order: `mcp__dpm__create_adr` for the
-new decision, then `mcp__dpm__create_dependency` with `kind: 'supersedes'`, the new ADR as
-`source_document_id` and the old one as `target_document_id`, then `mcp__dpm__update_adr` moving the
+When a decision replaces an earlier one, three calls in this order: `mcp__plugin_dpm_dpm__create_adr` for the
+new decision, then `mcp__plugin_dpm_dpm__create_dependency` with `kind: 'supersedes'`, the new ADR as
+`source_document_id` and the old one as `target_document_id`, then `mcp__plugin_dpm_dpm__update_adr` moving the
 old one's `decision_status` to `superseded`.
 
 **The edge comes before the status, because the old decision is only findable through it.** A
@@ -201,8 +201,8 @@ one nothing references. A single ADR cannot show that, because the relation live
 you cannot write the one-line justification for what the visual carries that the prose cannot, it
 has not earned its place.
 
-Record it only once published, with `mcp__dpm__create_artifact` carrying its address, title and
-publication time, then `mcp__dpm__create_artifact_document` binding it to the parent document — so the
+Record it only once published, with `mcp__plugin_dpm_dpm__create_artifact` carrying its address, title and
+publication time, then `mcp__plugin_dpm_dpm__create_artifact_document` binding it to the parent document — so the
 rows never claim a visual a reader cannot reach.
 
 ### After the decisions

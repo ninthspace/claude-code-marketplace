@@ -20,16 +20,16 @@ Deliverable Length**, **Cross-References** and **Artifact Publishing** from it.
 
 Resolve the problem this brief builds on, in this order.
 
-1. If `$ARGUMENTS` names a document id, `mcp__dpm__read_problem_brief` on it.
+1. If `$ARGUMENTS` names a document id, `mcp__plugin_dpm_dpm__read_problem_brief` on it.
 2. If `$ARGUMENTS` is a description, use it as the starting context.
-3. Otherwise `mcp__dpm__list_problem_brief` and offer the results with `AskUserQuestion`, showing
+3. Otherwise `mcp__plugin_dpm_dpm__list_problem_brief` and offer the results with `AskUserQuestion`, showing
    each title. **Ask which one; never take the most recent.** Recency answers a different question,
    and the two diverge the moment a project has more than one line of work.
 4. If there are none, ask the user to describe the product.
 
 **There is no chain to discover and no slug to match.** A brief either names a problem brief that
 exists or names none; the id resolved here becomes `parent_id` in Phase 8, and
-`mcp__dpm__read_problem_brief` refusing an id is the only "does it exist" check there is.
+`mcp__plugin_dpm_dpm__read_problem_brief` refusing an id is the only "does it exist" check there is.
 
 ## Startup
 
@@ -42,7 +42,7 @@ after Phase 1 has no other way back to it.
 
 ### Roster
 
-`mcp__dpm__list_agent` with `include_body`, for **Perspectives** in Phases 2 and 5. The traits are
+`mcp__plugin_dpm_dpm__list_agent` with `include_body`, for **Perspectives** in Phases 2 and 5. The traits are
 body columns, so without it the roster arrives as names and roles. Use only what the row carries.
 
 ### Library
@@ -69,7 +69,7 @@ Work through the phases **one at a time**, one gate per turn, each with `AskUser
 Summarise the problem from the resolved input and confirm it. From a problem brief this is quick:
 verify nothing has changed.
 
-Read its constraints with `mcp__dpm__list_document_section` and `mcp__dpm__read_document_section`, and
+Read its constraints with `mcp__plugin_dpm_dpm__list_document_section` and `mcp__plugin_dpm_dpm__read_document_section`, and
 restate them for confirmation rather than asking again. Add whatever has changed since.
 
 **Constraints are collected here and nowhere else in this skill**, so anything not surfaced now is
@@ -129,7 +129,7 @@ flowcharts.
 Render the complete brief in the message body from what the phases settled, then gate: "Approve
 this brief?" with `Approve` / `Request changes` / `Stop`.
 
-On approval, agree a title and a short kebab-case slug and call `mcp__dpm__create_product_brief`,
+On approval, agree a title and a short kebab-case slug and call `mcp__plugin_dpm_dpm__create_product_brief`,
 passing the problem brief resolved in Input as `parent_id`. That call assigns the number, which
 nothing here works out.
 
@@ -139,11 +139,11 @@ stored — where a slug that matched the wrong file resolved silently and stayed
 no problem behind it passes no `parent_id` at all; the argument is optional, and an absent parent is
 a brief that started from a description.
 
-Each phase's prose is then one `mcp__dpm__create_document_section` row against the id it returned, with
+Each phase's prose is then one `mcp__plugin_dpm_dpm__create_document_section` row against the id it returned, with
 its heading and its `position`: *Vision*, *Value Propositions*, *Key Features*, *Constraints*,
 *Differentiation*, *User Journeys*.
 
-Then `mcp__dpm__update_product_brief` sets `status` to `complete`. On *Request changes*, return to the
+Then `mcp__plugin_dpm_dpm__update_product_brief` sets `status` to `complete`. On *Request changes*, return to the
 phase the change belongs to and leave the status alone.
 
 **Write the rows only once the brief is approved.** A brief half-written and then abandoned at the
@@ -166,8 +166,8 @@ column, and a feature serving nothing shows up as an orphan. The rows state both
 canvas makes the mismatch a shape rather than a cross-reference. If you cannot write the one-line
 justification for what the visual carries that the prose cannot, it has not earned its place.
 
-Record it only once published, with `mcp__dpm__create_artifact` carrying its address, title and
-publication time, then `mcp__dpm__create_artifact_document` binding it to this brief — so the rows never
+Record it only once published, with `mcp__plugin_dpm_dpm__create_artifact` carrying its address, title and
+publication time, then `mcp__plugin_dpm_dpm__create_artifact_document` binding it to this brief — so the rows never
 claim a visual a reader cannot reach.
 
 ### After the brief

@@ -23,6 +23,40 @@ one without the other and the suite fails on the half that moved.
 - [SessionStart hooks ↔ the harness — the hook payload size limit](#sessionstart-hooks--the-harness--the-hook-payload-size-limit)
 - [`dpm` — FTS5 trigger names the dumper reads](#dpm--fts5-trigger-names-the-dumper-reads)
 - [`dpm` — the retirement abort message the tool layer parses](#dpm--the-retirement-abort-message-the-tool-layer-parses)
+- [`dpm` ↔ the harness — the MCP tool name prefix](#dpm--the-harness--the-mcp-tool-name-prefix)
+
+---
+
+## `dpm` ↔ the harness — the MCP tool name prefix
+
+**The record.** A tool from a **plugin-bundled** MCP server is callable as
+`mcp__plugin_<plugin-name>_<server-name>__<tool-name>`, with any character outside `A-Z`, `a-z`,
+`0-9`, `_` and `-` replaced by `_`. For dpm — plugin `dpm`, server key `dpm` — that is
+**`mcp__plugin_dpm_dpm__create_spec`**. The rule is the harness's, documented at
+[Plugin-provided MCP servers](https://code.claude.com/docs/en/mcp#plugin-provided-mcp-servers),
+and it is not the same as the `mcp__<server>__<tool>` form used by a server registered directly
+with `claude mcp add`. The server also registers under the scoped name `plugin:dpm:dpm`, which is
+what an `mcp_tool` hook's `server` field would take.
+
+**Why it needs a record.** Nothing in this repository can check it. Every test that drives the
+server spawns `bin/dpm-mcp.js` by path, so the suite supplies its own launch and never meets a
+name the harness constructed — the same blind spot FR29's first half exists to name, applied to
+FR29's second half. The corpus shipped `mcp__dpm__` in 456 places across the whole of M4 and every
+suite was green, because the only oracle was a constant the corpus was read with.
+
+**What can break it.** Renaming the plugin in `dpm/.claude-plugin/plugin.json`, or renaming the
+`mcpServers` key, changes 171 tool names in one edit. Adding a second server makes the prefix
+ambiguous, which is why `CALLABLE` refuses more than one rather than picking. A harness change to
+the naming rule breaks every skill at once and no test in this repository would fail.
+
+**What asserts it.** `CALLABLE` in `dpm/tests/support/skills.js` **derives** the prefix from the
+manifest's `name` and its single `mcpServers` key rather than transcribing it, and every skill
+sweep reads the corpus through it — so a skill left on an old prefix contributes no tool names and
+fails `reachability.test.js`'s "names no tool at all". `reachability.test.js` pins the literal
+`mcp__plugin_dpm_dpm__` against that derivation, the two sides differing in kind so the equality
+is a claim rather than a tautology. `plugin.json`'s name and server key are asserted there too.
+The literal is the transcription of an external rule, and this record is where the rule's source
+is written down.
 
 ---
 

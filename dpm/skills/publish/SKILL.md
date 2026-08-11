@@ -21,7 +21,7 @@ place.
 the tree into agreement or it did not, and the answer to a half-finished run is to run it again.
 
 **It writes no file itself.** Every write, every removal and every decision about which is which
-belongs to `mcp__dpm__publish`. A skill that wrote a file would be a second renderer, and a skill
+belongs to `mcp__plugin_dpm_dpm__publish`. A skill that wrote a file would be a second renderer, and a skill
 that removed one would be a second answer to which files no longer belong — and the two answers
 would disagree the first time anything was renamed, silently, in the direction that deletes.
 
@@ -44,7 +44,7 @@ what the two accepted values are.
 
 ### Step 1: What would change
 
-Call `mcp__dpm__publish` with `dry_run` set to true.
+Call `mcp__plugin_dpm_dpm__publish` with `dry_run` set to true.
 
 What comes back is the record the real run would produce: what is new, what would be rewritten, what
 already matches, and what would be removed. It is the same call with its last step withheld, not a
@@ -79,7 +79,7 @@ a tree holding half the orphans is one nothing describes, and the next run would
 
 ### Step 3: Publish
 
-Call `mcp__dpm__publish` with no arguments.
+Call `mcp__plugin_dpm_dpm__publish` with no arguments.
 
 **Report what the record says, and nothing else.** The record is the only account of what happened:
 

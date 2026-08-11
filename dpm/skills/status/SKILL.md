@@ -53,15 +53,15 @@ on request.
 ### Phase 1: The planning rows
 
 Every kind has a list tool, and the inventory is those lists. Call each with a `limit` above what
-the project plausibly holds — `mcp__dpm__list_spec`, `mcp__dpm__list_epic`,
-`mcp__dpm__list_problem_brief`, `mcp__dpm__list_product_brief`, `mcp__dpm__list_adr`,
-`mcp__dpm__list_retro`, `mcp__dpm__list_discussion`, `mcp__dpm__list_review`,
-`mcp__dpm__list_audit`, `mcp__dpm__list_quick`, `mcp__dpm__list_runbook`,
-`mcp__dpm__list_library` — and report counts rather than titles. **A list that comes back with
+the project plausibly holds — `mcp__plugin_dpm_dpm__list_spec`, `mcp__plugin_dpm_dpm__list_epic`,
+`mcp__plugin_dpm_dpm__list_problem_brief`, `mcp__plugin_dpm_dpm__list_product_brief`, `mcp__plugin_dpm_dpm__list_adr`,
+`mcp__plugin_dpm_dpm__list_retro`, `mcp__plugin_dpm_dpm__list_discussion`, `mcp__plugin_dpm_dpm__list_review`,
+`mcp__plugin_dpm_dpm__list_audit`, `mcp__plugin_dpm_dpm__list_quick`, `mcp__plugin_dpm_dpm__list_runbook`,
+`mcp__plugin_dpm_dpm__list_library` — and report counts rather than titles. **A list that comes back with
 `more` set is one whose count is wrong**, and a count reported short reads as a smaller project
 rather than as a truncated read; raise the `limit` and call again rather than reporting the page.
 
-Then the roll-up, per epic: `mcp__dpm__list_story` on it, and `mcp__dpm__list_task` per story where
+Then the roll-up, per epic: `mcp__plugin_dpm_dpm__list_story` on it, and `mcp__plugin_dpm_dpm__list_task` per story where
 task-level detail is wanted. An epic's completion is its stories' `status`, counted.
 
 **Retired stories leave the count rather than joining either side of it.** An epic with three
@@ -83,11 +83,11 @@ The waiver comes back on the row alongside its `retro_waived_reason`, so the rep
 was waived rather than only that it was.
 
 **Whether a completed epic has a retro is a scoped list, not a comparison.**
-`mcp__dpm__list_retro` scoped by `parent_id` to that epic answers it directly. Do not list every
+`mcp__plugin_dpm_dpm__list_retro` scoped by `parent_id` to that epic answers it directly. Do not list every
 retro in the project and match parents in the run — that is a join in the caller, and it goes wrong
 quietly the moment there are more retros than one page.
 
-**Active sessions replace the progress-file scan.** `mcp__dpm__list_session` reports which skills
+**Active sessions replace the progress-file scan.** `mcp__plugin_dpm_dpm__list_session` reports which skills
 have runs in flight, with `phase` saying where each reached. `updated_before` narrows to the stale
 ones — a session that has not moved in a long time is the thing worth mentioning, and an age is a
 bound rather than a status.
@@ -151,8 +151,8 @@ make rather than a vocabulary the project lacks.
 Only when the focus resolves to a spec. It answers what the project-wide view cannot: **is this spec
 delivered?**
 
-`mcp__dpm__list_requirement` on the spec with `include_body` and a `limit` above its requirement
-count, then `mcp__dpm__list_coverage` scoped by `requirement_id` for each. Three states, from the
+`mcp__plugin_dpm_dpm__list_requirement` on the spec with `include_body` and a `limit` above its requirement
+count, then `mcp__plugin_dpm_dpm__list_coverage` scoped by `requirement_id` for each. Three states, from the
 rows:
 
 - **Untraced** — no coverage rows at all. The breakdown missed it. This is a gap in the plan rather
@@ -175,8 +175,8 @@ runs. The untraced count is the part that discriminates, because the requirement
 person and the coverage rows are made later against them.
 
 **And separate the marks a test produced from the ones nothing could.** The spec's own tag for a
-requirement is `mcp__dpm__list_criterion_approach`; the tag on the criterion the breakdown actually
-wrote is `mcp__dpm__list_story_criterion_approach`, and the two need not agree. `target` and
+requirement is `mcp__plugin_dpm_dpm__list_criterion_approach`; the tag on the criterion the breakdown actually
+wrote is `mcp__plugin_dpm_dpm__list_story_criterion_approach`, and the two need not agree. `target` and
 `manual` are the approaches whose marks rest on something other than a test having run, so where any
 verified row carries either, say how many and which — in the same breath as the counts. Do not
 reweight anything: a mark is a mark, and this is a statement about what the marks rest on. A spec

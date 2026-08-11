@@ -303,7 +303,7 @@ test('a persona the project added is consultable by name, and a retired one is n
   // Step-scoped for the same reason as the search step's: the file names `include_body` in three
   // places and the binding cannot tell which of them the roster read is answerable for.
   assert.match(prose(source, 'Startup'),
-    /`mcp__dpm__read_agent` with `include_body` for each\s*agent brought into the room/);
+    /`mcp__plugin_dpm_dpm__read_agent` with `include_body` for each\s*agent brought into the room/);
   assert.match(prose(source, 'Startup'),
     /\*\*The traits are body columns\*\*.*rendering a persona off the list alone is rendering it\s*off nothing/);
 

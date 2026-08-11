@@ -431,7 +431,7 @@ test('the retro gate disposes of each observation, and the verification gate wai
   // other half — the file says the story's status is written at the gate and not before.
   const complete = section(source, '6. Complete');
   assert.notEqual(complete, '', 'the completion step still exists');
-  assert.match(complete, /mcp__dpm__update_story/);
+  assert.match(complete, /mcp__plugin_dpm_dpm__update_story/);
   assert.match(complete, /verification gate/i);
 
   // And a control on the ordering assertion itself: the gate is checkable only because a story
