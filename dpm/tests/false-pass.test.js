@@ -93,6 +93,13 @@ const DISPOSITIONS = new Map(Object.entries({
   // disposition is now a citation like every other. The cited test reads the corpus against the
   // live registry, so it fails on a skill that renders stored text from a read that never asked.
   25: { test: 'every read of a withholding tool asks for the body or is recorded as not needing it' },
+  // **Not `every table entry_fts indexes has all three triggers, and none has fewer`**, which is
+  // #16's citation and is the obvious neighbour. That test asserts the index is maintained for the
+  // tables it covers, and #26 is the entry about a column the index never covered — it stays green
+  // on a schema that grows a prose column and indexes nothing. The citation has to be the
+  // reconciliation, which reads both enumerations off the live schema and fails on the column
+  // rather than on the trigger.
+  26: { test: 'every column holding prose is indexed, or excluded for a reason the schema still bears out' },
 }).map(([entry, disposition]) => [Number(entry), disposition]));
 
 /** Every `test('…')` name the suite declares, read from the files rather than from a list. */
@@ -112,7 +119,7 @@ function declaredTests() {
 }
 
 /** The count below which a parse is not a short register but a broken read. */
-const FLOOR = 25;
+const FLOOR = 26;
 
 /**
  * Everything wrong with a register and its dispositions, as a list of complaints.

@@ -87,7 +87,7 @@ test('one row of every indexed type is written by its tool and found by a single
   // indexed with no create tool to write it fails at the write rather than being skipped.
   const indexed = ['document_section', ...entryEntities(db)];
 
-  assert.ok(indexed.length >= 6, `only ${indexed.length} indexed types — the enumeration is wrong`);
+  assert.ok(indexed.length >= 16, `only ${indexed.length} indexed types — the enumeration is wrong`);
 
   const spec = call.create_spec({ slug: 'lodestone', title: 'Lodestone' });
   const epic = call.create_epic({ parent_id: spec.id, slug: 'find', title: 'Find' });
@@ -99,40 +99,83 @@ test('one row of every indexed type is written by its tool and found by a single
   });
   const review = call.create_review({ parent_id: spec.id, slug: 'find', title: 'Review' });
   const retro = call.create_retro({ parent_id: epic.id, slug: 'find', title: 'Retro' });
+  const adr = call.create_adr({
+    parent_id: spec.id, slug: 'find', title: 'ADR', decision: 'a lodestone decision',
+  });
+  const audit = call.create_audit({ slug: 'find', title: 'Audit' });
+  const quick = call.create_quick({ slug: 'find', title: 'Quick' });
 
   // One row per indexed type, each through the type's own create tool and each carrying the same
   // term. Written as a map keyed by the enumerated name so a type nobody wrote is a failure here
-  // rather than an entity quietly missing from the search below.
+  // rather than an entity quietly missing from the search below. Each entry returns the value the
+  // hit will carry as `entity_id`, which is the row's key as declared and is not `id` everywhere —
+  // `adr` is keyed by its document and `agent` by its name.
   const written = {
     document_section: () => call.create_document_section({
       document_id: spec.id, heading: 'Body', position: 0, body: 'a lodestone section',
-    }),
-    requirement: () => requirement,
+    }).id,
+    requirement: () => requirement.id,
     acceptance_criterion: () => call.create_acceptance_criterion({
       requirement_id: requirement.id, position: 0, text: 'a lodestone criterion',
-    }),
+    }).id,
     story_criterion: () => call.create_story_criterion({
       story_id: story.id, position: 0, text: 'a lodestone story criterion',
-    }),
+    }).id,
     observation: () => call.create_observation({
       retro_id: retro.id, position: 0, text: 'a lodestone observation',
-    }),
+    }).id,
     finding: () => call.create_finding({
       review_id: review.id, position: 0, category_id: 'finding:hidden-complexity',
       severity_id: 'severity:warning', summary: 'a lodestone finding',
-    }),
+    }).id,
+    adr: () => adr.id,
+    adr_option: () => call.create_adr_option({
+      adr_id: adr.id, name: 'Rebuild', position: 0, rationale: 'a lodestone rationale',
+    }).id,
+    agent: () => call.create_agent({
+      name: 'lodestone-keeper', display_name: 'Keeper', icon: '🧭', role: 'Keeper', position: 20,
+      personality: 'a lodestone personality', communication_style: 'Short sentences.',
+    }).name,
+    artifact: () => call.create_artifact({
+      url: 'https://example.invalid/lodestone', title: 'Artifact',
+      published_at: '2026-08-11T00:00:00Z', description: 'a lodestone artifact',
+    }).id,
+    audit_finding: () => call.create_audit_finding({
+      audit_id: audit.id, position: 0, dimension_id: 'audit_dimension:test-debt',
+      file: 'dpm/src/schema/022-prose-index.sql', severity_id: 'severity:warning',
+      summary: 'a lodestone audit finding',
+    }).id,
+    milestone: () => call.create_milestone({
+      spec_id: spec.id, label: 'M1', title: 'Milestone', position: 0,
+      summary: 'a lodestone milestone',
+    }).id,
+    quick_criterion: () => call.create_quick_criterion({
+      quick_id: quick.id, position: 0, text: 'a lodestone quick criterion',
+    }).id,
+    retro_application: () => call.create_retro_application({
+      retro_id: retro.id, applied_to_id: epic.id, theme: 'Testing gaps', disposition: 'applied',
+      note: 'a lodestone note',
+    }).id,
+
+    // The two whose only prose column is a status note, which no create tool takes — so the row
+    // reaches the index through the update trigger, on the path a caller actually uses.
+    story: () => call.update_story({ id: story.id, status_note: 'a lodestone status note' }).id,
+    task: () => call.create_task({
+      story_id: story.id, number: 1, title: 'Task', position: 0,
+      description: 'a lodestone task',
+    }).id,
   };
 
   assert.deepEqual(Object.keys(written).sort(), [...indexed].sort(),
     'the fixture and the schema disagree about which types are indexed');
 
   const rows = Object.fromEntries(
-    Object.entries(written).map(([entity, write]) => [entity, write().id]),
+    Object.entries(written).map(([entity, write]) => [entity, write()]),
   );
 
-  // One search, and it has to reach all six. The tools are Story 1's and Story 2's, the triggers
-  // are Stories 3's and 4's, and the query is Story 5's — three stories that pass in isolation
-  // against a database where one of the six was never wired up.
+  // One search, and it has to reach every one of them. The tools are Story 1's and Story 2's, the
+  // triggers are Stories 3's and 4's, and the query is Story 5's — three stories that pass in
+  // isolation against a database where one of the types was never wired up.
   const page = call.search({ query: 'lodestone', limit: 50 });
   const found = new Map(page.items.map((hit) => [hit.entity, hit.entity_id]));
 

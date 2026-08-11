@@ -23,6 +23,12 @@
  * That is stated rather than hidden: what the criterion asks for is ranked results, and within
  * each index the ranking is real. A single index over everything would rank globally and would
  * cost the `entity:` scoping that makes `entry_fts` usable — the trade was taken deliberately.
+ *
+ * **The limits are in the `description`, not in this comment, and that is the point.** The caller
+ * is a model reading the tool list; a limitation recorded where only a maintainer sees it is a
+ * limitation the caller will discover by getting an empty result and reading it as absence. Three
+ * of them are real sources of that false negative — whole-token matching, no stemming, and the
+ * interleaved ranking above — so all three are stated where the query is written.
  */
 
 import { defineTool, DEFAULT_LIMIT, ToolError } from './convention.js';
@@ -108,10 +114,15 @@ export function searchTools({ db }) {
       name: 'search',
       table: 'document_fts',
       description:
-        'Search every indexed artefact — document section bodies and the prose held on '
-        + 'requirements, criteria, observations and findings. Each hit names the entity and the '
-        + 'row id, so it can be opened with that entity\'s read tool. Scope with an `entity:` '
-        + `term in the query, e.g. \`entity:requirement AND helpers\`. Entities: ${entities.join(', ')}.`,
+        'Search every indexed artefact — document section bodies and the prose held on the child '
+        + 'rows beneath them. Each hit names the entity and the row id, so it can be opened with '
+        + 'that entity\'s read tool. Scope with an `entity:` term in the query, e.g. '
+        + '`entity:requirement AND helpers`. '
+        + 'What it cannot do, because an empty result is not evidence of absence: matching is by '
+        + 'whole token, so `index` does not find `reindexing` and only a trailing `prefix*` '
+        + 'widens it; there is no stemming, so `index` does not find `indexed` or `indexing`; '
+        + 'and `rank` is bm25 within one index, so an unscoped query interleaves two rankings '
+        + `rather than ordering across both. Entities: ${entities.join(', ')}.`,
       reads: ['document_fts', 'entry_fts'],
       // `writes` is empty and not defaulted to `table`: this tool creates nothing, and the parity
       // enumeration reads `writes` to decide which tables a create tool covers.
