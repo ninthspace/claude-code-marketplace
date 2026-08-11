@@ -265,8 +265,8 @@ test('two branches each adding an epic leave a text conflict, and the merge rest
   const shifted = kept === made.ours ? made.theirs : made.ours;
 
   assert.deepEqual(readdirSync(join(repo.root, 'docs', 'epics')).sort(), [
-    `1-01-epic-${kept.slug}.md`,
-    `1-02-epic-${shifted.slug}.md`,
+    `01-01-epic-${kept.slug}.md`,
+    `01-02-epic-${shifted.slug}.md`,
   ]);
 });
 
@@ -312,8 +312,8 @@ test('a collision is renumbered, its file renamed, and what referenced it re-ren
 
   const specs = readdirSync(join(repo.root, 'docs', 'specifications')).sort();
 
-  assert.deepEqual(specs, [`1-spec-${winner.slug}.md`, `2-spec-${moved.slug}.md`]);
-  assert.ok(!existsSync(join(repo.root, 'docs', 'specifications', `1-spec-${moved.slug}.md`)),
+  assert.deepEqual(specs, [`01-spec-${winner.slug}.md`, `02-spec-${moved.slug}.md`]);
+  assert.ok(!existsSync(join(repo.root, 'docs', 'specifications', `01-spec-${moved.slug}.md`)),
     'the loser’s old file is still on disk');
   assert.match(out, new RegExp(`spec 1 → 2`));
 });
@@ -389,10 +389,10 @@ test('renumbering changes no stored text, and the next render names the new numb
     const { text } = renderDocument(db, loser);
 
     // FR28: the marker stored a ULID, so the render — not a rewrite — is what produces the number.
-    assert.ok(text.includes('See spec 2.'), `the marker did not resolve to the new number:\n${text}`);
-    assert.ok(!text.includes('See spec 1.'));
+    assert.ok(text.includes('See spec 02.'), `the marker did not resolve to the new number:\n${text}`);
+    assert.ok(!text.includes('See spec 01.'));
     assert.ok(!text.includes('{{ref:'), 'a marker survived the render');
-    assert.equal(readFileSync(join(repo.root, 'docs', 'specifications', `2-spec-${moved.slug}.md`), 'utf8'), text);
+    assert.equal(readFileSync(join(repo.root, 'docs', 'specifications', `02-spec-${moved.slug}.md`), 'utf8'), text);
   } finally {
     db.close();
   }
@@ -839,6 +839,6 @@ test('the report names what it removed and what to stage next', (t) => {
   const { out } = invoke(repo.root);
 
   assert.match(out, /Removed, because no document produces them any more:/);
-  assert.match(out, /docs\/specifications\/1-spec-\w+\.md/);
+  assert.match(out, /docs\/specifications\/01-spec-\w+\.md/);
   assert.match(out, /git add \.dpm\/dpm\.sql docs/);
 });

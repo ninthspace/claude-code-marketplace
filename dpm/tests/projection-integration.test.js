@@ -19,10 +19,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
-  chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
+  mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { committer } from './support/commit.js';
 import { fullCorpus } from './support/corpus.js';
 import { gitRepository, surface, twoBranches } from './support/git.js';
 import { dump } from '../src/dump/index.js';
@@ -90,19 +91,13 @@ function repository(t) {
 
   const hook = join(root, '.git', 'hooks', 'pre-commit');
 
+  // The mode is left as it arrives — a fixture that set it would be supplying the one thing a real
+  // install has to have been shipped with. `plugin.test.js` holds it to `100755`, in the index.
   symlinkSync(join(ROOT, 'hooks', 'pre-commit'), hook);
-  chmodSync(join(ROOT, 'hooks', 'pre-commit'), 0o755);
 
-  /** Commit everything. Returns the hook's own output when it refuses. */
-  const commit = (message) => {
-    git('add', '-A');
-
-    try {
-      return { ok: true, output: git('commit', '--quiet', '-m', message) };
-    } catch (error) {
-      return { ok: false, output: `${error.stdout ?? ''}${error.stderr ?? ''}` };
-    }
-  };
+  // Commit everything, and assert the guard ran on both paths — see `support/commit.js`. Row 2's
+  // second half is an accepted commit, which without that is satisfied by an uninstalled hook.
+  const commit = committer(root);
 
   const first = commit('The corpus');
 
@@ -166,11 +161,11 @@ test('a commit carrying only a database write is refused until both artefacts re
 
   assert.ok(!refused.ok, 'the hook let a stale projection through');
   assert.match(refused.output, /does not match the database/);
-  assert.match(refused.output, /2-spec-search\.md/);
+  assert.match(refused.output, /02-spec-search\.md/);
   assert.match(refused.output, /is not on disk, and the database produces it/);
 
   // Nothing was fixed on the way past: the hook reports and stops.
-  assert.ok(!readdirSync(join(repo.root, 'docs', 'specifications')).includes('2-spec-search.md'));
+  assert.ok(!readdirSync(join(repo.root, 'docs', 'specifications')).includes('02-spec-search.md'));
 
   project(repo.db, { root: repo.root });
 

@@ -16,10 +16,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
-  chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
+  existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { committer } from './support/commit.js';
 import { fullCorpus } from './support/corpus.js';
 import { start } from '../src/start.js';
 import { spineTools } from '../src/tools/index.js';
@@ -61,18 +62,14 @@ function repository(t) {
   // A symlink, because that is what the hook's own install instructions say — and the symlink is
   // what broke it once before: a test that copied the file in resolves `$0` to a real path and
   // passes against an install nobody performs.
+  //
+  // The mode is left as it arrives. Setting it here would hand the fixture a hook a real install
+  // has to have been shipped; `plugin.test.js` is where it is held to `100755`, in the index.
   symlinkSync(join(ROOT, 'hooks', 'pre-commit'), join(root, '.git', 'hooks', 'pre-commit'));
-  chmodSync(join(ROOT, 'hooks', 'pre-commit'), 0o755);
 
-  const commit = (message) => {
-    git('add', '-A');
-
-    try {
-      return { ok: true, output: git('commit', '--quiet', '-m', message) };
-    } catch (error) {
-      return { ok: false, output: `${error.stdout ?? ''}${error.stderr ?? ''}` };
-    }
-  };
+  // Asserts the guard ran, on both paths — see `support/commit.js`. Criterion 3's control commit
+  // is the one that needs it: "a tree in agreement was accepted" is satisfied by no hook at all.
+  const commit = committer(root);
 
   const first = commit('The corpus');
 
@@ -160,7 +157,11 @@ test('must NOT — the hook regenerates and stages, overwriting a hand-edit', (t
 
   const spec = repo.documents.spec;
   const edited = repo.db.prepare('SELECT slug, number FROM document WHERE id = ?').get(spec.id);
-  const path = join(repo.root, 'docs', 'specifications', `${edited.number}-spec-${edited.slug}.md`);
+  // Padded to two digits, the same as the renderer does. Spelled here rather than imported from
+  // `naming.js`, because this test is about the hook and a path derived from the code under test
+  // would agree with a renderer that had stopped naming files the way it says it does.
+  const number = String(edited.number).padStart(2, '0');
+  const path = join(repo.root, 'docs', 'specifications', `${number}-spec-${edited.slug}.md`);
 
   assert.ok(existsSync(path), `the fixture's spec is not at ${path}`);
 

@@ -191,7 +191,7 @@ test('communication is a seeded kind with a template, and the enumeration holds 
   const rendered = renderDocument(db, note.id);
 
   assert.equal(rendered.kind, 'communication');
-  assert.equal(rendered.path, 'docs/communications/1-communication-launch.md',
+  assert.equal(rendered.path, 'docs/communications/01-communication-launch.md',
     'the seed\'s `dir` and root numbering did not reach the path');
   assert.match(rendered.text, /# Launch note/);
   assert.match(rendered.text, /## Audience/);

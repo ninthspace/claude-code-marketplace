@@ -19,6 +19,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { javascriptFilesUnder } from './support/sources.js';
@@ -125,6 +126,56 @@ test('the suite runs from one command, and it is a plain node --test invocation'
   for (const path of testFiles) {
     assert.ok(path.startsWith(DPM), `${path} is inside dpm/, so one run reaches it`);
   }
+});
+
+/**
+ * Every tracked file under `dpm/`, as `{path, mode}` — the mode **git records**, not the one on
+ * this disk.
+ *
+ * The distinction is the whole point of the test below. The plugin reaches a user as a clone, so
+ * the executable bit that matters is the one in the index; a local `chmod` fixes a working tree
+ * and ships nothing. A `statSync` check would pass on this machine and go on passing while every
+ * install got a file it could not run.
+ */
+function trackedFiles() {
+  return execFileSync('git', ['ls-files', '-s', '--', DPM], { cwd: REPOSITORY, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => ({ mode: line.split(' ')[0], path: line.slice(line.indexOf('\t') + 1) }));
+}
+
+test('a file with a shebang is executable in the index, and nothing else is', () => {
+  const files = trackedFiles();
+
+  assert.ok(files.length > 0, 'the check found tracked files to read');
+
+  // **Derived from the shebang rather than from a list of paths**, so a fifth binary added
+  // without its mode fails here instead of being absent from a list nobody updated. `dpm-merge.js`
+  // shipped mode 644 for two epics precisely because nothing was watching, and every caller
+  // reaches these files as an argument to `node`, which is why nothing ever failed.
+  const shebanged = files
+    .filter(({ path }) => readFileSync(join(REPOSITORY, path), 'utf8').startsWith('#!'))
+    .map(({ path }) => path)
+    .sort();
+  const executable = files
+    .filter(({ mode }) => mode === '100755')
+    .map(({ path }) => path)
+    .sort();
+
+  assert.ok(shebanged.length > 0, 'there are files declaring an interpreter');
+
+  // Both directions in one reading. A shebang without the bit is a file that cannot be run as
+  // written; the bit without a shebang is a mode nothing asked for, and the pair that would drift
+  // apart silently is exactly the pair the equality holds together.
+  assert.deepEqual(executable, shebanged);
+
+  // The control, and the reason the equality above is a fact about modes rather than about a
+  // reading that returns the same list twice: an ordinary source file is tracked as 644.
+  assert.equal(
+    files.find(({ path }) => path === 'dpm/package.json').mode,
+    '100644',
+    'the reading distinguishes the two modes, so 100755 above was found rather than assumed',
+  );
 });
 
 test('the running Node meets the floor the manifest declares', () => {

@@ -332,11 +332,15 @@ test('the identifier and the filename are one derivation', (t) => {
   const spec = call.create_spec({ slug: 'persistence', title: 'Artefact persistence' });
   const epic = call.create_epic({ parent_id: spec.id, slug: 'projection', title: 'Projection' });
 
-  assert.equal(identifierOf(spec), '1');
-  assert.equal(identifierOf(epic, spec), '1-01', 'a sequence is zero-padded to two digits');
+  // **Both halves are padded, and asserting only one of them is how they came apart.** The
+  // sequence was padded from the start and the number was not, so the corpus rendered
+  // `1-01-epic-…` — half a convention, in one filename. What the padding buys is a directory that
+  // lists in order: unpadded, the tenth document sorts between the first and the second.
+  assert.equal(identifierOf(spec), '01', 'a root number is zero-padded to two digits');
+  assert.equal(identifierOf(epic, spec), '01-01', 'and so is a sequence, on the same rule');
 
-  assert.equal(pathOf(db, spec), 'docs/specifications/1-spec-persistence.md');
-  assert.equal(pathOf(db, epic, spec), 'docs/epics/1-01-epic-projection.md');
+  assert.equal(pathOf(db, spec), 'docs/specifications/01-spec-persistence.md');
+  assert.equal(pathOf(db, epic, spec), 'docs/epics/01-01-epic-projection.md');
 
   // The filename contains the identifier the markers resolve to, which is the whole point: Story
   // 4 renumbers one document and both move together, because there is one derivation.
@@ -353,7 +357,7 @@ test('the identifier and the filename are one derivation', (t) => {
   const adr = db.prepare("SELECT * FROM document WHERE id = 'adr-1'").get();
 
   assert.equal(pathOf(db, adr, spec), null);
-  assert.equal(identifierOf(adr, spec), '1-01', 'and it still has a number to be cited by');
+  assert.equal(identifierOf(adr, spec), '01-01', 'and it still has a number to be cited by');
 });
 
 test('the kind is in the filename because dir is not unique', (t) => {
@@ -624,7 +628,7 @@ test('a kind with no template refuses the whole projection, and writes nothing',
 
   // The document is named and not only its kind — in a corpus with fifty epics, the kind alone
   // does not say whether one kind is unregistered or one row has an unexpected kind.
-  assert.match(error.message, /docs\/ledgers\/9-ledger-costs\.md/);
+  assert.match(error.message, /docs\/ledgers\/09-ledger-costs\.md/);
   assert.match(error.message, /1 of 4 documents/, 'the count of refusals and of documents');
 
   // **Nothing was written.** A run that wrote the specs and failed on the ledger would leave a tree

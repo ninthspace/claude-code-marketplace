@@ -256,22 +256,51 @@ a component; this one is checked against the sequence a new user actually perfor
 
 ## Notes
 
-**Raised, not claimed by this epic.** Both surfaced in the same readiness check and neither is
-publishing's business:
+**Raised, not claimed by this epic.** These surfaced in the same readiness check and none of them
+is publishing's business:
 
 - `dpm` sits at `0.1.0` in `dpm/package.json` and `dpm/.claude-plugin/plugin.json`, and in the  
   marketplace entry, with spec 47 otherwise delivered. A version decision is Chris's.
-- Root documents render unpadded — `1-spec-smoke.md` where CPM writes `01-`. FR5 makes numbering a  
-  database concern and says nothing about width, so this may be intended; it is recorded here  
-  because the first person to see a `docs/` tree will notice it and there is currently nothing to  
-  point them at.
+- Root documents rendered unpadded — `1-spec-smoke.md` where CPM writes `01-`. FR5 makes numbering  
+  a database concern and says nothing about width, so it was recorded as possibly intended rather  
+  than as a defect. **Fixed 2026-08-10** — Chris's decision, at his direction, outside any story:  
+  a two-digit minimum on the root number, matching the sequence half, which was padded already.  
+  The reason is lexical sort rather than appearance — a directory lists in byte order, so unpadded  
+  the tenth document files between the first and the second. Twenty-two assertions across seven  
+  suites moved with it, which is the evidence the shape is asserted rather than incidental.
 - `dpm/bin/dpm-merge.js` was mode 644 where the other three binaries are 755, from Epic 47-08. It  
   has a shebang, so the mode was the only thing stopping it being run directly; every caller today  
   reaches it as `node dpm-merge.js`, which is why nothing had failed. Noticed while writing Story  
   2's cross-binary floor test, which reads all four sources and had no reason to look at modes.  
-  **Fixed 2026-08-10** — `chmod 755`, at Chris's direction, outside any story. Nothing guards  
-  against recurrence: no test reads a file mode, and the four binaries are only ever spawned as  
-  arguments to `node`.
+  **Fixed 2026-08-10** — `chmod 755`, at Chris's direction, outside any story. **Guarded  
+  2026-08-11**, also at his direction: `plugin.test.js` holds the set of files carrying a shebang  
+  equal to the set git records as `100755`. Derived from the shebang rather than from a list of  
+  four paths, so a fifth binary is covered the day it arrives; and read from the **index** rather  
+  than from the filesystem, because the plugin ships as a clone and a local `chmod` fixes a  
+  working tree while shipping nothing. Confirmed by `git update-index --chmod=-x` on one binary,  
+  which fails that test alone and no other — with the file still `755` on disk, which is exactly  
+  what a `statSync` check would have passed on.  
+  Three fixtures were `chmod`-ing `dpm/hooks/pre-commit` to 755 before symlinking it, which is a  
+  test writing to a repository file and, worse, supplying the one property a real install has to  
+  have arrived with. Removed the same day — which exposed a second defect underneath. With the  
+  repair gone, `chmod 644` failed only the three tests requiring a *refusal*: a skipped hook lets  
+  every clean-tree commit through, so eight tests asserting acceptance were passing with no guard  
+  running at all. **Fixed by `tests/support/commit.js`**, which every fixture that commits now  
+  uses: it reads stdout **and stderr** and asserts the guard reported on whichever path was taken.  
+  git had been saying so the whole time — `hint: … hook was ignored because it's not set as  
+  executable` — on stderr, the stream `execFileSync`'s return value drops. The same mutation now  
+  fails eleven tests by name. The generalisation is worth keeping: an acceptance asserted by exit  
+  code alone cannot tell approval from absence, and the evidence separating them is often on the  
+  stream the fixture is not reading.
+- Nothing asserted that a first start puts the **whole** agent roster in the database. Two personas  
+  were exercised by name and the other seven by nothing, so a seed that stopped short would have  
+  shipped a working install with a thin cast. Noticed during the temp-directory first-run exercise,  
+  where the roster is the part a user meets by name. **Guarded 2026-08-11**, at Chris's direction:  
+  two tests in `vocabulary.test.js` — one asserting that `start()` (not a fixture calling  
+  `applyVocabulary`) lands every shipped term in every vocabulary, counted against the manifest  
+  rather than against a transcribed total; one looping the *table's own rows* through both columns  
+  that name a persona, so a tenth is covered the day it is seeded. Dropping one persona from the  
+  seed fails the first alone; excluding one persona from `document_agent` fails the second alone.
 
 **Why `publish` is not a `[target]` story.** The whole of it is checkable in a real repository with
 a real hook, which `tests/support/git.js` already builds. Nothing here needs a deployment.

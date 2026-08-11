@@ -9,13 +9,27 @@
  * the tool meant to repair it. So `pathOf` calls `identifierOf`; it does not rebuild the number.
  *
  * **Nothing here inherits CPM's conventions** — the spec is explicit that dpm does not read,
- * parse or reproduce historic artefacts, so legacy filename shapes are not binding. The shape
- * below matches what a reader of this repository already sees, which is a different and much
- * weaker reason: familiarity, not compatibility.
+ * parse or reproduce historic artefacts, so legacy filename shapes are not binding. That the shape
+ * below matches what a reader of this repository already sees is familiarity, not compatibility,
+ * and is not on its own a reason to keep any part of it.
+ *
+ * **The zero-padding is the exception, and it is kept on its own merits.** CPM arrived at it for
+ * sorting, and the reason survives the separation intact because it is a property of how
+ * directories are listed rather than of CPM. See `pad`.
  */
 
-/** `03`, not `3`. Two digits is the corpus's shape; a sequence past 99 simply gets wider. */
-const pad = (sequence) => String(sequence).padStart(2, '0');
+/**
+ * `03`, not `3` — applied to both halves of an identifier.
+ *
+ * **The reason is lexical sort, not appearance, and it is worth stating because the padding looks
+ * cosmetic and is not.** A directory is listed in byte order by every tool that lists one, so
+ * unpadded numbers come out `1, 10, 11, 2, 3` — the tenth document filed between the first and the
+ * second, in a tree whose whole purpose is to be read. Two digits is the floor rather than the
+ * width: a number past 99 simply gets wider, and sorts correctly against its padded neighbours
+ * until the corpus passes 100, by which point the ordering problem it was protecting against has
+ * mostly gone away on its own.
+ */
+const pad = (number) => String(number).padStart(2, '0');
 
 /** Raised when a document cannot be named. Distinct from a tool refusal — nothing is written. */
 export class ProjectionError extends Error {}
@@ -54,7 +68,7 @@ export class ProjectionError extends Error {}
  * @returns {string}
  */
 export function identifierOf(document, ...ancestry) {
-  if (document.numbering === 'root') return String(document.number);
+  if (document.numbering === 'root') return pad(document.number);
 
   if (document.numbering === 'child') {
     if (ancestry.length === 0) {
@@ -77,7 +91,7 @@ export function identifierOf(document, ...ancestry) {
     // its parent at two. Its sequence is the one both share.
     const numbered = chain[rootIndex - 1];
 
-    return `${chain[rootIndex].number}-${pad(numbered.sequence)}`;
+    return `${pad(chain[rootIndex].number)}-${pad(numbered.sequence)}`;
   }
 
   // `numbering = 'none'` is legal in the schema and has no human number by construction. Reaching

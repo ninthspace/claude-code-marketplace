@@ -18,11 +18,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
-  chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync,
-  writeFileSync,
+  existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { committer } from './support/commit.js';
 import { runNode } from './support/run-node.js';
 import { fullCorpus } from './support/corpus.js';
 import { start } from '../src/start.js';
@@ -55,8 +55,9 @@ function freshProject(t) {
   git('config', 'user.name', 'Fixture');
 
   // Step 1 of the README, performed exactly as it is written there — a symlink, and the ignore line
-  // that keeps the binary database out of the commit AD4 says carries the text.
-  chmodSync(join(ROOT, 'hooks', 'pre-commit'), 0o755);
+  // that keeps the binary database out of the commit AD4 says carries the text. Nothing sets the
+  // hook's mode, deliberately: the README does not either, so a fixture that did would supply the
+  // one thing a real install has to have arrived with. `plugin.test.js` holds it to `100755`.
   symlinkSync(join(ROOT, 'hooks', 'pre-commit'), join(root, '.git', 'hooks', 'pre-commit'));
   writeFileSync(join(root, '.gitignore'), '.dpm/dpm.db*\n', 'utf8');
 
@@ -73,15 +74,9 @@ function freshProject(t) {
 
   const call = Object.fromEntries(spineTools(db).map((tool) => [tool.name, tool.handler]));
 
-  const commit = (message) => {
-    git('add', '-A');
-
-    try {
-      return { ok: true, output: git('commit', '--quiet', '-m', message) };
-    } catch (error) {
-      return { ok: false, output: `${error.stdout ?? ''}${error.stderr ?? ''}` };
-    }
-  };
+  // Asserts the guard ran, on both paths — see `support/commit.js`. Without that, criterion 1's
+  // accepted commit reads the same whether the hook approved the tree or was never invoked.
+  const commit = committer(root);
 
   /** Everything the commit carries. `ls-files` and not `readdir` — an untracked file is not in it. */
   const tracked = () => git('ls-files').split('\n').filter(Boolean).sort();
@@ -191,7 +186,7 @@ test('must NOT — the run passes against stubs, or a corpus with nothing to orp
 
   const before = repo.db.prepare('SELECT number, slug FROM document WHERE id = ?')
     .get(documents.spec.id);
-  const stale = `docs/specifications/${before.number}-spec-${before.slug}.md`;
+  const stale = `docs/specifications/${String(before.number).padStart(2, '0')}-spec-${before.slug}.md`;
 
   assert.ok(repo.tracked().includes(stale), `${stale} is not in the commit, so nothing is orphaned`);
 

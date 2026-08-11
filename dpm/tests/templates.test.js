@@ -162,8 +162,8 @@ test('one document of every kind renders, and only the ADR renders without a fil
   // are the reason the kind is there at all, and they also share an identifier.
   const paths = written.map((file) => file.path).sort();
 
-  assert.ok(paths.includes('docs/epics/1-01-epic-projection.md'));
-  assert.ok(paths.includes('docs/epics/1-01-coverage_matrix-projection.md'),
+  assert.ok(paths.includes('docs/epics/01-01-epic-projection.md'));
+  assert.ok(paths.includes('docs/epics/01-01-coverage_matrix-projection.md'),
     'the matrix shares its epic\'s number and is kept apart only by the kind in the filename');
   assert.equal(new Set(paths).size, paths.length, 'two documents rendered to one path');
 
@@ -252,7 +252,7 @@ test('the ADR renders inside its parent and as its own bytes, from one set of bl
 
   // Inside the spec — which is the criterion's clause, and the only place a reader meets it.
   assert.match(spec.text, /## Architecture Decisions/);
-  assert.match(spec.text, /### 1-01 — The projection is one-way/);
+  assert.match(spec.text, /### 01-01 — The projection is one-way/);
   assert.match(spec.text, /\*\*Decision status\*\*: accepted/);
   assert.match(spec.text, /One-way projection — chosen/);
   assert.match(spec.text, /\| cost \| low \|/);
@@ -261,7 +261,7 @@ test('the ADR renders inside its parent and as its own bytes, from one set of bl
   // writes none of them — which is what render-checks an ADR whose parent's template forgot it.
   const standalone = all.find((file) => file.path === null);
 
-  assert.match(standalone.text, /^# 1-01 — The projection is one-way/);
+  assert.match(standalone.text, /^# 01-01 — The projection is one-way/);
   assert.match(standalone.text, /## One-way projection — chosen/);
 
   assert.equal(db.prepare("SELECT dir FROM document_kind WHERE kind = 'adr'").get().dir, null,
@@ -338,7 +338,7 @@ test('a story-scoped observation renders on its epic as well as in the retro', (
   // constraint between them would make gathering an observation destroy where it came from, so a
   // template set that rendered it only under the retro would drop the story's `**Retro**:` half —
   // and the whole-corpus appearance check would not notice, because the retro still holds it.
-  const epic = written.find((file) => file.path === 'docs/epics/1-01-epic-projection.md');
+  const epic = written.find((file) => file.path === 'docs/epics/01-01-epic-projection.md');
   const retro = written.find((file) => file.path.startsWith('docs/retros/'));
 
   assert.match(epic.text, /### Retro/);
@@ -373,7 +373,7 @@ test('a parentage cycle fails the render rather than hanging it', (t) => {
   const names = identifiers(db);
 
   assert.ok(!names.has(built.epic.id));
-  assert.equal(names.get(built.spec.id), '1');
+  assert.equal(names.get(built.spec.id), '01');
 });
 
 test('a story blocked by a story in another epic names that epic', (t) => {
@@ -393,11 +393,11 @@ test('a story blocked by a story in another epic names that epic', (t) => {
   });
 
   const epic = project(db, { write: false }).written
-    .find((file) => file.path === 'docs/epics/1-01-epic-projection.md');
+    .find((file) => file.path === 'docs/epics/01-01-epic-projection.md');
 
   // `Story 4` alone would be ambiguous the moment the edge leaves the epic, and cross-epic story
   // blocking is one of the two directions `010-dependency.sql` says occurs in real epics.
-  assert.match(epic.text, /\*\*Blocked by\*\*: 1-02 Story 4/);
+  assert.match(epic.text, /\*\*Blocked by\*\*: 01-02 Story 4/);
 });
 
 // --- Determinism and fidelity, over the whole set --------------------------------------------
@@ -464,8 +464,8 @@ test('no marker survives into any file, in any template', (t) => {
     assert.doesNotMatch(file.text, MARKER, `${file.path ?? 'inline'} shipped a marker verbatim`);
   }
 
-  assert.match(corpusText(all), /Superseded by spec 1\./, 'requirement.text');
-  assert.match(corpusText(all), /The matrix reaches its rows through spec 1\./, 'finding.summary');
+  assert.match(corpusText(all), /Superseded by spec 01\./, 'requirement.text');
+  assert.match(corpusText(all), /The matrix reaches its rows through spec 01\./, 'finding.summary');
 });
 
 test('every file ends in exactly one newline and holds no CRLF', (t) => {
@@ -537,8 +537,8 @@ test('a coverage matrix is numbered through its epic to the spec above it', (t) 
   // and a matrix's parent is an epic.
   const names = identifiers(db);
 
-  assert.equal(names.get(built.epic.id), '1-01');
-  assert.equal(names.get(built.coverage_matrix.id), '1-01');
+  assert.equal(names.get(built.epic.id), '01-01');
+  assert.equal(names.get(built.coverage_matrix.id), '01-01');
 
   const matrix = db.prepare('SELECT * FROM document WHERE id = ?').get(built.coverage_matrix.id);
   const epic = db.prepare('SELECT * FROM document WHERE id = ?').get(built.epic.id);
@@ -547,5 +547,5 @@ test('a coverage matrix is numbered through its epic to the spec above it', (t) 
   // With only the epic in hand there is no number to build from — the failure the old rule
   // reported as a schema gap, which it was not.
   assert.throws(() => identifierOf(matrix, epic), ProjectionError);
-  assert.equal(identifierOf(matrix, epic, spec), '1-01');
+  assert.equal(identifierOf(matrix, epic, spec), '01-01');
 });

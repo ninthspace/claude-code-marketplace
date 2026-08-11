@@ -19,6 +19,8 @@ import { retire } from './support/vocabulary.js';
 import { authoredTables, columnNames, foreignKeys, triggerNames } from './support/introspection.js';
 import { create } from './fixtures/index.js';
 import { childDocument, retroDocument, rootDocument } from './fixtures/planning.js';
+import { start } from '../src/start.js';
+import { VOCABULARIES } from '../src/schema/seeds/index.js';
 
 /**
  * The parity contract, transcribed from the spec's own enumeration — "thirteen document
@@ -54,6 +56,86 @@ test('the seeded kinds and the parity enumeration name each other, in both direc
   // gave every kind a dir would still satisfy the enumeration above.
   const fileless = db.prepare('SELECT kind FROM document_kind WHERE dir IS NULL').all();
   assert.deepEqual(fileless.map((r) => r.kind), ['adr'], 'the ADR renders inside its parent');
+});
+
+test('a first start puts every term the release ships into an empty database', (t) => {
+  // **`start` and not `planning`**, which is the claim. AD8 says a project begins empty, so what
+  // a new user actually gets is decided by whether the server's own startup seeds — not by
+  // whether `applyVocabulary` works when a fixture calls it directly, which every other test in
+  // this file already establishes. A `start` that had stopped calling it passes all of them.
+  const { db, vocabulary } = start(':memory:');
+
+  t.after(() => db.close());
+
+  // Counted against the shipped manifest rather than against a transcribed total. A number
+  // written here would be a second copy of a list that grows, and the first thing to go stale;
+  // what is worth asserting is that seeding *reached* every vocabulary, which is a fact about
+  // the startup path and not about the manifest agreeing with itself.
+  for (const { table, rows } of VOCABULARIES) {
+    assert.equal(
+      db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n,
+      rows.length,
+      `${table} did not receive every term this release ships`,
+    );
+    assert.equal(
+      vocabulary.inserted[table].inserted,
+      rows.length,
+      `${table}'s report and its rows disagree, so one of the two is not describing the write`,
+    );
+  }
+
+  assert.ok(VOCABULARIES.length >= 6, 'the walk found vocabularies to check');
+
+  // The roster named, because it is the one a user meets by name — `/dpm:consult` and the review
+  // personas both address it — and the one whose absence would read as a working install with a
+  // thin cast rather than as a failure. Every persona, not the two that happen to be exercised
+  // elsewhere in this file.
+  const roster = db.prepare('SELECT name, position FROM agent ORDER BY position').all();
+
+  assert.deepEqual(
+    roster.map((row) => row.position),
+    roster.map((_, index) => index + 1),
+    'the roster is positioned 1..n with no gap or repeat — the order every reader presents it in',
+  );
+  assert.ok(roster.every((row) => row.name), 'and every persona is nameable');
+
+  // The control. Without it the loop above passes against a reading that cannot fail — and the
+  // count is the one assertion in this file with no `assert.throws` beside it to prove otherwise.
+  db.prepare('DELETE FROM agent WHERE name = ?').run(roster.at(-1).name);
+  assert.notEqual(
+    db.prepare('SELECT count(*) AS n FROM agent').get().n,
+    VOCABULARIES.find(({ table }) => table === 'agent').rows.length,
+    'the count is capable of disagreeing, so the agreement above was found rather than assumed',
+  );
+});
+
+test('every persona the roster carries is usable on both columns that name one', (t) => {
+  const db = planning(t);
+  const { review } = reviewedSpec(db);
+  create(db, 'review', { document_id: review.id, scope: 'whole' });
+
+  const roster = db.prepare('SELECT name FROM agent WHERE retired_at IS NULL ORDER BY position')
+    .all().map((row) => row.name);
+
+  assert.ok(roster.length > 1, 'the roster has personas to attribute work to');
+
+  // **Driven off the table, so a tenth persona is covered the day it is seeded.** The rejection
+  // test below asserts that a name outside the roster is refused; on its own that is satisfied by
+  // a schema refusing everything except the two names it happens to name, which would leave seven
+  // seeded personas unusable and every existing test green.
+  for (const [index, agent] of roster.entries()) {
+    assert.ok(
+      create(db, 'document_agent', { document_id: review.id, agent }),
+      `${agent} can be recorded against a document`,
+    );
+    assert.ok(
+      create(db, 'finding', {
+        review_id: review.id, position: index + 1, agent,
+        category_id: 'finding:architectural-risks', severity_id: 'severity:critical',
+      }),
+      `${agent} can be attributed a finding`,
+    );
+  }
 });
 
 test('an adr parents onto a spec, a brief or a discussion, and onto an epic not at all', (t) => {
