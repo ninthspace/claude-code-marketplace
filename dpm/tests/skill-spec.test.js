@@ -32,7 +32,7 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
   skillSource, frontMatter, section, recorder, recoveries, bindings, reachable, seedStartup,
-  driveStartup,
+  driveStartup, CALLABLE, ungated,
 } from './support/skills.js';
 
 const SKILL = 'spec';
@@ -294,6 +294,25 @@ test('the facilitation survives: scope gates, the testing strategy is produced, 
     'and the refusal is about a criterion that cannot be checked, not about some other failure');
   assert.match(section(source, 'Step 3a'), /blocks this step/i,
     'Step 3a still fails closed rather than proceeding');
+});
+
+/**
+ * `spec` is where this defect was found, so its own file keeps the check as well as the corpus.
+ *
+ * `spec` gates at **section** granularity — *"Gate each section with `AskUserQuestion`"* — and its
+ * `####` steps sit inside sections rather than being them, so that rule reaches none of the six.
+ * Steps 6a and 6d record nothing and are gateless on purpose; 3a, 6b and 6c write, and each carries
+ * its own gate. `skills-gates.test.js` holds the property and its controls, this holds the file.
+ */
+test('every one of spec\'s #### steps that records rows gates first', () => {
+  assert.deepEqual(ungated(source), []);
+
+  // Planted, per retro 41: with every step gated, a gateless one has to be manufactured for the
+  // complaint to be observable at all. A comment claiming it would fire is not evidence.
+  const planted = `${source}\n#### Step 6f: Record the leftovers\n\n`
+    + `Present them, **propose** an order, then record with \`${CALLABLE}create_document_section\`.\n`;
+
+  assert.deepEqual(ungated(planted), [{ heading: 'Step 6f: Record the leftovers', depth: 4 }]);
 });
 
 test('must NOT — the skill recovers an entity by reading a generated markdown file', () => {

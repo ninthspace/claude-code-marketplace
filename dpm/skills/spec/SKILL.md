@@ -90,6 +90,11 @@ conventions — and propose requirements that build on what is there.
 Gate each section with `AskUserQuestion`. Approving one moves to the next; Section 7's approval
 ends the run. Each section converges in one or two rounds.
 
+**A step that records rows carries its own gate**, also with `AskUserQuestion`, because the rule
+above reaches sections and a step inside a section is not one. Work through such a step one item at
+a time, one gate per turn. A rendered proposal is not an approved one, and a turn that ends on one
+has recorded nothing and asked nothing.
+
 Where the user needs information the session does not hold, note the gap, carry on, and raise it at
 Section 7. Where they cannot decide after one clarification round, offer a recommended default; if
 they still cannot, record both options and move on — **except in Step 3a**, which blocks.
@@ -170,6 +175,9 @@ checkable form. That is a refinement round, not a rejection of the concern.
 and **blocks this step**. Never dropped, never silently reclassified, never recorded without its
 class.
 
+**Gate the entries before recording them**, with `AskUserQuestion`. An entry refused above comes
+back through the same gate in its checkable form.
+
 Record each as `mcp__plugin_dpm_dpm__create_requirement` with `class: 'environmental_requirement'` for something that
 must be available and `class: 'environmental_restriction'` for something that must not be required,
 so the roll-up traces them as it traces the others.
@@ -224,7 +232,9 @@ where it does — is the false pass it exists to stop.
 #### Step 6b: Give each requirement a criterion and a tag
 
 For each must-have functional requirement **and each non-functional requirement**, propose
-acceptance criteria and an approach for each. Work through them one at a time.
+acceptance criteria and an approach for each. Work through them one at a time, one gate per turn:
+present one requirement's criteria, approaches and must-not clauses together, then ask with
+`AskUserQuestion` before taking up the next.
 
 **Default to automation.** Boundary-crossing is `integration`, isolated logic is `unit`, a
 user-visible workflow is `feature`. Propose `manual` only where automation is genuinely infeasible,
@@ -239,9 +249,9 @@ to land there is phrased as an absence — *no dependencies*, *never mutates X* 
 artefact to point at. Give it an observable: a check that the absence holds is a criterion; the
 absence itself is not.
 
-**Probe for must-not clauses.** For each criterion ask: "are there behaviours this allows that you
-would reject?" A rejected behaviour is its own criterion with `polarity: 'must_not'` — a value on
-the row, not the words "must NOT" at the front of the text.
+**Probe for must-not clauses.** Carry the question into that requirement's gate: "are there
+behaviours this allows that you would reject?" A rejected behaviour is its own criterion with
+`polarity: 'must_not'` — a value on the row, not the words "must NOT" at the front of the text.
 
 Each criterion is `mcp__plugin_dpm_dpm__create_acceptance_criterion` under its requirement, and each approach is
 `mcp__plugin_dpm_dpm__create_criterion_approach` naming the criterion and the tag. A criterion verified two ways
@@ -250,8 +260,8 @@ carries two of them.
 #### Step 6c: Integration boundaries
 
 Identify the seams between components — contracts, event shapes, data flows — from the decisions
-recorded in Section 4. These are where integration coverage belongs. Present, refine, then record
-with `mcp__plugin_dpm_dpm__create_document_section`.
+recorded in Section 4. These are where integration coverage belongs. Present, refine, gate with
+`AskUserQuestion`, then record with `mcp__plugin_dpm_dpm__create_document_section`.
 
 #### Step 6d: Reconcile the tags against the constraints
 

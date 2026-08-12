@@ -162,6 +162,12 @@ Where the story goes beyond what the spec rejects and touches authentication, se
 handling, data mutation, or an external system, **propose** one or two further rejections for the
 user to accept, modify or refuse. Proposed, never assumed.
 
+**Gate the story's criteria with `AskUserQuestion` before writing any of them**, and carry the
+proposed rejections into that same gate — accept, modify and refuse are the dispositions it offers,
+and a proposal with nowhere to be answered is one the run records on the user's behalf. Step 3's own
+gate closes the step; this one is per story, because that is the unit the criteria belong to and the
+unit whose rows exist once it passes.
+
 #### Approach tags
 
 Each criterion's approach is `mcp__plugin_dpm_dpm__create_story_criterion_approach`, naming the criterion and

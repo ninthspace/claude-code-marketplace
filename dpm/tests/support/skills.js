@@ -215,6 +215,78 @@ export function instructions(source, heading) {
     .join(' ');
 }
 
+/** A block puts something to the user for a decision rather than simply executing it. */
+const PROPOSES = /\bpropose\b|\bdraft\b|\bfacilitate\b|\bsuggest\b|work through|\belicit\b|\bagree\b|present (?:each|the|a|it|them)/i;
+
+/**
+ * A block names the mechanism that holds the turn open.
+ *
+ * **`AskUserQuestion` and nothing looser.** Matching the bare word *gate* was tried and is worse
+ * than no check: it is satisfied by a sentence *about* gating, so a block can lose its actual gate
+ * while a neighbouring clause explaining the gating rule keeps it passing. And soft prose — "present
+ * and refine", "confirm before writing" — is the shape the defect takes, so accepting it as
+ * evidence of a gate accepts the thing being checked for.
+ */
+const GATES = /AskUserQuestion/;
+
+/** Startup and bookkeeping blocks, which write and are never a proposal to approve. */
+const BOOKKEEPING = /^(Session|Roster|Library|Retro awareness|Prior decisions|Constraint inheritance|Test runner|Commands|Resolving it|Codebase grounding)$/;
+
+/**
+ * Every `##`–`####` heading block in a skill file, with its depth and body.
+ *
+ * @param {string} source
+ * @returns {{heading: string, depth: number, body: string}[]}
+ */
+export function blocks(source) {
+  const found = [];
+  let current = null;
+
+  for (const line of source.split('\n')) {
+    const heading = line.match(/^(#{2,4})\s+(.*)$/);
+    if (heading) {
+      current = { heading: heading[2], depth: heading[1].length, body: [] };
+      found.push(current);
+    } else if (current) current.body.push(line);
+  }
+
+  return found.map((block) => ({ ...block, body: block.body.join('\n') }));
+}
+
+/**
+ * The blocks that put something to the user, write rows, and are reached by no gate.
+ *
+ * A skill that renders a proposal and ends the turn has asked nothing and, where the rows are
+ * already written, recorded the answer on the user's behalf. Coverage is read off the file in three
+ * clauses rather than from a list of blocks judged once:
+ *
+ * 1. the block **gates itself** — it names `AskUserQuestion`;
+ * 2. a `###`-or-shallower block is reached by a **blanket rule in the skill's `## Process`
+ *    preamble**, which is where a skill states that every section, step or phase gates;
+ * 3. a `####` block is reached by no blanket rule, because a rule written about sections, steps or
+ *    phases does not say whether a sub-block of one is itself a unit — and a run resolving that
+ *    ambiguity by writing first is the failure this exists to catch.
+ *
+ * **Keyed on what the block does, never on which blocks are named.** A rule listing the steps that
+ * must gate would be a copy of the file rather than a check on it, and the block added next year is
+ * exactly the one no list contains.
+ *
+ * @param {string} source
+ * @returns {{heading: string, depth: number}[]}
+ */
+export function ungated(source) {
+  const preamble = (source.split(/^## Process\s*$/m)[1] ?? '').split(/^### /m)[0];
+  const blanket = GATES.test(preamble);
+
+  return blocks(source)
+    .filter(({ heading, body }) => !BOOKKEEPING.test(heading)
+      && new RegExp(`${CALLABLE}(create|update)_`).test(body)
+      && PROPOSES.test(body)
+      && !GATES.test(body))
+    .filter(({ depth }) => !(depth <= 3 && blanket))
+    .map(({ heading, depth }) => ({ heading, depth }));
+}
+
 /**
  * A dispatcher that records which tools were called and which arguments each call carried, so a
  * run can be checked against the file that prescribed it.

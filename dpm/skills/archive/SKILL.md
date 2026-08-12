@@ -116,8 +116,8 @@ the survey as a document nothing flagged.
 
 1. **Present each unit** with the signals that fired and every document it contains. Units that
    fired something come first.
-2. **Gate each unit on its own** — archive, skip, or open it and choose within. Never present
-   several for one approval, and never carry an approval forward.
+2. **Gate each unit on its own with `AskUserQuestion`** — archive, skip, or open it and choose
+   within. Never present several for one approval, and never carry an approval forward.
 3. **Offer a retired epic under a spec with live siblings separately.** It is **its own unit**, not
    part of any chain, and it takes its coverage matrix and nothing else.
 4. **On approval, stamp every document in the unit**: call the kind's update tool with `archived_at`

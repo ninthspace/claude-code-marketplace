@@ -220,8 +220,9 @@ Three outcomes, and only one of them is actionable:
 ### Step T2: Confirm and waive
 
 Present the waivable epics with the one-line reason each reads clean, and support waiving some of
-them rather than all. Then `mcp__plugin_dpm_dpm__update_epic` with `retro_waived_at` and `retro_waived_reason`
-together.
+them rather than all. **Then gate with `AskUserQuestion` — which epics to waive — and write only
+what it returns.** Then `mcp__plugin_dpm_dpm__update_epic` with `retro_waived_at` and
+`retro_waived_reason` together.
 
 **Both or neither — the database refuses one without the other.** A waiver with a date and no reason
 is a decision with no record of why it was made, so the pairing is enforced rather than encouraged.
