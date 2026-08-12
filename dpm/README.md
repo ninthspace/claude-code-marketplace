@@ -73,30 +73,42 @@ CPM `docs/` tree. New and existing projects alike begin with a blank database, s
 adopting dpm carries none of its history across — the artefacts stay exactly where they are,
 as CPM's files, and dpm neither converts nor repairs them.
 
-**But dpm will offer to delete them, so move them first.** The projection reclaims a file it
-did not write if the name looks like one it would have: anything matching
-`<number>-<kind>-<slug>.md` under a projected directory is treated as a document that no
-longer exists, because that is a name only this renderer produces. It is also exactly how CPM
-names its artefacts. So in a repository that used CPM, the first publish reports the entire
-existing corpus as orphaned.
+**But dpm will offer to delete some of them, so move them out of the way first.** The
+projection reclaims a file it did not write when the name carries one of dpm's *own kind names*
+in the position the renderer puts it — `-spec-`, `-epic-`, and so on — inside the directory that
+kind is mapped to. Whether that catches a given CPM directory comes down to whether the two
+systems happen to use the same word for the same kind of document: `spec` and `spec` collide,
+`plan` and `problem_brief` do not.
 
-The fix is to put them somewhere the rule does not look. Only the seeded projection
-directories are walked — `plans`, `briefs`, `specifications`, `epics`, `reviews`, `retros`,
-`quick`, `discussions`, `communications`, `audits`, `runbooks`, `library` — so a corpus moved
-under `docs/archive/` is out of reach and stays readable:
+**Move all twelve regardless.** The ones that are safe are safe by coincidence of vocabulary,
+and renaming a single kind in a later version moves a directory from one column to the other
+with nothing to announce it. Sorting them is work that has to be redone every release, and
+being wrong costs files.
+
+Only those twelve are walked, and only one level deep, so `docs/cpm/` is permanently out of
+reach and stays readable:
 
 ```sh
-mkdir -p docs/archive
-git mv docs/specifications docs/epics docs/retros docs/archive/   # and any others in use
+mkdir -p docs/cpm
+git mv docs/plans docs/briefs docs/specifications docs/epics docs/retros docs/quick \
+       docs/discussions docs/communications docs/reviews docs/audits docs/runbooks \
+       docs/library docs/cpm/   # drop any you do not have
 ```
 
-A directory the rule does walk is still safe for files it cannot mistake for its own: a
-hand-kept `docs/epics/README.md` is never a candidate.
+`docs/architecture/` is not on that list because it is never walked at all: dpm renders an ADR
+inside the document that raised it and has no directory for the kind. Leave your ADRs where
+they are.
+
+A walked directory is still safe for files the rule cannot mistake for its own: a hand-kept
+`docs/epics/README.md` is never a candidate.
 
 **Preview before the first publish either way.** `/dpm:publish` lists every removal and asks
 before it removes anything. `bin/dpm-publish.js` does not — it is the non-interactive form,
 and it is also the command the pre-commit guard names when it refuses a commit. In a
 repository with a CPM corpus still in place, reach for the skill.
+
+Once the corpus is out of reach, [MIGRATION.md](MIGRATION.md) covers the other half: which of
+it, if any, is worth carrying over, and which is finished work that no dpm skill will ever read.
 
 ## Status
 
