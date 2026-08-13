@@ -28,6 +28,7 @@ is what a checkout restores from.
 - **FR7 — A database that disagrees with the dump is diagnosed by direction.** The guard distinguishes *database ahead* (publish), *dump ahead* (import) and *both moved* (reconcile deliberately), and names the fix belonging to each. Today it reports `differs` and names publish in every case, which silently discards a pull.
 - **FR8 — An explicit import operation exists, sharing one implementation with the merge.** Import is the merge's restore → rename-into-place → verify-round-trip → publish → re-guard sequence without the three-way merge.
 - **FR10 — A first open that did something unusual reports it in one line on stderr.** A restore from the dump, or a database served read-only, is named. An ordinary create is not.
+- **FR12 — The deferred open honours a read-only server mode.** Where the server is running read-only, the first tool call refuses a missing database rather than creating one, writes no `.dpm/` directory and no ignore file, and performs no restore. The mode is introduced by spec 48's AD1 (`DPM_READ_ONLY=1`), which needs SQLite's refusal on a missing file to supply its own FR11 state; this requirement is that FR1–FR6 do not defeat it by creating on first call instead. The two specs are complementary — 48 stops an observer *migrating* a project, this one stops any caller *creating* one — and either may land first.
 
 ### Should Have
 
@@ -99,6 +100,13 @@ carries comments citing AD4, AD5, AD10 and AD11 and a second AD4 would be unreso
 
 **Alternatives considered**: reimporting automatically whenever the dump is ahead — rejected as AD11's mistake with data loss in place of an inconvenient rewrite. Never restoring and leaving the clone case manual — rejected because the README already promises otherwise and an empty database beside a full dump is a state nobody wants.
 
+**There is a third case, and it is not a weaker form of the first: under a read-only server, create
+never.** A restore is a write, so FR6 is out of bounds there however empty the directory is — a
+read-only observer that restored a project from its dump would be writing into a repository it was
+launched specifically not to touch. The distinction that makes the automatic case safe is that nothing
+can be lost, and it holds only because the caller was going to use the database; an observer was not.
+Read-only refuses instead, and the refusal is what spec 48's FR11 reads as a named state (FR12).
+
 ### AD15 — The ignore file is nested in `.dpm/`, not appended to the root `.gitignore`
 
 **Choice**: write `.dpm/.gitignore` containing `dpm.db*`, only when absent, before the database file is created.
@@ -119,8 +127,21 @@ carries comments citing AD4, AD5, AD10 and AD11 and a second AD4 would be unreso
 
 ### In Scope
 
-- FR1–FR8 and FR10; FR9 and FR11.
+- FR1–FR8, FR10 and FR12; FR9 and FR11.
 - `src/server/index.js` — `main()` becomes a template build plus a lazy `open()` carrying the mkdir, the ignore file, restore-if-missing, and the version-ahead gate.
+
+**Landing order against spec 48.** Spec 48 (*dpm board*) introduces the read-only server mode its AD1
+specifies, and this spec's FR12 is the requirement that the deferred open does not defeat it. Either
+may land first and the split of work differs:
+
+- **This spec first**: 48's server amendment reduces to the read-only connection, the skipped migration  
+  and seeding, and the refusal its FR11 reads. Nothing there has to prevent a file being created.
+- **48 first**: its amendment is built as specified, and FR12 is then a constraint on the lazy open  
+  rather than a description of behaviour that already holds.
+
+FR12 is a must-have in both orders. Should the read-only mode never be built, FR12 is satisfied
+vacuously — which is a reason to check it against 48's own criteria rather than to drop it.
+
 - `src/server/mcp.js` — `methods()` splits `tools/list` from `tools/call` with a defaulted resolver.
 - A sync-marker module, written by publish and import, read by the guard.
 - `src/guard/` — the three-way verdict, the named fix per case, and the adopt-on-agreement upgrade path.
@@ -184,6 +205,10 @@ production entries, so no criterion needs the real host.
 | FR8 | Pull → guard names import → import → commit passes the guard, and the pulled rows are present | `[feature]` |
 | FR10 | A first open that restored from a dump writes exactly one line to stderr naming the restore; an ordinary create writes none | `[integration]` |
 | FR10 | must NOT write any of it to stdout | `[integration]` |
+| FR12 | A read-only server whose first tool call finds no database refuses with SQLite's own error rather than creating one | `[integration]` |
+| FR12 | After that refusal, no `.dpm/` directory, no `.gitignore` and no database file exist | `[integration]` |
+| FR12 | must NOT restore from a dump under read-only: a directory holding `.dpm/dpm.sql` and no database still yields the refusal, and no database is written | `[integration]` |
+| FR12 | The same spawn and the same call **without** the read-only flag does create the database — the decoy that stops the three absences above passing on a server too broken to reach the filesystem at all | `[integration]` |
 | FR9 | The README's setup carries no ignore-line instruction and still carries the pre-commit symlink step | `[unit]` |
 | FR11 | The README names `dpm-merge`, says when to run it, and shares one constant with the guard's reconcile message rather than a second copy of the command string | `[unit]` |
 | NFR1 | A clean spawned session writes nothing to stderr | `[integration]` |

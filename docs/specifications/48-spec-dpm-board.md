@@ -138,13 +138,20 @@ skips `migrate` and `applyVocabulary`, and serves `readOnlyTools`. SQLite's own 
 file supplies FR11's missing-database state.
 
 **Rationale**: `bin/dpm-mcp.js` calls `start()`, which migrates the database and re-seeds vocabulary
-before a single tool is called, and `main()` creates `.dpm/` and the database file on the way in. So
-merely opening the board after a plugin update would migrate every registered project's database,
-leaving each one diverged from its committed `.dpm/dpm.sql` — and the pre-commit guard would then
-refuse the user's next commit in a repository they had not touched. The failure is silent, delayed,
-and impossible to attribute. A read-only connection closes it at the only layer that can, and the
-same flag refuses a missing file (`ERR_SQLITE_ERROR`, confirmed on Node 24.19) which closes the
-create-on-open hazard as a side effect.
+before a single tool is called. So merely opening the board after a plugin update would migrate every
+registered project's database, leaving each one diverged from its committed `.dpm/dpm.sql` — and the
+pre-commit guard would then refuse the user's next commit in a repository they had not touched. The
+failure is silent, delayed, and impossible to attribute. A read-only connection closes it at the only
+layer that can.
+
+**The migration is the whole of the rationale, and the create-on-open hazard is no longer part of it.**
+An earlier draft of this decision also cited `main()` creating `.dpm/` and the database file on the way
+in, and credited the read-only flag with closing that as a side effect. Spec 49 closes it at the
+source for every caller, not only for a board-launched one, so read-only mode is not what protects a
+registered project from acquiring a database. What the flag still does — and what FR11 depends on — is
+supply the *named state*: SQLite refuses to open a missing file read-only (`ERR_SQLITE_ERROR`,
+confirmed on Node 24.19), which is how the board learns a project has no database rather than
+inferring it. That is an obligation on this spec whether or not 49 has landed.
 
 **Alternatives considered**: an existence check plus call-site discipline (leaves the migration
 intact); copying the database to a temporary file and serving from the copy (racy, and stale by
@@ -152,6 +159,19 @@ construction); accepting the migration as harmless (it is not — it breaks the 
 
 **Consequence**: this spec spans two components. The board depends on the server amendment, so the
 amendment is built first.
+
+**Consequence — the relationship to spec 49, in both landing orders.** Spec 49 (*DPM Database
+Lifecycle*) defers creation for every caller and adds FR12, which requires the deferred open to honour
+this mode: refuse a missing database rather than create it, write no directory and no ignore file, and
+perform no restore. The two specs are complementary — 49 covers create universally and leaves
+migrate-on-first-use alone, this one covers migrate for observers and needs the refusal for FR11 — so
+neither replaces the other, and the order they land in changes only how much each carries.
+
+- **49 first**: this amendment reduces to the read-only connection, the skipped migration and seeding,  
+  and the refusal that FR11 reads. Nothing here has to prevent a file being created, because nothing  
+  creates one.
+- **This one first**: the amendment is built as specified, and 49's FR12 is then the requirement that  
+  its lazy open does not reintroduce the create on the read-only path.
 
 ### AD2 — Python 3.11 and Textual, forked from cpm board's module split
 
@@ -283,7 +303,8 @@ happens on — so every environmental entry is a development claim and takes an 
 | FR2 | must NOT open any file under a project's `docs/` or `.dpm/` from board code | `[unit]` |
 | FR3 | Reading a project spawns exactly one server process, reused across subsequent reads | `[integration]` |
 | FR3 | Every spawned process is terminated when the board exits | `[integration]` |
-| FR3 | must NOT spawn a server against a project with no `.dpm/dpm.db`, and no file is created there | `[integration]` |
+| FR3 | must NOT spawn a server against a project with no `.dpm/dpm.db` — no process starts, and the project renders FR11's named missing-database state rather than nothing at all | `[integration]` |
+| FR3 | A server spawned read-only against a missing database refuses with `ERR_SQLITE_ERROR` and creates no file, driven as the sequence board code would perform: spawn, then call a read tool | `[integration]` |
 | FR4 | Projects, Epics and Stories columns render, and focus moves between them with ← / → | `[feature]` |
 | FR4 | The highlighted row's preview panel renders beneath its column | `[feature]` |
 | FR5 | An epic held by an incomplete blocker renders blocked and names that blocker | `[tdd] [integration]` |

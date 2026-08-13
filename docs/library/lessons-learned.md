@@ -2,7 +2,7 @@
 title: Promoted Retro Lessons
 source: docs/retros/ (promoted via /cpm:retro learn)
 added: 2026-08-11
-last-reviewed: 2026-08-11
+last-reviewed: 2026-08-13
 scope:
 
   - do
@@ -31,3 +31,14 @@ for reaching.
 shared `Perspectives` procedure reading a roster without `include_body`; that was fixed, and the
 23 skill files beside it were not, which is the defect epic 47-12 exists to close. When a surface
 behaviour bites once, sweep every caller before closing it.
+
+## Amendment — 2026-08-13 (via retro)
+
+**Source**: docs/retros/42-retro-dpm-database-lifecycle.md  
+**Category**: Criteria gaps
+
+An absence can be delivered by something other than the mechanism under test. Before marking a
+criterion of the form "X is not created / does not happen" as met, ask what else in the current state
+of the tree would produce that absence — a crashed process, a sibling change, a fix that landed
+elsewhere. Where the answer is "something else could", the criterion needs the mechanism named before
+it can be verified.
