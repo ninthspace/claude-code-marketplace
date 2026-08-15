@@ -275,6 +275,8 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 **`ralph-loop@ninthspace-ralph` 1.2.0 or later** is the supported configuration — it is what CPM's documented loop behaviour is written against. The loop also runs on `ralph-loop@claude-plugins-official` and `ralph-wiggum@claude-code-plugins`, and `/cpm:ralph` probes whichever hook is installed rather than checking a name or a version. What you lose below 1.2.0 is not an error message: an unreadable transcript ends the run silently and looks like a clean finish, every `<promise>` in the transcript is the hook's own reminder rather than the model's, and `active: false` in the loop's state file does nothing at all. See [the fork's README](https://github.com/ninthspace/ralph-loop) for what each change does.
 
+**Thinking about DPM instead?** The two are the same pipeline over different substrates, and a repository can only sensibly use one. [Moving to DPM from CPM](./dpm/MIGRATION.md) covers what carries across, what does not, and the one move to make before DPM's first publish — CPM can run it with you while you still have both installed.
+
 [View full documentation](./cpm/README.md) | [Interactive Training Guide](./cpm-training-guide.html)
 
 ---
@@ -290,6 +292,14 @@ CPM's pipeline with a different substrate. Every artefact — spec, epic, story,
 - **Queryable state** — "which requirements have no covering criterion" is a query, not a grep across four hundred files
 - **A guard that cannot be fooled** — a pre-commit hook regenerates both artefacts and refuses a commit that disagrees with the database, so a hand-edit to a generated file is caught rather than silently overwritten at the next render
 - **Restorable from text** — `.dpm/dpm.sql` is the committed form; the binary database is derived and gitignored
+
+> **Coming from CPM? Read [MIGRATION.md](./dpm/MIGRATION.md) before you run anything in
+> that repository.** There is no importer and there will not be one — DPM cannot read
+> prose, which is the point of it — so the move is a short list of things worth carrying
+> by hand and a longer list to leave alone. One step has to happen first: DPM's first
+> publish offers to delete files it did not write, and your CPM corpus has to be out of
+> its reach before then. CPM can also walk you through the whole thing, which is worth
+> doing while you still have both systems installed.
 
 **Quick Start:**
 ```bash
@@ -311,7 +321,7 @@ The database is created on the first tool call rather than at launch, so a sessi
 
 **Status:** in use, still settling. The skill corpus, the tool surface, the database lifecycle and the board are in place — specs `47-spec-dpm-sqlite-persistence.md`, `48-spec-dpm-board.md` and `49-spec-dpm-database-lifecycle.md` under `docs/specifications/`, with the work broken down across `docs/epics/47-*`, `48-*` and `49-*`.
 
-[View full documentation](./dpm/README.md)
+[View full documentation](./dpm/README.md) | [Moving to DPM from CPM](./dpm/MIGRATION.md)
 
 ---
 

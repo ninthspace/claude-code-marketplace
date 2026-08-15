@@ -22,8 +22,8 @@ DPM parses prose.
 - **A refused commit is telling you which of four things happened**, and each has a
   different fix — publishing when you should have imported destroys what you pulled. The
   refusal names the command; *When the guard refuses* explains the choice.
-- **Coming from CPM?** Read `MIGRATION.md` first — there is one move to make before you
-  run anything.
+- **Coming from CPM?** Read **[MIGRATION.md](MIGRATION.md)** before you run anything —
+  there is one move to make first, and it is easier while CPM is still installed.
 
 ## Requirements
 
@@ -55,6 +55,13 @@ then `/plugin marketplace add <path to the clone>`.
 
 Installing registers the MCP server, so the tools and skills are available immediately.
 There is nothing to compile either way.
+
+> **Already using CPM in this repository? Stop here and read
+> [MIGRATION.md](MIGRATION.md).** DPM's first publish will offer to delete files it did
+> not write, and the move that puts your CPM corpus out of its reach has to happen
+> before then. The guide also covers what is worth carrying across — which is a
+> conversation best had while CPM is still installed, because it is the one moment you
+> have both systems to hand.
 
 ## First run
 
@@ -199,6 +206,11 @@ See [tools/board/README.md](tools/board/README.md) for the columns, the keys, an
 per-project states.
 
 ## Coming from CPM
+
+**The full guide is [MIGRATION.md](MIGRATION.md), and it can be run for you**: paste its
+URL into `/cpm:consult` while CPM is still installed and you get a conversation that
+already knows what is worth carrying and can see which of it your repository has. This
+section is the one part you should not put off — what DPM will delete if you do.
 
 **There is no importer, and that is a decision rather than a gap** (AD8). DPM never reads a
 CPM `docs/` tree. New and existing projects alike begin with a blank database, so a project
