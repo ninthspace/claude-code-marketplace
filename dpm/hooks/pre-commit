@@ -13,6 +13,13 @@
 # Install with:
 #   ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 #
+# **Check what is at that path first.** This script ends in `exec`, so it replaces an existing
+# pre-commit hook rather than running after it, and git has no notion of a second hook at the same
+# path. `ls -l .git/hooks/pre-commit` and `git config core.hooksPath` tell apart the four cases the
+# README's "When something else owns the hook" covers — a stale link into an older release, a hook
+# manager that has moved the directory out from under this one, the `pre-commit` framework, and a
+# hook someone wrote. Only the first is safe to overwrite, and it is the one that needs `ln -sf`.
+#
 # **The target has to be absolute.** A symlink resolves its target from the directory holding the
 # link — `.git/hooks/` — rather than from wherever `ln` was run, so a path written relative to the
 # repository root lands two levels too deep. git then skips a hook it cannot resolve, silently and

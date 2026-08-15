@@ -281,7 +281,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### DPM — Data-Modelled Planning Method (v0.3.0)
+### DPM — Data-Modelled Planning Method (v0.3.1)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 
@@ -303,7 +303,10 @@ CPM's pipeline with a different substrate. Every artefact — spec, epic, story,
 
 **Quick Start:**
 ```bash
-# After installing, in each repository DPM keeps artefacts in:
+# After installing, in each repository DPM keeps artefacts in — check the path is free first,
+# because DPM's hook replaces an existing pre-commit rather than running after it:
+git config core.hooksPath && ls -l .git/hooks/pre-commit   # both should come back empty
+
 # (an absolute <plugin path> — a symlink resolves its target from .git/hooks/)
 ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 
@@ -311,7 +314,9 @@ ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 /dpm:publish
 ```
 
-**Re-make that symlink after each DPM upgrade.** A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
+**If either check came back with something**, the DPM README's [When something else owns the hook](./dpm/README.md#when-something-else-owns-the-hook) covers it — a stale link from a previous release, a hook manager that has moved the directory, the `pre-commit` framework, or a hook of your own to run alongside.
+
+**Re-make that symlink after each DPM upgrade**, with `ln -sf` since the old link is in the way. A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
 
 The database is created on the first tool call rather than at launch, so a session in a directory that does not use DPM leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
 

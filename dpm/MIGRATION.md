@@ -58,9 +58,12 @@ make for you** — that is the whole reason there is no import command.
   usual way a migration ends up half-done.
 - **Check it by running `/dpm:spec`** and reading the first few lines back. It should name your
   decisions and library documents. Don't count things.
-- **Expect less to carry across than feels right** — perhaps four documents, two ADRs, a handful
-  of lessons. The rest stays in `docs/cpm/`, in git, readable whenever you ask.
-- **`docs/architecture/` does not move.** DPM never looks there.
+- **Expect less to carry across than feels right** — perhaps four documents, a handful of lessons,
+  and however many of your decisions are still in force. The rest stays in `docs/cpm/`, in git,
+  readable whenever you ask.
+- **`docs/architecture/` does not move.** DPM never looks there — an ADR lives inside the document
+  that raised it rather than in a folder of its own. Which is also why carrying your ADRs across is
+  the one step that may have to wait until you have a document to hang them on; see step 4.
 
 ---
 
@@ -146,6 +149,10 @@ records what already happened, leave it.**
 Ask for these **in this order**, in one conversation or several — each gives the next something to
 attach to. Claude will handle the mechanics; you're deciding *what* goes, not *how*.
 
+The fourth takes that principle one step further out: a decision has to hang off a document, and on
+a freshly migrated repository there isn't one yet. Read step 4 before you start, because the answer
+may be *not today*.
+
 ### 1. Constraints, if any project is still in flight
 
 If you have work that hasn't finished, its constraints are worth having — the environment it has to
@@ -198,14 +205,56 @@ Expect this to be a short list. If it isn't, that's usually a sign step 2 hasn't
 Your ADRs, but only the ones still in force. Skip anything superseded, and anything that only ever
 constrained work that's now finished.
 
-> "Carry these ADRs into DPM: `docs/architecture/02-adr-event-sourcing.md` and
-> `05-adr-multi-tenancy.md`. Include the options that were rejected and why."
+This one is different from the other three, in a way that decides *when* you do it.
 
-Note the path — `docs/architecture/` did not move, because DPM never touches it.
+**A decision has to hang off something.** In CPM an ADR was a file in its own folder, answerable to
+nothing. In DPM it is part of a document — a spec, a brief, or a recorded discussion — because a
+decision made in the abstract is a decision nobody can tell you the reason for later. So before you
+can carry one across, you have to say what it belongs to, and a repository that has just migrated
+has nothing yet.
 
-**Ask for the rejected options.** A decision that records only what was chosen doesn't tell a future
-conversation anything — the value is in what was considered and set aside, because that's what stops
-the same argument being had again.
+That gives you two moments to choose between:
+
+- **You already know what you're building next.** Write that spec first — `/dpm:spec` — and carry
+  the decisions that bear on it onto that spec. This is the better option whenever it's available,
+  and the reason is the step after: when you break the spec into epics, the breakdown reads *that
+  spec's* decisions. A decision recorded somewhere else won't reach it, and won't shape the work it
+  was supposed to constrain.
+- **You don't, or the decisions are older and broader than any one piece of work.** Have them
+  recorded against a discussion instead, created for the purpose. Say what it's for; that sentence
+  is the context a bare list of decisions would otherwise be missing. **Make a new one** — if you
+  have a discussion already it is probably the record of this migration, and hanging your
+  architecture off the conversation about moving tools reads to the next person exactly as wrong as
+  it is.
+
+> "Before I start anything new: make a discussion called *Architecture as it stands*, saying these
+> are decisions inherited from the CPM era and still in force. Then carry
+> `docs/architecture/02-adr-event-sourcing.md` and `05-adr-multi-tenancy.md` into it."
+
+Note the path — `docs/architecture/` did not move, because DPM never touches it. Your ADR files stay
+readable exactly where they are; what you're doing here is putting the ones that still bind
+somewhere DPM will read them.
+
+**Say which option you took, not just what the document concluded.** DPM records a decision as
+*proposed* until one of its options is marked as the one chosen — that's what turns it into an
+accepted decision rather than an open question. A decision that has been binding your architecture
+for two years arriving as *proposed* is worse than not carrying it, because the next conversation
+will treat it as still up for debate. So name the option you went with:
+
+> "Multi-tenancy by schema is the one we chose and it's still in force — record it as accepted."
+
+**Ask for the rejected options too.** A decision that records only what was chosen doesn't tell a
+future conversation anything — the value is in what was considered and set aside, because that's what
+stops the same argument being had again. DPM keeps each option and how it scored against the axes you
+compared them on, so this is worth the extra sentence:
+
+> "Include the options we rejected and why, and how they compared — that's in the *Considered
+> alternatives* section of each file."
+
+If none of this is decidable yet, **leave it**. Steps 1 to 3 are a complete migration on their own,
+and your ADRs are still sitting in `docs/architecture/`, unchanged and unread by anything. Coming
+back for them when you write your first spec costs nothing; carrying them onto a placeholder now
+costs you the one thing that made them useful.
 
 ---
 
@@ -224,9 +273,11 @@ Read the first few lines of what it says back. It should tell you what it found 
 naming the library documents it's going to use.
 
 - **It names your decisions and your library documents** — the migration worked. Stop here.
-- **It says it found nothing** — the material is in DPM but not reachable. Nine times out of ten
-  that's the scope from step 2: the documents are there, but nothing knows which skills should read
-  them. Say so and ask Claude to check.
+- **It names your library documents and no decisions** — expected, if you left step 4 for later.
+  This run is the moment to come back to it: there is now a spec for the decisions to hang off.
+- **It says it found nothing at all** — the material is in DPM but not reachable. Nine times out of
+  ten that's the scope from step 2: the documents are there, but nothing knows which skills should
+  read them. Say so and ask Claude to check.
 
 You can stop the spec run as soon as you've read the startup lines. You're testing the migration,
 not writing a spec.
@@ -246,7 +297,14 @@ judgement about what's still true and what's finished is yours, and it can only 
 at a time. Read what comes back.
 
 **Less will carry over than you expect, and that's the design.** A project with three years of CPM
-history might carry across four library documents, two ADRs and a handful of lessons. That can feel
-like you've thrown something away. You haven't — it's all still in `docs/cpm/`, still in git,
-still readable by you and by Claude whenever you ask. What's changed is that DPM won't be reading it
-over your shoulder, which is precisely what makes it faster.
+history might carry across four library documents and a handful of lessons. That can feel like
+you've thrown something away. You haven't — it's all still in `docs/cpm/`, still in git, still
+readable by you and by Claude whenever you ask. What's changed is that DPM won't be reading it over
+your shoulder, which is precisely what makes it faster.
+
+**Your decisions are the exception, and the count depends on the project.** If your architecture was
+settled up front — how sync orders and merges, how auth works across platforms, where the data layer
+sits, what the release channel is — then most of your ADRs are still binding and most of them should
+come across. Ten is not a sign you're carrying too much; it's a sign the decisions were made at the
+start rather than accumulated as you went. What to skip is what's *superseded* or spent, not what's
+numerous.

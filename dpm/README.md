@@ -68,11 +68,27 @@ There is nothing to compile either way.
 Two steps, in a repository DPM is going to keep planning artefacts in.
 
 **1. Install the pre-commit hook.** It regenerates both artefacts and refuses a commit
-that disagrees with the database. From the repository root:
+that disagrees with the database.
+
+**Look before you link.** Git allows exactly one `pre-commit` hook, and DPM's replaces
+whatever is there rather than running it — so two commands first, from the repository
+root:
+
+```sh
+git config core.hooksPath          # expect no output
+ls -l .git/hooks/pre-commit        # expect "No such file or directory"
+```
+
+If both come back empty, install it:
 
 ```sh
 ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 ```
+
+If either came back with something, read [When something else owns the
+hook](#when-something-else-owns-the-hook) before going further — including when the
+`ls` shows a symlink into an older DPM, which is the upgrade case and the one time
+`ln -sf` is the right command.
 
 **`<plugin path>` has to be absolute here**, unlike everywhere else in this README. A
 symlink's target is resolved from the directory holding the *link* — `.git/hooks/` — and
@@ -94,6 +110,16 @@ symlink into the one you linked against. So the ordinary state after upgrading i
 current database checked by the previous release's guard. It refuses rather than
 reporting on a schema it only partly understands — see below — but the refusal is the
 thing that tells you, so it is worth knowing why it arrives.
+
+Re-making it takes `-f`, because the link you are replacing is already there:
+
+```sh
+ln -sf <new plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+```
+
+**`-f` deletes what it replaces, without asking and without a copy.** That is what you
+want when it is DPM's own stale link and never what you want otherwise, which is why the
+check above comes first rather than this command being the one you always run.
 
 The database itself is not committed — `.dpm/dpm.sql` is its committed text form, and it
 is what a checkout restores from. That restore is not a step either: on a fresh clone the
@@ -117,6 +143,71 @@ and `.dpm/dpm.sql` go in the same commit.
 
 Skip step 2 and the hook refuses the commit and names this command; nothing is lost, and
 nothing is written behind you.
+
+## When something else owns the hook
+
+DPM's hook ends in `exec` — it hands the process to the guard and never returns, so it
+runs *instead of* whatever was at `.git/hooks/pre-commit`, not before it. Git has no
+notion of a second hook at the same path. Four cases, and the check in step 1 tells them
+apart.
+
+**`ls` showed a symlink into an older DPM.** The upgrade case, and the only one where
+overwriting is correct:
+
+```sh
+ln -sf <new plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+```
+
+**`git config core.hooksPath` printed a path.** Something — husky, lefthook, or the
+`pre-commit` framework — has moved the hooks directory, and git now looks *only* there.
+This is the case worth knowing about, because installing DPM's link anyway works
+perfectly and does nothing: the file is created, `ls -l` shows it correct, and git never
+invokes it. Put DPM's hook inside whatever owns that directory instead, using that tool's
+own mechanism, or unset the setting if you no longer use it:
+
+```sh
+git config --unset core.hooksPath
+```
+
+**You use the `pre-commit` framework** (the Python one — the name collision is
+unfortunate). It owns `.git/hooks/pre-commit` and dispatches from
+`.pre-commit-config.yaml`, so overwriting it disables every other check in the
+repository. Register DPM as a local hook instead:
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: dpm-guard
+        name: DPM projection guard
+        entry: <plugin path>/dpm/hooks/pre-commit
+        language: system
+        pass_filenames: false
+```
+
+**`ls` showed a hook of your own, or another tool's.** Keep it and run both, in a wrapper
+you own. Move the incumbent aside, then write a hook that calls each in turn:
+
+```sh
+mv .git/hooks/pre-commit .git/hooks/pre-commit.local
+cat > .git/hooks/pre-commit <<'SH'
+#!/bin/sh
+set -e
+.git/hooks/pre-commit.local
+exec <plugin path>/dpm/hooks/pre-commit
+SH
+chmod +x .git/hooks/pre-commit
+```
+
+**Order matters, and DPM's goes last.** `set -e` stops at the first failure, and DPM's
+guard is the one whose refusal has a specific fix attached — reaching it after your own
+checks have passed means the message you are reading is about the thing you still have
+to do. It stays `exec` so the guard's exit status is the hook's.
+
+The wrapper is a real file rather than a symlink, so it does not go stale on an upgrade
+the way a link into a versioned plugin path does — but the `<plugin path>` inside it
+does. Re-edit that line when you upgrade; it is the same obligation as re-making the
+symlink, in a place the check in step 1 will not find for you.
 
 ## When the guard refuses
 
