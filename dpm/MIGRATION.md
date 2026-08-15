@@ -29,6 +29,12 @@ That gets you a conversation that already knows what the four things worth carry
 see which of them your repository actually has. The rest of this document is the same migration
 done by reading; you do not need both.
 
+**Expect it to start using dpm's own tools, and let it.** You began in a CPM skill, but if dpm is
+installed its MCP tools are available in that same session, and writing your library documents and
+decisions through them is how they end up as rows rather than as more prose. A CPM session reaching
+for dpm's tools looks like it has wandered off; it has not, and it is the only way this conversation
+can finish the job. What matters is which system the work lands in, not which one you typed to.
+
 Two things stay yours either way. The `git mv` in the next section is a decision about your files,
 so make it yourself rather than delegating it, and **what is still true is a judgement nothing can
 make for you** — that is the whole reason there is no import command.
