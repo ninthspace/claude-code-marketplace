@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path';
 import { dump } from '../dump/index.js';
 import { contents, orphans, DUMP_PATH } from '../guard/index.js';
 import { project } from '../projection/index.js';
+import { writeMarker } from '../sync/marker.js';
 
 /**
  * Bring the generated artefacts into agreement with the database.
@@ -71,7 +72,8 @@ export function publish(db, { root = '.', dryRun = false } = {}) {
   // fix is to run again. The reverse — a current dump above a projection that never landed — is a
   // commit whose readable diff is missing the change its database already carries, which is FR7's
   // second failure and the one that passes every check aimed at the markdown.
-  const artefacts = [...rendered, { path: DUMP_PATH, text: dump(db).sql }];
+  const dumped = dump(db).sql;
+  const artefacts = [...rendered, { path: DUMP_PATH, text: dumped }];
 
   const written = [];
   const rewritten = [];
@@ -109,6 +111,20 @@ export function publish(db, { root = '.', dryRun = false } = {}) {
     }
 
     for (const path of removed) unlinkSync(join(root, path));
+
+    // **The sync point, recorded last** (AD13). This is the moment the database and the dump are
+    // known to agree, and the marker is the only thing that will still know it after a pull rewrites
+    // the dump and touches nothing else — without it the guard can see that the two differ and
+    // cannot say which of them moved.
+    //
+    // Last rather than beside the dump write, because the two half-finished states a failure can
+    // leave are not equally survivable. A marker one publish behind is a stale marker: the guard
+    // reads it, finds the database ahead, and names publish — which is both true and the right fix.
+    // A marker for a dump that never landed is a verdict built on a lie, and it reports clean.
+    //
+    // Written even when nothing changed, because "nothing changed" is precisely the state the
+    // marker exists to record. A publish over a settled tree is how an existing project adopts one.
+    writeMarker(dumped, { root });
   }
 
   return { written: written.map((file) => file.path), rewritten, unchanged, removed, inline };

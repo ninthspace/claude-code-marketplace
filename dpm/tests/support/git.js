@@ -10,9 +10,14 @@
  * **The staging commands here are the fixture's, not the project's.** CPM's rule that version
  * control stays with the user is about the repository the work is happening in; this one is created
  * by the test, lives under `os.tmpdir()`, and is deleted when the test ends.
+ *
+ * **Nothing here writes an ignore file.** It used to write one at the root, transcribing what the
+ * README told a user to type; the server now writes `.dpm/.gitignore` itself (FR4, AD15) and the
+ * README no longer names the step. Nothing needs ignoring in this fixture either way — every
+ * database it opens is `:memory:`, so no `dpm.db` is ever on disk to be staged.
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -27,8 +32,50 @@ import { spineTools } from '../../src/tools/index.js';
 /** The committed text form of the database — the file every branch here conflicts on. */
 export const DUMP = '.dpm/dpm.sql';
 
+/**
+ * `git check-ignore -v` against `root`, as a verdict *and* its provenance.
+ *
+ * Exit 0 means ignored and 1 means not — and the `-v` line names the file and the pattern that
+ * decided it. Reading that back is the whole value: without it, a machine-level `core.excludesFile`
+ * on whoever is running the suite passes every positive ignore assertion for the wrong reason, and
+ * the suite is green on a project that would commit its database.
+ *
+ * `spawnSync` rather than `execFileSync` because exit 1 is an *answer* here, not a failure.
+ *
+ * @param {string} root A git repository.
+ * @returns {(path: string) => {ignored: boolean, source: string}}
+ */
+export function ignoreCheck(root) {
+  return (path) => {
+    const { status, stdout } = spawnSync('git', ['check-ignore', '-v', path],
+      { cwd: root, encoding: 'utf8' });
+
+    return { ignored: status === 0, source: stdout.trim() };
+  };
+}
+
 /** The tool surface, by name. The spine is written through it and never by statement. */
 export const surface = (db) => Object.fromEntries(spineTools(db).map((tool) => [tool.name, tool.handler]));
+
+/**
+ * An empty repository at `root`, and a `git` bound to it.
+ *
+ * Identity is set on the repository rather than read from the machine, so every fixture here works
+ * on a checkout with no global git config — and produces the same commits on every one. This is the
+ * only part three otherwise-unlike fixtures share; what each does *next* is what makes it its own.
+ *
+ * @param {string} root An existing directory.
+ * @returns {(...args: string[]) => string}
+ */
+export function initRepository(root) {
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+
+  git('init', '--quiet', '--initial-branch', 'main');
+  git('config', 'user.email', 'fixture@example.invalid');
+  git('config', 'user.name', 'Fixture');
+
+  return git;
+}
 
 /**
  * A repository with `.dpm/dpm.sql` and a projection committed on its default branch.
@@ -45,15 +92,9 @@ export function gitRepository(t) {
 
   t.after(() => rmSync(root, { recursive: true, force: true }));
 
-  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
-
-  git('init', '--quiet', '--initial-branch', 'main');
-  git('config', 'user.email', 'fixture@example.invalid');
-  git('config', 'user.name', 'Fixture');
+  const git = initRepository(root);
 
   mkdirSync(join(root, '.dpm'), { recursive: true });
-  // The database itself is derived from the dump and is not committed; AD4 commits the text.
-  writeFileSync(join(root, '.gitignore'), 'dpm.db\ndpm.db-*\n.dpm/dpm.db*\n', 'utf8');
 
   /**
    * Apply `change` to the committed database and rewrite both generated artefacts.

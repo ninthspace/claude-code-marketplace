@@ -16,15 +16,16 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync,
+  existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { committer } from './support/commit.js';
+import { initRepository } from './support/git.js';
 import { runNode } from './support/run-node.js';
 import { fullCorpus } from './support/corpus.js';
+import { IGNORE_FILE, writeIgnore } from '../src/server/ignore.js';
 import { start } from '../src/start.js';
 import { spineTools } from '../src/tools/index.js';
 import { project } from '../src/projection/index.js';
@@ -48,25 +49,25 @@ function freshProject(t) {
 
   t.after(() => rmSync(root, { recursive: true, force: true }));
 
-  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  const git = initRepository(root);
 
-  git('init', '--quiet', '--initial-branch', 'main');
-  git('config', 'user.email', 'fixture@example.invalid');
-  git('config', 'user.name', 'Fixture');
-
-  // Step 1 of the README, performed exactly as it is written there — a symlink, and the ignore line
-  // that keeps the binary database out of the commit AD4 says carries the text. Nothing sets the
-  // hook's mode, deliberately: the README does not either, so a fixture that did would supply the
-  // one thing a real install has to have arrived with. `plugin.test.js` holds it to `100755`.
+  // Step 1 of the README, performed exactly as it is written there — and it is now one line, not
+  // two. The ignore step came out when the server started writing `.dpm/.gitignore` itself (FR9),
+  // so a fixture still typing it would be performing an instruction the README no longer gives.
+  // Nothing sets the hook's mode, deliberately: the README does not either, so a fixture that did
+  // would supply the one thing a real install has to have arrived with. `plugin.test.js` holds it
+  // to `100755`.
   symlinkSync(join(ROOT, 'hooks', 'pre-commit'), join(root, '.git', 'hooks', 'pre-commit'));
-  writeFileSync(join(root, '.gitignore'), '.dpm/dpm.db*\n', 'utf8');
 
   // The database is created here rather than by the CLI, because `publish/main.js` opens and never
   // starts: a publish that migrated would resolve a refused commit by changing the thing being
-  // checked. Starting the server is what a user does, and `start` is what the server calls.
+  // checked. Starting the server is what a user does, and this is what the server's `open()` does
+  // on the first tool call — the ignore file first, then `start` — reached through the shipped
+  // writer rather than a transcribed pattern, so the fixture cannot drift from what ships.
   const location = join(root, '.dpm', 'dpm.db');
 
   mkdirSync(dirname(location), { recursive: true });
+  writeIgnore(dirname(location));
 
   const { db } = start(location);
 
@@ -103,10 +104,12 @@ test('a fresh repository, a run that writes, a publish and a commit [feature]', 
   // A tree holding every generated file *plus* a stale one satisfies every check that only walks
   // what the database produces — which is the orphan failure FR6's clause exists to name, and the
   // one a first-run test is most likely to pass over.
+  // `.dpm/.gitignore` is in the list because it is *committed*: AD15's guarantee is that a clone
+  // arrives already ignoring the database, and an untracked ignore file reaches no clone at all.
   const expected = [
     ...project(repo.db, { write: false }).written.map((file) => file.path),
     DUMP_PATH,
-    '.gitignore',
+    `.dpm/${IGNORE_FILE}`,
   ].sort();
 
   assert.deepEqual(repo.tracked(), expected, 'the commit carries something the database does not');

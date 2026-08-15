@@ -8,14 +8,14 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR8 | "A dump that does not survive its own restore is refused by the import and by the merge, with one message from one implementation" | "A dump that does not survive its own restore is refused by the import and by the merge, with one message from one implementation" | Story 1 | `[integration]` | |
-| 2 | FR8 (must NOT) | "must NOT leave the original database replaced when a restore fails — the staging file is gone and the original still opens" | "must NOT leave the original database replaced when a restore fails — the staging file is gone and the original still opens" | Story 1 | `[integration]` | |
-| 3 | FR8 (added) | "An explicit import operation exists, sharing one implementation with the merge. Import is the merge's restore → rename-into-place → verify-round-trip → publish → re-guard sequence without the three-way merge." | "`bin/dpm-import.js` rebuilds the database from `.dpm/dpm.sql` through the shared implementation, and is the command the guard's dump-moved verdict names" | Story 2 | `[integration]` | |
-| 4 | AD13 (added) | "written by both publish and import" | "After an import, the marker equals the hash of the dump on disk and the following guard run reports clean" | Story 2 | `[integration]` | |
-| 5 | FR11 | "The README names `dpm-merge`, says when to run it, and shares one constant with the guard's reconcile message rather than a second copy of the command string" | "The README names `dpm-merge`, says when to run it, and shares one constant with the guard's reconcile message rather than a second copy of the command string" | Story 3 | `[unit]` | |
-| 6 | FR11 (added) | "`dpm-merge` becomes discoverable. It is documented nowhere today, so FR7's reconcile diagnostic would otherwise name a tool findable only by reading the source." | "The README names the import command on the same terms, sharing the constant the guard's dump-moved verdict uses" | Story 3 | `[unit]` | |
-| 7 | FR8 | "Clone → first open restores → publish → commit passes the guard" | "Clone → first open restores → publish → commit passes the guard" | Story 4 | `[feature]` | |
-| 8 | FR8 | "Pull → guard names import → import → commit passes the guard, and the pulled rows are present" | "Pull → guard names import → import → commit passes the guard, and the pulled rows are present" | Story 4 | `[feature]` | |
+| 1 | FR8 | "A dump that does not survive its own restore is refused by the import and by the merge, with one message from one implementation" | "A dump that does not survive its own restore is refused by the import and by the merge, with one message from one implementation" | Story 1, Story 2 | `[integration]` | ✓ |
+| 2 | FR8 (must NOT) | "must NOT leave the original database replaced when a restore fails — the staging file is gone and the original still opens" | "must NOT leave the original database replaced when a restore fails — the staging file is gone and the original still opens" | Story 1 | `[integration]` | ✓ |
+| 3 | FR8 (added) | "An explicit import operation exists, sharing one implementation with the merge. Import is the merge's restore → rename-into-place → verify-round-trip → publish → re-guard sequence without the three-way merge." | "`bin/dpm-import.js` rebuilds the database from `.dpm/dpm.sql` through the shared implementation, and is the command the guard's dump-moved verdict names" | Story 2 | `[integration]` | ✓ |
+| 4 | AD13 (added) | "written by both publish and import" | "After an import, the marker equals the hash of the dump on disk and the following guard run reports clean" | Story 2 | `[integration]` | ✓ |
+| 5 | FR11 | "The README names `dpm-merge`, says when to run it, and shares one constant with the guard's reconcile message rather than a second copy of the command string" | "The README names `dpm-merge`, says when to run it, and shares one constant with the guard's reconcile message rather than a second copy of the command string" | Story 3 | `[unit]` | ✓ |
+| 6 | FR11 (added) | "`dpm-merge` becomes discoverable. It is documented nowhere today, so FR7's reconcile diagnostic would otherwise name a tool findable only by reading the source." | "The README names the import command on the same terms, sharing the constant the guard's dump-moved verdict uses" | Story 3 | `[unit]` | ✓ |
+| 7 | FR8 | "Clone → first open restores → publish → commit passes the guard" | "Clone → first open restores → publish → commit passes the guard" | Story 4 | `[feature]` | ✓ |
+| 8 | FR8 | "Pull → guard names import → import → commit passes the guard, and the pulled rows are present" | "Pull → guard names import → import → commit passes the guard, and the pulled rows are present" | Story 4 | `[feature]` | ✓ |
 
 ## Notes
 
@@ -43,6 +43,23 @@ forbids. The assertion is that one constant reaches both surfaces.
 **Row 1's "one message from one implementation" is asserted by driving both callers.** Comparing each
 against a transcribed expected string would pass on two implementations that agree today; the two
 messages are compared to each other, over the same bad dump.
+
+**Which is why row 1 names two stories.** One of those callers is the import, and the import binary is
+Story 2's — so at Story 1's gate the criterion has one caller and cannot be more than half-proven.
+Story 1 asserts what is reachable there: the merge emits byte-for-byte what the shared implementation
+throws, rather than rewording it, which is the half a later reader would assume rather than check.
+The row is marked only once Story 2's gate has passed too, per this file's multi-story rule. The epic's
+own Task 1.2 note has said this in prose since the breakdown — "the shared-message criterion is only
+meaningful once both callers reach it" — and the mapping simply had not been written to match.
+
+**Row 4 is asserted at its own value, and cannot be asserted at its author.** The criterion is that
+the marker equals the hash of the dump on disk, and after an import it does. What no assertion taken
+after an import can add is *which write put it there*: the rebuild publishes and then re-guards, and
+the guard adopts a marker that disagrees with two artefacts that agree — which is precisely the
+state a publish recording the wrong digest would leave. Driven to confirm it: hashing the wrong text
+in `publish` leaves row 4's assertion green and fails `publish.test.js`, which is where 49-03 bound
+the attribution. Recorded here rather than left for a reader to rediscover, because the line looks
+like it proves more than it does.
 
 **Rows 7 and 8 span four epics.** Both journeys cross the lazy open (49-01), restore-on-create (49-02),
 the marker and verdict (49-03) and import (49-04). They are in this matrix because neither can complete

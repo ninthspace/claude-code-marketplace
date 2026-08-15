@@ -8,21 +8,21 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR4 | "Projects, Epics and Stories columns render, and focus moves between them with ← / →" | "Projects, Epics and Stories columns render, and focus moves between them with ← / →" | Story 1 | `[feature]` | |
-| 2 | FR4 | "The highlighted row's preview panel renders beneath its column" | "The highlighted row's preview panel renders beneath its column" | Story 1 | `[feature]` | |
-| 3 | FR4 (added) | "Projects → Epics → Stories in Miller columns, with a preview panel beneath the Epics and Stories columns and colour carrying state." | "Each derived state maps to a distinct style, asserted from the rendered row rather than from the mapping table, and no two states share one" | Story 1 | `[feature]` | |
-| 4 | ENV7 | "Feature-level tests drive the TUI through Textual's `run_test()` pilot" | "Feature-level tests drive the TUI through Textual's `run_test()` pilot" | Story 1 | `[feature]` | |
-| 5 | FR7 | "Preview text for an epic, spec or retro equals what the read tool returned for it" | "Preview text for an epic, spec or retro equals what the read tool returned for it" | Story 2 | `[integration]` | |
-| 6 | FR7 | "A story's preview renders that story's own criteria and tasks, not the whole epic" | "A story's preview renders that story's own acceptance criteria and tasks, not the whole epic" | Story 2 | `[integration]` | |
-| 7 | FR7 (added) | "the story preview renders that story's own acceptance criteria and tasks as rows" | "A story whose epic has several stories previews only the selected one, asserted against a fixture where another story's criteria would be visible if the scope were wrong" | Story 2 | `[integration]` | |
-| 8 | FR7 (must NOT) | "must NOT open a projected `.md` file to build any preview" | "must NOT open a projected `.md` file to build any preview" | Story 2 | `[unit]` | |
-| 9 | NFR3 | "The Projects column renders before any spawned server has completed its handshake" | "The Projects column renders before any spawned server has completed its handshake" | Story 3 | `[feature]` | |
-| 10 | NFR3 (added) | "Over ten registered projects the Projects column renders without waiting on server startup" | "Over ten registered projects the Projects column renders without waiting on server startup" | Story 3 | `[feature]` | |
-| 11 | NFR3 (must NOT) | "must NOT block the UI thread on a server spawn or a tool call" | "must NOT block the UI thread on a server spawn or a tool call" | Story 3 | `[feature]` | |
-| 12 | FR18 | "`Ctrl+P` opens the palette directly on the board's own actions" | "`Ctrl+P` opens the palette directly on the board's own actions" | Story 4 | `[feature]` | |
-| 13 | FR18 (added) | "`Ctrl+P` opens straight to the board's own actions." | "The palette lists the board's actions and not Textual's default system commands" | Story 4 | `[feature]` | |
-| 14 | FR1 | "Registration works from the CLI and from inside the TUI via a directory picker." | "A directory picker reached from the board registers a project, and the new project appears in the Projects column without a restart" | Story 5 | `[feature]` | |
-| 15 | FR1 (added) | "Register, list and remove projects, persisted under XDG config." | "The picker refuses a directory that is not a dpm project with the same message the CLI gives" | Story 5 | `[feature]` | |
+| 1 | FR4 | "Projects, Epics and Stories columns render, and focus moves between them with ← / →" | "Projects, Epics and Stories columns render, and focus moves between them with ← / →" | Story 1 | `[feature]` | ✓ |
+| 2 | FR4 | "The highlighted row's preview panel renders beneath its column" | "The highlighted row's preview panel renders beneath its column" | Story 1 | `[feature]` | ✓ |
+| 3 | FR4 (added) | "Projects → Epics → Stories in Miller columns, with a preview panel beneath the Epics and Stories columns and colour carrying state." | "Each derived state maps to a distinct style, asserted from the rendered row rather than from the mapping table, and no two states share one" | Story 1 | `[feature]` | ✓ |
+| 4 | ENV7 | "Feature-level tests drive the TUI through Textual's `run_test()` pilot" | "Feature-level tests drive the TUI through Textual's `run_test()` pilot" | Story 1 | `[feature]` | ✓ |
+| 5 | FR7 | "Preview text for an epic, spec or retro equals what the read tool returned for it" | "Preview text for an epic, spec or retro equals what the read tool returned for it" | Story 2 | `[integration]` | ✓ |
+| 6 | FR7 | "A story's preview renders that story's own criteria and tasks, not the whole epic" | "A story's preview renders that story's own acceptance criteria and tasks, not the whole epic" | Story 2 | `[integration]` | ✓ |
+| 7 | FR7 (added) | "the story preview renders that story's own acceptance criteria and tasks as rows" | "A story whose epic has several stories previews only the selected one, asserted against a fixture where another story's criteria would be visible if the scope were wrong" | Story 2 | `[integration]` | ✓ |
+| 8 | FR7 (must NOT) | "must NOT open a projected `.md` file to build any preview" | "must NOT open a projected `.md` file to build any preview" | Story 2 | `[unit]` | ✓ |
+| 9 | NFR3 | "The Projects column renders before any spawned server has completed its handshake" | "The Projects column renders before any spawned server has completed its handshake" | Story 3 | `[feature]` | ✓ |
+| 10 | NFR3 (added) | "Over ten registered projects the Projects column renders without waiting on server startup" | "Over ten registered projects the Projects column renders without waiting on server startup" | Story 3 | `[feature]` | ✓ |
+| 11 | NFR3 (must NOT) | "must NOT block the UI thread on a server spawn or a tool call" | "must NOT block the UI thread on a server spawn or a tool call" | Story 3 | `[feature]` | ✓ |
+| 12 | FR18 | "`Ctrl+P` opens the palette directly on the board's own actions" | "`Ctrl+P` opens the palette directly on the board's own actions" | Story 4 | `[feature]` | ✓ |
+| 13 | FR18 (added) | "`Ctrl+P` opens straight to the board's own actions." | "The palette lists the board's actions and not Textual's default system commands" | Story 4 | `[feature]` | ✓ |
+| 14 | FR1 | "Registration works from the CLI and from inside the TUI via a directory picker." | "A directory picker reached from the board registers a project, and the new project appears in the Projects column without a restart" | Story 5 | `[feature]` | ✓ |
+| 15 | FR1 (added) | "Register, list and remove projects, persisted under XDG config." | "The picker refuses a directory that is not a dpm project with the same message the CLI gives" | Story 5 | `[feature]` | ✓ |
 
 ## Notes
 

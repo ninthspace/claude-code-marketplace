@@ -30,6 +30,7 @@ import { identifierOf, identifiers, pathOf, ProjectionError } from '../src/proje
 import { MARKER, resolve } from '../src/projection/markers.js';
 import { field, heading, paragraph, render, sorted, table } from '../src/projection/text.js';
 import { checkIntegrity } from '../src/integrity/check.js';
+import { IGNORE_FILE, writeIgnore } from '../src/server/ignore.js';
 
 const ROOT = join(import.meta.dirname, '..');
 
@@ -525,12 +526,14 @@ test('nothing in the render path sorts by locale, or reads a clock', () => {
   assert.equal([...sample.matchAll(/\b(Date\.now|new Date)\b/g)].length, 1);
 });
 
-test('nothing outside the projection writes under docs/', () => {
+test('nothing outside the projection writes under docs/', (t) => {
   // **Removal counts, and used to not.** The rule watched `writeFileSync` and `appendFileSync`
   // only, so a module that deleted every projected file passed it — and deletion is the operation
   // a renumber actually needs, which is how the gap surfaced. Unlinking a generated file is the
   // same authority as rewriting one.
-  const WRITES = /\bwriteFileSync\b|\bappendFileSync\b|\bunlinkSync\b|\brmSync\b|\brenameSync\b/;
+  // `writeMarker` for the reason `tests/support/sweeps.js` gives at length: a write reached through
+  // a helper is still a write, and until `src/sync/marker.js` existed no module had one to reach.
+  const WRITES = /\bwriteFileSync\b|\bappendFileSync\b|\bunlinkSync\b|\brmSync\b|\brenameSync\b|\bwriteMarker\b/;
 
   // **Two modules outside `src/projection/` write files, and each is named with what it may write.**
   //
@@ -543,10 +546,33 @@ test('nothing outside the projection writes under docs/', () => {
   // catches it is behavioural rather than a sweep: `publish.test.js` compares every byte it wrote
   // against what `project` returned for the same database.
   //
-  // `src/merge/main.js` renames and removes the staging *database* — `.dpm/dpm.db.merging`, never
-  // anything under `docs/`. It used to write the dump and unlink orphans too; both moved to publish
-  // when the orphan rule stopped being restated at its call site.
-  const ALLOWED = new Set(['src/merge/main.js', 'src/publish/index.js']);
+  // `src/rebuild/index.js` renames and removes the staging *database* — `.dpm/dpm.db.merging`,
+  // never anything under `docs/`. Its one path is `resolve(root, location)` plus a module constant
+  // for the suffix, so a corpus cannot steer it. This was `src/merge/main.js` until the sequence was
+  // extracted for the import to share (Epic 49-04, AD16), and the merge now writes nothing at all.
+  //
+  // `src/server/ignore.js` writes `.gitignore` into the directory it is handed, which is the one
+  // holding the database — `.dpm/`, which ENVX2 permits (Epic 49-01, AD15). It cannot reach `docs/`
+  // because it composes no path of its own beyond that filename, and the assertion that holds it to
+  // that is behavioural rather than a sweep: it runs against a directory this test owns and checks
+  // what appeared there.
+  //
+  // `src/server/from-dump.js` removes exactly the database path it was handed, and only on a
+  // restore that failed (Epic 49-02, FR6). It composes no path at all — the one path it builds,
+  // `dirname(location)/dpm.sql`, it only ever *reads* — so there is no argument by which it could
+  // reach `docs/`, and the file it deletes is one it created microseconds earlier.
+  //
+  // `src/sync/marker.js` writes one file whose path is a module constant joined to the root it is
+  // handed — `.dpm/dpm.db.synced` (Epic 49-03, AD13). It composes nothing from a document, a kind
+  // or a title, so no corpus can steer it, and it holds the constant that names it.
+  //
+  // `src/guard/index.js` writes that same marker, on one verdict: the dump and the database agree
+  // and nothing records it (Epic 49-03, AD13's adopt row). It reaches `docs/` only to *read*, which
+  // is the whole of what a guard does, and the file it writes is the one gitignored path in `.dpm/`.
+  const ALLOWED = new Set([
+    'src/guard/index.js', 'src/publish/index.js', 'src/rebuild/index.js',
+    'src/server/from-dump.js', 'src/server/ignore.js', 'src/sync/marker.js',
+  ]);
 
   const offenders = [];
   let spent = 0;
@@ -572,6 +598,16 @@ test('nothing outside the projection writes under docs/', () => {
   const merge = readFileSync(join(ROOT, 'src', 'merge', 'main.js'), 'utf8');
 
   assert.ok(!/^\s*(?:'|`|")#{1,6} /m.test(merge), 'the merge tool emits markdown of its own');
+
+  // And the ignore writer touches one file, inside the directory it was handed. Run rather than
+  // read, because the question the allowance turns on is *where the bytes land* — a sweep for the
+  // string `docs` would pass on a module that composed the path from fragments.
+  const owned = mkdtempSync(join(tmpdir(), 'dpm-ignore-'));
+  t.after(() => rmSync(owned, { recursive: true, force: true }));
+
+  writeIgnore(owned);
+
+  assert.deepEqual(readdirSync(owned), [IGNORE_FILE], 'the ignore writer wrote something else');
 });
 
 // --- Writing ---------------------------------------------------------------------------------------

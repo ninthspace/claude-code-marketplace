@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path';
 import { runNode } from './support/run-node.js';
 import { fullCorpus } from './support/corpus.js';
 import { start } from '../src/start.js';
-import { readOnlyTools, spineTools } from '../src/tools/index.js';
+import { readOnlyTools, spineTools, versionSkew } from '../src/tools/index.js';
 import { ToolError } from '../src/tools/convention.js';
 import { describe, publish } from '../src/publish/index.js';
 
@@ -141,7 +141,7 @@ test('a database from a newer plugin is not published into by this server', (t) 
   // newer schema writes a projection missing whatever the new columns hold and then deletes the
   // files that projection no longer accounts for — a downgrade that discards planning history
   // rather than reporting it, which is the outcome NFR7 exists to prevent.
-  const [refused] = readOnlyTools([tool], { found: 99, supported: 1 });
+  const [refused] = readOnlyTools([tool], { reason: versionSkew({ found: 99, supported: 1 }) });
 
   assert.throws(() => refused.handler({}), /schema version 99/,
     'publishing was served to a database this server does not understand');
@@ -149,7 +149,8 @@ test('a database from a newer plugin is not published into by this server', (t) 
   // The control: the downgrade only reaches it because it declared `mutates: true`. Declared false
   // — the shape a maintainer would arrive at by reasoning "it writes no row" — it is passed
   // through untouched and publishes happily into exactly the tree it must not.
-  const [served] = readOnlyTools([{ ...tool, mutates: false }], { found: 99, supported: 1 });
+  const [served] = readOnlyTools([{ ...tool, mutates: false }],
+    { reason: versionSkew({ found: 99, supported: 1 }) });
 
   assert.equal(served.handler({}).written.length > 0, true,
     'the positive control did not publish, so the refusal above proves nothing');

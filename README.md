@@ -295,7 +295,6 @@ CPM's pipeline with a different substrate. Every artefact — spec, epic, story,
 ```bash
 # After installing, in each repository dpm keeps artefacts in:
 ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
-echo '.dpm/dpm.db*' >> .gitignore
 
 # Then, after any skill run that wrote something:
 /dpm:publish

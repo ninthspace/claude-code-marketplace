@@ -29,34 +29,21 @@ import { project, renderDocument } from '../src/projection/index.js';
 import { restore } from '../src/restore/index.js';
 import { applySchema } from '../src/schema/index.js';
 import { applyVocabulary } from '../src/schema/seeds/index.js';
+import { emptyDump } from './support/dumps.js';
 import { DUMP, gitRepository, surface, twoBranches } from './support/git.js';
 import { runNode } from './support/run-node.js';
+import { capture } from './support/streams.js';
 
 const BIN = join(import.meta.dirname, '..', 'bin', 'dpm-merge.js');
 
 /** Both streams of one `run()`, so the exit code and the text are asserted from the same call. */
 function invoke(root) {
-  const written = { out: '', err: '' };
-  const code = run({
-    root,
-    streams: { out: (text) => { written.out += text; }, err: (text) => { written.err += text; } },
-  });
+  const written = capture();
+  const code = run({ root, streams: written.streams });
 
-  return { code, ...written };
+  return { code, out: written.out, err: written.err };
 }
 
-/** An empty database's dump — the common ancestor every in-memory case branches from. */
-function emptyDump() {
-  const db = applySchema(openConnection(':memory:'));
-
-  try {
-    applyVocabulary(db);
-
-    return dump(db).sql;
-  } finally {
-    db.close();
-  }
-}
 
 /** Restore `base`, apply `change`, and dump the result — one branch, without a repository. */
 function branch(base, change) {

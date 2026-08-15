@@ -191,12 +191,12 @@ test('each binary refuses with the exit code its fixture stands in for', () => {
   // code is right — the fixtures establish that — it is the join between a file and its stand-in,
   // which is the one thing a copy can never assert about itself.
   //
-  // **1 for the server and 2 for the three commands**, and the split is not cosmetic: the commands
-  // have already spent 1 on an outcome the user causes — divergence for the guard, a refusal for
+  // **1 for the server and 2 for the commands**, and the split is not cosmetic: the commands have
+  // already spent 1 on an outcome the user causes — divergence for the guard, a refusal for
   // publish — so a floor failure sharing that code would send someone to fix their templates when
   // the answer is to upgrade Node.
   const expected = {
-    'dpm-guard.js': 2, 'dpm-mcp.js': 1, 'dpm-merge.js': 2, 'dpm-publish.js': 2,
+    'dpm-guard.js': 2, 'dpm-import.js': 2, 'dpm-mcp.js': 1, 'dpm-merge.js': 2, 'dpm-publish.js': 2,
   };
 
   const floorExit = (source) =>
@@ -223,10 +223,10 @@ test('no binary reaches node:sqlite through a static import, publish included', 
   // import reaching `node:sqlite` moves the crash *before* the check and silently un-implements
   // NFR2 in a file where nothing looks wrong.
   //
-  // Swept over all four binaries rather than asserted of the new one, because the criterion is
-  // "the same as the other three": a sweep is what makes the fourth binary's conformance a
-  // property of the directory rather than a fact about one file, and it is what will catch the
-  // fifth. Neither `dpm-guard.js` nor `dpm-merge.js` had this asserted of them until now.
+  // Swept over every binary rather than asserted of the new one, because the criterion is "the
+  // same as the others": a sweep is what makes a new binary's conformance a property of the
+  // directory rather than a fact about one file. It caught the fifth, which is what it was written
+  // for — `bin/dpm-import.js` arrived with epic 49-04 and failed the enumeration below.
   const staticImports = (source) =>
     [...source.matchAll(/^\s*import\s[^;]*?from\s+['"]([^'"]+)['"]/gm)].map((match) => match[1]);
 
@@ -250,7 +250,7 @@ test('no binary reaches node:sqlite through a static import, publish included', 
   const binaries = readdirSync(join(ROOT, 'bin')).filter((name) => name.endsWith('.js')).sort();
 
   assert.deepEqual(binaries,
-    ['dpm-guard.js', 'dpm-mcp.js', 'dpm-merge.js', 'dpm-publish.js'],
+    ['dpm-guard.js', 'dpm-import.js', 'dpm-mcp.js', 'dpm-merge.js', 'dpm-publish.js'],
     'the set of binaries moved — the sweep below is enumerating something else now');
 
   for (const name of binaries) {

@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { openDatabaseFile } from './support/database.js';
 import { authoredTables } from './support/introspection.js';
-import { readOnlyTools, spineTools } from '../src/tools/index.js';
+import { readOnlyTools, spineTools, versionSkew } from '../src/tools/index.js';
 import { start } from '../src/start.js';
 import { targetVersion } from '../src/schema/migrate.js';
 
@@ -208,7 +208,7 @@ test('a database whose version is ahead is opened rather than refused', (t) => {
 
   // And the history is still there, which is the whole of what NFR7 asks for.
   const tools = readOnlyTools(spineTools(again.db),
-    { found: again.migrated.from, supported: again.migrated.target });
+    { reason: versionSkew({ found: again.migrated.from, supported: again.migrated.target }) });
   const call = handlers(tools);
 
   assert.equal(call.read_spec({ id: spec.id }).title, 'Planning history');
@@ -223,7 +223,8 @@ test('the writes are refused by name, and the tools stay listed', (t) => {
   t.after(() => again.db.close());
 
   const full = spineTools(again.db);
-  const tools = readOnlyTools(full, { found: FUTURE, supported: again.migrated.target });
+  const tools = readOnlyTools(full,
+    { reason: versionSkew({ found: FUTURE, supported: again.migrated.target }) });
   const call = handlers(tools);
 
   // Listed, not withheld. A withheld tool answers Method not found, which reads as a broken

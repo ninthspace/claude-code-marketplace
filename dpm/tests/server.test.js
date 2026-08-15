@@ -14,90 +14,43 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Readable, Writable } from 'node:stream';
-import { serve } from '../src/server/index.js';
+import { Readable } from 'node:stream';
+import { advertisedTools, main, open, serve } from '../src/server/index.js';
+import { IGNORE_FILE, IGNORE_PATTERN } from '../src/server/ignore.js';
 import { dispatch, methods, negotiate, PREFERRED_PROTOCOL, SUPPORTED_PROTOCOLS } from '../src/server/mcp.js';
 import { takeLines } from '../src/server/transport.js';
+import { targetVersion } from '../src/schema/migrate.js';
 import { assertNodeFloor, floorMessage, meetsFloor, REQUIRED_NODE } from '../src/server/node-floor.js';
 import { filterWarnings, isSqliteExperimental } from '../src/server/warnings.js';
+import { sha256 } from './support/hashes.js';
 import { javascriptFilesUnder } from './support/sources.js';
+import { openDatabaseFile } from './support/database.js';
 import { openPlanningDatabase } from './support/planning-database.js';
+import { recordOpen, recordStarts } from './support/recorders.js';
+import { runNode } from './support/run-node.js';
+import { ownedDirectory as scratch } from './support/scratch.js';
+import { BIN, call, HELLO, NO_OVERRIDE, repliesFrom, wire } from './support/session.js';
+import { sessionOutput } from './support/streams.js';
+import { compareToolLists, describedBy } from './support/tool-lists.js';
+import { dump } from '../src/dump/index.js';
+import { start } from '../src/start.js';
 import { spineTools } from '../src/tools/index.js';
 
-/**
- * Run a script to completion, writing `input` to its stdin and closing it.
- *
- * `execFile` has no `input` option — that belongs to `execFileSync` — and passing one is
- * silently ignored, so the child waits on a stdin that never closes and the test hangs rather
- * than failing. Spawning and ending the stream explicitly is what makes the server see EOF.
- *
- * @param {string[]} args
- * @param {string} [input]
- * @returns {Promise<{code: number, stdout: string, stderr: string}>}
- */
-function runNode(args, input = '', env = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk;
-    });
-
-    child.on('error', reject);
-    child.on('close', (code) => resolve({ code, stdout, stderr }));
-
-    child.stdin.end(input);
-  });
-}
-
 const ROOT = join(import.meta.dirname, '..');
-const BIN = join(ROOT, 'bin', 'dpm-mcp.js');
-
-/** Collects everything written, so a test can read the whole stream rather than sample it. */
-function capture() {
-  const chunks = [];
-
-  return {
-    stream: new Writable({
-      write(chunk, encoding, done) {
-        chunks.push(chunk.toString());
-        done();
-      },
-    }),
-    get lines() {
-      return chunks.join('').split('\n').filter((line) => line !== '');
-    },
-  };
-}
 
 /** Run a whole session through the real loop and hand back what reached stdout. */
 async function session(messages, tools = []) {
-  const output = capture();
+  const output = sessionOutput();
   const input = Readable.from([`${messages.map((m) => JSON.stringify(m)).join('\n')}\n`]);
 
   const { handled } = await serve({ input, output: output.stream, tools });
 
-  return { handled, lines: output.lines, replies: output.lines.map((line) => JSON.parse(line)) };
+  return { handled, lines: output.lines, replies: output.replies() };
 }
 
-const HELLO = {
-  jsonrpc: '2.0',
-  id: 1,
-  method: 'initialize',
-  params: { protocolVersion: PREFERRED_PROTOCOL, capabilities: {}, clientInfo: { name: 't', version: '1' } },
-};
 
 // --- The Node floor ----------------------------------------------------------------------------
 
@@ -196,12 +149,12 @@ test('a notification is answered with nothing at all', async () => {
 });
 
 test('an unparseable line becomes a parse error on stdout and a diagnostic on stderr', async () => {
-  const output = capture();
+  const output = sessionOutput();
   const input = Readable.from(['not json at all\n{"jsonrpc":"2.0","id":7,"method":"ping"}\n']);
 
   await serve({ input, output: output.stream });
 
-  const replies = output.lines.map((line) => JSON.parse(line));
+  const replies = output.replies();
 
   // The bad line does not take the stream down with it — the request after it is still served,
   // which is the whole reason the transport reports parse failures rather than throwing.
@@ -266,7 +219,18 @@ test('the real binary serves a session over real pipes', async (t) => {
 
   const lines = stdout.split('\n').filter((line) => line !== '');
   assert.equal(lines.length, 2);
-  assert.equal(JSON.parse(lines[0]).result.serverInfo.name, 'dpm');
+  const info = JSON.parse(lines[0]).result.serverInfo;
+
+  assert.equal(info.name, 'dpm');
+
+  // The schema version reaches a client through the handshake and nowhere else: the connection is
+  // not open when `initialize` is answered (AD12 defers it to the first call) and no read tool
+  // reports it. A client caching derived answers needs it, because an entry produced under an
+  // earlier schema is stale however untouched the database file is. Compared against the schema
+  // module's own answer rather than a number written here, which is the only form that survives a
+  // migration landing.
+  assert.equal(info.schemaVersion, targetVersion(), 'the handshake carries the schema it writes');
+  assert.ok(info.schemaVersion > 0, 'and the version it carries is a real one');
 
   // Story 1 asserted this list was empty, which was true and is no longer: the entry point now
   // opens a database and registers the spine. What is checked is that the real binary reaches
@@ -362,6 +326,425 @@ test('dpm has no dependency to install, which is the checkable half of NFR1', ()
     );
 
   assert.deepEqual(external, [], 'and no source file imports anything but Node built-ins');
+});
+
+// --- The advertised list, before any database exists (Epic 49-01 Story 1: FR2, AD12) ------------
+
+/** A tool that answers with one value, for the tests about *which list* was dispatched against. */
+const stubTool = (name, answer) => ({
+  name,
+  description: name,
+  inputSchema: { type: 'object', properties: {} },
+  handler: () => answer,
+});
+
+test('the template-built tool list is the list a real file database builds', async (t) => {
+  // The comparison that makes deferral safe. `mcp.js` declares `listChanged: false`, so the list
+  // advertised at launch — built from a `:memory:` template, with no file anywhere — has to be the
+  // list the real database would have produced. Compared over the whole wire form, because a
+  // template that got the names right and the schemas wrong would advertise a contract the server
+  // does not keep, and every client would be checked against it.
+  const file = openDatabaseFile(t);
+  const { db } = start(file.path);
+
+  t.after(() => {
+    try {
+      db.close();
+    } catch {
+      // Already closed; the directory removal is `openDatabaseFile`'s.
+    }
+  });
+
+  assert.deepEqual(compareToolLists(describedBy(spineTools(db)), describedBy(advertisedTools())), []);
+});
+
+test('the advertised list is non-empty and as long as the registry itself builds', (t) => {
+  // The floor, and it is derived rather than typed. A template yielding two tools compares equal
+  // to a real build that also yielded two, so the criterion above cannot catch a failure that
+  // reached both sides — this is the third construction that can. `openPlanningDatabase` reaches
+  // the registry by `applySchema` + `applyVocabulary` rather than through `start()`, and the count
+  // comes off the list it builds. There is no number in this test.
+  const planning = openPlanningDatabase(t);
+  const registered = spineTools(planning);
+
+  assert.ok(registered.length > 0, 'the registry the count comes from is not empty');
+  assert.equal(advertisedTools().length, registered.length);
+
+  // **And a second floor, because all three of those constructions run through `spineTools`.** A
+  // registry that collapsed — the `document_kind` read yielding nothing, say — collapses every one
+  // of them by the same amount, and the equality above goes green over three empty lists. This
+  // bound comes off the seeded vocabulary instead: each kind carries create, read, update and
+  // list tools, so the list cannot be shorter than four per seeded kind however the registry is
+  // built. Still derived, still no transcribed number.
+  const kinds = planning.prepare('SELECT count(*) AS kinds FROM document_kind').get().kinds;
+
+  assert.ok(kinds > 0, 'the vocabulary the floor comes from is seeded');
+  assert.ok(
+    registered.length >= kinds * 4,
+    `${registered.length} tools for ${kinds} document kinds is below four apiece`,
+  );
+});
+
+test('tools/list describes the advertised list and tools/call resolves the live one', () => {
+  // Deliberately disjoint. Sharing a name between the two would let a table wired to the wrong
+  // list answer correctly, which is the failure this is written to find.
+  const advertised = [stubTool('advertised_only', 'template')];
+  const live = [stubTool('live_only', 'real')];
+
+  const split = methods(advertised, () => live);
+
+  assert.deepEqual(split['tools/list']().tools.map((each) => each.name), ['advertised_only']);
+  assert.equal(split['tools/call']({ name: 'live_only' }).structuredContent, 'real');
+  assert.throws(() => split['tools/call']({ name: 'advertised_only' }), /no such tool/);
+
+  // The compatibility half: one argument, and both methods answer from that one list. This is what
+  // leaves every existing `methods(tools)` call site unchanged.
+  const unsplit = methods(advertised);
+
+  assert.deepEqual(unsplit['tools/list']().tools.map((each) => each.name), ['advertised_only']);
+  assert.equal(unsplit['tools/call']({ name: 'advertised_only' }).structuredContent, 'template');
+});
+
+test('the resolver is untouched until the first tools/call', () => {
+  // The whole epic turns on this. A resolver called while the method table is built opens the
+  // database at launch, and every assertion about the *result* still passes — AD12 rejected a lazy
+  // getter on `context.db` for the same reason, since several tool modules destructure
+  // `const { db } = context` at build time and would resolve it invisibly.
+  let resolved = 0;
+  const live = [stubTool('live_only', 'real')];
+
+  const table = methods([], () => {
+    resolved += 1;
+    return live;
+  });
+
+  assert.equal(resolved, 0, 'building the table resolves nothing');
+
+  table.initialize({});
+  table.ping();
+  table['tools/list']();
+
+  assert.equal(resolved, 0, 'and neither does the handshake or the listing');
+
+  table['tools/call']({ name: 'live_only' });
+
+  assert.ok(resolved > 0, 'only the call reaches it');
+});
+
+test('the comparison must not pass on names alone', () => {
+  // The planted control. Without it the comparison could be name-only and would read exactly like
+  // a working one — the failure retro 40 recorded, where a check that found nothing anywhere let
+  // every case pass by never being tested. The names are correct and complete here; only the
+  // contract is gone.
+  const real = describedBy(advertisedTools());
+  const namesOnly = real.map((each) => ({ ...each, inputSchema: {} }));
+
+  assert.deepEqual(compareToolLists(real, real), [], 'the control: the real list matches itself');
+
+  const complaints = compareToolLists(real, namesOnly);
+
+  assert.equal(complaints.length, real.length, 'every tool is complained about');
+  assert.ok(complaints.every((line) => line.endsWith('inputSchema differs')));
+});
+
+// --- Creating nothing until asked (Epic 49-01 Story 2: FR1, NFR1) -------------------------------
+
+/** A temp directory the child runs in, so the relative default database path lands inside it. */
+const ownedDirectory = (t) => scratch(t, 'dpm-deferred-');
+
+test('a session that never calls a tool creates nothing, and one that does create the database', async (t) => {
+  const directory = ownedDirectory(t);
+
+  const listed = await runNode([BIN], wire([HELLO, { jsonrpc: '2.0', id: 2, method: 'tools/list' }]),
+    NO_OVERRIDE, { cwd: directory });
+
+  assert.equal(listed.code, 0, `the server exited ${listed.code}: ${listed.stderr}`);
+  assert.deepEqual(readdirSync(directory), [], 'a session that called no tool left something on disk');
+  assert.equal(listed.stderr, '', 'a clean spawned session says nothing on stderr');
+
+  // **The must-NOT, and it is the reason the absence above means anything.** A server that crashed
+  // before it reached the filesystem leaves an empty directory too. What distinguishes the two is
+  // that this one served: a well-formed result, with more tools in it than a floor taken off the
+  // registry rather than typed here.
+  const served = repliesFrom(listed.stdout).find((reply) => reply.id === 2)?.result?.tools;
+  const floor = spineTools(openPlanningDatabase(t)).length;
+
+  assert.ok(floor > 0, 'the registry the floor comes from is not empty');
+  assert.ok(Array.isArray(served), `stdout carried no tools/list result:\n${listed.stdout}`);
+  assert.ok(served.length >= floor, `${served.length} tools served, below the registry's ${floor}`);
+  assert.ok(served.every((tool) => tool.name && tool.inputSchema), 'a served tool was not well formed');
+
+  // **The paired positive, in the same test and in the same directory.** Separated, a server that
+  // died at startup passes the absence and this never runs; here the only thing that differs
+  // between the two spawns is the message, so the file appearing is attributable to the call.
+  const called = await runNode([BIN], wire([HELLO, call(2, 'list_spec')]),
+    NO_OVERRIDE, { cwd: directory });
+
+  assert.equal(called.code, 0, `the server exited ${called.code}: ${called.stderr}`);
+  assert.equal(called.stderr, '', 'an ordinary create says nothing on stderr either');
+  assert.equal(existsSync(join(directory, '.dpm', 'dpm.db')), true,
+    'the first tool call did not bring the database into existence');
+});
+
+test('launch writes nothing, and a session migrates once however many requests arrive', async (t) => {
+  const directory = ownedDirectory(t);
+  const location = join(directory, '.dpm', 'dpm.db');
+
+  const run = async (messages) => {
+    const recorder = recordStarts();
+    const output = sessionOutput();
+
+    await main({
+      input: Readable.from([wire(messages)]),
+      output: output.stream,
+      location,
+      start: recorder.start,
+    });
+
+    return { locations: recorder.locations, replies: output.replies() };
+  };
+
+  const launch = await run([HELLO, { jsonrpc: '2.0', id: 2, method: 'tools/list' }]);
+
+  assert.deepEqual(launch.locations, [':memory:'], 'launch brought up something other than the template');
+  assert.deepEqual(readdirSync(directory), [], 'launch performed a filesystem write');
+
+  // Three calls, one bring-up of the file. Counted rather than timed: the question is whether the
+  // migration ran once for the session or once for each request, and a duration answers neither.
+  const worked = await run([HELLO, call(2, 'list_spec'), call(3, 'list_spec'), call(4, 'list_spec')]);
+
+  assert.deepEqual(worked.locations, [':memory:', location],
+    'the file was brought up other than exactly once');
+
+  // The control: all three calls were answered. A resolver that threw on the second would leave
+  // one bring-up in the record and satisfy the assertion above by failing.
+  assert.deepEqual(
+    worked.replies.filter((reply) => [2, 3, 4].includes(reply.id)).map((reply) => reply.error),
+    [undefined, undefined, undefined],
+  );
+});
+
+// --- The first call brings the database into existence (Epic 49-01 Story 3: FR3) ----------------
+
+test('a first tool call answers normally, and leaves an ignored database behind', async (t) => {
+  const directory = ownedDirectory(t);
+
+  const session = await runNode([BIN], wire([HELLO, call(2, 'list_spec')]),
+    NO_OVERRIDE, { cwd: directory });
+
+  assert.equal(session.code, 0, `the server exited ${session.code}: ${session.stderr}`);
+
+  // **The result first, because it is what "invisible to a caller" means.** A first call that
+  // reported a missing database, or that succeeded with an `isError` payload explaining what it had
+  // just had to create, would satisfy every file-existence assertion below. What FR3 asks is that
+  // the caller cannot tell this call from the second one.
+  const reply = repliesFrom(session.stdout).find((message) => message.id === 2);
+
+  assert.ok(reply, `stdout carried no reply to the call:\n${session.stdout}`);
+  assert.equal(reply.error, undefined, `the first call failed: ${JSON.stringify(reply.error)}`);
+  assert.equal(reply.result?.isError, undefined, 'the first call returned a tool error');
+  assert.ok(reply.result?.content?.length > 0, 'the first call returned an empty result');
+
+  // Both files, and the ignore one read back rather than merely counted: an empty `.gitignore`
+  // exists just as convincingly as one that ignores anything.
+  assert.equal(existsSync(join(directory, '.dpm', 'dpm.db')), true,
+    'the first tool call did not bring the database into existence');
+  assert.equal(readFileSync(join(directory, '.dpm', IGNORE_FILE), 'utf8'), `${IGNORE_PATTERN}\n`);
+});
+
+test('the ignore file is written before the database is opened', async (t) => {
+  const directory = ownedDirectory(t);
+  const location = join(directory, '.dpm', 'dpm.db');
+  const recorder = recordOpen();
+
+  open(location, recorder);
+
+  // The ordering, which is the whole of AD15: a database that exists unignored even for the moment
+  // between the two writes can be staged by a `git add -A` landing in that window. The restore
+  // (49-02, FR6) sits between them and declines — there is no dump in this directory — which is
+  // the case that has to stay silent for AD15's window to be the one asserted here.
+  assert.deepEqual(recorder.events, ['ignore', 'restore:skipped', `start:${location}`]);
+
+  // The control, and it is what stops the assertion above from being satisfied by an `open()` that
+  // did neither: both seams delegated to the real thing, so both files are on disk afterwards.
+  assert.deepEqual(readdirSync(join(directory, '.dpm')).sort(), [IGNORE_FILE, 'dpm.db']);
+
+  // **An ignore file already there is left exactly as it was** (AD15, ENVX2 — a user who has edited
+  // theirs has said something). Recorded through the same seam, so a second session's order is
+  // observed rather than assumed: the write is skipped, the bring-up still happens.
+  const second = recordOpen();
+
+  writeFileSync(join(directory, '.dpm', IGNORE_FILE), 'dpm.db*\n!keep-this\n', 'utf8');
+  open(location, second);
+
+  assert.deepEqual(second.events, ['ignore', 'restore:skipped', `start:${location}`]);
+  assert.equal(readFileSync(join(directory, '.dpm', IGNORE_FILE), 'utf8'), 'dpm.db*\n!keep-this\n',
+    'a second open rewrote an ignore file the user owns');
+});
+
+// --- The version-ahead gate, decided at first open (Epic 49-01 Story 5: FR5, NFR3) ---------------
+
+const FUTURE = 999;
+
+/**
+ * A database with one spec in it, stamped with a version no server understands, and **closed**.
+ *
+ * **Deliberately not `naming.test.js`'s `fromTheFuture`, which is otherwise nearly identical.**
+ * That one hands back an open connection, because its subject is what `readOnlyTools` does to a
+ * table built against it. Here the file being closed *is* the point: the criterion is about a
+ * database the server opens lazily for itself, and a fixture holding a handle would be supplying
+ * the one thing the story exists to defer. Sharing would mean a flag deciding whether the thing
+ * under test has already happened.
+ *
+ * @returns {{path: string, spec: object, supported: number}}
+ */
+function aheadDatabase(t) {
+  const file = openDatabaseFile(t);
+  const { db, migrated } = start(file.path);
+  const handlers = Object.fromEntries(spineTools(db).map((tool) => [tool.name, tool.handler]));
+  const spec = handlers.create_spec({ slug: 'history', title: 'Planning history' });
+
+  db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)')
+    .run(FUTURE, '2027-01-01T00:00:00Z');
+  db.close();
+
+  return { path: file.path, spec, supported: migrated.target };
+}
+
+test('an ahead database, opened lazily, answers reads and refuses writes by name', async (t) => {
+  const ahead = aheadDatabase(t);
+
+  const session = await runNode([BIN],
+    wire([HELLO,
+      { jsonrpc: '2.0', id: 2, method: 'tools/call',
+        params: { name: 'create_spec', arguments: { slug: 'new', title: 'New' } } },
+      call(3, 'list_spec')]),
+    { DPM_DATABASE: ahead.path });
+
+  // **Served, not refused to start.** NFR7's clause is that a user is not locked out of their own
+  // planning history, and the outcome it rules out is a server that will not come up at all.
+  assert.equal(session.code, 0, `the server exited ${session.code}: ${session.stderr}`);
+
+  const replies = new Map(repliesFrom(session.stdout).map((reply) => [reply.id, reply]));
+
+  // The write, refused with the existing two-version message — both numbers, because a refusal
+  // naming only one of them tells a caller nothing about which side has to move.
+  // Read out of `data`, not `message`: `rpc.js` keeps `message` as the code's standard text and
+  // puts the detail a caller can act on in `data`, so a test matching on `message` would be
+  // asserting against the string "Invalid params" and would pass for any refusal at all.
+  const refused = replies.get(2);
+
+  assert.ok(refused?.error, `the write was not refused:\n${session.stdout}`);
+  assert.equal(refused.error.code, -32602);
+  assert.match(JSON.stringify(refused.error.data), new RegExp(`\\b${FUTURE}\\b`),
+    'the refusal does not name the version the database is at');
+  assert.match(JSON.stringify(refused.error.data), new RegExp(`\\b${ahead.supported}\\b`),
+    'the refusal does not name what this server understands');
+
+  // The read, answered — and answering with the row that was there before the stamp, so this is
+  // the history NFR7 is about rather than an empty database that refuses nothing.
+  const read = replies.get(3);
+
+  assert.equal(read?.error, undefined, `a read was refused: ${JSON.stringify(read?.error)}`);
+  assert.ok(JSON.stringify(read.result).includes('Planning history'),
+    `the read did not return the spec that was there:\n${JSON.stringify(read.result)}`);
+
+  // And the skew is said out loud once, on stderr, where a diagnostic belongs. Without this a
+  // caller's only clue is a refusal they have to trigger.
+  assert.match(session.stderr, new RegExp(`${FUTURE}[\\s\\S]*${ahead.supported}`),
+    `the version skew was not reported:\n${session.stderr}`);
+});
+
+/**
+ * The database's *content*, hashed — every object and every row, through the dump.
+ *
+ * **Not the file's bytes, and the difference is a finding rather than a convenience.** `migrate()`
+ * calls `createRetirementGuards()` on every open, which drops and recreates twenty-four triggers by
+ * design — its own comment says recreating an identical trigger is the ordinary case. So the file
+ * hash differs after *any* open, including two consecutive ones, and a criterion pinned to it would
+ * be asserting against pre-existing migration behaviour this epic does not touch. NFR3's clause is
+ * "no migration beyond what `migrate()` already does", and the guard regeneration is what it
+ * already does. What NFR3 is protecting is the data, and this is the hash that watches it.
+ */
+const contentDigest = (path) => {
+  const db = new DatabaseSync(path);
+
+  try {
+    return sha256(dump(db).sql);
+  } finally {
+    db.close();
+  }
+};
+
+test('an existing database is unchanged by a read-only lazy session [NFR3]', async (t) => {
+  const file = openDatabaseFile(t);
+  const { db } = start(file.path);
+  const handlers = Object.fromEntries(spineTools(db).map((tool) => [tool.name, tool.handler]));
+  const spec = handlers.create_spec({ slug: 'existing', title: 'Already here' });
+
+  db.close();
+
+  const before = contentDigest(file.path);
+
+  const session = await runNode([BIN], wire([HELLO, call(2, 'list_spec'), call(3, 'check_integrity')]),
+    { DPM_DATABASE: file.path });
+
+  assert.equal(session.code, 0, `the server exited ${session.code}: ${session.stderr}`);
+
+  // **The reads first, because they are what stops the hash from being satisfied by a session that
+  // never opened the file.** NFR3 asks that an existing database opens and serves exactly as today,
+  // and a server that failed to find it would leave the bytes just as identical.
+  const replies = new Map(repliesFrom(session.stdout).map((reply) => [reply.id, reply]));
+
+  assert.equal(replies.get(2)?.error, undefined, `the list was refused: ${JSON.stringify(replies.get(2))}`);
+  assert.ok(JSON.stringify(replies.get(2).result).includes(spec.id),
+    'the session did not read back the spec that was already there');
+  assert.equal(replies.get(3)?.error, undefined, 'check_integrity was refused');
+
+  // No rebuild, no re-seed, no migration: the content is byte-identical. Hashed over the whole
+  // dump rather than compared table by table, because "no rebuild" is a claim about everything.
+  assert.equal(contentDigest(file.path), before, 'a read-only session changed the database');
+
+  // **And the two ways an open writes without changing content, stated separately.** A dump hash
+  // that held while a migration ran or the vocabulary was re-seeded would mean the writes happened
+  // to be idempotent, not that they did not happen — and NFR3's clause is about the second.
+  const reopened = start(file.path);
+
+  t.after(() => reopened.db.close());
+
+  assert.deepEqual(reopened.migrated.applied, [], 'a migration ran against an up-to-date database');
+  assert.deepEqual(
+    Object.values(reopened.vocabulary.inserted).map((table) => table.inserted),
+    Object.values(reopened.vocabulary.inserted).map(() => 0),
+    'the vocabulary was re-seeded into a database that already had it',
+  );
+});
+
+test('an ahead database keeps its write tools listed, and they refuse [unit]', (t) => {
+  const ahead = aheadDatabase(t);
+
+  const table = open(ahead.path);
+  const advertised = advertisedTools();
+
+  // **Listed, not withheld** — the must-NOT, and it is what keeps `listChanged: false` honest for
+  // an ahead database. `tools/list` describes the template, which is never made read-only; if the
+  // live table dropped its write tools, what was advertised at launch would be false for the rest
+  // of the session, which is the failure Story 1 exists to prevent arriving by another route.
+  assert.deepEqual(table.map((tool) => tool.name), advertised.map((tool) => tool.name));
+
+  // Every write refuses, and a read still answers. Both halves, because a table that refused
+  // everything and one that refused nothing each pass one of them alone.
+  const writes = table.filter((tool) => tool.mutates);
+
+  assert.ok(writes.length > 0, 'the table has no write tools, so refusing them proves nothing');
+
+  for (const tool of writes) {
+    assert.throws(() => tool.handler({}), new RegExp(`\\b${FUTURE}\\b`), `${tool.name} was not refused`);
+  }
+
+  const list = table.find((tool) => tool.name === 'list_spec');
+
+  assert.equal(list.handler({}).returned, 1, 'a read tool was refused along with the writes');
 });
 
 // --- The pieces, directly -----------------------------------------------------------------------

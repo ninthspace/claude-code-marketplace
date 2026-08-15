@@ -8,21 +8,19 @@
  * **Nothing is staged.** The tool writes files and stops; `git add` is the user's, exactly as it is
  * with the guard. A merge tool that staged its own output would make the resolution of a conflict
  * something that happened without a review.
+ *
+ * **What is left here is the merge and nothing else.** Reading git's three stages, merging them,
+ * and reporting — everything after that is `src/rebuild/`, shared with the import (AD16), because
+ * rebuilding a database from a dump is the same operation whether the dump came out of a conflict
+ * or out of a pull.
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { openConnection } from '../db/connection.js';
-import { dump } from '../dump/index.js';
-import { describe as describeGuard, guard, DUMP_PATH } from '../guard/index.js';
-import { publish } from '../publish/index.js';
-import { restore } from '../restore/index.js';
+import { DATABASE } from '../db/location.js';
+import { DUMP_PATH } from '../guard/index.js';
+import { rebuild, RebuildError, report } from '../rebuild/index.js';
 import { describe, merge } from './index.js';
 import { MergeError } from './rows.js';
-
-/** Where the database lives. Same default and same override as the server's and the guard's. */
-export const DATABASE = process.env.DPM_DATABASE ?? '.dpm/dpm.db';
 
 /** git's numbering of the three sides of a conflict. */
 const SIDES = { 1: 'base', 2: 'ours', 3: 'theirs' };
@@ -137,84 +135,33 @@ export function run({ root = '.', location = DATABASE, streams } = {}) {
     return 1;
   }
 
-  // **The database is rebuilt beside the real one and moved into place.** A restore straight over
-  // `.dpm/dpm.db` that failed part-way would leave the user without the database *and* without the
-  // merge, which is a worse position than the conflict they started with.
-  // Under `root` and not under the working directory, and `resolve` rather than `join` so an
-  // absolute `DPM_DATABASE` still points where it says — the same rule the guard follows.
-  const target = resolve(root, location);
-  const staging = `${target}.merging`;
+  // **Everything past the merge itself is shared with the import** (AD16). The staging restore,
+  // the rename into place, the round-trip check, the publish and the re-guard are identical for a
+  // dump that arrived in a conflict and one that arrived in a pull, and the piece most easily lost
+  // to a second copy is the staging file — four lines that read as caution and are correctness.
+  //
+  // The refusals are worded for both callers, so what a user sees here no longer says "merged".
+  // That is FR8's one-message-from-one-implementation criterion spending a little specificity to
+  // buy the thing the specificity kept breaking: two error strings kept in step by hand.
+  let removed = [];
 
   try {
-    mkdirSync(dirname(target), { recursive: true });
-    rmSync(staging, { force: true });
-
-    const fresh = openConnection(staging);
-
-    try {
-      restore(fresh, result.sql);
-    } finally {
-      fresh.close();
-    }
-
-    renameSync(staging, target);
+    ({ removed } = rebuild(result.sql, { root, location }));
   } catch (error) {
-    rmSync(staging, { force: true });
-    err(`dpm: the merged dump did not restore into ${location} — ${error.message}\n`);
+    if (!(error instanceof RebuildError)) throw error;
+
+    err(`${error.message}\n`);
 
     return 2;
   }
 
-  const db = openConnection(target);
-  let removed = [];
-
-  try {
-    // **The merged dump has to survive its own restore, and this is where that was checked.** The
-    // merge used to write `result.sql` here and then let the guard compare `dump(db)` against it,
-    // so a merged file that restored into a database dumping differently failed. `publish` writes
-    // what the database dumps, which would make that comparison trivially true — so the check is
-    // stated rather than left to emerge from the order of two writes.
-    if (dump(db).sql !== result.sql) {
-      err(
-        'dpm: the merged dump did not survive its own restore — the database it produced dumps '
-        + 'differently, so committing it would commit a state nobody merged.\n',
-      );
-
-      return 2;
-    }
-
-    // **Both artefacts, one call, and the orphan rule is not restated here.** A renumbered
-    // document's old file is on disk and no document produces it, which is what the guard already
-    // knows how to recognise; `publish` removes exactly what the guard would report, so the two
-    // cannot disagree the first time naming changes. The dump still lands after the restore for
-    // the reason it always did — it is the committed artefact, and a run that wrote it and then
-    // failed would leave a broken database in the commit and a tree that looked resolved — but
-    // that ordering is now a property of `publish` rather than of this call site.
-    ({ removed } = publish(db, { root }));
-
-    const after = guard(db, { root });
-
-    if (after.diverged.length > 0) {
-      err(`dpm: the merge left the tree inconsistent, which is a bug:\n${describeGuard(after)}\n`);
-
-      return 2;
-    }
-  } finally {
-    db.close();
-  }
-
-  const lines = [describe(result)];
-
-  if (removed.length > 0) {
-    lines.push('', 'Removed, because no document produces them any more:',
-      ...removed.map((path) => `  ${path}`));
-  }
-
-  lines.push('', `Review the changes and stage them: git add ${DUMP_PATH} docs`);
-
-  if (existsSync(join(root, '.dpm', 'dpm.db-wal'))) {
-    lines.push('A dpm server may be holding the old database open — restart it before using it.');
-  }
+  // The dump is in the staging list because the merge is what produced it. On the other side of the
+  // shared rebuild it arrived in a pull and is already committed, which is why the two callers
+  // differ on this line and agree on everything `report` holds.
+  const lines = [
+    describe(result),
+    ...report({ removed }, { root, stage: `git add ${DUMP_PATH} docs` }),
+  ];
 
   out(`${lines.join('\n')}\n`);
 

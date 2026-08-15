@@ -36,18 +36,16 @@ import { openConnection } from '../src/db/connection.js';
 import { restore } from '../src/restore/index.js';
 import { start } from '../src/start.js';
 import { spineTools } from '../src/tools/index.js';
+import { capture } from './support/streams.js';
 
 const ROOT = join(import.meta.dirname, '..');
 
 /** Both streams of one command, so the exit code and the text are asserted from the same call. */
 function invoke(command, options) {
-  const written = { out: '', err: '' };
-  const code = command({
-    ...options,
-    streams: { out: (text) => { written.out += text; }, err: (text) => { written.err += text; } },
-  });
+  const written = capture();
+  const code = command({ ...options, streams: written.streams });
 
-  return { code, ...written };
+  return { code, out: written.out, err: written.err };
 }
 
 /**

@@ -53,29 +53,42 @@ import { vocabularies, vocabularyJoins } from './vocabulary.js';
  * @returns {object[]} Every tool, in a stable order.
  */
 /**
- * The same registry with every write refused, for a database this server is too old for.
+ * Why a database this server is too old for is served read-only (NFR7).
+ *
+ * @param {{found: number, supported: number}} version
+ * @returns {string}
+ */
+export const versionSkew = ({ found, supported }) =>
+  `this database is at schema version ${found} and this server understands up to ${supported}. `
+  + 'Reads are answered; writes are refused until the plugin is updated, so an older release '
+  + 'cannot write rows a newer schema constrains.';
+
+/**
+ * The same registry with every write refused, for whichever reason applies.
  *
  * **The write tools stay listed rather than being dropped.** Withholding them would answer a
  * create call with *Method not found*, which is what a caller sees when a server is broken or a
- * tool was renamed — and would tell them nothing about the version skew that is the actual
- * reason. Listed and refusing, the refusal names both versions and the caller knows to update
- * the plugin. NFR7's clause is that a user is not locked out of their own planning history; a
- * lockout with a misleading error is the worst of the available outcomes, not a safe default.
+ * tool was renamed — and would tell them nothing about the reason that actually applies. Listed
+ * and refusing, the refusal explains itself. NFR7's clause is that a user is not locked out of
+ * their own planning history; a lockout with a misleading error is the worst of the available
+ * outcomes, not a safe default.
+ *
+ * **The reason is a parameter because there are two of them and only one mechanism.** A database
+ * from a newer plugin and a server launched to observe are different situations with the same
+ * answer — every mutating tool refuses, every read still answers, and the wire form of the list is
+ * untouched, which is what `listChanged: false` promises a client. Building the sentence at the
+ * call site is what keeps that one implementation from acquiring a mode.
  *
  * @param {object[]} tools
- * @param {{found: number, supported: number}} version
+ * @param {{reason: string}} why One of the two sentences above.
  * @returns {object[]}
  */
-export function readOnlyTools(tools, { found, supported }) {
+export function readOnlyTools(tools, { reason }) {
   return tools.map((tool) => (tool.mutates
     ? Object.freeze({
       ...tool,
       handler: () => {
-        throw new ToolError(
-          `${tool.name}: this database is at schema version ${found} and this server understands `
-          + `up to ${supported}. Reads are answered; writes are refused until the plugin is `
-          + 'updated, so an older release cannot write rows a newer schema constrains.',
-        );
+        throw new ToolError(`${tool.name}: ${reason}`);
       },
     })
     : tool));

@@ -1,0 +1,32 @@
+[project]
+name = "dpm-board"
+version = "0.1.0"
+description = "Cross-project dpm status board & launcher"
+requires-python = ">=3.11"
+
+# **It has to stay a copy of board.py's PEP 723 block rather than a superset of it.** What ships is
+# the single file, provisioned by the inline block; this list is what the *test* environment gets. A
+# package named here and not there is one the suite has and the board does not, which is how an
+# import that works in every test fails on the first real run. Textual landed in both at once with
+# the TUI (48-04, ENV7), and the suite asserts the two lists agree.
+dependencies = [
+    "textual>=0.80",
+]
+
+# The board is distributed and run as a PEP 723 single-file script (board.py), so this file is not
+# what provisions it — the inline block at the top of board.py is (AD2, ENV1). This pyproject exists
+# for development and testing only: it provisions the harness so `uv run pytest` works from this
+# directory (ENV4), and it is the reason dpm itself gains no dependency (ENVX2) — everything here is
+# uv-managed and belongs to the board.
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+# `tests/support` is on the path for the same reason it is on a spawned board's `PYTHONPATH`: the
+# network guard (ENVX4) has to be installable both ways from one copy of the rule.
+pythonpath = [".", "tests/support"]
+asyncio_mode = "auto"
+testpaths = ["tests"]

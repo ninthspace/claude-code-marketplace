@@ -14,16 +14,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { committer } from './support/commit.js';
-import { fullCorpus } from './support/corpus.js';
-import { start } from '../src/start.js';
-import { spineTools } from '../src/tools/index.js';
+import { publishedRepository } from './support/published.js';
 import { publish } from '../src/publish/index.js';
 import { describe, guard, DIVERGENCE, DUMP_PATH, PUBLISH_COMMAND } from '../src/guard/index.js';
 
@@ -31,31 +25,9 @@ const ROOT = join(import.meta.dirname, '..');
 
 /** A published repository, with the hook installed as a symlink and the corpus committed. */
 function repository(t) {
-  const root = mkdtempSync(join(tmpdir(), 'dpm-guard-fix-'));
-
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-
-  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
-
-  git('init', '--quiet', '--initial-branch', 'main');
-  git('config', 'user.email', 'fixture@example.invalid');
-  git('config', 'user.name', 'Fixture');
-
-  const location = join(root, '.dpm', 'dpm.db');
-
-  mkdirSync(dirname(location), { recursive: true });
-
-  const { db } = start(location);
-
-  t.after(() => db.close());
-
-  const call = Object.fromEntries(spineTools(db).map((tool) => [tool.name, tool.handler]));
-  const documents = fullCorpus(db, call);
-
-  // **Published by the thing under test**, not by a hand-rolled regenerate. This file is about the
-  // guard and the publish agreeing, so a fixture that wrote the tree some other way would be
-  // asserting that the guard agrees with the fixture.
-  publish(db, { root });
+  // Published through the release's own path — `start`, the tool surface, `publish` — so what this
+  // file departs from is a state dpm produces rather than one the fixture assembled.
+  const { root, git, db, call, documents, location } = publishedRepository(t, 'dpm-guard-fix-');
 
   writeFileSync(join(root, '.gitignore'), '.dpm/dpm.db*\n', 'utf8');
 

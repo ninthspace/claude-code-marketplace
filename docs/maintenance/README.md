@@ -24,6 +24,7 @@ one without the other and the suite fails on the half that moved.
 - [`dpm` — FTS5 trigger names the dumper reads](#dpm--fts5-trigger-names-the-dumper-reads)
 - [`dpm` — the retirement abort message the tool layer parses](#dpm--the-retirement-abort-message-the-tool-layer-parses)
 - [`dpm` ↔ the harness — the MCP tool name prefix](#dpm--the-harness--the-mcp-tool-name-prefix)
+- [`dpm:status` ↔ `dpm/tools/board` — the status-model reconciliation record](#dpmstatus--dpmtoolsboard--the-status-model-reconciliation-record)
 
 ---
 
@@ -122,6 +123,50 @@ silently, since the enrichment degrades to an empty string rather than failing.
 error is a `ToolError` carrying `rpc.code === -32602` — **not** merely that a refusal happened,
 which `assert.throws` satisfies against the broken state — and that its message contains the
 retired item in quotes. `dpm/tests/vocabulary-tools.test.js` asserts the guards fire.
+
+---
+
+## `dpm:status` ↔ `dpm/tools/board` — the status-model reconciliation record
+
+**The record.** `dpm/shared/status-model.md` is the single definition of how a dpm project's
+planning state is derived (AD5), and it has two consumers: `dpm/skills/status/SKILL.md`, which
+references it in prose, and `dpm/tools/board`, which implements it in code. Against the board the
+reconciliation is automated in both directions — `dpm/tools/board/tests/test_contract.py`
+reconciles the contract's rule names against the board's `DERIVATIONS` registry. **Against the
+skill it cannot be**: the skill is prose, and no parse tells a passage that agrees with a rule from
+one that never met it. This table is that second reconciliation. Every rule the contract states
+carries a disposition here, and a rule with none fails a test.
+
+| Contract rule | Disposition | What happened |
+|---|---|---|
+| readiness | amended in the skill | The skill's recommendation table offered `/dpm:do` without asking dpm's `ready` filter, so an epic held by a blocker was recommended as workable. The table gained a row for the epics `ready` returns and a row for held ones, and the skill gained *Readiness is asked for, not inferred from the stories*. It still does not restate `readyClause`, which is what the contract asks of both consumers. |
+| blocking | amended in the skill, with a bounded omission | The same paragraph now names `list_dependency` as what identifies the blocker. **`gates_work` and `include_retired` were deliberately left out.** The skill never derives the held state — it asks `ready`, and the server has already applied the gating set — so the kinds would serve only to choose *which* edge to name. A project with a non-gating kind can therefore have the skill name an edge that holds nothing; that is a known limit, not a contradiction, and closing it means adding a `list_dependency_kind` call to Phase 1's inventory, which is a change beyond "amend where it contradicts". |
+| retired blockers | conformed by delegation | The skill says nothing about a blocker whose status is `superseded` or `withdrawn`, and needs to: because it asks `ready` rather than deriving it, `readyClause`'s `blocker.status <> 'complete'` applies before the rows reach it. Recorded rather than amended — the conformance is real but invisible, and the readiness paragraph added above is what makes the delegation legible to a reader who would otherwise add the rule by hand. |
+| in progress | deliberately left alone | The contract's derived value and its precedence order (`complete` → retired → `blocked` → in progress → `ready`/`pending`) are how the *board* renders an epic in a column. The skill prints a fraction and a narrative, never a state word per epic, so there is no passage for the precedence to contradict. The one place the two could disagree — an epic whose only incomplete stories are retired — the skill already handled correctly, and the board was changed to agree with it. |
+| progress counts | conformed; the board was amended to match | The skill was right and the board was wrong. *Retired stories leave the count rather than joining either side of it*, and *say how many were retired alongside the fraction*, were already in Phase 1; the board counted a `withdrawn` story in the denominator forever. The board's `progress()` now excludes retired stories and carries the count, and the contract states the rule. The skill's Phase 1 `more` paragraph likewise sent the truncated-read rule into the contract and paging into the board. The skill prints no project-wide fraction, so the averaging trap the contract names cannot arise in it and no wording was added for it. |
+| untraced requirements | conformed; the two shapes differ deliberately | The skill was already deriving this rule before the contract stated it — Phase 3b's **Untraced**, "no coverage rows at all", named as the load-bearing measurement and reported before the counts. Nothing in it contradicts the rule and nothing was amended. What is worth recording is the shape: `dpm:status` scopes `list_coverage` by `requirement_id` and asks once per requirement, over one spec; the board reads `list_requirement` and `list_coverage` unscoped, project-wide, and takes the set difference. The rule states the shapes are interchangeable, because otherwise the next reader finds two of them and assumes one is a bug. Two related things stay out of the skill: the contract's *untraced is a gap in the plan, not slow progress* is already Phase 3b's own wording, and the truncated-read rule the two reads are held to is the contract's preamble rule, which the skill's Phase 1 conformed to when it was written — Phase 3b's "a `limit` above its requirement count" is the raise-the-bound half of it and needed nothing. |
+| candidate ordering | amended in the skill | The recommendation table's order was not the contract's: it read specs-before-epics, and its preamble said "one to three, in priority order" without saying the table's order was that order. Reordered so the first three command-carrying rows are the contract's three kinds — `epic_ready`, `spec_without_epics`, `retro_missing` — with a preamble that says so and cites the contract. The rows the contract has no kind for (`/dpm:discover` on an empty project, a session in flight, uncommitted changes) stay: they are not derived from planning rows and the contract does not claim them. The waiver rule needed nothing — *Retro-waived epics are settled* already stated it. |
+
+**Deliberate omissions in the other direction.** The contract's *Graceful degradation* table has no
+skill counterpart and wants none: `no-database`, `tool-surface-mismatch` and `server-failed` are
+states of a board spawning servers across many projects, and a skill running in a project whose
+tools answered it has a database by construction. The *Inputs* table's `list_dependency_kind` row
+is unreferenced by the skill for the reason recorded against *blocking* above.
+
+**Why it needs a record.** What was left alone is the half that would otherwise be lost — after the
+pass, an unamended passage and an unexamined one look identical. Three of the four contradictions
+this reconciliation found were the *board's*, not the skill's, which is the case a record written
+as a list of skill edits cannot express at all.
+
+**What can break it.** Adding a `###` rule to *Derivation rules* in `dpm/shared/status-model.md`
+without dispositioning it here. Rewriting the amended passages in `dpm/skills/status/SKILL.md` —
+the recommendation table, the readiness paragraph, Phase 1's retired-story and `more` paragraphs —
+puts the skill back out of conformance with no signal, since only the rule *names* are checked
+mechanically.
+
+**What asserts it.** `dpm/tools/board/tests/test_contract.py` reconciles this table's first column
+against the contract's rule headings, in both directions and over a floor, so a rule added to the
+contract fails until it appears here and a disposition for a rule that no longer exists fails too.
 
 ---
 

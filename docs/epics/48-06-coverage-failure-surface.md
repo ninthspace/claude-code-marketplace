@@ -8,20 +8,20 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR11 | "A project with no `.dpm/dpm.db` renders a named state carrying its remedy" | "A project with no `.dpm/dpm.db` renders a named state carrying its remedy" | Story 1 | `[integration]` | |
-| 2 | FR11 | "A database whose schema is ahead of the server renders a distinct named state" | "A database whose schema is ahead of the server renders a distinct named state" | Story 1 | `[integration]` | |
-| 3 | FR11 | "A server that exits immediately renders a third, distinct named state" | "A server that exits immediately renders a third, distinct named state" | Story 1 | `[integration]` | |
-| 4 | ENV2 | "With a Node below dpm's floor, the executable's refusal is captured and rendered per FR11" | "With a Node below dpm's floor, the executable's refusal is captured and rendered per FR11" | Story 1 | `[integration]` | |
-| 5 | FR11 (added) | "A missing `.dpm/dpm.db`, a schema version ahead of the server, a Node below dpm's floor, and a server that fails to start each render as a distinct named per-project state carrying its remedy." | "The four states are distinct from one another, reconciled against FR11's enumeration so a state that collapses into another fails" | Story 1 | `[unit]` | |
-| 6 | NFR2 | "With one project unreadable, every other registered project still renders its state" | "With one project unreadable, every other registered project still renders its state" | Story 2 | `[integration]` | |
-| 7 | FR11 (must NOT) | "must NOT let any of the three prevent the remaining projects from rendering" | "must NOT let any of the three prevent the remaining projects from rendering" | Story 2 | `[integration]` | |
-| 8 | NFR2 (added) | "One unreadable project never takes the board down. A failure is contained to its own row." | "Each of the four failure states is exercised in a mixed registry, not only the missing-database one" | Story 2 | `[integration]` | |
-| 9 | FR10 | "After a full board session over a fixture project, the database file's hash, size and mtime are unchanged" | "After a full board session over a fixture project, the database file's hash, size and mtime are unchanged" | Story 3 | `[integration]` | |
-| 10 | FR10 (added) | "No mutating tool is called, nothing is staged, and no file under a registered project is written — `.dpm/` included. Observing a project leaves it byte-identical." | "The project tree's whole file set and content hashes are unchanged, `.dpm/` included — not only the database" | Story 3 | `[integration]` | |
-| 11 | FR10 (must NOT) | "must NOT call any tool whose name is a mutating verb, in any code path" | "must NOT call any tool whose name is a mutating verb, in any code path" | Story 3 | `[unit]` | |
-| 12 | FR10 (added, must NOT) | "No mutating tool is called" | "must NOT — the mutating-verb check passes over an empty verb set; the set is derived from the difference between the server's full `tools/list` and its read-only set" | Story 3 | `[unit]` | |
-| 13 | ENVX3 | "A registered project on a read-only filesystem renders its state without error" | "A registered project on a read-only filesystem renders its state without error" | Story 4 | `[integration]` | |
-| 14 | ENVX3 (added) | "Must not require write access to any registered project, including creating `.dpm/dpm.db` in a project that has none." | "Its epics, stories, progress and previews render as they do for a writable project — the read-only filesystem changes nothing the user sees" | Story 4 | `[integration]` | |
+| 1 | FR11 | "A project with no `.dpm/dpm.db` renders a named state carrying its remedy" | "A project with no `.dpm/dpm.db` renders a named state carrying its remedy" | Story 1 | `[integration]` | ✓ |
+| 2 | FR11 | "A database whose schema is ahead of the server renders a distinct named state" | "A database whose schema is ahead of the server renders a distinct named state" | Story 1 | `[integration]` | ✓ |
+| 3 | FR11 | "A server that exits immediately renders a third, distinct named state" | "A server that exits immediately renders a third, distinct named state" | Story 1 | `[integration]` | ✓ |
+| 4 | ENV2 | "With a Node below dpm's floor, the executable's refusal is captured and rendered per FR11" | "With a Node below dpm's floor, the executable's refusal is captured and rendered per FR11" | Story 1 | `[integration]` | ✓ |
+| 5 | FR11 (added) | "A missing `.dpm/dpm.db`, a schema version ahead of the server, a Node below dpm's floor, and a server that fails to start each render as a distinct named per-project state carrying its remedy." | "The four states are distinct from one another, reconciled against FR11's enumeration so a state that collapses into another fails" | Story 1 | `[unit]` | ✓ |
+| 6 | NFR2 | "With one project unreadable, every other registered project still renders its state" | "With one project unreadable, every other registered project still renders its state" | Story 2 | `[integration]` | ✓ |
+| 7 | FR11 (must NOT) | "must NOT let any of the three prevent the remaining projects from rendering" | "must NOT let any of the three prevent the remaining projects from rendering" | Story 2 | `[integration]` | ✓ |
+| 8 | NFR2 (added) | "One unreadable project never takes the board down. A failure is contained to its own row." | "Each of the four failure states is exercised in a mixed registry, not only the missing-database one" | Story 2 | `[integration]` | ✓ |
+| 9 | FR10 | "After a full board session over a fixture project, the database file's hash, size and mtime are unchanged" | "After a full board session over a fixture project, the database file's hash, size and mtime are unchanged" | Story 3 | `[integration]` | ✓ |
+| 10 | FR10 (added) | "No mutating tool is called, nothing is staged, and no file under a registered project is written — `.dpm/` included. Observing a project leaves it byte-identical." | "The project tree's whole file set and content hashes are unchanged, `.dpm/` included — not only the database" | Story 3 | `[integration]` | ✓ |
+| 11 | FR10 (must NOT) | "must NOT call any tool whose name is a mutating verb, in any code path" | "must NOT call any tool whose name is a mutating verb, in any code path" | Story 3 | `[unit]` | ✓ |
+| 12 | FR10 (added, must NOT) | "No mutating tool is called" | "must NOT — the mutating-verb check passes over an empty verb set; the set is derived from the tools a read-only server refuses" | Story 3 | `[unit]` | ✓ |
+| 13 | ENVX3 | "A registered project on a read-only filesystem renders its state without error" | "A registered project on a read-only filesystem renders its state without error" | Story 4 | `[integration]` | ✓ |
+| 14 | ENVX3 (added) | "Must not require write access to any registered project, including creating `.dpm/dpm.db` in a project that has none." | "Its epics, stories, progress and previews render as they do for a writable project — the read-only filesystem changes nothing the user sees" | Story 4 | `[integration]` | ✓ |
 
 ## Notes
 
@@ -37,10 +37,16 @@ regenerated `.dpm/dpm.sql`, or left a lock file, or wrote its own cache into the
 10 is added rather than substituted, so row 9 stays verifiable as the spec states it.
 
 **Rows 11 and 12 are a derived sweep and its floor.** A transcribed list of mutating verbs is correct on the
-day it is written and narrows silently every time dpm gains a tool; the set is derived from the difference
-between the full `tools/list` and the read-only set instead. That derivation makes row 12 necessary — an
-empty difference means the two sets are identical, which is a much larger problem than a failed sweep and
-would otherwise report as a pass.
+day it is written and narrows silently every time dpm gains a tool, so the set is derived from the server
+instead. That derivation makes row 12 necessary — a derivation that produced nothing would sweep for
+nothing and report as a pass.
+
+**Row 12's derivation was amended on 2026-08-15**, from the difference between the full `tools/list` and
+the read-only one to the tools a read-only server *refuses*. The difference is empty by construction: a
+read-only server advertises every tool and refuses at call time (`src/tools/index.js`), because a tool
+withheld from the list answers with *Method not found* and tells the user nothing about the reason that
+applies. Measured at 181 tools either way. The behavioural derivation is the same idea one layer down and
+its floor holds; see the epic's Task 3.3.
 
 **Rows 9–12 prove a property this epic does not deliver.** The board is non-mutating because of 48-02's
 Story 3 must-NOTs and 48-01's read-only mode. These rows are the evidence, which is why they sit late in the

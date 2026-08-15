@@ -25,12 +25,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { openConnection } from '../src/db/connection.js';
 import { hasFts5, refusal, FTS5 } from '../src/db/capability.js';
+import { dump } from '../src/dump/index.js';
 import { openPlanningDatabase } from './support/planning-database.js';
 import { runNode } from './support/run-node.js';
 import { gitRepository, twoBranches } from './support/git.js';
@@ -60,6 +61,11 @@ function migrated(t) {
   const applied = db.prepare('SELECT max(version) AS at FROM schema_version').get().at;
 
   assert.equal(applied, targetVersion(), 'the fixture database is not fully migrated');
+
+  // The import is the one binary that reads a file before it opens anything, and without a dump it
+  // refuses on that instead — a refusal naming the missing file rather than the missing capability,
+  // which would read as a pass. Writing the dump costs the other binaries nothing.
+  writeFileSync(join(root, '.dpm', 'dpm.sql'), dump(db).sql);
 
   db.close();
 
@@ -138,9 +144,9 @@ test('the refusal fires on a forced-false probe, on a runtime that has the capab
   assert.match(refusal(':memory:'), /v\d+\./, 'the refusal stopped reporting the version');
 });
 
-// --- Criterion 1: all four binaries, against a fully-migrated database ---------------------------
+// --- Criterion 1: every binary, against a fully-migrated database -------------------------------
 
-test('all four binaries refuse to open a database on a runtime without FTS5', async (t) => {
+test('every binary refuses to open a database on a runtime without FTS5', async (t) => {
   const file = migrated(t);
   const bin = (name) => join(ROOT, 'bin', name);
   const listTools = `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })}\n`;
@@ -160,7 +166,22 @@ test('all four binaries refuse to open a database on a runtime without FTS5', as
     ['dpm-publish.js', [bin('dpm-publish.js'), file.root], '', { DPM_DATABASE: file.location }],
     ['dpm-merge.js', [bin('dpm-merge.js'), repo.root], '', {}],
     ['dpm-mcp.js', [bin('dpm-mcp.js')], listTools, { DPM_DATABASE: file.location }],
+    // Last, because its control run is the only one that rewrites `file`'s database — it leaves a
+    // consistent tree behind it, but a binary reading that tree afterwards would be reading what
+    // this rebuilt rather than what the fixture built.
+    ['dpm-import.js', [bin('dpm-import.js'), file.root], '', { DPM_DATABASE: file.location }],
   ];
+
+  // **The enumeration is checked against the directory, because this list cannot be derived from
+  // it.** Each binary needs its own arguments, input and environment, so the runs are written by
+  // hand — and a hand-written list of every X is the shape that goes quietly out of date. The
+  // criterion this test carries said "all four binaries" when there were four; what it means is
+  // every one, and this is the line that keeps the two the same thing.
+  assert.deepEqual(
+    runs.map(([name]) => name).sort(),
+    readdirSync(join(ROOT, 'bin')).filter((name) => name.endsWith('.js')).sort(),
+    'the set of binaries moved — the sweep below is no longer running all of them',
+  );
 
   for (const [name, args, input, env] of runs) {
     const refused = await runNode(args, input, { ...env, ...WITHOUT });

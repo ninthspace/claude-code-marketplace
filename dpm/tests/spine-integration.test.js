@@ -22,40 +22,16 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { openDatabaseFile } from './support/database.js';
 import { conformance } from './support/conformance.js';
+import { runNode } from './support/run-node.js';
 import { spineTools } from '../src/tools/index.js';
 import { PREFERRED_PROTOCOL } from '../src/server/mcp.js';
 
 const ROOT = join(import.meta.dirname, '..');
 const BIN = join(ROOT, 'bin', 'dpm-mcp.js');
-
-function runNode(args, input = '', env = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk;
-    });
-
-    child.on('error', reject);
-    child.on('close', (code) => resolve({ code, stdout, stderr }));
-
-    child.stdin.end(input);
-  });
-}
 
 /** `tools/call` as one JSON-RPC request. */
 const callTool = (id, name, args = {}) => ({
@@ -281,7 +257,11 @@ test('must NOT — a tool accepts an argument the schema rejects', async (t) => 
   t.after(() => db.close());
 
   const probe = openDatabaseFile(t);
-  const opened = await session(t, [{ jsonrpc: '2.0', id: 1, method: 'ping' }], { path: probe.path });
+
+  // A `tools/call` rather than a `ping`, because a ping no longer brings the database into
+  // existence: FR1 defers the open to the first call, so a session that only handshakes leaves
+  // nothing on disk for `inspect` to read back.
+  const opened = await session(t, [callTool(1, 'list_spec')], { path: probe.path });
 
   assert.ok(opened.replies.has(1));
 
@@ -324,7 +304,15 @@ test('must NOT — a tool accepts an argument the schema rejects', async (t) => 
 /** The tool list as the running server reports it, paired with the local registry. */
 async function registered(t) {
   const file = openDatabaseFile(t);
-  const run = await session(t, [{ jsonrpc: '2.0', id: 1, method: 'tools/list' }], { path: file.path });
+
+  // The read call is what makes the database exist. `tools/list` is answered from the in-memory
+  // template built at launch (FR2), so on its own it writes nothing and there would be no file to
+  // build the local registry against — which is also the pairing that makes the comparison below
+  // worth making, since the two lists now come from genuinely different databases.
+  const run = await session(t, [
+    { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    callTool(2, 'list_spec'),
+  ], { path: file.path });
   const wire = run.replies.get(1).result.tools;
 
   const db = inspect(t, file.path);

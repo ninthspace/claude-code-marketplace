@@ -16,10 +16,8 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openConnection } from '../db/connection.js';
+import { DATABASE } from '../db/location.js';
 import { describe, guard } from './index.js';
-
-/** Where the database lives. Same default and same override as the server's. */
-export const DATABASE = process.env.DPM_DATABASE ?? '.dpm/dpm.db';
 
 /**
  * @typedef {object} Streams

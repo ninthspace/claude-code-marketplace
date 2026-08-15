@@ -8,15 +8,15 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | AD13 | "`.dpm/dpm.db.synced` holds the hash of the dump text at the last sync point, written by both publish and import." | "`.dpm/dpm.db.synced` holds the hash of the dump text at the last sync point, written and read through one module" | Story 1 | `[unit]` | |
-| 2 | AD13 (added) | "the filename is already covered by AD4's `dpm.db*` ignore pattern — the marker is machine-local for the same reason the database is" | "The marker is machine-local and already ignored by 49-01's `dpm.db*` pattern — asserted, not assumed" | Story 1 | `[integration]` | |
-| 3 | AD13 (added) | "written by both publish and import" | "After a publish, the marker equals the hash of the dump on disk, and the immediately following guard run reports clean" | Story 2 | `[integration]` | |
-| 4 | AD13 (added) | "The guard compares the marker against the hash of the dump on disk and against the hash of `dump(db)`" | "A publish that does not complete leaves the previous marker in place rather than a marker for a dump that was never written" | Story 2 | `[integration]` | |
-| 5 | FR7 | "The verdict function returns database-moved / dump-moved / both-moved / adopt / unknown for the five marker states" | "The verdict function returns database-moved / dump-moved / both-moved / adopt / unknown for the five marker states" | Story 3 | `[tdd] [unit]` | |
-| 6 | FR7 | "The guard distinguishes *database ahead* (publish), *dump ahead* (import) and *both moved* (reconcile deliberately), and names the fix belonging to each." | "Each verdict names its own fix in the guard's output, driven in a real repository" | Story 4 | `[integration]` | |
-| 7 | FR7 | "An absent marker over a database that agrees with the dump writes the marker and reports clean" | "An absent marker over a database that agrees with the dump writes the marker and reports clean" | Story 4 | `[integration]` | |
-| 8 | FR7 (must NOT) | "must NOT name publish when the dump moved" | "must NOT name publish when the dump moved" | Story 4 | `[integration]` | |
-| 9 | FR7 (must NOT) | "must NOT name a single fix when the marker is absent and the two disagree — both are named, with what each would do" | "must NOT name a single fix when the marker is absent and the two disagree — both are named, with what each would do" | Story 4 | `[integration]` | |
+| 1 | AD13 | "`.dpm/dpm.db.synced` holds the hash of the dump text at the last sync point, written by both publish and import." | "`.dpm/dpm.db.synced` holds the hash of the dump text at the last sync point, written and read through one module" | Story 1 | `[unit]` | ✓ |
+| 2 | AD13 (added) | "the filename is already covered by AD4's `dpm.db*` ignore pattern — the marker is machine-local for the same reason the database is" | "The marker is machine-local and already ignored by 49-01's `dpm.db*` pattern — asserted, not assumed" | Story 1 | `[integration]` | ✓ |
+| 3 | AD13 (added) | "written by both publish and import" | "After a publish, the marker equals the hash of the dump on disk, and the immediately following guard run reports clean" | Story 2 | `[integration]` | ✓ |
+| 4 | AD13 (added) | "The guard compares the marker against the hash of the dump on disk and against the hash of `dump(db)`" | "A publish that does not complete leaves the previous marker in place rather than a marker for a dump that was never written" | Story 2 | `[integration]` | ✓ |
+| 5 | FR7 | "The verdict function returns database-moved / dump-moved / both-moved / adopt / unknown for the five marker states" | "The verdict function returns database-moved / dump-moved / both-moved / adopt / unknown for the five marker states" | Story 3 | `[tdd] [unit]` | ✓ |
+| 6 | FR7 | "The guard distinguishes *database ahead* (publish), *dump ahead* (import) and *both moved* (reconcile deliberately), and names the fix belonging to each." | "Each verdict names its own fix in the guard's output, driven in a real repository" | Story 4 | `[integration]` | ✓ |
+| 7 | FR7 | "An absent marker over a database that agrees with the dump writes the marker and reports clean" | "An absent marker over a database that agrees with the dump writes the marker and reports clean" | Story 4 | `[integration]` | ✓ |
+| 8 | FR7 (must NOT) | "must NOT name publish when the dump moved" | "must NOT name publish when the dump moved" | Story 4 | `[integration]` | ✓ |
+| 9 | FR7 (must NOT) | "must NOT name a single fix when the marker is absent and the two disagree — both are named, with what each would do" | "must NOT name a single fix when the marker is absent and the two disagree — both are named, with what each would do" | Story 4 | `[integration]` | ✓ |
 
 ## Notes
 

@@ -8,11 +8,11 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR6 | "A missing database beside a committed dump is built from it. Restore, not migrate-empty — the behaviour the README already claims." | "A directory holding `.dpm/dpm.sql` and no database answers a read tool from the dump's rows" | Story 1 | `[integration]` | |
-| 2 | FR6 | "The same call with no dump present returns an empty result rather than an error — the decoy that stops \"answers from the dump\" passing by returning anything at all" | "The same call with no dump present returns an empty result rather than an error — the decoy that stops \"answers from the dump\" passing by returning anything at all" | Story 1 | `[integration]` | |
-| 3 | AD14 | "a first open that finds no database and a committed dump beside it restores from that dump. A first open that finds a database never touches it, whatever the dump says." | "must NOT restore over an existing database: a database holding a distinguishable row keeps it when the dump lacks it" | Story 1 | `[integration]` | |
-| 4 | FR10 | "A first open that did something unusual reports it in one line on stderr. A restore from the dump, or a database served read-only, is named. An ordinary create is not." | "A first open that restored from a dump writes exactly one line to stderr naming the restore; an ordinary create writes none" | Story 2 | `[integration]` | |
-| 5 | FR10 (must NOT) | "must NOT write any of it to stdout" | "must NOT write any of it to stdout" | Story 2 | `[integration]` | |
+| 1 | FR6 | "A missing database beside a committed dump is built from it. Restore, not migrate-empty — the behaviour the README already claims." | "A directory holding `.dpm/dpm.sql` and no database answers a read tool from the dump's rows" | Story 1 | `[integration]` | ✓ |
+| 2 | FR6 | "The same call with no dump present returns an empty result rather than an error — the decoy that stops \"answers from the dump\" passing by returning anything at all" | "The same call with no dump present returns an empty result rather than an error — the decoy that stops \"answers from the dump\" passing by returning anything at all" | Story 1 | `[integration]` | ✓ |
+| 3 | AD14 | "a first open that finds no database and a committed dump beside it restores from that dump. A first open that finds a database never touches it, whatever the dump says." | "must NOT restore over an existing database: a database holding a distinguishable row keeps it when the dump lacks it" | Story 1 | `[integration]` | ✓ |
+| 4 | FR10 | "A first open that did something unusual reports it in one line on stderr. A restore from the dump, or a database served read-only, is named. An ordinary create is not." | "A first open that restored from a dump writes exactly one line to stderr naming the restore; an ordinary create writes none" | Story 2 | `[integration]` | ✓ |
+| 5 | FR10 (must NOT) | "must NOT write any of it to stdout" | "must NOT write any of it to stdout" | Story 2 | `[integration]` | ✓ |
 
 ## Notes
 

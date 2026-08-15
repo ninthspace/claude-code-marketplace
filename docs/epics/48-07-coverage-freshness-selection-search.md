@@ -8,18 +8,18 @@
 
 | # | Spec Requirement | Spec Text (verbatim) | Story Criterion (verbatim) | Covered by | Spec Test Approach | Verified |
 |---|------------------|----------------------|----------------------------|------------|--------------------|----------|
-| 1 | FR13 | "A second read within the freshness window is served from cache; a touched database invalidates it" | "A second read within the freshness window is served from cache; a touched database invalidates it" | Story 1 | `[unit]` | |
-| 2 | AD6 | "the cache stamp is the database file's mtime and size, plus a schema-version stamp that invalidates old entries" | "The cache stamp is the database file's mtime and size, and a schema-version stamp invalidates entries written under an earlier schema" | Story 1 | `[unit]` | |
-| 3 | FR13 (added) | "Derived per-project status is cached and invalidated by the database file's own mtime and size, with a force-refresh and a clear." | "A force-refresh bypasses the cache and a clear removes it, both reachable from the board" | Story 1 | `[feature]` | |
-| 4 | ENVX6 | "A registered project that is not a git repository renders normally" | "A registered project that is not a git repository renders normally" | Story 1 | `[integration]` | |
-| 5 | FR10 (added, must NOT) | "no file under a registered project is written — `.dpm/` included. Observing a project leaves it byte-identical." | "must NOT write the cache anywhere inside a registered project — it lives beside the registry under XDG" | Story 1 | `[unit]` | |
-| 6 | FR14 | "A non-empty ralph selection retargets the launch keys to one `/dpm:ralph <epics…>` command" | "A non-empty ralph selection retargets the launch keys to one `/dpm:ralph <epics…>` command" | Story 2 | `[unit]` | |
-| 7 | FR14 (added) | "`space` selects runnable epics; while the selection is non-empty the launch keys build one `/dpm:ralph <epics…>` command instead of a single-epic `/dpm:do`." | "`space` selects a runnable epic and deselects it, and the selection is visible in the row" | Story 2 | `[feature]` | |
-| 8 | FR14 (added) | "instead of a single-epic `/dpm:do`" | "With an empty selection the launch keys behave exactly as 48-05 specifies, asserted against the same targets" | Story 2 | `[unit]` | |
-| 9 | FR14 (must NOT) | "must NOT allow selection of a blocked, retro or needs-epics row" | "must NOT allow selection of a blocked, retro or needs-epics row" | Story 2 | `[unit]` | |
-| 10 | FR15 | "A search runs across registered projects and each result navigates back to its project and epic" | "A search runs across registered projects and each result navigates back to its project and epic" | Story 3 | `[integration]` | |
-| 11 | FR15 (added) | "The `search` tool, run across registered projects, with results navigable back to their project and epic." | "Results come from the `search` tool, asserted from the calls made" | Story 3 | `[integration]` | |
-| 12 | NFR2 (added) | "One unreadable project never takes the board down. A failure is contained to its own row." | "A project whose server cannot start contributes no results and does not stop the other projects' results appearing" | Story 3 | `[integration]` | |
+| 1 | FR13 | "A second read within the freshness window is served from cache; a touched database invalidates it" | "A second read within the freshness window is served from cache; a touched database invalidates it" | Story 1 | `[unit]` | ✓ |
+| 2 | AD6 | "the cache stamp is the database file's mtime and size, plus a schema-version stamp that invalidates old entries" | "The cache stamp is the database file's mtime and size, and a schema-version stamp invalidates entries written under an earlier schema" | Story 1 | `[unit]` | ✓ |
+| 3 | FR13 (added) | "Derived per-project status is cached and invalidated by the database file's own mtime and size, with a force-refresh and a clear." | "A force-refresh bypasses the cache and a clear removes it, both reachable from the board" | Story 1 | `[feature]` | ✓ |
+| 4 | ENVX6 | "A registered project that is not a git repository renders normally" | "A registered project that is not a git repository renders normally" | Story 1 | `[integration]` | ✓ |
+| 5 | FR10 (added, must NOT) | "no file under a registered project is written — `.dpm/` included. Observing a project leaves it byte-identical." | "must NOT write the cache anywhere inside a registered project — it lives beside the registry under XDG" | Story 1 | `[unit]` | ✓ |
+| 6 | FR14 | "A non-empty ralph selection retargets the launch keys to one `/dpm:ralph <epics…>` command" | "A non-empty ralph selection retargets the launch keys to one `/dpm:ralph <epics…>` command" | Story 2 | `[unit]` | ✓ |
+| 7 | FR14 (added) | "`space` selects runnable epics; while the selection is non-empty the launch keys build one `/dpm:ralph <epics…>` command instead of a single-epic `/dpm:do`." | "`space` selects a runnable epic and deselects it, and the selection is visible in the row" | Story 2 | `[feature]` | ✓ |
+| 8 | FR14 (added) | "instead of a single-epic `/dpm:do`" | "With an empty selection the launch keys behave exactly as 48-05 specifies, asserted against the same targets" | Story 2 | `[unit]` | ✓ |
+| 9 | FR14 (must NOT) | "must NOT allow selection of a blocked, retro or needs-epics row" | "must NOT allow selection of a blocked, retro or needs-epics row" | Story 2 | `[unit]` | ✓ |
+| 10 | FR15 | "A search runs across registered projects and each result navigates back to its project and epic" | "A search runs across registered projects and each result navigates back to its project and epic" | Story 3 | `[integration]` | ✓ |
+| 11 | FR15 (added) | "The `search` tool, run across registered projects, with results navigable back to their project and epic." | "Results come from the `search` tool, asserted from the calls made" | Story 3 | `[integration]` | ✓ |
+| 12 | NFR2 (added) | "One unreadable project never takes the board down. A failure is contained to its own row." | "A project whose server cannot start contributes no results and does not stop the other projects' results appearing" | Story 3 | `[integration]` | ✓ |
 
 ## Notes
 
@@ -27,6 +27,11 @@
 FR10's proof at `docs/epics/48-06-coverage-failure-surface.md` rows 9 and 10 runs over a board session that
 may never have triggered a cache entry. This row hashes the project tree across a session that definitely
 does. If the cache is ever cut from scope, this row moves to 48-06 rather than being dropped with it.
+
+**Row 5's tree comparison is not, on its own, enough, and a planted mutation is what showed it.** A cache
+redirected into the project it was reading survived the hash: the same session runs the clear, which removed
+the misplaced file before the second snapshot was taken. The row's test now also asserts the path the cache
+is still pointing at when the session ends, which is the form of the claim that outlives the clear.
 
 **Row 3 is the half of FR13 its criterion omits.** The requirement names a force-refresh and a clear; the
 criterion tests only the caching and the invalidation. A cache with neither control passes row 1, and
@@ -37,6 +42,11 @@ satisfied by a board that always builds a `/dpm:ralph` command, with one epic in
 selected. That board passes every row in this matrix and fails
 `docs/epics/48-05-coverage-launch-and-live-sessions.md` rows 1 and 2. Row 8 asserts the empty case against
 those same targets rather than restating them, so the two cannot drift.
+
+**Row 8's comparison is against `launch_target()` called with two arguments — 48-05's own signature — and
+that is load-bearing.** Comparing the board's answer against the board's own three-argument call would
+agree with the always-ralph board this row exists to catch. Planted, that mutation failed seven tests,
+three of them 48-05's.
 
 **Row 7 is FR14's reachability half.** Row 6 is about what the launch keys compute; nothing in FR14's own
 criteria says a user can build a selection or see one. Both halves are needed — a correct retargeting over
@@ -53,3 +63,11 @@ neither ✓ is evidence about the other.
 
 **Every row here belongs to a Should-have except rows 5 and 12.** Those two are Must-have coverage that
 happens to live in this epic because the code that could violate them is here.
+
+**Row 10 is verified for every result that has a row on the board, and its limit is recorded rather than
+elided.** `search` answers over fifteen indexed entities and the browser holds documents and stories; a
+requirement or a review finding matches with no row for the cursor to move to, and those results carry
+their project and no document. Resolving them would mean the board walking dpm's parent columns table by
+table — the derivation AD5 exists to keep out of it. Story 3's Notes hold the reasoning; the behaviour is
+asserted in both directions, including the case where a section belongs to a document the Epics column
+does not hold.

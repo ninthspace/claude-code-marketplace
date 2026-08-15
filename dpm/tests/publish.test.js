@@ -30,6 +30,8 @@ import { project } from '../src/projection/index.js';
 import { ProjectionError } from '../src/projection/naming.js';
 import { dump } from '../src/dump/index.js';
 import { DIVERGENCE, DUMP_PATH, guard } from '../src/guard/index.js';
+import { readMarker } from '../src/sync/marker.js';
+import { sha256 } from './support/hashes.js';
 
 /** A database holding the full corpus, and an empty directory to publish it into. */
 function repository(t) {
@@ -53,6 +55,26 @@ function snapshot(root, at = '', into = new Map()) {
   }
 
   return into;
+}
+
+/**
+ * A corpus publish will refuse: a kind seeded and never templated, plus a change to an ordinary
+ * document.
+ *
+ * The kind is the shape this failure takes in life, where one arrives by migration and nobody
+ * writes the template. The second edit is what stops a refusal being indistinguishable from a run
+ * that had nothing to do — without it, "the tree is unchanged" is true of a publish that correctly
+ * refused *and* of one that had nothing to write in the first place.
+ */
+function makeUnpublishable(db) {
+  db.prepare("INSERT INTO document_kind (kind, dir, numbering) VALUES ('ledger', 'ledgers', 'root')")
+    .run();
+  db.prepare(`INSERT INTO document
+      (id, kind, numbering, number, slug, title, status, created_at, updated_at)
+      VALUES ('led-1', 'ledger', 'root', 9, 'costs', 'Costs', 'pending',
+              '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')`).run();
+  db.prepare('UPDATE document SET title = ? WHERE id = ?')
+    .run('Artefact persistence, revised', 'doc-quick');
 }
 
 /** What the guard currently calls orphaned — the rule publish must be deleting by, not a copy. */
@@ -214,19 +236,7 @@ test('a document that cannot render leaves the tree untouched rather than half-w
 
   const before = snapshot(root);
 
-  // A kind seeded and never templated — the shape this failure takes in life, where a kind arrives
-  // by migration and nobody writes the template.
-  db.prepare("INSERT INTO document_kind (kind, dir, numbering) VALUES ('ledger', 'ledgers', 'root')")
-    .run();
-  db.prepare(`INSERT INTO document
-      (id, kind, numbering, number, slug, title, status, created_at, updated_at)
-      VALUES ('led-1', 'ledger', 'root', 9, 'costs', 'Costs', 'pending',
-              '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')`).run();
-
-  // Something that *would* have been written, so the assertion below is not satisfied by a corpus
-  // in which nothing changed anyway: the ledger is not the only pending write when publish refuses.
-  db.prepare('UPDATE document SET title = ? WHERE id = ?')
-    .run('Artefact persistence, revised', 'doc-quick');
+  makeUnpublishable(db);
 
   assert.throws(() => publish(db, { root }), ProjectionError);
 
@@ -308,4 +318,127 @@ test('a write that fails partway leaves the dump unwritten rather than ahead of 
   assert.equal(existsSync(join(root, DUMP_PATH)), false,
     'the dump was written before the projection finished — a failed publish leaves a current dump '
     + 'over markdown that never landed, which is the half-finished state the order exists to avoid');
+});
+
+// --- The sync marker (Epic 49-03 Story 2: AD13) --------------------------------------------------
+
+test('a publish records the sync point, and the guard that follows reports clean [integration]', (t) => {
+  const { db, call, root } = repository(t);
+
+  // Nothing before, stated rather than assumed: otherwise every assertion below could be true of a
+  // marker something else left, and this test would not have observed publish writing one.
+  assert.equal(readMarker({ root }), null, 'something recorded a sync point before publish ran');
+
+  publish(db, { root });
+
+  // **Hashed off disk, not out of the run that wrote it.** The dump on disk is what the guard will
+  // hash on its next run, so that is the text the marker has to describe — and a marker equal to
+  // whatever the writing code happened to hash is the one failure mode a marker has.
+  const onDisk = () => readFileSync(join(root, DUMP_PATH), 'utf8');
+
+  assert.equal(readMarker({ root }), sha256(onDisk()),
+    'the marker does not describe the dump that is on disk');
+
+  // **The second clause, and it is what makes the first an assertion rather than a restatement.** A
+  // marker written from the wrong text satisfies every equality the writing code computes for
+  // itself; what it cannot do is survive a guard run. The guard does not read the marker until
+  // Story 4 — this line holds today because the two artefacts agree, and becomes the tie between
+  // the written value and the read one the moment the verdict starts consulting it.
+  assert.deepEqual(guard(db, { root }).diverged, [], 'the publish left the tree diverged');
+
+  // And it tracks the dump rather than being stamped once: move the database, publish again, and
+  // both the dump and the marker move together.
+  const first = readMarker({ root });
+
+  call.create_spec({ slug: 'moved-the-database', title: 'Moved the database' });
+  publish(db, { root });
+
+  assert.notEqual(readMarker({ root }), first, 'a second publish left the first publish\'s marker');
+  assert.equal(readMarker({ root }), sha256(onDisk()));
+  assert.deepEqual(guard(db, { root }).diverged, []);
+
+  // **A publish that changes nothing still records the sync point**, and this is the one case a
+  // "write it when you wrote something" implementation would miss. It is also the upgrade path: an
+  // existing project whose tree is already settled adopts a marker by publishing once, and a
+  // publish that stayed silent because it had nothing to write would leave it without one forever.
+  const settled = readMarker({ root });
+
+  rmSync(join(root, '.dpm', 'dpm.db.synced'));
+
+  const quiet = publish(db, { root });
+
+  assert.deepEqual(quiet.written, [], 'the tree was not settled, so this is not the case in hand');
+  assert.equal(readMarker({ root }), settled, 'a publish with nothing to write recorded no sync point');
+});
+
+test('a publish that refuses leaves the previous marker rather than one for a dump that never landed [integration]', (t) => {
+  const { db, root } = repository(t);
+
+  publish(db, { root });
+
+  const recorded = readMarker({ root });
+  const dumped = readFileSync(join(root, DUMP_PATH), 'utf8');
+
+  assert.ok(recorded, 'the first publish recorded no sync point, so there is no previous marker');
+
+  makeUnpublishable(db);
+
+  assert.throws(() => publish(db, { root }), ProjectionError);
+
+  // **The failure this rules out is not an absent marker — it is a present, wrong one.** A marker
+  // written before the projection landed would describe `dump(db)` as it now stands, which no file
+  // on disk carries; the next guard run reads it, finds the file it names is not the file it has,
+  // and reasons from that. Every other verdict in AD13's table is built on this value.
+  assert.equal(readMarker({ root }), recorded, 'the refused publish moved the marker');
+  assert.equal(readFileSync(join(root, DUMP_PATH), 'utf8'), dumped, 'the refused publish moved the dump');
+
+  // The control, and without it the two lines above hold for a database that never changed: the
+  // marker a completed publish *would* have written here is a different one.
+  assert.notEqual(sha256(dump(db).sql), recorded,
+    'the database did not move, so nothing was at stake in the refusal');
+
+  // A dry run is the same claim reached the other way — it completes, and still records nothing,
+  // because a sync point it reported would name a dump it deliberately did not write.
+  const { db: clean, root: elsewhere } = repository(t);
+
+  publish(clean, { root: elsewhere, dryRun: true });
+
+  assert.equal(readMarker({ root: elsewhere }), null, 'a dry run recorded a sync point');
+});
+
+test('a write that fails partway leaves the previous marker rather than the one it was about to record [integration]', (t) => {
+  const { db, call, root } = repository(t);
+
+  publish(db, { root });
+
+  const recorded = readMarker({ root });
+
+  // **A projection refusal cannot show this and the test above cannot either.** `project()` throws
+  // at the top of `publish`, before the branch the marker write lives in, so *every* position
+  // inside that branch leaves the previous marker — confirmed by mutation: hoisting the write to
+  // the first line of the block failed nothing. What the position governs is a run that reached the
+  // write loop and did not finish it, and that needs a fault injected the same way the
+  // dump-ordering criterion above needs one.
+  call.create_spec({ slug: 'never-lands', title: 'Never lands' });
+
+  const rendered = project(db, { write: false }).written;
+  const victim = rendered.at(-1).path;
+
+  rmSync(join(root, victim), { force: true });
+  symlinkSync(join(root, 'nowhere', 'target.md'), join(root, victim));
+
+  assert.throws(() => publish(db, { root }), { code: 'ENOENT' });
+
+  // The precondition the pair rests on, exactly as the dump-ordering test states it: publish really
+  // did reach the write loop, so what follows is about a partial write and not about a refusal.
+  assert.equal(existsSync(join(root, rendered[0].path)), true,
+    'nothing was written, so this is asserting a refusal rather than a partial write');
+
+  // **The marker is a publish behind, which is the survivable state.** A marker recorded before the
+  // loop would describe a database whose projection never landed — the guard reads it, agrees with
+  // it, and reports clean over a tree that is missing the change. Stale, the guard finds the
+  // database ahead and names publish, which is both true and the right fix.
+  assert.equal(readMarker({ root }), recorded, 'the failed publish recorded a sync point anyway');
+  assert.notEqual(sha256(dump(db).sql), recorded,
+    'the database did not move, so a marker written early would have looked identical');
 });

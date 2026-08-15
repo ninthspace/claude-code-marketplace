@@ -75,11 +75,47 @@ const describe = (tool) => ({
 /**
  * Build the method table for a set of tools.
  *
- * @param {Tool[]} tools
+ * **`tools/list` and `tools/call` no longer share one list (AD12).** The list is advertised before
+ * any database exists, built from an in-memory template; the table a call is dispatched against is
+ * built later, against the real file, on the first `tools/call`. `tools` is what is described and
+ * `resolve` is what is dispatched against, and the two are asserted identical rather than assumed
+ * — which is what `capabilities.tools.listChanged: false`, declared below, promises a client.
+ *
+ * **`resolve` is called inside the `tools/call` handler and nowhere else.** Calling it here would
+ * open the database at launch and silently undo the deferral, while every test of the *result*
+ * still passed. AD12 rejected a lazy getter on `context.db` for the same reason one level down:
+ * several tool modules destructure `const { db } = context` while the registry is being built, so
+ * a getter is resolved eagerly and invisibly.
+ *
+ * `resolve` defaults to returning `tools`, so a caller with one list passes one argument and gets
+ * exactly the behaviour this had before the split.
+ *
+ * `serverInfo` is a parameter for the same reason `resolve` is: this module knows the server's name
+ * and version and has no business knowing its *schema* version, which lives behind `src/schema/`
+ * and reaches the handshake from `serve()`. A client that caches derived answers needs it — an
+ * entry produced under an earlier schema is stale however untouched the database file is — and the
+ * handshake is the only place it can arrive, since the connection is not open yet and no read tool
+ * reports it.
+ *
+ * @param {Tool[]} tools The list `tools/list` describes.
+ * @param {() => Tool[]} [resolve] The live table `tools/call` dispatches against, resolved on
+ *   first call.
+ * @param {object} [serverInfo] What `initialize` answers with. Defaults to {@link SERVER_INFO}.
  * @returns {Record<string, (params: object) => unknown>}
  */
-export function methods(tools) {
-  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+export function methods(tools, resolve = () => tools, serverInfo = SERVER_INFO) {
+  // Memoised on the *identity* of the list `resolve` hands back, not on first call: the default
+  // resolver returns the same array every time, so the map is built once and the unsplit path
+  // keeps the cost it always had, while a resolver that opens the database on first call rebuilds
+  // the map exactly once — when the list it returns changes.
+  let indexed = null;
+  const byName = () => {
+    const live = resolve();
+
+    if (indexed?.list !== live) indexed = { list: live, map: new Map(live.map((t) => [t.name, t])) };
+
+    return indexed.map;
+  };
 
   return {
     initialize: (params) => ({
@@ -88,7 +124,7 @@ export function methods(tools) {
       // to decide whether to call `tools/list` at all, and a server that hid the capability
       // while holding tools would never be asked for them.
       capabilities: { tools: { listChanged: false } },
-      serverInfo: SERVER_INFO,
+      serverInfo,
     }),
 
     ping: () => ({}),
@@ -96,7 +132,7 @@ export function methods(tools) {
     'tools/list': () => ({ tools: tools.map(describe) }),
 
     'tools/call': (params) => {
-      const tool = byName.get(params?.name);
+      const tool = byName().get(params?.name);
 
       // Thrown rather than returned so `dispatch` can turn it into a JSON-RPC error. An unknown
       // tool is a caller mistake about the protocol, not a tool that ran and failed.

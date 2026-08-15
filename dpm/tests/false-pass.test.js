@@ -87,7 +87,7 @@ const DISPOSITIONS = new Map(Object.entries({
   21: { test: 'the plugin manifest declares a server whose entry point exists' },
   22: { test: 'an update clears a nullable column when told to, and leaves it alone when not' },
   23: { test: 'a retired blocker goes on blocking, where the same blocker completed does not' },
-  24: { test: 'all four binaries refuse to open a database on a runtime without FTS5' },
+  24: { test: 'every binary refuses to open a database on a runtime without FTS5' },
   // **A deferral converted, which is the branch working rather than the branch being retired.**
   // #25 sat on `closedIn: '47-12'` while its mechanism was unbuilt; 47-12 Story 3 built it, so the
   // disposition is now a citation like every other. The cited test reads the corpus against the
