@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPM Training Guide — Interactive Playground</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --text-faint: #6e7681;
+    --accent: #2dd4bf;
+    --accent-dim: #14b8a6;
+    --green: #3fb950;
+    --green-dim: #238636;
+    --yellow: #d29922;
+    --yellow-dim: #9e6a03;
+    --red: #f85149;
+    --red-dim: #da3633;
+    --purple: #bc8cff;
+    --purple-dim: #8957e5;
+    --orange: #f0883e;
+    --cyan: #39d2c0;
+    --pink: #f778ba;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  /* Header */
+  header {
+    grid-column: 1 / -1;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  .version-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted, #8b949e);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+
+  .preset-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .preset-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .preset-btn:hover { border-color: var(--accent); color: var(--text); }
+  .preset-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+
+  /* Canvas area */
+  .canvas-wrap {
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+
+  canvas.dragging { cursor: grabbing; }
+
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    max-width: 320px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+  }
+
+  .tooltip.visible { opacity: 1; }
+  .tooltip h3 { font-size: 13px; margin-bottom: 4px; color: var(--accent); }
+  .tooltip .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--surface2); color: var(--text-dim); margin-right: 4px; }
+  .tooltip p { color: var(--text-dim); margin-top: 4px; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Skill list */
+  .skill-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .skill-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .skill-row:hover { background: var(--surface2); }
+  .skill-row.selected { background: var(--accent-dim); }
+
+  .skill-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .skill-name {
+    font-size: 12px;
+    flex: 1;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+  }
+
+  .knowledge-btn {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+    min-width: 56px;
+    text-align: center;
+  }
+
+  .knowledge-btn.know { background: var(--green-dim); color: var(--green); border-color: var(--green-dim); }
+  .knowledge-btn.fuzzy { background: var(--yellow-dim); color: var(--yellow); border-color: var(--yellow-dim); }
+  .knowledge-btn.unknown { background: var(--red-dim); color: var(--red); border-color: var(--red-dim); }
+
+  /* Detail panel */
+  .detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+  }
+
+  .detail-panel h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .detail-panel .subtitle {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+
+  .detail-panel .desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .detail-panel .field-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+
+  .detail-panel .field-value {
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+    background: var(--surface2);
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  .detail-panel .phases {
+    list-style: none;
+    counter-reset: phase;
+  }
+
+  .detail-panel .phases li {
+    counter-increment: phase;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    padding-left: 22px;
+    position: relative;
+  }
+
+  .detail-panel .phases li::before {
+    content: counter(phase);
+    position: absolute;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 4px;
+    color: var(--text-faint);
+  }
+
+  .detail-panel .tip {
+    background: var(--accent-dim);
+    border-left: 3px solid var(--accent);
+    padding: 8px 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+
+  .detail-panel .tip strong { color: var(--accent); }
+
+  .no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-faint);
+    font-size: 12px;
+    text-align: center;
+    padding: 20px;
+    line-height: 1.6;
+  }
+
+  /* Prompt output */
+  .prompt-bar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .prompt-bar label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    padding-top: 4px;
+    white-space: nowrap;
+  }
+
+  .prompt-text {
+    flex: 1;
+    font-size: 12px;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-height: 60px;
+    overflow-y: auto;
+  }
+
+  .copy-btn {
+    padding: 6px 14px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover { background: var(--accent); color: var(--bg); }
+  .copy-btn.copied { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>/dpm</span> Training Guide</h1>
+  <span class="version-badge">v0.3.0 &middot; tuned for Claude Opus 5</span>
+  <div class="preset-bar">
+    <button class="preset-btn active" data-preset="full" onclick="applyPreset('full')">Full Pipeline</button>
+    <button class="preset-btn" data-preset="quick" onclick="applyPreset('quick')">Quick Start</button>
+    <button class="preset-btn" data-preset="planning" onclick="applyPreset('planning')">Planning Only</button>
+    <button class="preset-btn" data-preset="execution" onclick="applyPreset('execution')">Execution Focus</button>
+    <button class="preset-btn" data-preset="review" onclick="applyPreset('review')">Review Cycle</button>
+  </div>
+</header>
+
+<div class="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-section">
+    <h2>Knowledge Level</h2>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Know</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Fuzzy</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Unknown</div>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <h2>DPM Skills</h2>
+    <div class="skill-list" id="skillList"></div>
+  </div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="no-selection">Click a skill node on the canvas<br>or in the list to explore it</div>
+  </div>
+</div>
+
+<div class="prompt-bar">
+  <label>Prompt</label>
+  <div class="prompt-text" id="promptText">Mark your knowledge level for each DPM skill, then copy this prompt to get a tailored tutorial.</div>
+  <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────────────────
+
+const SKILLS = [
+  {
+    id: 'party',
+    name: '/dpm:party',
+    label: 'Party',
+    icon: '💬',
+    color: '#f778ba',
+    category: 'planning',
+    short: 'Multi-persona discussion',
+    description: 'The whole roster is in the room. Two or three personas answer each turn, build on each other and disagree where they genuinely differ. Great for brainstorming, decision-making, or exploring trade-offs. The conversation is saved as a discussion when it ends.',
+    input: 'A topic, a reference to an existing document, or a description',
+    output: 'A discussion row with key points, agreements, open questions and recommendations',
+    outputFile: 'discussion row → projected to docs/discussions/{nn}-discussion-{slug}.md',
+    phases: ['Load the roster from the agent table (include_body, or the voices are woven from nothing)', 'Library Check — filtered on scope rows', 'Orchestration loop: 2-3 personas per turn', 'Personas reference each other, disagree constructively', 'Exit option after each round', 'Save the discussion and hand off'],
+    tip: 'Use party before discover when you\'re unsure about the problem space. The diverse perspectives help surface blind spots early. Unlike CPM, the discussion is a row rather than an inline summary — so it survives the session and can be cited by everything downstream.',
+    personas: 'Jordan (PM), Margot (Architect), Bella (Dev), Priya (UX), Tomas (QA), Casey (Test Engineer), Sable (DevOps), Elli (Writer), Ren (Scrum Master) — seeded rows, extend with create_agent',
+    next: ['discover', 'spec', 'epics']
+  },
+  {
+    id: 'consult',
+    name: '/dpm:consult',
+    label: 'Consult',
+    icon: '🧑‍💼',
+    color: '#e879a0',
+    category: 'planning',
+    short: 'Focused consultation with one persona or a panel',
+    description: 'A focused consultation with one agent persona, or a small panel. You control who is in the room and who is driving — invite others as needed, transfer the facilitation lead for probing questions and structured exploration, or reclaim it. Same roster as party.',
+    input: 'A persona name, a role, or no argument (pick from the roster)',
+    output: 'A discussion row with key points, decisions, and context',
+    outputFile: 'discussion row → projected to docs/discussions/{nn}-discussion-{slug}.md',
+    phases: ['Select the persona (by name, role, or from the roster rows)', 'Library Check — filtered on scope rows', 'Conversation loop: user-led by default', 'Mid-session: invite, dismiss, transfer the lead', 'Agent-led mode: probing, structured exploration', 'Save the discussion and hand off'],
+    tip: 'Use consult when you want focused depth with one expert. Use party when you want breadth from multiple perspectives. You can invite more personas mid-conversation if the topic broadens.',
+    personas: 'Same roster as party — Jordan (PM), Margot (Architect), Bella (Dev), Priya (UX), Tomas (QA), Casey (Test Engineer), Sable (DevOps), Elli (Writer), Ren (Scrum Master)',
+    next: ['discover', 'spec', 'epics']
+  },
+  {
+    id: 'discover',
+    name: '/dpm:discover',
+    label: 'Discover',
+    icon: '🔍',
+    color: '#58a6ff',
+    category: 'planning',
+    short: 'Guided problem discovery',
+    description: 'Understand the problem before proposing solutions. Walks through six phases: Why, Who, Current State, Success Criteria, Constraints, and Summary — recording each as typed rows on a problem brief. Personas weigh in at phases 1 and 5. Suggests /dpm:brief as the primary next step.',
+    input: 'A description of what you want to build',
+    output: 'A problem_brief row carrying why, who, current state, success criteria and constraints',
+    outputFile: 'problem_brief row → projected to docs/plans/{nn}-plan-{slug}.md',
+    phases: ['Why — motivation and importance', 'Who — target users and needs', 'Current State — how it\'s solved today', 'Success Criteria — definition of done', 'Constraints — technical, business, timeline', 'Summary — confirm and write the rows'],
+    tip: 'Resist the urge to jump to solutions. Discovery builds the shared understanding that prevents costly pivots later. Constraints recorded here are the ones /dpm:spec will not have to ask for twice — they are rows, so nothing re-derives them from prose.',
+    next: ['brief', 'spec']
+  },
+  {
+    id: 'brief',
+    name: '/dpm:brief',
+    label: 'Brief',
+    icon: '💡',
+    color: '#d29922',
+    category: 'planning',
+    short: 'Product ideation & vision',
+    description: 'Turn a problem brief into a product brief through guided conversation. Explores vision, value propositions, key features (MoSCoW), differentiation, and user journey narratives — each recorded as its own rows. Bridges problem discovery and requirements specification.',
+    input: 'A problem brief from discover, a reference to one, or a description',
+    output: 'A product_brief row with vision, value props, features and user journeys as child rows',
+    outputFile: 'product_brief row → projected to docs/briefs/{nn}-brief-{slug}.md',
+    phases: ['Vision & Positioning — what and who', 'Value Propositions — why use this', 'Key Features — MoSCoW prioritised', 'Differentiation — vs alternatives', 'User Journey Narratives — key user flows'],
+    tip: 'Brief captures *what* we\'re building and *why* this approach. It sits between problem discovery (the "why") and specification (the "how"). Skip it when the solution is obvious.',
+    next: ['architect', 'spec']
+  },
+  {
+    id: 'architect',
+    name: '/dpm:architect',
+    label: 'Architect',
+    icon: '🏗️',
+    color: '#f0883e',
+    category: 'planning',
+    short: 'Architecture exploration & ADRs',
+    description: 'Facilitated architecture exploration that identifies the decisions the product actually needs. For each one it explores options and trade-offs, and records them as ADRs with typed options and axes — so a rejected option and the reason it was rejected are rows, not a paragraph someone has to re-read.',
+    input: 'A brief, spec or discussion — or a description',
+    output: 'ADR rows with context, typed options, trade-offs along named axes, and rationale',
+    outputFile: 'adr rows — child-numbered under the document that raised them, and rendered inside it. There is no docs/architecture/ directory',
+    phases: ['Decision Discovery — what needs deciding', 'Trade-off Exploration — options per decision, as rows', 'Dependency Mapping — how decisions interact', 'ADR Production — typed options and axes'],
+    tip: 'This is the sharpest difference from CPM: an ADR is not a standalone file. It is child-numbered under its parent and rendered inside that document, so a decision cannot drift away from the work that raised it. Downstream, requirements foreign-key to the ADRs that constrain them rather than mentioning them by name.',
+    next: ['spec']
+  },
+  {
+    id: 'spec',
+    name: '/dpm:spec',
+    label: 'Spec',
+    icon: '📋',
+    color: '#bc8cff',
+    category: 'planning',
+    short: 'Requirements, architecture & testing strategy',
+    description: 'Build a structured specification through facilitated conversation. Records requirements with their class and priority as typed columns, architecture decisions, scope boundaries and a testing strategy — all as rows. Test approaches are references into a vocabulary table rather than tags parsed out of a line of prose. Personas surface trade-offs at key decisions.',
+    input: 'A problem brief, a product brief, or a description',
+    output: 'A spec row with requirement rows carrying class and priority, plus scope and testing strategy',
+    outputFile: 'spec row → projected to docs/specifications/{nn}-spec-{slug}.md, with its ADRs rendered inside',
+    phases: ['Problem Recap — confirm understanding', 'Functional Requirements — class and priority as columns', 'Non-Functional Requirements — performance, security, then environmental constraints', 'Architecture Decisions — foreign keys to ADR rows, filling gaps', 'Scope Boundary — in / out / deferred', 'Testing Strategy — a test_approach reference per criterion', 'Review — confirm, then write the rows'],
+    tip: 'A test approach is a foreign key into a vocabulary table, so a typo is a rejected write rather than a criterion that silently covers nothing. Test tooling is still an environmental requirement rather than a section of its own — a spec that never records the runner it needs can otherwise roll up fully verified with nothing installed.',
+    next: ['epics']
+  },
+  {
+    id: 'epics',
+    name: '/dpm:epics',
+    label: 'Epics',
+    icon: '📦',
+    color: '#3fb950',
+    category: 'planning',
+    short: 'Break a spec into epics, stories, tasks and coverage',
+    description: 'Break a specification into epics, stories and tasks through facilitated conversation. Reads the spec\'s requirement rows and records the breakdown — epics, their stories, each story\'s tasks and acceptance criteria, and the coverage rows binding each criterion to the requirement text it delivers. Dependencies are rows in a graph rather than sentences, which is what lets readiness be computed instead of read.',
+    input: 'A spec (named, or the obvious one)',
+    output: 'Epic, story, task and acceptance_criterion rows, plus the coverage rows tracing each criterion to its requirement',
+    outputFile: 'epic + coverage_matrix rows → docs/epics/{parent}-{seq}-epic-{slug}.md and -coverage-{slug}.md',
+    phases: ['Read the spec\'s requirement and ADR rows', 'Identify 2-10 epics (major work areas)', 'Break each into stories with acceptance criteria', 'Attach a test_approach reference per criterion', 'Add integration stories where cross-story interaction warrants it', 'Write the coverage rows binding criteria to requirements', 'Identify tasks per story', 'Record dependencies as rows', 'Confirm the full tree'],
+    tip: 'Coverage is a row, so "which requirements does nothing cover?" is a query rather than a table someone maintains. A must-have covered by no story blocks rather than warns. Because dependencies are edges, a blocked epic can *name* its blocker — which is what the board shows, and what a markdown corpus can only infer.',
+    next: ['do', 'review']
+  },
+  {
+    id: 'do',
+    name: '/dpm:do',
+    label: 'Do',
+    icon: '⚡',
+    color: '#f0883e',
+    category: 'execution',
+    short: 'Execute stories and tasks, verifying each criterion',
+    description: 'Executes the stories and tasks of an epic, one at a time — load context, do the work, verify each acceptance criterion, record the verification, move on. Readiness comes from the dependency graph rather than from reading a list, and status, observations and verification are written back as typed rows. Discovers and caches the project\'s test runner at startup.',
+    input: 'An epic (named, or the next ready one)',
+    output: 'Completed code, plus status, observation and verification rows on the epic',
+    outputFile: 'writes rows — the epic\'s projected file changes at the next publish',
+    phases: ['Resolve the epic and read its ADR rows', 'Startup — apply prior retros through a disposition gate', 'Discover the test runner (library → config → ask)', 'Take the next story the dependency graph says is ready', 'Load the story\'s tasks and criteria as rows', 'Plan when warranted → do the work', 'Verify each criterion against its test_approach', 'Record the verification and any observation as rows', 'Loop until the story is done → take the next', 'Coverage rows carry the proof, anchored to the gates that passed'],
+    tip: 'Readiness is computed, not read: /dpm:do asks the graph what is unblocked rather than parsing a "Blocked by" line. Note that nothing here touches docs/ — the epic\'s file changes only when you publish, which is why the guard exists to catch a commit that forgot.',
+    next: ['ralph', 'publish', 'retro', 'review', 'pivot']
+  },
+  {
+    id: 'ralph',
+    name: '/dpm:ralph',
+    label: 'Ralph',
+    icon: '🔄',
+    color: '#f0883e',
+    category: 'execution',
+    short: 'Autonomous execution — epics, or a whole spec',
+    description: 'Launches an autonomous loop that wraps /dpm:do across epics, or works a spec from scratch. Probes the stop hook, resolves what the run will work from the rows, assembles the prompt and confirms before arming. Needs a Stop-hook plugin, which DPM does not supply — install ninthspace/ralph-loop, the fail-closed fork of Anthropic\'s ralph-loop. Ideal for overnight runs or delivering a spec end to end.',
+    input: 'Epics (explicit, a range, or resolved from the rows), or a spec to work from scratch. Optional max-iterations and dry-run.',
+    output: 'A ralph loop command, plus session and observation rows as it runs',
+    outputFile: 'writes rows — publish when the run finishes to render them',
+    phases: ['Pre-flight: resolve the input from the rows, probe the stop hook, find the test runner', 'Resume detection: read prior session rows and epic status columns', 'Prompt assembly: interpolate the target, iterations and autonomous overrides', 'Present the generated command for review', 'Launch on confirmation (or save for later)', 'Spec mode phase 1: /dpm:epics until every requirement is traced', 'Spec mode phase 2: /dpm:do until the coverage query says done'],
+    tip: 'Completion is decided by a query over the coverage rows rather than by the loop\'s own judgement — but note what that query aggregates: the marks /dpm:do placed on its own work. It is exact about what was recorded, which is not the same as independent verification. Remember the run leaves the projection stale; publish before you commit whatever it produced.',
+    next: ['publish', 'retro']
+  },
+  {
+    id: 'publish',
+    name: '/dpm:publish',
+    label: 'Publish',
+    icon: '📤',
+    color: '#2dd4bf',
+    category: 'support',
+    short: 'Render the database to docs/ — the one skill CPM has no equivalent of',
+    description: 'Regenerate the markdown projection and the committed dump from the database, so what is on disk matches what the planning database holds. Nothing else renders docs/ as a side effect of writing, which is deliberate: it is what makes the pre-commit guard able to tell a stale projection from a current one. Names every file it would remove and asks before removing it.',
+    input: 'Nothing — it publishes whatever the database currently holds',
+    output: 'Every projected markdown file, plus .dpm/dpm.sql, rewritten only where the bytes actually changed',
+    outputFile: 'docs/**/*.md + .dpm/dpm.sql — commit both in the same commit',
+    phases: ['Render every document and dump the database, before writing anything', 'Compare each artefact against what is on disk', 'List every file that would be removed, and ask', 'Write the changed files, then the dump last', 'Report what was written, rewritten and removed'],
+    tip: 'This is the habit to build: publish, then commit. Skip it and the guard refuses the commit and names this command — nothing is lost and nothing is written behind you. The dump is written last on purpose: of the two half-finished states a failed write can leave, a projection ahead of the dump is recoverable, while a current dump above a projection that never landed is a commit whose readable diff is missing the change its database already carries. Use the skill rather than bin/dpm-publish.js in a repo that still has a CPM corpus in place — the skill asks before removing, the script does not.',
+    next: []
+  },
+  {
+    id: 'review',
+    name: '/dpm:review',
+    label: 'Review',
+    icon: '🔎',
+    color: '#39d2c0',
+    category: 'quality',
+    short: 'Adversarial review through the roster\'s lenses',
+    description: 'Adversarial review of an epic or one of its stories, using the agent roster. Each persona examines the work through their professional lens — unclear requirements, missing criteria, hidden complexity, architectural risk, testability, scope creep, dependency risk. Findings carry a severity and a category as typed references, and remediation becomes tasks on the epic rather than a list someone has to transcribe.',
+    input: 'An epic or a story',
+    output: 'Finding rows carrying severity and category, and optionally new task rows on the epic',
+    outputFile: 'review row → projected to docs/reviews/{nn}-review-{slug}.md',
+    phases: ['Read the epic\'s rows and the spec and ADRs it references', 'Conduct the review (2-4 personas)', 'Check requirement coverage against the coverage rows', 'Check the stories against the ADRs they are bound to', 'Check each criterion has a test_approach that fits it', 'Write the findings as rows with severity and category', 'Optionally write remediation tasks straight onto the epic'],
+    tip: 'Severity and category are foreign keys into vocabularies, so findings can be counted and filtered rather than skimmed. Because remediation is written as task rows on the epic, /dpm:do picks the work up without anyone re-entering it.',
+    next: ['do', 'pivot']
+  },
+  {
+    id: 'pivot',
+    name: '/dpm:pivot',
+    label: 'Pivot',
+    icon: '🔀',
+    color: '#d29922',
+    category: 'quality',
+    short: 'Course correction that cascades',
+    description: 'Amend a planning artefact through its update tools, then walk the documents that hang off it and gate every downstream change on its own. The chain is not discovered by scanning directories — it is followed along foreign keys, so nothing downstream is missed because a file was named unexpectedly.',
+    input: 'The artefact to amend',
+    output: 'Updated rows on the artefact, and gated updates to everything referencing it',
+    outputFile: 'writes rows — publish to see the projection catch up',
+    phases: ['Follow the references to build the affected chain', 'Amend the artefact through its update tools', 'Walk each downstream document, gating its change separately', 'Flag affected tasks rather than rewriting them'],
+    tip: 'This is where the substrate earns its keep most visibly: in CPM the cascade had to find downstream documents by globbing five directories and matching slugs. Here the edges already exist, so "what does this change affect?" is answered rather than searched — and a document nothing references cannot be silently skipped.',
+    next: ['do', 'publish', 'review']
+  },
+  {
+    id: 'retro',
+    name: '/dpm:retro',
+    label: 'Retro',
+    icon: '📊',
+    color: '#f85149',
+    category: 'quality',
+    short: 'Retrospective, and the passes that keep the corpus honest',
+    description: 'Lightweight retrospective over a finished epic or quick record. Observations are rows that keep their origin, so a lesson promoted into the library still names the epic it came from. Three further passes keep the corpus honest: promoting a durable lesson into the library, retiring a spent one, and waiving a clean epic that has nothing to reflect on.',
+    input: 'A finished epic, or a quick record',
+    output: 'A retro row with observation rows grouped by category, each retaining its origin',
+    outputFile: 'retro row → projected to docs/retros/{nn}-retro-{slug}.md',
+    phases: ['Read the epic\'s observation rows', 'Synthesise by category and extract patterns', 'Write the retro and its recommendations as rows', 'Promote a durable lesson into the library (it keeps its origin)', 'Retire a spent observation, or waive a clean epic'],
+    tip: 'Because an observation keeps its origin as a reference, a promoted lesson can always be traced back to the epic that produced it — and a retired one stays retired rather than resurfacing in the next synthesis. Waiving is what stops the board flagging a clean epic as retro-pending forever.',
+    next: ['discover', 'spec', 'epics', 'library']
+  },
+  {
+    id: 'audit',
+    name: '/dpm:audit',
+    label: 'Audit',
+    icon: '🔬',
+    color: '#ff7b72',
+    category: 'quality',
+    short: 'Independent codebase health audit',
+    description: 'Structured audit of the codebase across the project\'s dimensions of code health. Findings are rows carrying a citation, a dimension and a severity as typed references; the audit is pinned to the commit it was taken at, so a finding always says which tree it was true of. Results can be piped into the library, a spec, or a quick change.',
+    input: 'An optional scope hint (a path or area); runs against the current codebase',
+    output: 'An audit row pinned to a commit, with finding rows carrying dimension, severity and a file:line citation',
+    outputFile: 'audit row → projected to docs/audits/{nn}-audit-{slug}.md',
+    phases: ['Orient on the codebase — structure, stack, conventions', 'Sweep each dimension independently', 'Cite every finding with file:line at the pinned commit', 'Rate by severity and effort as typed references', 'Hand off into library, spec or quick'],
+    tip: 'Dimensions are a vocabulary table, so a project can add its own and the sweep covers it — and "how many high-severity findings in the security dimension, at that commit?" is a query. Existing planning rows are read as context only, never to claim a finding is already planned.',
+    next: ['library', 'spec', 'quick']
+  },
+  {
+    id: 'inspect',
+    name: '/dpm:inspect',
+    label: 'Inspect',
+    icon: '🔬',
+    color: '#ffa657',
+    category: 'quality',
+    short: 'What a change set did, and where it sits',
+    description: 'Code, after execution. Takes a selector — a commit range, a branch, a ref to work back from, the working tree — and produces the account a colleague would want if they had to understand the work without opening the repository. It works out the axis that best explains the change, situates it against what was already there and what was deliberately left alone, and joins it to the planning rows that record intent. It names every file it did not read rather than letting a partial pass read as complete.',
+    input: 'A selector: a ref to work back from, a commit range, a branch, the working tree, or a phrase like "3 days ago". Absent, it derives a baseline and says which it chose',
+    output: 'A report in conversation — the finding first, then the axis, where the change sits, what it traces to, and what was not read',
+    outputFile: 'None. Nothing is written unless you ask for an artefact, which is separately confirmed',
+    phases: ['Resolve the selector to commits and files', 'Derive the axis that explains this repository and say why', 'Situate the change — proportion, layering, negative space', 'Join to the planning rows that record intent', 'Run what is cheap and relevant; report what was observed', 'Name every file not examined'],
+    tip: 'Joining to intent is exact here rather than inferred: it follows references into the planning rows instead of guessing from branch names and commit trailers. Watch for a signal that cannot discriminate — if every file traces to the same record, say the mapping is uniform rather than reporting it as provenance. This is not a code review; quality findings are /dpm:audit\'s output.',
+    next: ['audit', 'quick', 'spec', 'retro']
+  },
+  {
+    id: 'present',
+    name: '/dpm:present',
+    label: 'Present',
+    icon: '📣',
+    color: '#f778ba',
+    category: 'communication',
+    short: 'Audience-aware transformation of planning rows',
+    description: 'Turn planning rows into communications. Takes one or more documents as sources, gates audience then format then draft, and produces derived content — published as a shareable page whose link back to its sources is a row. Genuinely regenerable, because the sources are an edge rather than a line of prose naming a file.',
+    input: 'One or more source documents',
+    output: 'A communication row, derived from its sources and linked to them',
+    outputFile: 'communication row → projected to docs/communications/{nn}-{format}-{slug}.md',
+    phases: ['Select the source documents', 'Gate the audience', 'Gate the format', 'Extract and transform, then gate the draft', 'Write the communication and its source edges', 'Optionally publish it as a shareable page'],
+    tip: 'The regeneration promise is the substrate\'s, not the skill\'s: because the sources are foreign keys, a communication knows exactly what it was derived from and can be rebuilt when those rows move. Publishing is confirmed separately, since it puts content on the open web — and the resulting URL becomes an artifact row so regenerating updates the page you already shared.',
+    next: ['artifact']
+  },
+  {
+    id: 'templates',
+    name: '/dpm:templates',
+    label: 'Templates',
+    icon: '📐',
+    color: '#8b949e',
+    category: 'support',
+    short: 'What document kinds exist, and what they render as',
+    description: 'Template discoverability. Lists every document kind this project can hold, with where its file lands and how it is numbered, and renders an example of any of them so the format can be read before anything is written.',
+    input: 'Nothing to list, or a kind to preview',
+    output: 'The kinds this project holds, their directories and numbering, and a rendered example on request',
+    outputFile: 'None — it reads and renders, writing nothing',
+    phases: ['List every document kind with its directory and numbering', 'Render an example of the kind you name'],
+    tip: 'The list comes from the document_kind rows, so it is what this database can actually hold rather than what the documentation says. Note what the numbering column tells you: root-numbered kinds count project-wide, child-numbered ones count within a parent — which is why an ADR is numbered under the document that raised it and has no directory of its own.',
+    next: []
+  },
+  {
+    id: 'library',
+    name: '/dpm:library',
+    label: 'Library',
+    icon: '📚',
+    color: '#bc8cff',
+    category: 'support',
+    short: 'Curate the project reference library',
+    description: 'Curate a project reference library. Takes in an external document, derives what every other skill needs in order to find it, and records its scope as rows the Library Check filters on. Also consolidates accumulated amendments back into a clean document, so a reference reads as one current document rather than as a history of edits.',
+    input: 'A file, a URL, or an existing library document',
+    output: 'A library row with scope rows controlling which skills see it',
+    outputFile: 'library row → projected to docs/library/{nn}-library-{slug}.md',
+    phases: ['Intake the document and derive its metadata', 'Record its scope as rows', 'Consolidate amendments back into the body when asked'],
+    tip: 'Scope is rows rather than a front-matter list, so the Library Check filters instead of parsing — but the failure mode is unchanged and it is the most common one in a new project: a library document with no scope imports perfectly and is read by nothing. Be specific; a coding standard is relevant to do, not to discover.',
+    next: []
+  },
+  {
+    id: 'archive',
+    name: '/dpm:archive',
+    label: 'Archive',
+    icon: '🗄️',
+    color: '#6e7681',
+    category: 'support',
+    short: 'Sweep settled work out of the working set',
+    description: 'Sweep settled planning artefacts out of the working set. Finds what is finished by reading status columns, walks each chain by parentage rather than by matching slugs, and stamps archived_at on what you select. Nothing moves and nothing is deleted.',
+    input: 'Nothing — it reads the columns',
+    output: 'archived_at stamped on the rows you choose',
+    outputFile: 'no files move — the projection simply stops rendering what is archived',
+    phases: ['Find finished work by reading status columns', 'Walk each chain by parentage', 'Present the candidates for approval', 'Stamp archived_at on what you select'],
+    tip: 'There is no docs/archive/ directory, and CPM\'s obligation to keep it as a mirrored tree stops being a contract at all: archiving sets a column on a row that never moves. That also means numbering is unaffected — the counter never consults the documents, so an archived spec cannot free its number for reuse.',
+    next: []
+  },
+  {
+    id: 'quick',
+    name: '/dpm:quick',
+    label: 'Quick',
+    icon: '⚡',
+    color: '#f59e0b',
+    category: 'support',
+    short: 'Lightweight execution for a small, defined change',
+    description: 'Lightweight execution for a small, well-defined change. Classifies the input as a fix or a change, diagnoses root cause before proposing anything on the fix path, confirms a written record, executes, and closes that same record by deciding each criterion met or not.',
+    input: 'A description of the change, or a reference to the thing that is wrong',
+    output: 'A quick row with criterion rows, each closed as met or not met',
+    outputFile: 'quick row → projected to docs/quick/{nn}-quick-{slug}.md',
+    phases: ['Classify — a fix, or a change', 'On the fix path: diagnose root cause before proposing anything', 'Propose and confirm the record with its criteria', 'Execute', 'Close the record — each criterion decided met or not'],
+    tip: 'The fix path insists on root cause first, which is the whole reason quick is not just "do it": a symptom patched without a diagnosis is the change most likely to come back. The record is opened before execution and closed after, so a criterion that was not met is recorded as not met rather than quietly dropped.',
+    next: ['publish', 'retro']
+  },
+  {
+    id: 'status',
+    name: '/dpm:status',
+    label: 'Status',
+    icon: '📊',
+    color: '#58a6ff',
+    category: 'support',
+    short: 'Project status reconnaissance. Writes nothing',
+    description: 'Reports what exists, what is in flight and what needs attention, from queries over the planning rows and read-only git history. Orients someone picking up the project for the first time, with an optional spec coverage roll-up and an optional shareable full-picture page. Writes nothing.',
+    input: 'An optional focus — a document to centre on, or a request for the full picture',
+    output: 'A narrative briefing with recommended next steps, and on request a shareable page',
+    outputFile: 'None on the default path — it writes nothing at all',
+    phases: ['Query the rows for what exists and its state', 'Read-only git activity scan over an adaptive window', 'Synthesise the briefing and recommend next steps', 'On a spec focus: roll coverage up, untraced requirements first', 'On request: offer to publish the full picture as an artifact'],
+    tip: 'Focus it on a spec and it answers what the project-wide view cannot — is this spec delivered? — by rolling the coverage rows back up to the requirements, untraced ones first. Read the ✓ marks precisely: they aggregate what /dpm:do recorded about its own work, which is exact about what was claimed rather than independent verification. For the same picture across every project at once, use the DPM board.',
+    next: ['do', 'retro', 'archive', 'discover']
+  },
+  {
+    id: 'clean',
+    name: '/dpm:clean',
+    label: 'Clean',
+    icon: '🧹',
+    color: '#8b949e',
+    category: 'support',
+    short: 'Remove leftover session rows on demand',
+    description: 'Remove leftover session rows on demand. Lists every session with its skill, phase and age, marks the stale ones and this session\'s own, and deletes only the rows you name.',
+    input: 'Optional session identifiers; no arguments runs the full interactive flow',
+    output: 'An exhaustive listing of session rows, then deletion of only the ones you name',
+    outputFile: 'deletes rows — creates none, not even its own session',
+    phases: ['List every session row with skill, phase and age', 'Mark the stale ones and this session\'s own', 'Ask what to remove', 'Confirm, then delete exactly those rows'],
+    tip: 'Session state is a row rather than a scratch file, so there is nothing to leave behind on disk and nothing for a stale file to shadow. Interactive-only — /dpm:ralph never invokes it, and it deletes nothing without showing you the row first.',
+    next: []
+  },
+  {
+    id: 'artifact',
+    name: '/dpm:artifact',
+    label: 'Artifact',
+    icon: '🔗',
+    color: '#a371f7',
+    category: 'communication',
+    short: 'The register of published pages and their sources',
+    description: 'The register of published artifacts and the work they came from. Records what a page is, why it was made, and which documents it was published from, so a URL produced weeks ago can be found, reviewed and amended rather than rebuilt. A published page\'s only handle is its URL, and an unregistered URL exists solely in the transcript of the session that made it.',
+    input: 'A URL with an optional description, a search term, or nothing (review flow)',
+    output: 'An artifact row, joined to each source document by an edge',
+    outputFile: 'artifact rows → projected to the artifact register',
+    phases: ['Establish the four facts — URL, name, why, association', 'Write the artifact row', 'Join it to each source document as an edge', 'Report the entry and what it was linked to'],
+    tip: 'The association is an edge in both directions at once, so there is no backlink to write into the source document and none to go stale — which is what CPM needed a separate **Artifacts** field for. Superseded artifacts are marked rather than deleted, so the register can still answer "what happened to that page?".',
+    next: []
+  }
+];
+
+const EDGES = [
+  { from: 'party', to: 'discover', label: 'informs', style: 'dashed' },
+  { from: 'consult', to: 'discover', label: 'informs', style: 'dashed' },
+  { from: 'discover', to: 'brief', label: 'produces brief for', style: 'solid' },
+  { from: 'brief', to: 'architect', label: 'informs decisions', style: 'solid' },
+  { from: 'architect', to: 'spec', label: 'ADRs referenced by', style: 'solid' },
+  { from: 'brief', to: 'spec', label: 'alternative path', style: 'dashed' },
+  { from: 'spec', to: 'epics', label: 'produces spec for', style: 'solid' },
+  { from: 'epics', to: 'do', label: 'produces epics for', style: 'solid' },
+  { from: 'epics', to: 'ralph', label: 'autonomous execution', style: 'dashed' },
+  { from: 'epics', to: 'review', label: 'pre-execution review', style: 'dashed' },
+  { from: 'review', to: 'do', label: 'cleared to execute', style: 'dashed' },
+  { from: 'review', to: 'pivot', label: 'needs amendment', style: 'dashed' },
+  { from: 'do', to: 'retro', label: 'observations feed into', style: 'solid' },
+  { from: 'ralph', to: 'retro', label: 'observations feed into', style: 'solid' },
+  { from: 'do', to: 'pivot', label: 'mid-flight correction', style: 'dashed' },
+  { from: 'pivot', to: 'do', label: 'resume execution', style: 'dashed' },
+  { from: 'retro', to: 'discover', label: 'feed forward', style: 'dashed' },
+  { from: 'retro', to: 'library', label: 'write-back learnings', style: 'dashed' },
+  { from: 'library', to: 'discover', label: 'context for', style: 'dotted' },
+  { from: 'library', to: 'spec', label: 'context for', style: 'dotted' },
+  { from: 'library', to: 'party', label: 'context for', style: 'dotted' },
+  { from: 'library', to: 'consult', label: 'context for', style: 'dotted' },
+  { from: 'audit', to: 'spec', label: 'priorities become spec', style: 'dashed' },
+  { from: 'audit', to: 'library', label: 'findings to library', style: 'dashed' },
+  { from: 'audit', to: 'quick', label: 'quick wins', style: 'dashed' },
+  { from: 'do', to: 'publish', label: 'rows → docs/', style: 'solid' },
+  { from: 'quick', to: 'publish', label: 'rows → docs/', style: 'dashed' },
+  { from: 'ralph', to: 'publish', label: 'after each story', style: 'dashed' },
+  { from: 'do', to: 'inspect', label: 'what the change did', style: 'dashed' },
+  { from: 'inspect', to: 'retro', label: 'feeds observations', style: 'dotted' },
+  { from: 'present', to: 'artifact', label: 'registers the page', style: 'dashed' },
+];
+
+const PRESETS = {
+  full: { highlight: ['party','consult','discover','brief','architect','spec','epics','review','do','ralph','publish','pivot','retro','audit','inspect','present','templates','library','archive','quick','status','clean','artifact'], knowledge: {} },
+  quick: { highlight: ['discover','brief','spec','epics','do','quick','publish'], knowledge: { party:'know', consult:'know', architect:'know', review:'know', ralph:'know', pivot:'know', retro:'know', audit:'know', inspect:'know', present:'know', templates:'know', library:'know', archive:'know', status:'know', clean:'know', artifact:'know' } },
+  planning: { highlight: ['party','consult','discover','brief','architect','spec','epics','library'], knowledge: { do:'know', ralph:'know', publish:'know', review:'know', pivot:'know', retro:'know', audit:'know', inspect:'know', present:'know', templates:'know', archive:'know', quick:'know', status:'know', clean:'know', artifact:'know' } },
+  execution: { highlight: ['do','ralph','publish','pivot','review','retro','quick','status','clean'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', audit:'know', inspect:'know', present:'know', templates:'know', library:'know', archive:'know', artifact:'know' } },
+  review: { highlight: ['review','retro','pivot','audit','inspect','archive','artifact'], knowledge: { party:'know', consult:'know', discover:'know', brief:'know', architect:'know', spec:'know', epics:'know', do:'know', ralph:'know', publish:'know', present:'know', templates:'know', library:'know', quick:'know', status:'know', clean:'know' } },
+};
+
+// ── State ───────────────────────────────────────────────────────────────
+
+const LEVELS = ['unknown', 'fuzzy', 'know'];
+
+const state = {
+  selected: null,
+  knowledge: {},
+  activePreset: 'full',
+  highlightedSkills: SKILLS.map(s => s.id),
+  drag: null,
+  hover: null,
+  pan: { x: 0, y: 0 },
+};
+
+// Init knowledge
+SKILLS.forEach(s => state.knowledge[s.id] = 'unknown');
+
+// ── Node positions (arranged as a pipeline flow) ────────────────────────
+
+// Every skill has a position — including the four CPM left unplaced. `getNodeScreenPos` is
+// called by `hitTest` for every skill on every mousemove without a guard, so a skill missing
+// from this map throws on hover rather than simply not drawing.
+const NODE_POSITIONS = {
+  library:   { x: 60,   y: 70 },
+  clean:     { x: 190,  y: 70 },
+  artifact:  { x: 320,  y: 70 },
+  party:     { x: 60,   y: 190 },
+  consult:   { x: 60,   y: 310 },
+  discover:  { x: 210,  y: 220 },
+  brief:     { x: 320,  y: 220 },
+  architect: { x: 450,  y: 220 },
+  spec:      { x: 580,  y: 220 },
+  epics:     { x: 710,  y: 220 },
+  review:    { x: 710,  y: 70 },
+  do:        { x: 840,  y: 220 },
+  ralph:     { x: 840,  y: 70 },
+  publish:   { x: 1000, y: 70 },
+  retro:     { x: 1000, y: 220 },
+  pivot:     { x: 900,  y: 300 },
+  templates: { x: 190,  y: 370 },
+  audit:     { x: 320,  y: 370 },
+  present:   { x: 450,  y: 370 },
+  quick:     { x: 580,  y: 370 },
+  inspect:   { x: 710,  y: 370 },
+  status:    { x: 840,  y: 370 },
+  archive:   { x: 1000, y: 370 },
+};
+
+const NODE_RADIUS = 34;
+
+// ── Canvas ──────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+function resize() {
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth * devicePixelRatio;
+  canvas.height = wrap.clientHeight * devicePixelRatio;
+  canvas.style.width = wrap.clientWidth + 'px';
+  canvas.style.height = wrap.clientHeight + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+window.addEventListener('resize', resize);
+
+function getSkill(id) { return SKILLS.find(s => s.id === id); }
+
+function getNodeScreenPos(id) {
+  const p = NODE_POSITIONS[id];
+  // Every drawing path guards on a missing position; `hitTest` did not, so an unplaced skill
+  // threw on every mousemove that missed the nodes ahead of it in SKILLS order — silently
+  // killing hover and tooltips for everything after it. Returning null keeps that a
+  // not-drawn node rather than a broken canvas.
+  if (!p) return null;
+  const wrap = canvas.parentElement;
+  const ox = (wrap.clientWidth - 1100) / 2 + state.pan.x;
+  const oy = (wrap.clientHeight - 440) / 2 + state.pan.y;
+  return { x: p.x + ox, y: p.y + oy };
+}
+
+function draw() {
+  const w = canvas.parentElement.clientWidth;
+  const h = canvas.parentElement.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  // Offset to center the layout
+  const ox = (w - 1100) / 2 + state.pan.x;
+  const oy = (h - 440) / 2 + state.pan.y;
+
+  // Draw edges, collect labels to draw on top of nodes later
+  const edgeLabels = [];
+  EDGES.forEach(e => {
+    const from = NODE_POSITIONS[e.from];
+    const to = NODE_POSITIONS[e.to];
+    if (!from || !to) return;
+
+    const fx = from.x + ox, fy = from.y + oy;
+    const tx = to.x + ox, ty = to.y + oy;
+
+    const highlighted = state.highlightedSkills.includes(e.from) && state.highlightedSkills.includes(e.to);
+    const isSelectedEdge = state.selected && (e.from === state.selected || e.to === state.selected);
+
+    ctx.beginPath();
+    ctx.strokeStyle = isSelectedEdge ? 'rgba(45,212,191,0.6)' : highlighted ? 'rgba(139,148,158,0.35)' : 'rgba(139,148,158,0.12)';
+    ctx.lineWidth = isSelectedEdge ? 2 : 1.5;
+
+    if (e.style === 'dashed') ctx.setLineDash([6, 4]);
+    else if (e.style === 'dotted') ctx.setLineDash([2, 4]);
+    else ctx.setLineDash([]);
+
+    // Curved edges — selected edges arc further out to clear node labels
+    const mx = (fx + tx) / 2;
+    const my = (fy + ty) / 2;
+    const dx = tx - fx;
+    const dy = ty - fy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const baseCurve = dist > 200 ? 30 : 15;
+    const curve = isSelectedEdge ? Math.max(baseCurve, NODE_RADIUS * 4) : baseCurve;
+    const nx = -dy / dist * curve;
+    const ny = dx / dist * curve;
+
+    ctx.moveTo(fx, fy);
+    ctx.quadraticCurveTo(mx + nx, my + ny, tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrow head
+    const t = 0.92;
+    const ax = (1-t)*(1-t)*fx + 2*(1-t)*t*(mx+nx) + t*t*tx;
+    const ay = (1-t)*(1-t)*fy + 2*(1-t)*t*(my+ny) + t*t*ty;
+    const angle = Math.atan2(ty - ay, tx - ax);
+    const alen = 8;
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.moveTo(tx, ty);
+    const arrowTipX = tx - Math.cos(angle) * NODE_RADIUS;
+    const arrowTipY = ty - Math.sin(angle) * NODE_RADIUS;
+    ctx.moveTo(arrowTipX, arrowTipY);
+    ctx.lineTo(arrowTipX - alen * Math.cos(angle - 0.4), arrowTipY - alen * Math.sin(angle - 0.4));
+    ctx.lineTo(arrowTipX - alen * Math.cos(angle + 0.4), arrowTipY - alen * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // Collect label for deferred drawing (on top of nodes)
+    if (isSelectedEdge) {
+      const nLen = Math.sqrt(nx*nx + ny*ny);
+      const ndx = nx/nLen, ndy = ny/nLen;
+      edgeLabels.push({
+        label: e.label,
+        x: mx + ndx * (nLen * 0.5 + 18),
+        y: my + ndy * (nLen * 0.5 + 18),
+        ndx, ndy,
+      });
+    }
+  });
+
+  // Draw nodes
+  SKILLS.forEach(skill => {
+    const pos = NODE_POSITIONS[skill.id];
+    if (!pos) return;
+    const x = pos.x + ox;
+    const y = pos.y + oy;
+    const highlighted = state.highlightedSkills.includes(skill.id);
+    const selected = state.selected === skill.id;
+    const hovered = state.hover === skill.id;
+    const level = state.knowledge[skill.id];
+    const dimmed = !highlighted;
+
+    // Glow for selected
+    if (selected) {
+      const grad = ctx.createRadialGradient(x, y, NODE_RADIUS, x, y, NODE_RADIUS * 2);
+      grad.addColorStop(0, skill.color + '30');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - NODE_RADIUS * 2, y - NODE_RADIUS * 2, NODE_RADIUS * 4, NODE_RADIUS * 4);
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
+
+    if (dimmed) {
+      ctx.fillStyle = '#161b22';
+      ctx.strokeStyle = '#30363d';
+    } else {
+      ctx.fillStyle = selected ? skill.color + '25' : hovered ? skill.color + '18' : '#161b22';
+      ctx.strokeStyle = selected ? skill.color : hovered ? skill.color + '90' : '#30363d';
+    }
+
+    ctx.lineWidth = selected ? 2.5 : 1.5;
+    ctx.fill();
+    ctx.stroke();
+
+    // Knowledge ring
+    if (!dimmed && level !== 'unknown') {
+      ctx.beginPath();
+      ctx.arc(x, y, NODE_RADIUS + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = level === 'know' ? '#3fb95060' : '#d2992260';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Icon
+    ctx.font = '18px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = dimmed ? 0.3 : 1;
+    ctx.fillText(skill.icon, x, y - 2);
+    ctx.globalAlpha = 1;
+
+  });
+
+  // Labels in a second pass — drawn after every circle so a neighbouring node
+  // can never paint over an earlier node's text.
+  SKILLS.forEach(skill => {
+    const pos = NODE_POSITIONS[skill.id];
+    if (!pos) return;
+    const x = pos.x + ox;
+    const y = pos.y + oy;
+    const highlighted = state.highlightedSkills.includes(skill.id);
+    const selected = state.selected === skill.id;
+    const dimmed = !highlighted;
+    const nameY = y + NODE_RADIUS + 14;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Contrast backing so the label stays legible over edges or adjacent circles
+    if (!dimmed) {
+      ctx.font = `${selected ? '600' : '500'} 11px -apple-system, sans-serif`;
+      const nameW = ctx.measureText(skill.label).width;
+      ctx.font = '9px -apple-system, sans-serif';
+      const catW = ctx.measureText(skill.category).width;
+      const boxW = Math.max(nameW, catW) + 10;
+      ctx.fillStyle = 'rgba(13,17,23,0.82)';
+      ctx.fillRect(x - boxW / 2, nameY - 9, boxW, 28);
+    }
+
+    // Name
+    ctx.font = `${selected ? '600' : '500'} 11px -apple-system, sans-serif`;
+    ctx.fillStyle = dimmed ? '#6e768140' : selected ? skill.color : '#e6edf3';
+    ctx.fillText(skill.label, x, nameY);
+
+    // Category badge
+    if (!dimmed) {
+      ctx.font = '9px -apple-system, sans-serif';
+      ctx.fillStyle = '#6e7681';
+      ctx.fillText(skill.category, x, y + NODE_RADIUS + 26);
+    }
+  });
+
+  // Resolve collisions: push labels away from overlapping node regions
+  // Node exclusion box covers circle + name + category text below
+  const nodeBoxes = SKILLS.map(s => {
+    const p = NODE_POSITIONS[s.id];
+    if (!p) return null;
+    const cx = p.x + ox, cy = p.y + oy;
+    return {
+      cx, cy,
+      l: cx - NODE_RADIUS - 30,
+      r: cx + NODE_RADIUS + 30,
+      t: cy - NODE_RADIUS - 8,
+      b: cy + NODE_RADIUS + 34,
+    };
+  }).filter(Boolean);
+
+  const lbHW = 32, lbHH = 28;
+
+  edgeLabels.forEach(el => {
+    for (let i = 0; i < 50; i++) {
+      let closest = null, closestDist = Infinity;
+      for (const nb of nodeBoxes) {
+        if (el.x + lbHW > nb.l && el.x - lbHW < nb.r &&
+            el.y + lbHH > nb.t && el.y - lbHH < nb.b) {
+          const d = (el.x - nb.cx) ** 2 + (el.y - nb.cy) ** 2;
+          if (d < closestDist) { closestDist = d; closest = nb; }
+        }
+      }
+      if (!closest) break;
+      // Push directly away from the overlapping node's center
+      const awayX = el.x - closest.cx, awayY = el.y - closest.cy;
+      const awayLen = Math.sqrt(awayX * awayX + awayY * awayY) || 1;
+      el.x += (awayX / awayLen) * 10;
+      el.y += (awayY / awayLen) * 10;
+    }
+  });
+
+  // Separate labels from each other. The pass above only repels labels from nodes, so several
+  // edges converging on one node — publish takes three — get their labels pushed off the same
+  // node in the same direction and land on top of one another. This spreads any pair that still
+  // overlaps after that, moving both ends apart so no single label is dragged far from its edge.
+  for (let i = 0; i < 30; i++) {
+    let moved = false;
+    for (let a = 0; a < edgeLabels.length; a++) {
+      for (let b = a + 1; b < edgeLabels.length; b++) {
+        const la = edgeLabels[a], lb = edgeLabels[b];
+        const gapX = lbHW * 2 - Math.abs(la.x - lb.x);
+        const gapY = lbHH - Math.abs(la.y - lb.y);
+        if (gapX <= 0 || gapY <= 0) { continue; }
+        // Resolve along whichever axis needs the least movement
+        if (gapY <= gapX) {
+          const push = (la.y <= lb.y ? -1 : 1) * (gapY / 2 + 1);
+          la.y += push;
+          lb.y -= push;
+        } else {
+          const push = (la.x <= lb.x ? -1 : 1) * (gapX / 2 + 1);
+          la.x += push;
+          lb.x -= push;
+        }
+        moved = true;
+      }
+    }
+    if (!moved) { break; }
+  }
+
+  // Draw deferred edge labels on top of everything
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(45,212,191,0.85)';
+  ctx.textAlign = 'center';
+  edgeLabels.forEach(el => {
+    const words = el.label.split(' ');
+    const maxW = 50;
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else { line = test; }
+    }
+    if (line) lines.push(line);
+    const lh = 12;
+    const startY = el.y - (lines.length - 1) * lh / 2;
+    lines.forEach((l, i) => ctx.fillText(l, el.x, startY + i * lh));
+  });
+}
+
+// ── Interactions ────────────────────────────────────────────────────────
+
+function hitTest(mx, my) {
+  for (const skill of SKILLS) {
+    const pos = getNodeScreenPos(skill.id);
+    if (!pos) continue;
+    const dx = mx - pos.x;
+    const dy = my - pos.y;
+    if (dx*dx + dy*dy <= NODE_RADIUS * NODE_RADIUS) return skill.id;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (state.drag) {
+    state.pan.x += e.movementX;
+    state.pan.y += e.movementY;
+    draw();
+    return;
+  }
+
+  const hit = hitTest(mx, my);
+  if (hit !== state.hover) {
+    state.hover = hit;
+    canvas.style.cursor = hit ? 'pointer' : 'grab';
+    draw();
+  }
+
+  // Tooltip
+  if (hit) {
+    const skill = getSkill(hit);
+    const pos = getNodeScreenPos(hit);
+    tooltip.innerHTML = `<h3>${skill.icon} ${skill.name}</h3><span class="tag">${skill.category}</span><p>${skill.short}</p>`;
+    tooltip.style.left = (pos.x + NODE_RADIUS + 10) + 'px';
+    tooltip.style.top = (pos.y - 20) + 'px';
+    tooltip.classList.add('visible');
+  } else {
+    tooltip.classList.remove('visible');
+  }
+});
+
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const hit = hitTest(mx, my);
+
+  if (hit) {
+    selectSkill(hit);
+  } else {
+    state.drag = true;
+    canvas.classList.add('dragging');
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  state.drag = false;
+  canvas.classList.remove('dragging');
+});
+
+canvas.addEventListener('mouseleave', () => {
+  state.drag = false;
+  state.hover = null;
+  tooltip.classList.remove('visible');
+  canvas.classList.remove('dragging');
+  draw();
+});
+
+// ── Sidebar ─────────────────────────────────────────────────────────────
+
+function buildSkillList() {
+  const list = document.getElementById('skillList');
+  list.innerHTML = '';
+  SKILLS.forEach(skill => {
+    const row = document.createElement('div');
+    row.className = 'skill-row' + (state.selected === skill.id ? ' selected' : '');
+    row.onclick = () => selectSkill(skill.id);
+
+    const dot = document.createElement('div');
+    dot.className = 'skill-icon';
+    dot.style.background = skill.color;
+
+    const name = document.createElement('span');
+    name.className = 'skill-name';
+    name.textContent = skill.name;
+
+    const btn = document.createElement('button');
+    const level = state.knowledge[skill.id];
+    btn.className = 'knowledge-btn ' + level;
+    btn.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      cycleKnowledge(skill.id);
+    };
+
+    row.appendChild(dot);
+    row.appendChild(name);
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+
+function cycleKnowledge(id) {
+  const cur = LEVELS.indexOf(state.knowledge[id]);
+  state.knowledge[id] = LEVELS[(cur + 1) % LEVELS.length];
+  clearActivePreset();
+  updateAll();
+}
+
+function clearActivePreset() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function selectSkill(id) {
+  state.selected = state.selected === id ? null : id;
+  updateAll();
+}
+
+function renderDetail() {
+  const panel = document.getElementById('detailPanel');
+  if (!state.selected) {
+    panel.innerHTML = '<div class="no-selection">Click a skill node on the canvas<br>or in the list to explore it</div>';
+    return;
+  }
+
+  const skill = getSkill(state.selected);
+  const level = state.knowledge[skill.id];
+
+  let html = `<h3>${skill.icon} ${skill.name}</h3>`;
+  html += `<div class="subtitle">${skill.category} &middot; ${level}</div>`;
+  html += `<div class="desc">${skill.description}</div>`;
+
+  html += `<div class="field-label">Input</div><div class="field-value">${skill.input}</div>`;
+  html += `<div class="field-label">Output</div><div class="field-value">${skill.output}</div>`;
+  html += `<div class="field-label">Output File</div><div class="field-value">${skill.outputFile}</div>`;
+
+  if (skill.personas) {
+    html += `<div class="field-label">Agent Roster</div><div class="field-value">${skill.personas}</div>`;
+  }
+
+  html += `<div class="field-label">Phases</div><ol class="phases">`;
+  skill.phases.forEach(p => html += `<li>${p}</li>`);
+  html += `</ol>`;
+
+  if (skill.next.length > 0) {
+    html += `<div class="field-label">Pipeline Handoffs</div><div class="field-value">${skill.next.map(n => '/dpm:' + n).join(' → ')}</div>`;
+  }
+
+  html += `<div class="tip"><strong>Tip:</strong> ${skill.tip}</div>`;
+
+  panel.innerHTML = html;
+}
+
+// ── Presets ──────────────────────────────────────────────────────────────
+
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  state.activePreset = name;
+  state.highlightedSkills = preset.highlight;
+
+  SKILLS.forEach(s => {
+    state.knowledge[s.id] = preset.knowledge[s.id] || 'unknown';
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === name);
+  });
+
+  updateAll();
+}
+
+// ── Prompt ──────────────────────────────────────────────────────────────
+
+function updatePrompt() {
+  const known = SKILLS.filter(s => state.knowledge[s.id] === 'know');
+  const fuzzy = SKILLS.filter(s => state.knowledge[s.id] === 'fuzzy');
+  const unknown = SKILLS.filter(s => state.knowledge[s.id] === 'unknown');
+
+  if (known.length === SKILLS.length) {
+    document.getElementById('promptText').textContent = 'You\'ve marked everything as known! Adjust your knowledge levels or select a specific skill for a targeted deep-dive.';
+    return;
+  }
+
+  if (unknown.length === SKILLS.length) {
+    document.getElementById('promptText').textContent = 'I\'m new to the DPM plugin for Claude Code. Give me a complete walkthrough of the planning lifecycle: what each skill does, the standard pipeline (discover → brief → architect → spec → epics → do → retro, then publish before committing), what rows each skill writes, and how they chain together through foreign keys. Start with the big picture — that every artefact is a row in .dpm/dpm.db and docs/ is a generated projection — then explain each skill with a practical example.';
+    return;
+  }
+
+  const parts = ['I\'m learning the DPM (Data-Modelled Planning Method) plugin for Claude Code.'];
+
+  if (known.length > 0) {
+    parts.push('I already understand: ' + known.map(s => s.name + ' (' + s.short + ')').join(', ') + '.');
+  }
+
+  if (fuzzy.length > 0) {
+    parts.push('I\'m fuzzy on: ' + fuzzy.map(s => s.name + ' (' + s.short + ')').join(', ') + '.');
+  }
+
+  if (unknown.length > 0) {
+    parts.push('I don\'t know: ' + unknown.map(s => s.name + ' (' + s.short + ')').join(', ') + '.');
+  }
+
+  if (fuzzy.length > 0 || unknown.length > 0) {
+    parts.push('Please explain the concepts I\'m fuzzy on or don\'t know, building on what I already understand. Use a practical example of building a feature to show how these skills chain together. Include the rows each one writes, the foreign keys that connect them, and where they land in the generated docs/ projection.');
+  }
+
+  if (state.selected) {
+    const skill = getSkill(state.selected);
+    parts.push(`I'm particularly interested in ${skill.name} right now — give extra detail on its phases, inputs, outputs, and when to use it vs alternatives.`);
+  }
+
+  document.getElementById('promptText').textContent = parts.join(' ');
+}
+
+function copyPrompt() {
+  const text = document.getElementById('promptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// ── Update all ──────────────────────────────────────────────────────────
+
+function updateAll() {
+  draw();
+  buildSkillList();
+  renderDetail();
+  updatePrompt();
+}
+
+// ── Init ────────────────────────────────────────────────────────────────
+
+resize();
+updateAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPM Onboarding — Technical Team</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f1117;
+    --bg-slide: #161822;
+    --surface: #1e2030;
+    --surface-hover: #252840;
+    --border: #2a2d3e;
+    --text: #e2e4f0;
+    --text-dim: #8b8fa8;
+    --accent: #2dd4bf;
+    --accent-glow: rgba(45, 212, 191, 0.15);
+    --accent-bright: #5eead4;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --cyan: #22d3ee;
+    --blue: #38bdf8;
+    --violet: #7c6aef;
+    --radius: 12px;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck { flex: 1; position: relative; overflow: hidden; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px 72px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    pointer-events: none;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .slide-inner { max-width: 1000px; width: 100%; }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 18px;
+  }
+  h1 .hl {
+    background: linear-gradient(135deg, var(--accent-bright), var(--violet));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  h2 {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.8px;
+    margin-bottom: 28px;
+  }
+
+  .subtitle {
+    font-size: 20px;
+    font-weight: 300;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-width: 680px;
+  }
+
+  .title-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(45,212,191,0.25);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-bright);
+    margin-bottom: 24px;
+  }
+
+  /* ── Bullets ── */
+  .bullets { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+  .bullets li {
+    font-size: 18px;
+    line-height: 1.55;
+    padding-left: 26px;
+    position: relative;
+  }
+  .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 10px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .bullets li strong { color: var(--accent-bright); font-weight: 600; }
+  .bullets li em { color: var(--text-dim); font-style: normal; }
+  .bullets li code {
+    font-family: var(--mono);
+    font-size: 15px;
+    background: var(--surface);
+    padding: 2px 7px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Pipeline ── */
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin: 32px 0 16px;
+    justify-content: center;
+  }
+  .pipeline-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .pipeline-node {
+    width: 100px; height: 100px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    cursor: default;
+  }
+  .pipeline-node:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-3px);
+  }
+  .pipeline-node .icon { font-size: 26px; margin-bottom: 3px; }
+  .pipeline-node .label { font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
+  .pipeline-arrow {
+    font-size: 18px;
+    color: var(--text-dim);
+    margin: 40px 5px 0;
+    flex-shrink: 0;
+  }
+  .pipeline-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 100px;
+    line-height: 1.3;
+  }
+
+  /* ── Supporting skills ── */
+  .support-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .support-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .support-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .support-card.is-new { border-color: rgba(45,212,191,0.5); }
+  .support-card .card-cmd {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent-bright);
+    margin-bottom: 6px;
+  }
+  .support-card .new-pill {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--bg);
+    background: var(--accent);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .support-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.45;
+  }
+
+  /* ── Decision matrix ── */
+  .decision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .decision-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+  }
+  .decision-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .decision-card p { font-size: 14px; color: var(--text-dim); line-height: 1.5; }
+  .decision-card code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent-bright);
+  }
+
+  /* ── Session flow ── */
+  .flow-steps {
+    display: flex;
+    gap: 0;
+    margin: 24px 0;
+    align-items: flex-start;
+  }
+  .flow-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .flow-num {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0f1117;
+    font-size: 16px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  .flow-step h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .flow-step p { font-size: 12px; color: var(--text-dim); line-height: 1.4; padding: 0 8px; }
+  .flow-connector {
+    width: 40px;
+    margin: 20px -8px 0;
+    font-size: 16px;
+    color: var(--text-dim);
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Agent roster ── */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .agent-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .agent-icon { font-size: 28px; margin-bottom: 6px; }
+  .agent-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .agent-card .role { font-size: 11px; color: var(--accent-bright); font-weight: 500; margin-bottom: 6px; }
+  .agent-card p { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+  /* ── File tree ── */
+  .file-tree {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.75;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-top: 8px;
+  }
+  .file-tree .dir { color: var(--cyan); }
+  .file-tree .gen { color: var(--accent-bright); }
+  .file-tree .comment { color: var(--text-dim); }
+  .file-tree .indent { padding-left: 24px; }
+  .file-tree .indent2 { padding-left: 48px; }
+  .file-tree .rule {
+    border-top: 1px dashed var(--border);
+    margin: 10px 0;
+  }
+
+  /* ── Example walkthrough ── */
+  .example-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 4px;
+  }
+  .example-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 18px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .example-step .cmd {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent-bright);
+    min-width: 180px;
+    flex-shrink: 0;
+  }
+  .example-step .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  /* ── Tips ── */
+  .tip-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .tip-list li {
+    font-size: 16px;
+    line-height: 1.55;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .tip-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .tip-list li strong { color: var(--accent-bright); }
+  .tip-list li code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--cyan);
+  }
+
+  /* ── Nav bar ── */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--bg-slide);
+    border-top: 1px solid var(--border);
+    user-select: none;
+  }
+  .counter { font-size: 13px; font-weight: 500; color: var(--text-dim); min-width: 80px; }
+  .progress-track {
+    flex: 1; max-width: 420px; height: 3px;
+    background: var(--border); border-radius: 2px;
+    margin: 0 20px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 2px; transition: width 0.4s ease;
+  }
+  .nav-buttons { display: flex; gap: 8px; }
+  .nav-btn {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .nav-btn:hover { background: var(--border); border-color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .hint {
+    position: fixed;
+    bottom: 64px;
+    right: 28px;
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: 0.4;
+  }
+
+  .centered { text-align: center; align-items: center; }
+  .centered .subtitle { margin: 0 auto; }
+
+  @media (max-width: 860px) {
+    .slide { padding: 32px 24px; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 24px; }
+    .subtitle { font-size: 16px; }
+    .bullets li { font-size: 15px; }
+    .pipeline-node { width: 72px; height: 72px; }
+    .pipeline-node .icon { font-size: 20px; }
+    .pipeline-node .label { font-size: 10px; }
+    .pipeline-arrow { margin: 30px 3px 0; font-size: 14px; }
+    .pipeline-desc { display: none; }
+    .support-grid { grid-template-columns: 1fr 1fr; }
+    .agent-grid { grid-template-columns: 1fr 1fr; }
+    .decision-grid { grid-template-columns: 1fr; }
+    .example-step .cmd { min-width: auto; }
+    .file-tree { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- 1: Title -->
+  <div class="slide centered active" data-slide="0">
+    <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="title-badge">Technical Onboarding &middot; v0.3.0</div>
+      <h1>Getting Started with <span class="hl">DPM</span></h1>
+      <p class="subtitle">A practical guide to database-backed planning in Claude Code.<br>What it is, how it works, and what changes if you know CPM.<br><span style="opacity:.65;font-size:.85em;">23 skills &middot; SQLite-backed &middot; tuned for Claude Opus 5</span></p>
+    </div>
+  </div>
+
+  <!-- 2: What is DPM -->
+  <div class="slide" data-slide="1">
+    <div class="slide-inner">
+      <div class="tag">Overview</div>
+      <h2>What is DPM?</h2>
+      <ul class="bullets">
+        <li>A <strong>planning plugin</strong> for Claude Code — the same slash-command "skills" as CPM</li>
+        <li>Each skill handles a planning stage through <strong>guided conversation</strong>, unchanged</li>
+        <li>The difference is where answers land: <strong>rows with typed columns</strong>, not prose in a file</li>
+        <li>Markdown under <code>docs/</code> is a <strong>generated projection</strong> — committed so diffs read well, but never read back</li>
+        <li>Skills write through typed MCP tools, so <em>no skill contains SQL and nothing parses prose</em></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3: The Pipeline -->
+  <div class="slide" data-slide="2">
+    <div class="slide-inner">
+      <div class="tag">Core Pipeline</div>
+      <h2>The planning pipeline</h2>
+      <div class="pipeline">
+        <div class="pipeline-stage">
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+            <div class="pipeline-node" style="border-color: #f778ba;padding:6px 10px;font-size:13px;">
+              <span class="icon">&#x1F4AC;</span>
+              <span class="label">Party</span>
+            </div>
+            <div class="pipeline-node" style="border-color: #e879a0;padding:6px 10px;font-size:13px;">
+              <span class="icon">&#x1F9D1;&#x200D;&#x1F4BC;</span>
+              <span class="label">Consult</span>
+            </div>
+          </div>
+          <span class="pipeline-desc">Explore ideas</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--rose);">
+            <span class="icon">&#x1F50D;</span>
+            <span class="label">Discover</span>
+          </div>
+          <span class="pipeline-desc">Why? Who? What?</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--amber);">
+            <span class="icon">&#x1F4A1;</span>
+            <span class="label">Brief</span>
+          </div>
+          <span class="pipeline-desc">Vision &amp; value</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--cyan);">
+            <span class="icon">&#x1F3D7;</span>
+            <span class="label">Architect</span>
+          </div>
+          <span class="pipeline-desc">ADRs with typed options</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--violet);">
+            <span class="icon">&#x1F4CB;</span>
+            <span class="label">Spec</span>
+          </div>
+          <span class="pipeline-desc">Requirements + test strategy</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--green);">
+            <span class="icon">&#x1F4E6;</span>
+            <span class="label">Epics</span>
+          </div>
+          <span class="pipeline-desc">Stories, tasks + coverage rows</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--blue);">
+            <span class="icon">&#x2699;</span>
+            <span class="label">Do</span>
+          </div>
+          <span class="pipeline-desc">Execute, test &amp; verify</span>
+        </div>
+        <span class="pipeline-arrow">&rarr;</span>
+        <div class="pipeline-stage">
+          <div class="pipeline-node" style="border-color: var(--accent);">
+            <span class="icon">&#x1F4E4;</span>
+            <span class="label">Publish</span>
+          </div>
+          <span class="pipeline-desc">Rows &rarr; markdown</span>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:14px;margin-top:14px;">Each step feeds the next as rows. <strong style="color:var(--accent-bright);">Publish</strong> is the one stage CPM has no equivalent of — it renders <code style="font-family:var(--mono);font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">docs/</code> from the database.</p>
+    </div>
+  </div>
+
+  <!-- 4: Supporting Skills -->
+  <div class="slide" data-slide="3">
+    <div class="slide-inner">
+      <div class="tag">Supporting Skills</div>
+      <h2>The rest of the toolkit</h2>
+      <div class="support-grid">
+        <div class="support-card is-new">
+          <div class="card-cmd">/dpm:publish<span class="new-pill">NEW</span></div>
+          <p>Regenerate the markdown and the committed dump from the database — names every removal and asks first</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:party</div>
+          <p>Multi-persona discussion — the whole roster is in the room, two or three answer each turn</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:consult</div>
+          <p>Focused consultation with one persona or a small panel — you control who is in the room</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:review</div>
+          <p>Adversarial review of an epic — findings carry severity and category as typed references</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:audit</div>
+          <p>Codebase health across the project's dimensions, pinned to the commit it was taken at</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:inspect</div>
+          <p>What a change set did and where it sits — joined to the planning rows that record intent</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:retro</div>
+          <p>Retrospective over a finished epic — observations are rows that keep their origin</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:pivot</div>
+          <p>Amend an artefact, then walk everything hanging off it, gating each change on its own</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:present</div>
+          <p>Turn planning rows into communications — regenerable, because sources are an edge not a sentence</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:library</div>
+          <p>Import reference docs and record their scope as rows the Library Check filters on</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:templates</div>
+          <p>Every document kind this project can hold, where its file lands, and a rendered example</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:archive</div>
+          <p>Stamp <code style="font-family:var(--mono);font-size:11px;">archived_at</code> on settled work — found by reading columns, not by moving files</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:quick</div>
+          <p>Small change, root-caused and closed against its own criteria — no pipeline ceremony</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:ralph</div>
+          <p>Autonomous loop across epics, or a spec worked from scratch — readiness read from the graph</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:status</div>
+          <p>Reconnaissance over the rows and read-only git history. Writes nothing</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:clean</div>
+          <p>Remove leftover session rows — lists every one, deletes only what you name</p>
+        </div>
+        <div class="support-card">
+          <div class="card-cmd">/dpm:artifact</div>
+          <p>The register of published pages and the documents they came from, so a URL can be found again</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5: When to Use What -->
+  <div class="slide" data-slide="4">
+    <div class="slide-inner">
+      <div class="tag">Decision Guide</div>
+      <h2>When to use what</h2>
+      <div class="decision-grid">
+        <div class="decision-card">
+          <h3>&#x26A1; Quick fix</h3>
+          <p>Small, well-defined change. <strong>Use <code>/dpm:quick</code></strong> for traceability without ceremony, or skip DPM entirely for trivial one-liners.</p>
+        </div>
+        <div class="decision-card">
+          <h3>&#x1F3AF; Known scope</h3>
+          <p>Feature is clear, just need structure. <strong>Jump to</strong> <code>/dpm:spec</code> or <code>/dpm:epics</code>.</p>
+        </div>
+        <div class="decision-card">
+          <h3>&#x1F914; Unclear requirements</h3>
+          <p>Not sure what to build or why. <strong>Start at</strong> <code>/dpm:discover</code> to understand the problem first.</p>
+        </div>
+        <div class="decision-card">
+          <h3>&#x1F680; Major initiative</h3>
+          <p>New product, big feature, cross-cutting change. <strong>Use the full pipeline</strong> from discover through do.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: How a Session Works -->
+  <div class="slide" data-slide="5">
+    <div class="slide-inner">
+      <div class="tag">Mechanics</div>
+      <h2>How a skill session works</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <h4>Invoke</h4>
+          <p>Run a slash command, optionally naming an existing document</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <h4>Converse</h4>
+          <p>Claude asks questions one at a time, building on your answers</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <h4>Perspectives</h4>
+          <p>Personas load from the agent table and weigh in at key moments</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <h4>Review</h4>
+          <p>Claude presents a draft — you refine until it's right</p>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <h4>Write rows</h4>
+          <p>The outcome is written through typed tools, straight into the database</p>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:14px;margin-top:20px;">Sessions are <strong style="color:var(--green);">compaction-resilient</strong> — progress is a session row, not a scratch file. <code style="font-family:var(--mono);font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">/dpm:clean</code> clears anything left behind. Nothing here touches <code style="font-family:var(--mono);font-size:12px;background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">docs/</code> — that is what publish is for.</p>
+    </div>
+  </div>
+
+  <!-- 7: Agent Roster -->
+  <div class="slide" data-slide="6">
+    <div class="slide-inner">
+      <div class="tag">Team Perspectives</div>
+      <h2>The agent roster</h2>
+      <p style="color:var(--text-dim);font-size:15px;margin-bottom:16px;">The same nine personas as CPM, seeded as rows in the <code style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);">agent</code> table. They appear automatically at relevant points.</p>
+      <div class="agent-grid">
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F4CB;</div>
+          <h3>Jordan</h3>
+          <div class="role">Product Manager</div>
+          <p>User focus, business value, cuts unnecessary complexity</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F3D7;</div>
+          <h3>Margot</h3>
+          <div class="role">Software Architect</div>
+          <p>Systems thinking, trade-offs, boundaries</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F4BB;</div>
+          <h3>Bella</h3>
+          <div class="role">Senior Developer</div>
+          <p>Implementation reality, hidden complexity</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F3A8;</div>
+          <h3>Priya</h3>
+          <div class="role">UX Designer</div>
+          <p>User empathy, simplicity, interaction quality</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F50D;</div>
+          <h3>Tomas</h3>
+          <div class="role">QA Engineer</div>
+          <p>Edge cases, testability, what could break</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F9EA;</div>
+          <h3>Casey</h3>
+          <div class="role">Test Engineer</div>
+          <p>Test strategy, coverage boundaries, right level of test</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F680;</div>
+          <h3>Sable</h3>
+          <div class="role">DevOps Engineer</div>
+          <p>Deployment, monitoring, operational concerns</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F4DD;</div>
+          <h3>Elli</h3>
+          <div class="role">Technical Writer</div>
+          <p>Clarity, naming, documentation quality</p>
+        </div>
+        <div class="agent-card">
+          <div class="agent-icon">&#x1F504;</div>
+          <h3>Ren</h3>
+          <div class="role">Scrum Master</div>
+          <p>Scope, delivery, sustainable pace</p>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--text-dim);font-size:13px;margin-top:14px;">Add your own with <code style="font-family:var(--mono);font-size:11px;background:var(--surface);padding:2px 5px;border-radius:4px;border:1px solid var(--border);color:var(--cyan);">create_agent</code> — a project that added a persona has it in the roster, with nothing read from a file.</p>
+    </div>
+  </div>
+
+  <!-- 8: Where things live -->
+  <div class="slide" data-slide="7">
+    <div class="slide-inner">
+      <div class="tag">Artefacts</div>
+      <h2>Where things live</h2>
+      <div class="file-tree">
+        <div><span class="dir">.dpm/</span> <span class="comment">&#8592; the planning data itself</span></div>
+        <div class="indent"><span class="dir">dpm.db</span> <span class="comment">&#8592; the database. Never committed — gitignored automatically</span></div>
+        <div class="indent"><span class="dir">dpm.sql</span> <span class="comment">&#8592; its committed text form. A fresh clone rebuilds from this</span></div>
+        <div class="rule"></div>
+        <div><span class="gen">docs/</span> <span class="comment">&#8592; GENERATED. One-way projection — written by publish, never read back</span></div>
+        <div class="indent"><span class="gen">discussions/</span> <span class="comment">&#8592; /dpm:party and /dpm:consult</span></div>
+        <div class="indent"><span class="gen">plans/</span> <span class="comment">&#8592; problem briefs from /dpm:discover</span></div>
+        <div class="indent"><span class="gen">briefs/</span> <span class="comment">&#8592; product briefs from /dpm:brief</span></div>
+        <div class="indent"><span class="gen">specifications/</span> <span class="comment">&#8592; specs from /dpm:spec &#183; ADRs render inside them</span></div>
+        <div class="indent"><span class="gen">epics/</span> <span class="comment">&#8592; epics and coverage matrices from /dpm:epics</span></div>
+        <div class="indent"><span class="gen">reviews/ retros/ quick/</span> <span class="comment">&#8592; /dpm:review, /dpm:retro, /dpm:quick</span></div>
+        <div class="indent"><span class="gen">communications/ audits/ runbooks/ library/</span></div>
+      </div>
+      <p style="color:var(--text-dim);font-size:14px;margin-top:14px;"><strong style="color:var(--rose);">Do not hand-edit anything under <code style="font-family:var(--mono);font-size:12px;">docs/</code>.</strong> There is no <code style="font-family:var(--mono);font-size:12px;">architecture/</code> directory — an ADR is rendered inside the document that raised it. There is no <code style="font-family:var(--mono);font-size:12px;">archive/</code> either: archiving stamps a column.</p>
+    </div>
+  </div>
+
+  <!-- 9: Example Walkthrough -->
+  <div class="slide" data-slide="8">
+    <div class="slide-inner">
+      <div class="tag">In Practice</div>
+      <h2>Example: adding multi-tenancy</h2>
+      <div class="example-steps">
+        <div class="example-step">
+          <div class="step-num" style="background:var(--rose);">1</div>
+          <div class="cmd">/dpm:discover</div>
+          <div class="desc">Understand the problem — who needs it, why, what success looks like</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--amber);">2</div>
+          <div class="cmd">/dpm:brief</div>
+          <div class="desc">Vision, value props, features, user journeys — as rows on a product brief</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--cyan);">3</div>
+          <div class="cmd">/dpm:architect</div>
+          <div class="desc">Tenant isolation and data partitioning as ADRs, with each option and its trade-offs typed</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--violet);">4</div>
+          <div class="cmd">/dpm:spec</div>
+          <div class="desc">Requirements with class and priority, foreign-keyed to the ADRs that constrain them</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--green);">5</div>
+          <div class="cmd">/dpm:epics</div>
+          <div class="desc">Stories, tasks, criteria — plus the coverage rows binding each criterion to a requirement</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--blue);">6</div>
+          <div class="cmd">/dpm:do</div>
+          <div class="desc">Implement, verify each criterion, record the verification, move on</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--blue);opacity:0.7;">6b</div>
+          <div class="cmd">/dpm:ralph</div>
+          <div class="desc">Or: autonomous execution across the epics, stopping when coverage says every requirement is verified</div>
+        </div>
+        <div class="example-step">
+          <div class="step-num" style="background:var(--accent);color:#0f1117;">7</div>
+          <div class="cmd">/dpm:publish</div>
+          <div class="desc">Render <code style="font-family:var(--mono);font-size:12px;">docs/</code> and the dump, then commit both together</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10: Tips -->
+  <div class="slide" data-slide="9">
+    <div class="slide-inner">
+      <div class="tag">Tips</div>
+      <h2>Getting the most out of DPM</h2>
+      <ul class="tip-list">
+        <li>
+          <span class="tip-icon">&#x1F3AF;</span>
+          <div><strong>Start anywhere.</strong> The pipeline is a suggestion. Jump to whatever skill matches where you are.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x1F4E4;</span>
+          <div><strong>Publish before you commit.</strong> Nothing renders <code>docs/</code> as a side effect of writing. Skip it and the pre-commit guard refuses and names the command — nothing is lost, and nothing is written behind you.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x270B;</span>
+          <div><strong>Never hand-edit a generated file.</strong> The guard catches it rather than letting the next publish quietly destroy it. If the content is wrong, change the row.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x1F504;</span>
+          <div><strong>Use pivot, not start over.</strong> <code>/dpm:pivot</code> amends the artefact and walks what hangs off it, gating each downstream change on its own.</div>
+        </li>
+        <li>
+          <span class="tip-icon">&#x1F4DA;</span>
+          <div><strong>Feed the library — and set its scope.</strong> A library document without a scope imports cleanly and is read by nothing. That is the most common way a setup ends up half-done.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 11: Coming from CPM -->
+  <div class="slide" data-slide="10">
+    <div class="slide-inner">
+      <div class="tag">If You Know CPM</div>
+      <h2>What actually changes</h2>
+      <ul class="bullets">
+        <li><strong>The conversation does not.</strong> Twenty-two skills are the CPM pipeline one for one — same gates, same roster, same facilitation.</li>
+        <li><strong>One new skill.</strong> <code>/dpm:publish</code>, because in CPM the file <em>was</em> the artefact and here it is a rendering of one.</li>
+        <li><strong>Two new habits.</strong> Publish before committing, and never hand-edit under <code>docs/</code>.</li>
+        <li><strong>There is no importer</strong>, and that is a decision rather than a gap — reading prose is the thing DPM was built to stop doing. Your CPM history stays exactly where it is.</li>
+        <li><strong>One move before you run anything:</strong> <code>git mv</code> the twelve generated folders into <code>docs/cpm/</code>, which DPM never walks. See <code>MIGRATION.md</code> — or ask CPM to walk you through it while you still have both installed.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 12: Get Started -->
+  <div class="slide centered" data-slide="11">
+    <div class="slide-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="tag">Let's Go</div>
+      <h1>Start with <span class="hl">what you need</span></h1>
+      <p class="subtitle" style="margin-bottom:32px;">Pick the skill that matches where you are right now.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/dpm:discover</div>
+          <div style="font-size:12px;color:var(--text-dim);">Unclear problem</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/dpm:spec</div>
+          <div style="font-size:12px;color:var(--text-dim);">Need requirements</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/dpm:epics</div>
+          <div style="font-size:12px;color:var(--text-dim);">Ready to break down</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/dpm:do</div>
+          <div style="font-size:12px;color:var(--text-dim);">Ready to build</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 22px;text-align:center;">
+          <div style="font-family:var(--mono);font-size:13px;color:var(--accent-bright);margin-bottom:4px;">/dpm:publish</div>
+          <div style="font-size:12px;color:var(--text-dim);">Before every commit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<span class="hint">Arrow keys or click to navigate</span>
+
+<div class="nav-bar">
+  <span class="counter" id="counter">1 / 12</span>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress" style="width: 8.3%"></div>
+  </div>
+  <div class="nav-buttons">
+    <button class="nav-btn" id="prevBtn" disabled onclick="go(-1)">&#8592;</button>
+    <button class="nav-btn" id="nextBtn" onclick="go(1)">&#8594;</button>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  let animating = false;
+
+  function go(dir) {
+    if (animating) return;
+    const next = current + dir;
+    if (next < 0 || next >= total) return;
+    animating = true;
+    const leaving = slides[current];
+    const entering = slides[next];
+    leaving.classList.remove('active');
+    leaving.style.transform = dir > 0 ? 'translateX(-60px)' : 'translateX(60px)';
+    leaving.style.opacity = '0';
+    entering.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+    entering.style.opacity = '0';
+    requestAnimationFrame(() => {
+      entering.classList.add('active');
+      entering.style.transform = 'translateX(0)';
+      entering.style.opacity = '1';
+    });
+    current = next;
+    updateNav();
+    setTimeout(() => { animating = false; }, 450);
+  }
+
+  function updateNav() {
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === total - 1;
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') { e.preventDefault(); while (current > 0) go(-1); }
+    if (e.key === 'End') { e.preventDefault(); while (current < total - 1) go(1); }
+  });
+
+  document.getElementById('deck').addEventListener('click', function(e) {
+    if (e.target.closest('.nav-bar')) return;
+    const x = e.clientX / window.innerWidth;
+    if (x < 0.3) go(-1);
+    else if (x > 0.7) go(1);
+  });
+</script>
+
+</body>
+</html>
