@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (dpm), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, and Filament v5 admin mockups. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, and Filament v5 admin mockups. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -279,7 +279,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### dpm — Data-Modelled Planning Method (v0.3.0)
+### DPM — Data-Modelled Planning Method (v0.3.0)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 
@@ -293,7 +293,7 @@ CPM's pipeline with a different substrate. Every artefact — spec, epic, story,
 
 **Quick Start:**
 ```bash
-# After installing, in each repository dpm keeps artefacts in:
+# After installing, in each repository DPM keeps artefacts in:
 # (an absolute <plugin path> — a symlink resolves its target from .git/hooks/)
 ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 
@@ -301,13 +301,13 @@ ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 /dpm:publish
 ```
 
-**Re-make that symlink after each dpm upgrade.** A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
+**Re-make that symlink after each DPM upgrade.** A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
 
-The database is created on the first tool call rather than at launch, so a session in a directory that does not use dpm leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
+The database is created on the first tool call rather than at launch, so a session in a directory that does not use DPM leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
 
-**Requires:** Node 22.5.0 or later. dpm reaches SQLite through `node:sqlite` in the standard library — no native module, no `node-gyp`, no build step.
+**Requires:** Node 22.5.0 or later. DPM reaches SQLite through `node:sqlite` in the standard library — no native module, no `node-gyp`, no build step.
 
-**Companion tool — dpm board:** a standalone terminal UI (`dpm/tools/board/`) showing the state of every project you register — a three-column Projects → Epics → Stories browser — and launching the right `/dpm:*` session for each without leaving the board. Unlike CPM's board it reads nothing off disk: it is an MCP client, so a blocked epic *names* its blocker from a `dependency` row instead of having one guessed from a `**Blocked by**` line, and it can answer questions a markdown corpus cannot — `Ctrl+G` lists every requirement no coverage row traces, and a per-project badge carries what `check_integrity` reported. Servers are spawned read-only, so observing a project leaves it byte-identical. See [the board README](./dpm/tools/board/README.md).
+**Companion tool — DPM board:** a standalone terminal UI (`dpm/tools/board/`) showing the state of every project you register — a three-column Projects → Epics → Stories browser — and launching the right `/dpm:*` session for each without leaving the board. Unlike CPM's board it reads nothing off disk: it is an MCP client, so a blocked epic *names* its blocker from a `dependency` row instead of having one guessed from a `**Blocked by**` line, and it can answer questions a markdown corpus cannot — `Ctrl+G` lists every requirement no coverage row traces, and a per-project badge carries what `check_integrity` reported. Servers are spawned read-only, so observing a project leaves it byte-identical. See [the board README](./dpm/tools/board/README.md).
 
 **Status:** in use, still settling. The skill corpus, the tool surface, the database lifecycle and the board are in place — specs `47-spec-dpm-sqlite-persistence.md`, `48-spec-dpm-board.md` and `49-spec-dpm-database-lifecycle.md` under `docs/specifications/`, with the work broken down across `docs/epics/47-*`, `48-*` and `49-*`.
 

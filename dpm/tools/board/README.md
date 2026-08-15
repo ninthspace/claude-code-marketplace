@@ -1,6 +1,6 @@
-# dpm board
+# DPM board
 
-A cross-project dpm status board and launcher — a standalone terminal UI that shows
+A cross-project DPM status board and launcher — a standalone terminal UI that shows
 the state of every project you register and launches the right `/dpm:*` session for
 each one without leaving the board.
 
@@ -68,7 +68,7 @@ reported for that project's database — a count of broken register rows and orp
 rows together. A project with nothing wrong carries neither.
 
 A project the board cannot read is a **state, not a crash**: a missing database, a
-schema version ahead of the server, a Node below dpm's floor, a server that failed to
+schema version ahead of the server, a Node below DPM's floor, a server that failed to
 start, a server that is not installed, and a tool surface that does not match each
 render as a named state carrying its remedy, and every other project still renders.
 

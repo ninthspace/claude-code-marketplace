@@ -1,15 +1,15 @@
-# dpm — Data-Modelled Planning Method
+# DPM — Data-Modelled Planning Method
 
 SQLite-backed persistence for planning artefacts. Every artefact is a row with typed
 columns; every cross-artefact reference is a foreign key. Markdown under `docs/` is a
 generated, one-way projection of the database rather than the place the data lives.
 
 Skills write exclusively through typed MCP tools — no skill contains SQL, and nothing in
-dpm parses prose.
+DPM parses prose.
 
 ## TL;DR
 
-- **`docs/` is output.** dpm generates it from `.dpm/dpm.db`. Editing a file under it is
+- **`docs/` is output.** DPM generates it from `.dpm/dpm.db`. Editing a file under it is
   writing into something with a generator behind it; the edit survives until the next
   publish and no longer.
 - **The database is not committed.** `.dpm/dpm.sql` is its text form and is what a fresh
@@ -17,7 +17,7 @@ dpm parses prose.
 - **Two things to do once per repository**: symlink the pre-commit hook (with an
   **absolute** target), and run `/dpm:publish` before committing. Both are under *First
   run*.
-- **Re-make that symlink after every dpm upgrade.** Releases install side by side and
+- **Re-make that symlink after every DPM upgrade.** Releases install side by side and
   re-point nothing, so the link keeps running the release you installed it from.
 - **A refused commit is telling you which of four things happened**, and each has a
   different fix — publishing when you should have imported destroys what you pulled. The
@@ -27,9 +27,9 @@ dpm parses prose.
 
 ## Requirements
 
-- **Node 22.5.0 or later.** dpm uses `node:sqlite` from the standard library, so there is
+- **Node 22.5.0 or later.** DPM uses `node:sqlite` from the standard library, so there is
   no native module, no `node-gyp`, and no build step at install time. Below the floor,
-  each of dpm's five executables refuses with a message naming the version rather than
+  each of DPM's five executables refuses with a message naming the version rather than
   failing on a missing module.
 
 ## Installation
@@ -44,7 +44,7 @@ Inside Claude Code:
 The suffix is the marketplace's name rather than the repository's — they differ, and only
 the former resolves.
 
-To work on dpm itself, clone the repository and add the clone as a marketplace instead, so
+To work on DPM itself, clone the repository and add the clone as a marketplace instead, so
 the plugin points at your working tree rather than a cached copy:
 
 ```sh
@@ -58,7 +58,7 @@ There is nothing to compile either way.
 
 ## First run
 
-Two steps, in a repository dpm is going to keep planning artefacts in.
+Two steps, in a repository DPM is going to keep planning artefacts in.
 
 **1. Install the pre-commit hook.** It regenerates both artefacts and refuses a commit
 that disagrees with the database. From the repository root:
@@ -71,7 +71,7 @@ ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 symlink's target is resolved from the directory holding the *link* — `.git/hooks/` — and
 not from the directory you ran `ln` in, so a path that is correct relative to the
 repository root points two levels too deep once installed. An installed plugin is at an
-absolute path anyway; the failure only bites when you are running dpm from a clone. If
+absolute path anyway; the failure only bites when you are running DPM from a clone. If
 you would rather not think about it, `ln -s "$(pwd)/…"` from the plugin directory is the
 same instruction with the question removed.
 
@@ -96,7 +96,7 @@ the dump holds — replacing one is a merge, and a merge is something you ask fo
 Keeping the binary out of the commit is not a step you
 perform: the first tool call writes `.dpm/.gitignore` before it creates the database, so
 there is no window in which an unignored `dpm.db` can be staged. Commit that file once and
-it reaches every clone. If you already have one, dpm leaves it exactly as it is.
+it reaches every clone. If you already have one, DPM leaves it exactly as it is.
 
 **2. Publish before committing.** The markdown under `docs/` is generated, and nothing
 generates it as a side effect of writing. After a skill run that changed anything:
@@ -155,11 +155,11 @@ Run it during the conflicted `git merge`, from the repository root. It reads git
 stages of `.dpm/dpm.sql`, merges them row by row, and rebuilds the database from the
 result. Where it cannot decide, it stops and says which rows are in question rather than
 picking one. Git does not invoke it for you; registering it as a merge driver needs
-per-clone configuration and is not something dpm does on your behalf.
+per-clone configuration and is not something DPM does on your behalf.
 
 ## When the guard is out of date
 
-Nothing is out of step here; the hook is. dpm upgraded, the database is at a schema
+Nothing is out of step here; the hook is. DPM upgraded, the database is at a schema
 version this guard has never heard of, and `.git/hooks/pre-commit` is still symlinked
 into the previous release — an upgrade installs beside the old version rather than over
 it, and re-points nothing.
@@ -200,13 +200,13 @@ per-project states.
 
 ## Coming from CPM
 
-**There is no importer, and that is a decision rather than a gap** (AD8). dpm never reads a
+**There is no importer, and that is a decision rather than a gap** (AD8). DPM never reads a
 CPM `docs/` tree. New and existing projects alike begin with a blank database, so a project
-adopting dpm carries none of its history across — the artefacts stay exactly where they are,
-as CPM's files, and dpm neither converts nor repairs them.
+adopting DPM carries none of its history across — the artefacts stay exactly where they are,
+as CPM's files, and DPM neither converts nor repairs them.
 
-**But dpm will offer to delete some of them, so move them out of the way first.** The
-projection reclaims a file it did not write when the name carries one of dpm's *own kind names*
+**But DPM will offer to delete some of them, so move them out of the way first.** The
+projection reclaims a file it did not write when the name carries one of DPM's *own kind names*
 in the position the renderer puts it — `-spec-`, `-epic-`, and so on — inside the directory that
 kind is mapped to. Whether that catches a given CPM directory comes down to whether the two
 systems happen to use the same word for the same kind of document: `spec` and `spec` collide,
@@ -227,7 +227,7 @@ git mv docs/plans docs/briefs docs/specifications docs/epics docs/retros docs/qu
        docs/library docs/cpm/   # drop any you do not have
 ```
 
-`docs/architecture/` is not on that list because it is never walked at all: dpm renders an ADR
+`docs/architecture/` is not on that list because it is never walked at all: DPM renders an ADR
 inside the document that raised it and has no directory for the kind. Leave your ADRs where
 they are.
 
@@ -242,7 +242,7 @@ refuses](#when-the-guard-refuses). In a repository with a CPM corpus still in pl
 the skill.
 
 Once the corpus is out of reach, [MIGRATION.md](MIGRATION.md) covers the other half: which of
-it, if any, is worth carrying over, and which is finished work that no dpm skill will ever read.
+it, if any, is worth carrying over, and which is finished work that no DPM skill will ever read.
 
 ## Status
 
