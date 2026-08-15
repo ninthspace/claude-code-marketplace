@@ -114,6 +114,30 @@ result. Where it cannot decide, it stops and says which rows are in question rat
 picking one. Git does not invoke it for you; registering it as a merge driver needs
 per-clone configuration and is not something dpm does on your behalf.
 
+## The board
+
+`dpm/tools/board/` is a cross-project terminal UI: every project you register, the
+state of its epics and stories, and a keypress that launches the right `/dpm:*`
+session for the row you are looking at. There is no install step — it is a PEP 723
+single-file script, and `uv` provisions it on first run.
+
+```sh
+uv run <plugin path>/dpm/tools/board/board.py add .
+uv run <plugin path>/dpm/tools/board/board.py
+```
+
+It reads through the same MCP tools the skills do, which is what makes its answers
+exact rather than inferred: a blocked epic names its blocker from a `dependency` row.
+Two of its views ask questions a markdown corpus cannot be asked at all — `Ctrl+G`
+lists every requirement no coverage row traces, and a per-project badge carries what
+`check_integrity` found. It spawns servers read-only and writes nothing anywhere
+except its own registry and cache under the XDG config directory, so a project it is
+pointed at is left byte-identical — including one with no database, which it declines
+to spawn against rather than creating one.
+
+See [tools/board/README.md](tools/board/README.md) for the columns, the keys, and the
+per-project states.
+
 ## Coming from CPM
 
 **There is no importer, and that is a decision rather than a gap** (AD8). dpm never reads a
@@ -162,8 +186,14 @@ it, if any, is worth carrying over, and which is finished work that no dpm skill
 
 ## Status
 
-Under construction — spec `docs/specifications/47-spec-dpm-sqlite-persistence.md`, built
-across the epics in `docs/epics/47-*`.
+In use, still settling. Three specs are built out, each across the epics sharing its
+number in `docs/epics/`:
+
+| Spec | What it delivered |
+|---|---|
+| `47-spec-dpm-sqlite-persistence.md` | The schema, the tool surface, the skill corpus, the projection and the pre-commit guard |
+| `48-spec-dpm-board.md` | The cross-project board — see [The board](#the-board) |
+| `49-spec-dpm-database-lifecycle.md` | Deferred creation, the automatic ignore file, restore-from-dump, and a guard that names the fix by direction |
 
 ## Licence
 

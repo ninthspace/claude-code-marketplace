@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.18.0",
+  "version": "3.19.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -66,7 +66,7 @@
       "name": "dpm",
       "source": "./dpm",
       "description": "Data-Modelled Planning Method — SQLite-backed persistence for planning artefacts. Artefacts are rows, cross-artefact references are foreign keys, and markdown is a generated one-way projection. Skills write through typed MCP tools; nothing parses prose.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "keywords": [
         "planning",
         "sqlite",

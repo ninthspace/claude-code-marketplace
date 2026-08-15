@@ -279,7 +279,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### dpm — Data-Modelled Planning Method (v0.1.0)
+### dpm — Data-Modelled Planning Method (v0.2.0)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 
@@ -300,9 +300,13 @@ ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 /dpm:publish
 ```
 
+The database is created on the first tool call rather than at launch, so a session in a directory that does not use dpm leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
+
 **Requires:** Node 22.5.0 or later. dpm reaches SQLite through `node:sqlite` in the standard library — no native module, no `node-gyp`, no build step.
 
-**Status:** under construction. The skill corpus and the tool surface are in place; the spec is `docs/specifications/47-spec-dpm-sqlite-persistence.md` and the work is broken down across `docs/epics/47-*`.
+**Companion tool — dpm board:** a standalone terminal UI (`dpm/tools/board/`) showing the state of every project you register — a three-column Projects → Epics → Stories browser — and launching the right `/dpm:*` session for each without leaving the board. Unlike CPM's board it reads nothing off disk: it is an MCP client, so a blocked epic *names* its blocker from a `dependency` row instead of having one guessed from a `**Blocked by**` line, and it can answer questions a markdown corpus cannot — `Ctrl+G` lists every requirement no coverage row traces, and a per-project badge carries what `check_integrity` reported. Servers are spawned read-only, so observing a project leaves it byte-identical. See [the board README](./dpm/tools/board/README.md).
+
+**Status:** in use, still settling. The skill corpus, the tool surface, the database lifecycle and the board are in place — specs `47-spec-dpm-sqlite-persistence.md`, `48-spec-dpm-board.md` and `49-spec-dpm-database-lifecycle.md` under `docs/specifications/`, with the work broken down across `docs/epics/47-*`, `48-*` and `49-*`.
 
 [View full documentation](./dpm/README.md)
 

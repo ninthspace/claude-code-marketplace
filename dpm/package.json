@@ -1,6 +1,6 @@
 {
   "name": "dpm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Data-Modelled Planning Method — SQLite-backed persistence for planning artefacts.",
