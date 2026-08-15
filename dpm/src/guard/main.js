@@ -11,12 +11,20 @@
  * anyone knew of it would be an unexplained diff in `.dpm/dpm.sql` produced by the guard that was
  * supposed to be checking it. The guard reads. If the schema is behind, the answer is to start the
  * server, not to have the hook do it.
+ *
+ * **And it refuses a database from a newer release**, for the reason `migrate` leaves one alone.
+ * The hook is installed as a symlink into a version-pinned plugin directory, the cache keeps old
+ * versions beside new ones, and nothing re-points the link on upgrade — so the ordinary state
+ * after one is a current database checked by the previous release's guard. That guard compares
+ * the projection against a schema missing whatever the release added: a pass from it means
+ * nothing, and it is the one outcome nobody investigates.
  */
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openConnection } from '../db/connection.js';
 import { DATABASE } from '../db/location.js';
+import { currentVersion, targetVersion } from '../schema/migrate.js';
 import { describe, guard } from './index.js';
 
 /**
@@ -74,6 +82,29 @@ export function run({ root = '.', location = DATABASE, streams } = {}) {
   }
 
   try {
+    // **Before the comparison, because the comparison is what cannot be trusted.** Every other
+    // failure here is the guard reporting on the tree; this one is the guard reporting on itself.
+    //
+    // The message names the path this executable was loaded from rather than a version number.
+    // That path *is* the diagnosis — it ends in the release the symlink still points at — and it
+    // is the argument to the `ln -s` that fixes it, so a user who reads it has already been told
+    // both what happened and what to type.
+    const schema = currentVersion(db);
+    const known = targetVersion();
+
+    if (schema > known) {
+      err(`dpm: this guard is from an older release than ${database} — the database is at schema `
+        + `version ${schema} and this one knows ${known}. The guard that ran is the one at `
+        + `${resolve(import.meta.dirname, '..', '..')}. An upgrade installs beside the previous `
+        + 'release rather than over it and re-points nothing, so a .git/hooks/pre-commit '
+        + 'symlinked against that path keeps running it. Re-create the symlink against the '
+        + 'current plugin path. Nothing was checked.\n');
+
+      // Exit 2 for the reason the missing database is: this is "the guard could not run". A 1
+      // would send a user to regenerate a current projection against an older understanding of it.
+      return 2;
+    }
+
     const result = guard(db, { root });
 
     if (result.diverged.length === 0) {

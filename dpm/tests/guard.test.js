@@ -30,6 +30,7 @@ import { dump } from '../src/dump/index.js';
 import { project } from '../src/projection/index.js';
 import { DIVERGENCE, DUMP_PATH, guard } from '../src/guard/index.js';
 import { run } from '../src/guard/main.js';
+import { targetVersion } from '../src/schema/migrate.js';
 
 const ROOT = join(import.meta.dirname, '..');
 const BIN = join(ROOT, 'bin', 'dpm-guard.js');
@@ -328,6 +329,31 @@ test('the guard cannot run without a database, and creates none in the process',
   // The guard writes nothing, and that has to include the database.
   assert.ok(!readdirSync(join(repo.root, '.dpm')).includes('absent.db'),
     'the guard created the database it was checking for');
+});
+
+test('a database from a newer release is refused rather than compared against', (t) => {
+  const repo = repository(t);
+
+  // The tree is clean, so every *other* reason to fail is excluded — what this asserts is that a
+  // guard which would otherwise pass refuses anyway. That is the whole hazard: the stale guard's
+  // verdict on a newer database is a pass, and a pass is what nobody looks into.
+  assert.equal(invoke(repo).code, 0);
+
+  repo.db
+    .prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)')
+    .run(targetVersion() + 1, new Date().toISOString());
+
+  const { code, out, err } = invoke(repo);
+
+  // Exit 2 and not 1 — the setup is wrong, the tree is not.
+  assert.equal(code, 2);
+  assert.match(err, /older release/);
+  assert.equal(out, '', 'a refusal reached stdout, where a hook logs nothing');
+
+  // The two things the message has to carry to be actionable: where the hook is still wired, and
+  // that re-pointing it is the fix.
+  assert.match(err, /\.git\/hooks\/pre-commit/);
+  assert.match(err, /symlink/);
 });
 
 test('the shipped pre-commit hook runs the guard and repairs nothing', () => {

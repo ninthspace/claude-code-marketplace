@@ -13,6 +13,51 @@ installed. You will not need to know anything about how dpm stores things.
 
 ---
 
+## If you would rather be walked through it
+
+CPM can read this guide and run the migration with you, which is worth doing while CPM is still
+installed — it is the one moment you have both systems to hand. In the repository you are moving:
+
+```
+/cpm:consult bella, please read https://github.com/ninthspace/claude-code-marketplace/blob/main/dpm/MIGRATION.md so we can move from cpm to dpm in this repo and help me migrate
+```
+
+One line, however it wraps on screen — a slash command submits at the first newline, so a
+paste broken across lines sends only the first part of it.
+
+That gets you a conversation that already knows what the four things worth carrying are, and can
+see which of them your repository actually has. The rest of this document is the same migration
+done by reading; you do not need both.
+
+Two things stay yours either way. The `git mv` in the next section is a decision about your files,
+so make it yourself rather than delegating it, and **what is still true is a judgement nothing can
+make for you** — that is the whole reason there is no import command.
+
+---
+
+## TL;DR
+
+- **Do this first, before running anything**: `git mv` all twelve `docs/` folders dpm generates
+  into `docs/cpm/`. dpm regenerates those folders and tidies up files in them it takes for its
+  own leftovers, and a good number of CPM documents qualify. Move all twelve, not the ones that
+  look risky.
+- **That step alone is a complete migration.** dpm works from here. Everything after it is a head
+  start rather than a requirement.
+- **There is no import command and there will not be one.** Not reading prose is the thing dpm was
+  built to do; the judgement about what is still true is yours, one document at a time.
+- **Four things are worth carrying**, in this order: constraints on anything still in flight, your
+  library documents, lessons that never got promoted, and ADRs still in force. If you do one, do
+  the library documents — every skill reads them, every time.
+- **A library document without `scope:` imports cleanly and is read by nothing.** This is the
+  usual way a migration ends up half-done.
+- **Check it by running `/dpm:spec`** and reading the first few lines back. It should name your
+  decisions and library documents. Don't count things.
+- **Expect less to carry across than feels right** — perhaps four documents, two ADRs, a handful
+  of lessons. The rest stays in `docs/cpm/`, in git, readable whenever you ask.
+- **`docs/architecture/` does not move.** dpm never looks there.
+
+---
+
 ## First: `docs/` becomes generated output
 
 **Do this before you run anything else.**

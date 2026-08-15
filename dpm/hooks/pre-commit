@@ -11,7 +11,17 @@
 # move into the database.
 #
 # Install with:
-#   ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+#   ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+#
+# **The target has to be absolute.** A symlink resolves its target from the directory holding the
+# link — `.git/hooks/` — rather than from wherever `ln` was run, so a path written relative to the
+# repository root lands two levels too deep. git then skips a hook it cannot resolve, silently and
+# without failing the commit, which is indistinguishable from never having installed one.
+#
+# **`<plugin path>` contains a version, so this link is stale after an upgrade** — a new release
+# installs beside the old one and re-points nothing, leaving the previous release's guard wired to
+# a current database. Re-make the link. The guard detects the case and refuses rather than
+# reporting on a schema it half knows, but detecting it is not the same as fixing it.
 
 set -e
 

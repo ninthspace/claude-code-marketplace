@@ -279,7 +279,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### dpm — Data-Modelled Planning Method (v0.2.0)
+### dpm — Data-Modelled Planning Method (v0.3.0)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 
@@ -294,11 +294,14 @@ CPM's pipeline with a different substrate. Every artefact — spec, epic, story,
 **Quick Start:**
 ```bash
 # After installing, in each repository dpm keeps artefacts in:
-ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+# (an absolute <plugin path> — a symlink resolves its target from .git/hooks/)
+ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 
 # Then, after any skill run that wrote something:
 /dpm:publish
 ```
+
+**Re-make that symlink after each dpm upgrade.** A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
 
 The database is created on the first tool call rather than at launch, so a session in a directory that does not use dpm leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
 

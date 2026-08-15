@@ -102,6 +102,33 @@ test('the README names each fix, its condition, and no command a constant does n
   }
 });
 
+// --- The one refusal whose fix is not a command --------------------------------------------
+
+test('the stale-guard refusal is documented, and kept out of the command map [unit]', () => {
+  // The same requirement one refusal over: a reader told the guard is out of date has to be able
+  // to find what to do about it. It is asserted separately because its fix is an `ln -s` rather
+  // than one of `COMMANDS`, and folding it into the section above would break the one-to-one the
+  // previous test exists to hold — a case with no command would have to be excused there, and the
+  // excusing is what would let a genuinely undocumented fix through later.
+  const stale = section('When the guard is out of date');
+
+  assert.match(stale, /ln -s/, 'the section does not name the fix');
+  assert.match(stale, /\.git\/hooks\/pre-commit/, 'the section does not say what is stale');
+
+  // And it stays out of the command map: no `bin/dpm-*.js` here, or the sweep above would see a
+  // command in a section whose fix is not one.
+  assert.doesNotMatch(stale, /bin\/dpm-[a-z-]+\.js/,
+    'the stale-guard section names a command, which is not how this one is fixed');
+
+  // The guard's own message carries the same two things, so the refusal and the section agree
+  // about what happened. Read from the source rather than run, because reaching the refusal needs
+  // a database from a release that does not exist yet — `guard.test.js` drives that end.
+  const main = readFileSync(join(ROOT, 'src', 'guard', 'main.js'), 'utf8');
+
+  assert.match(main, /\.git\/hooks\/pre-commit/, 'the refusal does not name the stale link');
+  assert.match(main, /symlink/, 'the refusal does not say what to re-make');
+});
+
 test('the path the guard prints and the one the README carries are one constant [unit]', () => {
   // **This is the join, and without it the test above is a test of the README against itself.**
   // The guard prints an absolute path — a fact about one machine, which no README can carry — so

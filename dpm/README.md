@@ -7,6 +7,24 @@ generated, one-way projection of the database rather than the place the data liv
 Skills write exclusively through typed MCP tools — no skill contains SQL, and nothing in
 dpm parses prose.
 
+## TL;DR
+
+- **`docs/` is output.** dpm generates it from `.dpm/dpm.db`. Editing a file under it is
+  writing into something with a generator behind it; the edit survives until the next
+  publish and no longer.
+- **The database is not committed.** `.dpm/dpm.sql` is its text form and is what a fresh
+  clone rebuilds from, automatically, on the first tool call.
+- **Two things to do once per repository**: symlink the pre-commit hook (with an
+  **absolute** target), and run `/dpm:publish` before committing. Both are under *First
+  run*.
+- **Re-make that symlink after every dpm upgrade.** Releases install side by side and
+  re-point nothing, so the link keeps running the release you installed it from.
+- **A refused commit is telling you which of four things happened**, and each has a
+  different fix — publishing when you should have imported destroys what you pulled. The
+  refusal names the command; *When the guard refuses* explains the choice.
+- **Coming from CPM?** Read `MIGRATION.md` first — there is one move to make before you
+  run anything.
+
 ## Requirements
 
 - **Node 22.5.0 or later.** dpm uses `node:sqlite` from the standard library, so there is
@@ -46,8 +64,29 @@ Two steps, in a repository dpm is going to keep planning artefacts in.
 that disagrees with the database. From the repository root:
 
 ```sh
-ln -s ../../<plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 ```
+
+**`<plugin path>` has to be absolute here**, unlike everywhere else in this README. A
+symlink's target is resolved from the directory holding the *link* — `.git/hooks/` — and
+not from the directory you ran `ln` in, so a path that is correct relative to the
+repository root points two levels too deep once installed. An installed plugin is at an
+absolute path anyway; the failure only bites when you are running dpm from a clone. If
+you would rather not think about it, `ln -s "$(pwd)/…"` from the plugin directory is the
+same instruction with the question removed.
+
+Get it wrong and there is nothing to notice: git skips a hook it cannot resolve, without
+a warning and without failing the commit, so a broken link and no link at all look
+identical from the outside. `ls -l .git/hooks/pre-commit` after installing is the whole
+check.
+
+**`<plugin path>` carries a version, and so this link needs re-making after an upgrade.**
+An installed plugin lives at `…/plugins/cache/<marketplace>/dpm/<version>/`, an upgrade
+adds the new version beside the old rather than replacing it, and nothing re-points a
+symlink into the one you linked against. So the ordinary state after upgrading is a
+current database checked by the previous release's guard. It refuses rather than
+reporting on a schema it only partly understands — see below — but the refusal is the
+thing that tells you, so it is worth knowing why it arrives.
 
 The database itself is not committed — `.dpm/dpm.sql` is its committed text form, and it
 is what a checkout restores from. That restore is not a step either: on a fresh clone the
@@ -79,6 +118,10 @@ step in three different ways. The guard says which one happened and names the fi
 each of these is a real command you can run at any time, not only when a commit is
 refused, and each discards whatever is only on the side it overwrites. Knowing which is
 which before you are standing in front of a refusal is the point of this section.
+
+There is a fourth refusal that is not about the two artefacts at all — the guard
+reporting that it is itself out of date. It has its own section below, because its fix is
+not one of these commands.
 
 **The database moved.** You changed something and did not publish. Regenerate both
 artefacts:
@@ -113,6 +156,23 @@ stages of `.dpm/dpm.sql`, merges them row by row, and rebuilds the database from
 result. Where it cannot decide, it stops and says which rows are in question rather than
 picking one. Git does not invoke it for you; registering it as a merge driver needs
 per-clone configuration and is not something dpm does on your behalf.
+
+## When the guard is out of date
+
+Nothing is out of step here; the hook is. dpm upgraded, the database is at a schema
+version this guard has never heard of, and `.git/hooks/pre-commit` is still symlinked
+into the previous release — an upgrade installs beside the old version rather than over
+it, and re-points nothing.
+
+The fix is to re-make the link against the current plugin path: the `ln -s` from step 1.
+The refusal names the directory it ran from, which is the old release's, so the path you
+are replacing is in the message.
+
+It refuses rather than carrying on for the reason the migrator leaves a newer database
+alone. This guard's picture of the schema is missing whatever the release added, so what
+it would produce is a comparison against part of a database — and the outcome of that is
+very often a pass, which is the one verdict nobody investigates. Until the link is
+re-made, no commit in that repository has been checked by anything.
 
 ## The board
 
