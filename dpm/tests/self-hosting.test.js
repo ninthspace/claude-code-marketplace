@@ -36,7 +36,21 @@ import { project, renderDocument } from '../src/projection/index.js';
 import { identifiers } from '../src/projection/naming.js';
 import { resolve } from '../src/projection/markers.js';
 
-const EPICS = join(import.meta.dirname, '..', '..', 'docs', 'epics');
+/**
+ * The frozen spec-47 corpus under `tests/corpus-snapshot/`, not the repository's `docs/`.
+ *
+ * **What this costs, stated because the scan below argues the opposite.** `registerSections()` is
+ * written to pick up an entry raised by an epic written later, and against a fixture no later epic
+ * can arrive. That property was already lost, though, and not by this line: the repository migrated
+ * from CPM to dpm, so epics from 51 onwards are rows in `.dpm/dpm.db` rather than files under
+ * `docs/epics/` — a path into `docs/cpm/` would scan a parked archive while reading as though it
+ * still watched the live corpus. A fixture is the same coverage, said honestly.
+ *
+ * **A dpm-era register has no home yet**, and that is the open work this note exists to name.
+ * Carrying the register into dpm, so the scan reads rows and grows again, is the fix; until then
+ * this asserts that the CPM-era register closed, which is true and permanently true.
+ */
+const EPICS = join(import.meta.dirname, 'corpus-snapshot', 'epics');
 
 /** Open a database, load the corpus, and hand back everything a test here needs. */
 function loaded(t) {

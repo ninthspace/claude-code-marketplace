@@ -27,7 +27,11 @@ observations below are the ones the pivot surfaced rather than ones gathered fro
   started" arriving from a direction no single spec could see — not a weak assertion inside one  
   epic, but a correct assertion undermined by a sibling document. The fix was to re-ground it on the  
   mechanism: spawn read-only against a missing database, call a read tool, assert the refusal and  
-  the absence. That sequence creates a file without the flag, so it discriminates.
+  the absence. That sequence creates a file without the flag, so it discriminates.  
+  **Retired 2026-08-16**: promoted to the library document *Promoted Retro Lessons*, under "A check  
+  that passes may be passing for a reason other than the one you want". It had been carried into the  
+  CPM library as a 2026-08-13 amendment without being retired here; the migration folded that  
+  amendment into the body and closed the gap.
 
 ### Scope Surprises
 

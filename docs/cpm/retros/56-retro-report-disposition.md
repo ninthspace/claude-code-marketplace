@@ -105,7 +105,10 @@ the `[manual]` one.
   of Story 4's sweeps passed on their first run, which is what a vacuous sweep looks like. The fix  
   was the same move each time: extract the *reading* into a function taking a `read(skill)`  
   callback, then drive it against a corpus with the defect planted. Until the reading is separable  
-  from the corpus, there is nothing to point at a broken one.
+  from the corpus, there is nothing to point at a broken one.  
+  **Retired 2026-08-16**: promoted to the library document *Promoted Retro Lessons*, under "A check  
+  that passes may be passing for a reason other than the one you want", where it is stated together  
+  with retro 42's criterion-level form of the same rule.
 - **The only criterion that found a defect was the one no assertion could reach.** Twenty-one  
   automated criteria across two epics were green over a report that read as padding. FR4's  
   `[manual]` read is the only criterion that tests the goal rather than the mechanism, and it was  
@@ -115,7 +118,9 @@ the `[manual]` one.
   copy the file to the scratchpad and `cp` it back. The run also made programmatic edits to files  
   rather than using the Edit tool. Both breach the shared Implementation Guidelines, both were  
   caught mid-run and written into the progress file as conduct notes, and both are worth naming here  
-  because a control mutation is exactly the moment the reflex reaches for `git`.
+  because a control mutation is exactly the moment the reflex reaches for `git`.  
+  **Retired 2026-08-16**: promoted to the library document *Promoted Retro Lessons*, under "A control  
+  mutation needs a revert that cannot take the tree with it".
 
 ### Patterns Worth Reusing
 

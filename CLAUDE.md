@@ -1,5 +1,15 @@
 # Claude Code Marketplace — Development Guidelines
 
+## Critical: `docs/` is generated output, and CPM's history is under `docs/cpm/`
+
+This repository migrated from CPM to DPM on 2026-08-16. Two rules follow, and both are permanent.
+
+**Never hand-write into the folders DPM generates.** `plans`, `briefs`, `specifications`, `epics`, `reviews`, `retros`, `quick`, `discussions`, `communications`, `audits`, `runbooks` and `library` under `docs/` are regenerated from `.dpm/dpm.db` whenever DPM publishes. Anything written there by hand is competing with a generator and is lost at the next regeneration. The pre-commit guard (`.git/hooks/pre-commit`, symlinked into the DPM plugin) refuses the commit and names what diverged; it deliberately fixes nothing, because a hook that regenerated and staged the result would silently overwrite the edit. Move the content into the database instead — that is what the guard is asking for.
+
+**The CPM-era corpus lives under `docs/cpm/` and never moves back.** 140 planning documents across nine folders. It stays readable, greppable and in git exactly as it was, and DPM cannot see it: DPM only looks one folder deep, so `docs/cpm/` is permanently out of reach. Cite it by that path.
+
+Three directories under `docs/` are neither generated nor parked, and stay where they are: `docs/maintenance/` (see below), `docs/stories/` and `docs/artifacts/`. `docs/archive/` also stays — it is work archived *during* the CPM era, which is a different thing from the CPM era itself.
+
 ## Critical: Source vs. Cache Paths
 
 This repository contains the source code for multiple plugins: `cpm`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`.
@@ -51,7 +61,7 @@ grep -rl "Section Name" cpm/skills/*/SKILL.md | wc -l
 
 The bar for core is high and should stay high — it is the only part with unconditional reach, and it is the part that has to stay small for any of it to arrive. **Adding a section to `CORE_SECTIONS` is a change to what every session pays for; adding one to the file is not.**
 
-**A relevance check rather than a byte budget**, because a byte target can be met by deleting rules. Moving content to where it is used is the only way to satisfy this one. Growth history, per-section reference counts, and the deferred relocation inventory: `docs/quick/27-quick-shared-conventions-relevance-check-spec.md`.
+**A relevance check rather than a byte budget**, because a byte target can be met by deleting rules. Moving content to where it is used is the only way to satisfy this one. Growth history, per-section reference counts, and the deferred relocation inventory: `docs/cpm/quick/27-quick-shared-conventions-relevance-check-spec.md`.
 
 Note that the file's own growth is now much cheaper than it was, which is a reason to keep applying the check rather than to relax it: a section nothing references costs one index line instead of its length, so the pressure that used to enforce this rule automatically is gone.
 
@@ -65,6 +75,6 @@ The distinction is not "prose versus instructions". Rationale is welcome and oft
 
 Reach is what makes it different from an ordinary documentation choice. A SKILL.md is loaded in full on every invocation of that skill, in every project the plugin is installed in. A note explaining a removal is paid for on every run, forever, by readers who never knew the removed thing existed.
 
-Two things make it hard to catch. Skills already instruct their *runtime output* to record a decided absence — and those rules are correct, so the instinct is right one directory over and wrong here. And no metric finds it: citation counts and commentary-density both rank clean files top. Read the file. Evidence, and the passages removed in the 2026-07-28 sweep: `docs/quick/29-quick-skill-construction-prose-sweep-spec.md`.
+Two things make it hard to catch. Skills already instruct their *runtime output* to record a decided absence — and those rules are correct, so the instinct is right one directory over and wrong here. And no metric finds it: citation counts and commentary-density both rank clean files top. Read the file. Evidence, and the passages removed in the 2026-07-28 sweep: `docs/cpm/quick/29-quick-skill-construction-prose-sweep-spec.md`.
 
 **The same rule covers maintenance records, and they have one home.** Coupling to external components, formats CPM writes that something else parses, tables kept so a maintainer notices when a dependency moves — none of it belongs in a skill, and a pointer from a skill is still a line every invocation pays for. It all lives in **`docs/maintenance/README.md`**, which this file is the only thing that references. When a record there documents a behaviour, its operative counterpart stays in the skill and the suites assert the pair; nothing in `cpm/skills/` should name that path.

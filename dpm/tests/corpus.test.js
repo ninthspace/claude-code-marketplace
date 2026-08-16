@@ -40,7 +40,16 @@ import { domainTerms } from './support/vocabulary.js';
 /** The marketplace repository, which holds `cpm/` and `dpm/` as siblings in one commit. */
 const REPO = join(import.meta.dirname, '..', '..');
 const SKILLS = join(import.meta.dirname, '..', 'skills');
-const EPICS = join(REPO, 'docs', 'epics');
+
+/**
+ * The frozen spec-47 corpus under `tests/corpus-snapshot/`, not the repository's `docs/`.
+ *
+ * The conversion stories this roll-up reads are all in spec 47's epics and all finished. The
+ * repository has migrated from CPM to dpm and parked its CPM-era corpus under `docs/cpm/`, so a
+ * path into `docs/` no longer resolves and a path into `docs/cpm/` would read as live while being
+ * an archive. See `tests/corpus-snapshot/README.md`.
+ */
+const EPICS = join(import.meta.dirname, 'corpus-snapshot', 'epics');
 
 /**
  * FR25's list, transcribed. **The one hand-kept list in this file, and it has to be** — it is the

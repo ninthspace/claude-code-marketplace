@@ -14,9 +14,18 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** The spec that carries the register. Named once, because two copies is how the first one rots. */
-export const SPEC = join(import.meta.dirname, '..', '..', '..',
-  'docs', 'specifications', '47-spec-dpm-sqlite-persistence.md');
+/**
+ * The spec that carries the register. Named once, because two copies is how the first one rots.
+ *
+ * **It is a fixture rather than the working copy, and the reason is that the source is finished.**
+ * Spec 47 was written under CPM; the repository has since migrated to dpm, and its CPM-era corpus
+ * is parked under `docs/cpm/` where nothing edits it again. Pointing at that path would read as a
+ * live corpus and quietly never change; a fixture says what it is. The rule this module exists for
+ * survives the move intact — the numbers, the conditions and the count are still *parsed out of the
+ * document*, never transcribed into an array, which is the failure the header describes.
+ */
+export const SPEC = join(import.meta.dirname, '..',
+  'corpus-snapshot', 'specifications', '47-spec-dpm-sqlite-persistence.md');
 
 const HEADING = '### The false-pass register';
 

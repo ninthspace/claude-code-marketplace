@@ -46,8 +46,14 @@ import { register } from './support/register.js';
 
 const TESTS_DIRECTORY = new URL('.', import.meta.url).pathname;
 
-/** Where a `closedIn` deferral has to resolve to, so "later" cannot name an epic nobody wrote. */
-const EPICS = join(import.meta.dirname, '..', '..', 'docs', 'epics');
+/**
+ * Where a `closedIn` deferral has to resolve to, so "later" cannot name an epic nobody wrote.
+ *
+ * The frozen spec-47 corpus under `tests/fixtures/`, not the repository's `docs/`. Every epic a
+ * disposition defers to was written under CPM and is finished; the repository has since migrated to
+ * dpm and parked that corpus. See `tests/corpus-snapshot/README.md`.
+ */
+const EPICS = join(import.meta.dirname, 'corpus-snapshot', 'epics');
 
 /**
  * What the spec cannot say: which test closes each condition, keyed by the register's number.
