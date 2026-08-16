@@ -2,7 +2,33 @@
 
 **Number**: 02-02  
 **Source spec**: 02  
-**Status**: pending  
+**Status**: complete  
+
+## The three interaction surfaces, and what each comparison found
+
+Story 6's sweep. Three surfaces were compared against `cpm/tools/board/board.py` in this checkout, and each has an outcome below — a difference closed, a difference recorded as deliberate, or a statement that the surface agrees. None is left without one, because a surface nobody compared reads afterwards exactly like one that was compared and agreed.
+
+**Bindings — agrees, with three deliberate additions.** All thirteen keys the CPM board binds are bound here to the same capability: `q`, `r`, `R`, `a`, `x`, `z`, `space`, `c`, `l`, `o`, `t`, `←` and `→`. Four of those pairs are one capability under two names — `add_project`/`register`, `remove_project`/`unregister`, `copy`/`copy_command`, `open_plain`/`open` — and one is the same capability over a wider set of states, `toggle_complete`/`toggle_retired`, since dpm has two retired statuses CPM has no word for. All five are recorded in `SAME_MEANING` in `tests/support/key_maps.py`, which is what keeps the check reporting collisions rather than spellings. Three keys are dpm's own and CPM binds none of them: `ctrl+r` for the forced re-read, `ctrl+f` for search, `ctrl+g` for coverage gaps. The addition is the intended state rather than a drift — the check is a rejection over CPM's own keys, not an equality between the maps, and `test_a_new_capability_on_a_key_cpm_leaves_alone_keeps_the_check_passing` is what stops it becoming one.
+
+**Footer — two differences closed, and one bug found.** `o` read "Open" and now reads "Open project"; `space` read "Select" and now reads "Ralph-select". Both were closed in story 4 against the CPM board's own words, and every one of the thirteen shared keys now carries an identical label. The bug is separate and had been shipping since the board's first story: `OptionList` inherits horizontal scroll bindings, so while a column had focus Textual answered `←` with "Scroll Left" carrying `show=False` and the footer printed neither arrow. The keys worked throughout — a column that cannot scroll sideways declines its own binding and lets it bubble — so the only symptom was two undocumented keys, and it was invisible to any test comparing `BINDINGS` with itself. A `Column(OptionList)` subclass re-declares them against the app's actions.
+
+**Command palette — differs, and the difference is deliberate.** Nothing in spec 2 asks for palette parity; FR19's wording clause is scoped to the footer, and the two sets cannot match in any case because dpm offers four entries CPM has no equivalent of (search, coverage gaps, force refresh, copy project path) and CPM offers one dpm deliberately withholds. The differences, each with its reason:
+
+- Seven entries are named more fully here than on the CPM board — "Launch a session" for "Launch", "Open Claude at the project" for "Open project", "Attach to a live session" for "Attach", "Copy the command" for "Copy command", "Register a project" for "Add project", "Clear the cache" for "Clear cache", "Show/hide done" for "Show/hide completed". A palette is reached by typing at it, so a longer distinctive name is worth more there than in a footer where width is scarce and the key is beside the label. "Show/hide done" is also the more accurate of the pair here, since what it hides is complete, superseded and withdrawn.
+- "Quit the board" rather than "Quit", which is forced: Textual's own system command set — the one this board's provider replaces — has an entry called "Quit", and a palette asserted to hold the board's own actions is not testable against a name that appears in both lists.
+- `toggle_ralph` has a key and no palette entry, where CPM offers "Ralph-select epic". The palette acts on the board as a whole and this acts on the row under the cursor, so an entry would run against whichever row the palette happened to leave highlighted rather than the one the user was looking at when they opened it.
+
+Two entries already agree word for word — "Refresh" and "Remove project" — and were left alone.
+
+## FR9 is verified in one direction and left unclaimed
+
+Every coverage row under FR9 is verified and the requirement is deliberately not claimed, which is a distinction worth stating rather than leaving to be inferred from an empty field.
+
+FR9 says a difference "fails something mechanically the next time **one board moves and the other does not**" — either board. The criterion bound to it is explicitly one-sided: *changing a DPM binding so that a key the CPM board binds does something else makes the parity check fail*, and that is what `test_a_binding_that_takes_a_cpm_key_makes_the_check_fail_and_name_the_key` runs. The check itself is symmetric — it re-reads `cpm/tools/board/board.py` on every run and compares over the intersection, so a rebinding on the CPM side fires it exactly as one here does — but symmetric-by-construction is an argument, not a verification, and nothing in this epic moves the CPM side and watches the check go red.
+
+Closing it needs one more control: a copy of the CPM board's source with a binding changed, read by the same reader, and the check run against it. That is a small test and it was left out of this epic rather than forgotten, because the natural home for it is beside the reader's own cases in `tests/test_parity.py` and it belongs to whoever next has reason to touch that file.
+
+The other seven requirements this epic delivers — FR1, FR2, FR3, FR7, FR8, ENV4 and ENVX3 — are claimed: each one's bound fragments account for its text whole.
 
 ## Story 1 — CPM's key meanings restored
 
@@ -169,7 +195,7 @@ The production restriction, checked here because the environment is reproducible
 
 ## Story 6 — Sweep the interaction surfaces
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: —  
 
 ### Acceptance Criteria
@@ -179,6 +205,10 @@ The production restriction, checked here because the environment is reproducible
 
 ### Task 1 — Compare bindings, footer and palette, and record an outcome for each
 
-**Status**: pending  
+**Status**: complete  
 
 Three surfaces, three outcomes: a difference closed, a difference recorded as deliberate, or a statement that the surface agrees. A surface with no outcome recorded is the failure this story exists to prevent.
+
+### Retro
+
+- "Recorded as deliberate" turned out to be the outcome that earned this story, and it was the one most at risk of being skipped. Bindings and footer both ended in agreement, which a run could have reported in a sentence; the palette differs on ten of its entries, and the temptation was either to close those differences (making a change nothing in the spec asks for — FR19's wording clause is scoped to the footer, and the two sets cannot match anyway since dpm has four entries CPM lacks) or to say nothing about them at all. Writing the reason per entry surfaced that one of the differences is forced rather than chosen: "Quit the board" cannot be renamed to CPM's "Quit" without breaking an existing test, because Textual's own system command set — the one this board's provider replaces — already has an entry by that name. A sweep that reported "the palette differs" and moved on would have left that indistinguishable from a difference somebody could close on a slow afternoon.
