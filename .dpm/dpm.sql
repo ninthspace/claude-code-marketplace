@@ -750,6 +750,12 @@ CREATE TABLE plugin_stamp (
   version    TEXT    NOT NULL,
   UNIQUE (singleton)
 );
+CREATE TABLE dependency_kind_endpoint (
+  kind         TEXT NOT NULL REFERENCES dependency_kind(kind),
+  source_kind  TEXT NOT NULL REFERENCES document_kind(kind),
+  target_kind  TEXT NOT NULL REFERENCES document_kind(kind),
+  PRIMARY KEY (kind, source_kind, target_kind)
+);
 CREATE TRIGGER criterion_approach_tag_not_retired_on_insert
     BEFORE INSERT ON criterion_approach FOR EACH ROW
     WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
@@ -894,6 +900,18 @@ CREATE TRIGGER document_agent_agent_not_retired_on_update
     BEGIN
       SELECT RAISE(ABORT, 'retired: document_agent.agent references a retired agent row');
     END;
+CREATE TRIGGER dependency_kind_endpoint_kind_not_retired_on_insert
+    BEFORE INSERT ON dependency_kind_endpoint FOR EACH ROW
+    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: dependency_kind_endpoint.kind references a retired dependency_kind row');
+    END;
+CREATE TRIGGER dependency_kind_endpoint_kind_not_retired_on_update
+    BEFORE UPDATE OF kind ON dependency_kind_endpoint FOR EACH ROW
+    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: dependency_kind_endpoint.kind references a retired dependency_kind row');
+    END;
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (1, '1970-01-01T00:00:00Z');
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (2, '1970-01-01T00:00:00Z');
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (3, '1970-01-01T00:00:00Z');
@@ -917,6 +935,7 @@ INSERT INTO "schema_version" ("version", "applied_at") VALUES (20, '1970-01-01T0
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (21, '1970-01-01T00:00:00Z');
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (22, '1970-01-01T00:00:00Z');
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (23, '1970-01-01T00:00:00Z');
+INSERT INTO "schema_version" ("version", "applied_at") VALUES (24, '1970-01-01T00:00:00Z');
 INSERT INTO "document_kind" ("kind", "dir", "numbering") VALUES ('adr', NULL, 'child');
 INSERT INTO "document_kind" ("kind", "dir", "numbering") VALUES ('audit', 'audits', 'root');
 INSERT INTO "document_kind" ("kind", "dir", "numbering") VALUES ('communication', 'communications', 'root');
@@ -2406,4 +2425,11 @@ INSERT INTO "task" ("id", "story_id", "number", "title", "description", "status"
 INSERT INTO "task" ("id", "story_id", "number", "title", "description", "status", "status_note", "position") VALUES ('01M05R3896YHDRXMBDGM69RV97', '01M05QSCJCT9JBH0BQSVQJYCVS', 1, 'Compare column layout and row composition across the two boards', 'Each surface gets a recorded outcome: a difference closed, a difference recorded as deliberate, or a statement that the surface agrees. Reads the repository source of both boards, never the plugin cache.', 'complete', NULL, 0);
 INSERT INTO "task" ("id", "story_id", "number", "title", "description", "status", "status_note", "position") VALUES ('01M05R3AB4XY9REDEGJEQH87S6', '01M05QSCJCT9JBH0BQSVQJYCVS', 2, 'Compare CSS and preview behaviour across the two boards', 'The same three outcomes, over the two surfaces this epic has just moved. A difference introduced by stories 1 to 4 and left unrecorded is the case this task exists to catch.', 'complete', NULL, 1);
 INSERT INTO "document_agent" ("document_id", "document_kind", "agent") VALUES ('01M05HXF3GS1DSX68YSBR6M0C8', 'discussion', 'dev');
-INSERT INTO "plugin_stamp" ("singleton", "version") VALUES (1, '0.5.0');
+INSERT INTO "plugin_stamp" ("singleton", "version") VALUES (1, '0.5.1');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('builds_on', 'library', 'audit');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('builds_on', 'spec', 'discussion');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('builds_on', 'spec', 'problem_brief');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('builds_on', 'spec', 'product_brief');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('builds_on', 'spec', 'spec');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('constrains', 'adr', 'adr');
+INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('supersedes', 'adr', 'adr');
