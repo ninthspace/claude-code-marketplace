@@ -127,7 +127,7 @@ Covers both directions of the must-NOT — no label for an unbound key, and no b
 
 ## Story 5 — The cross-board parity check
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: —  
 
 ### Acceptance Criteria
@@ -141,27 +141,31 @@ Covers both directions of the must-NOT — no label for an unbound key, and no b
 
 ### Task 1 — Write the reader that extracts a key map from a board's source
 
-**Status**: pending  
+**Status**: complete — Written in story 1 as `tests/support/key_maps.py` and finished here: `binding_tuples` now gates every read through `readable`, which refuses a path under an installed plugin cache before opening it and asserts — naming the path — when the tree is absent.  
 
 One reader, run against both boards, and the thing stories 1 and 3 lean on for their rejections. It reads the repository source rather than the installed plugin cache.
 
 ### Task 2 — Write the check as a category claim over CPM's map
 
-**Status**: pending  
+**Status**: complete  
 
 Every key CPM binds means the same here; DPM's extras touch nothing in that set. Addresses the must-NOT that this is not an equality — a whole-map comparison fires the first time either board legitimately grows a key.
 
 ### Task 3 — Run the mutation and the unreadable-tree case, and read what each failure says
 
-**Status**: pending  
+**Status**: complete — Both cases run, and both read for what they said rather than for red. The mutation put `quit` on `x` — CPM's unregister — and the check answered "`x` is remove_project on the cpm board and quit here". The absent tree answered with the path it wanted and the reason a skip would be wrong. The activity is now also a standing test in `tests/test_parity.py`, so neither case depends on having been run once by hand.  
 
 An activity rather than an artefact, and deliberately so: the failure has to name the key, or the tree it could not read, rather than merely being red. A mutation that fails for the wrong reason is not yet a control.
 
 ### Task 4 — Assert the board runs with no CPM tree present
 
-**Status**: pending  
+**Status**: complete  
 
 The production restriction, checked here because the environment is reproducible: a board launched from a copy with no sibling starts, paints and answers keys. Keeps the sideways reach in the suite and out of the board.
+
+### Retro
+
+- A check that compares this repository against another file has four ways to be green and only one of them is agreement: the second file was never opened, the wrong second file was opened, the comparison cannot fail as written, or the two really do agree. Three of those are only distinguishable by breaking something and reading what comes back, so this story's tests are mostly plants — an absent tree, a cache-shaped path, a mutated binding, a new capability on a free key. Two things made them worth the effort. First, importing `test_keys`' own parity test and running it under a substituted `BoardApp.BINDINGS` exercises the assertion that actually runs in the suite, where a re-implementation could satisfy every criterion while the real check had quietly stopped working. Second, the isolation criterion could only be answered in a subprocess from a copied tree: this process has already imported the board from a checkout that does have a cpm tree beside it, so no assertion made in-process can tell a board that never reaches sideways from one that reached and found what it wanted.
 
 ## Story 6 — Sweep the interaction surfaces
 

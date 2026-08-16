@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from key_maps import cpm_bindings, disagreements
+from key_maps import cpm_bindings, disagreement_report, disagreements
 from pilot import board, lines, until
 from wiring import registered, surveyed
 
@@ -125,6 +125,4 @@ def test_no_key_the_cpm_board_binds_does_something_else_here():
 
     found = disagreements(cpm, dpm)
 
-    assert found == {}, "\n".join(
-        f"`{key}` is {cpm} on the cpm board and {dpm} here" for key, (cpm, dpm) in found.items()
-    )
+    assert found == {}, disagreement_report(found)

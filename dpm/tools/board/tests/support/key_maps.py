@@ -28,6 +28,10 @@ MARKETPLACE = Path(__file__).resolve().parents[5]
 #: The CPM board's source, in the repository rather than in any installed copy of it.
 CPM_BOARD = MARKETPLACE / "cpm" / "tools" / "board" / "board.py"
 
+#: What an installed copy's path contains, and no repository path does. The reader refuses anything
+#: carrying it — see :func:`readable`.
+CACHE = ".claude/plugins/cache"
+
 #: How each board titles the class holding its own key map. Both files also hold modal screens with
 #: `BINDINGS` of their own — escape, y, n — and those are a dialog's keys rather than a board's.
 CPM_TITLE = "cpm board"
@@ -54,6 +58,33 @@ SAME_MEANING = {
 }
 
 
+def readable(source: Path) -> Path:
+    """``source``, having established that it is a file worth reading — or an assertion saying why.
+
+    **Two refusals, and they fail in the same direction on purpose.** A parity check with nothing to
+    compare against must not pass and must not skip: both read afterwards as the two boards
+    agreeing, and the second is worse for looking deliberate. So a missing tree is an assertion
+    naming the path rather than a `FileNotFoundError` from somewhere deeper, and a path under an
+    installed plugin cache is refused before it is opened.
+
+    The cache refusal is not hypothetical tidiness. `~/.claude/plugins/cache/` holds copies that are
+    overwritten on update, so a check reading one compares this board against a copy nobody edits —
+    green while the two boards in this repository drift apart, which is precisely the drift the
+    check exists to catch.
+    """
+    assert CACHE not in source.as_posix(), (
+        f"{source} is under an installed plugin cache. That copy is overwritten on update, so a "
+        "parity check reading it stays green while the repository's two boards diverge."
+    )
+    assert source.is_file(), (
+        f"the cpm board's source is not readable at {source}, so there is nothing to check parity "
+        "against — reported as a failure rather than a skip, because a skipped parity check and "
+        "two boards that agree look identical afterwards."
+    )
+
+    return source
+
+
 def binding_tuples(source: Path, title: str) -> list[tuple[str, ...]]:
     """Every `BINDINGS` entry of the class in ``source`` whose ``TITLE`` is ``title``, as tuples.
 
@@ -64,7 +95,7 @@ def binding_tuples(source: Path, title: str) -> list[tuple[str, ...]]:
     The whole tuple rather than the first two elements, because the third is the footer label and
     story 4 compares those as story 1 compares the actions.
     """
-    for node in ast.walk(ast.parse(source.read_text())):
+    for node in ast.walk(ast.parse(readable(source).read_text())):
         if not isinstance(node, ast.ClassDef):
             continue
 
@@ -142,3 +173,16 @@ def disagreements(cpm: dict[str, str], dpm: dict[str, str]) -> dict[str, tuple[s
         for key, action in cpm.items()
         if key in dpm and dpm[key] != SAME_MEANING.get(action, action)
     }
+
+
+def disagreement_report(found: dict[str, tuple[str, str]]) -> str:
+    """What :func:`disagreements` found, as the message a failing check prints.
+
+    Here rather than at the assertion because story 5 runs the check against a *mutated* map and
+    reads what it says: a message built at one call site cannot be exercised from another, so the
+    control would be checking a second copy of the sentence.
+    """
+    return "\n".join(
+        f"`{key}` is {theirs} on the cpm board and {mine} here"
+        for key, (theirs, mine) in found.items()
+    )
