@@ -39,11 +39,18 @@ CPM_TITLE = "cpm board"
 #: A key is in disagreement when it does a *different thing*, so a comparison over raw action names
 #: would report four disagreements that are only spellings — and, worse, would go on reporting them
 #: after somebody fixed the real ones, until nobody read the output.
+#: `toggle_complete` and `toggle_retired` are here on slightly different grounds from the other
+#: four, and it is worth saying which: they are the same *capability* over a wider set of states
+#: rather than the same behaviour under two spellings. CPM hides `complete` because complete is the
+#: only finished state its model has; dpm hides everything `status_model` calls finished, which
+#: includes two statuses CPM has no word for. A user pressing `z` on either board is asking for the
+#: same thing — take the finished work off the screen — and that is what this table is about.
 SAME_MEANING = {
     "add_project": "register",
     "remove_project": "unregister",
     "copy": "copy_command",
     "open_plain": "open",
+    "toggle_complete": "toggle_retired",
 }
 
 

@@ -630,6 +630,7 @@ COMMANDS: tuple[Command, ...] = (
     ),
     Command("Register a project", "Choose a directory to add to the board", "register"),
     Command("Refresh", "Read every registered project again", "refresh"),
+    Command("Show/hide done", "Show or hide complete, superseded and withdrawn rows", "toggle_retired"),
     # FR13's two halves, and they are different actions rather than one with a flag. A refresh that
     # is answered from the cache is the ordinary case and the one the entry above is for; this pair
     # is what a user reaches for when they do not believe it. Both are bound as well as listed, for
@@ -966,6 +967,10 @@ class BoardApp(App[None]):
         # this map in story 3.
         ("r", "refresh", "Refresh"),
         ("R", "clear_cache", "Clear cache"),
+        # FR19. `z` is the CPM board's key for the same capability over a narrower set of states:
+        # that board hides `complete` because complete is all its model has, and this one hides
+        # everything `status_model` calls finished. Same key, same gesture, more rows.
+        ("z", "toggle_retired", "Show/hide done"),
         # FR15, bound and in the palette for the reason registering is: a search is the thing a user
         # opens the board to do when they cannot remember which project something is in, and that is
         # exactly the moment they will not want to go looking for it in a menu.
@@ -1664,6 +1669,23 @@ class BoardApp(App[None]):
         if self._forget is not None:
             self._forget()
 
+    def action_toggle_retired(self) -> None:
+        """Show or hide finished work — complete, superseded and withdrawn (FR19).
+
+        **Each press says which way it went**, because the two states are told apart by what is on
+        screen and a board with nothing finished under it looks identical in both. Without the
+        message, pressing `z` on such a project reads as a key that does nothing, and the next
+        thing a user does is press it again.
+
+        Nothing is re-read. The rows are already in hand and the filter is applied where the
+        columns are built from them, so this is a repaint rather than a survey — which is also what
+        makes the toggle instant on a project the board took seconds to read.
+        """
+        self.selection.show_retired = not self.selection.show_retired
+
+        self.repaint()
+        self.notify("Showing finished work" if self.selection.show_retired else "Hiding finished work")
+
     def _reread(self, *, fresh: bool = False) -> None:
         """The rebuild both refreshes share: registry first, then a survey per row."""
         if self._reload is not None:
@@ -1705,7 +1727,20 @@ class BoardApp(App[None]):
             self.selection.epic = 0
             self.selection.story = 0
 
-            for epic, row in enumerate(project.epics):
+            # Over the *visible* epics, because that is the column the index addresses. Enumerating
+            # the project's own tuple was right while nothing was hidden and became an off-by-n the
+            # moment `z` could take rows out of it — the cursor would land on whichever epic had
+            # moved up into the position the hidden one used to occupy.
+            #
+            # A hit on a hidden row reveals the filter rather than being dropped: the search reads
+            # every epic the project holds, so a result the board then refused to move to would be
+            # a row it had just offered and could not reach.
+            if any(row.id == result.document for row in project.epics):
+                self.selection.show_retired = self.selection.show_retired or not any(
+                    row.id == result.document for row in self.selection.epics
+                )
+
+            for epic, row in enumerate(self.selection.epics):
                 if row.id == result.document:
                     self.selection.epic = epic
 

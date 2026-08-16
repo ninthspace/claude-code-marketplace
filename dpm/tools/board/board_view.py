@@ -17,6 +17,7 @@ exception is a project the board could not read, where there is no progress to s
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,11 +28,21 @@ from status_model import (
     IN_PROGRESS,
     PENDING,
     READY,
+    RETIRED,
     SUPERSEDED,
     WITHDRAWN,
     Candidate,
     Progress,
 )
+
+#: The states `z` hides, and the states it does not (FR19). Finished work is work that is finished:
+#: complete, and the two ways a row is retired without being delivered.
+#:
+#: **Built from the model's own words rather than written out here.** `status_model.RETIRED` is
+#: where "which statuses are terminal" is decided, and a second list in the view would agree with it
+#: until the day a status was added — at which point the board would quietly go on showing rows the
+#: model considers finished, which is the failure this filter exists to prevent.
+HIDDEN_STATES = (COMPLETE, *RETIRED)
 
 #: What a row shows in place of a figure it does not have — an epic with no stories, a project with
 #: no epics. Not ``0/0``: that reads as complete, which is the whole of `progress()`'s rule.
@@ -337,6 +348,21 @@ class Gap:
         return f"{self.name}  ·  {self.requirement}"
 
 
+def visible(rows: Sequence, *, show_retired: bool) -> tuple:
+    """``rows`` with the finished ones dropped, or all of them when ``show_retired`` (FR19).
+
+    One function for both columns, because an epic and a story are hidden on the same grounds: each
+    carries a ``state``, and what the filter reads is that word against `HIDDEN_STATES`. A second
+    implementation per column is how a board ends up hiding a complete epic and showing a complete
+    story under a project that has both.
+
+    `HIDDEN_STATES` is read here rather than closed over, so a test can widen it and watch the
+    filter take something it should not — which is the only way to show that the live states are
+    kept by the filter rather than by there having been nothing to take.
+    """
+    return tuple(rows) if show_retired else tuple(row for row in rows if row.state not in HIDDEN_STATES)
+
+
 @dataclass
 class Selection:
     """Where the cursor is in each column, and what the columns below it therefore hold.
@@ -352,6 +378,10 @@ class Selection:
     epic: int = 0
     story: int = 0
 
+    #: Whether finished work is shown (FR19). Off, because a board opened on a long-running project
+    #: otherwise opens on its history: the rows a person came to look at are the ones still moving.
+    show_retired: bool = False
+
     def clamp(self) -> None:
         """Pull every index back inside the list it indexes, innermost last."""
         self.project = _clamp(self.project, len(self.projects))
@@ -366,7 +396,7 @@ class Selection:
     def epics(self) -> tuple[EpicView, ...]:
         project = self.current_project
 
-        return project.epics if project is not None else ()
+        return visible(project.epics, show_retired=self.show_retired) if project is not None else ()
 
     @property
     def current_epic(self) -> EpicView | None:
@@ -376,7 +406,7 @@ class Selection:
     def stories(self) -> tuple[StoryView, ...]:
         epic = self.current_epic
 
-        return epic.stories if epic is not None else ()
+        return visible(epic.stories, show_retired=self.show_retired) if epic is not None else ()
 
     @property
     def current_story(self) -> StoryView | None:

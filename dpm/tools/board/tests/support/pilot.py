@@ -56,6 +56,18 @@ async def board(projects=(), *, size=SIZE, notifications=False, **injections):
         yield app, pilot
 
 
+async def show_everything(pilot) -> None:
+    """Press `z`, so the board paints finished work alongside live work (FR19).
+
+    A board opens hiding complete, superseded and withdrawn rows, which is right for the person
+    looking at one and wrong for a test whose fixture is a row per state. Pressed rather than set,
+    because the board's affordance is what a user has and a test reaching into the model would go
+    on passing after the key stopped working.
+    """
+    await pilot.press("z")
+    await pilot.pause()
+
+
 def painted(widget: Widget) -> list[Strip]:
     """The lines a widget actually painted, cropped to the whole of its own box.
 
@@ -119,6 +131,19 @@ def styles(app: BoardApp, column: str) -> dict[str, str]:
 def preview(app: BoardApp, kind: str) -> list[str]:
     """What the preview panel beneath ``kind``'s column painted."""
     return lines(app, f"{kind}-preview-body")
+
+
+def toasts(app: BoardApp) -> list[str]:
+    """What the board's notifications painted, one string per toast, oldest first.
+
+    Read from the rendered toasts rather than from the app's own record, the same rule everything
+    else here follows: a notification the app noted and never painted told nobody anything. A toast
+    wraps over several lines in a narrow terminal, so each one's lines are rejoined into a sentence.
+
+    A test wanting these has to open its board with ``notifications=True`` — ``run_test`` suppresses
+    them by default, because a toast is painted over the columns.
+    """
+    return [" ".join(text_of(painted(toast))) for toast in app.screen.query("Toast")]
 
 
 def palette(app: BoardApp) -> list[str]:

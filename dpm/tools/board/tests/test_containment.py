@@ -31,7 +31,7 @@ from shutil import copytree, which
 import pytest
 from failures import ahead, per_project_node
 from fixture_database import CONTENT, titles
-from pilot import board, lines, until
+from pilot import board, lines, show_everything, until
 
 from board import registry_views, run_cli, survey_project
 from board_view import ProjectView
@@ -156,6 +156,11 @@ async def test_every_failure_state_renders_beside_a_healthy_project(
             # than merely a figure on its row. Driven with the keyboard because that is how a user
             # reaches it — past four rows the board could not read.
             await pilot.press(*["down"] * (len(roots) - 1))
+
+            # Every epic the fixture holds, which includes the complete and retired ones FR19 hides
+            # — the claim being made is that the healthy project read whole behind four failures,
+            # and a filtered column would let a partial read look like a filtered one.
+            await show_everything(pilot)
 
             epics = [row.split("·")[0].strip() for row in lines(app, "epics")]
 

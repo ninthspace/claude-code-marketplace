@@ -35,7 +35,7 @@ Three of this board's keys had to give way, and one piece of reasoning had to be
 
 ## Story 2 — Hide retired work
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 6  
 
 ### Acceptance Criteria
@@ -47,21 +47,25 @@ Three of this board's keys had to give way, and one piece of reasoning had to be
 
 ### Task 1 — Add the retired filter over the model's own grouping
 
-**Status**: pending  
+**Status**: complete  
 
 Reads `status_model.RETIRED` plus `complete` rather than restating `superseded` and `withdrawn` where the board can drift from the model. Addresses the filter, not the key.
 
 ### Task 2 — Bind z, open hidden, and report each press
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the toggle and the notification. Opening hidden is the CPM default and means this board shows fewer rows on first run than it does today — expected, not a regression.
 
 ### Task 3 — Write tests for hide retired work
 
-**Status**: pending  
+**Status**: complete  
 
 Covers all four criteria, including the control that widens the filter to hide a live state — without it, the must-NOT passes equally against a toggle that hides nothing at all.
+
+### Retro
+
+- Changing a default that seven existing tests had silently baked in cost more than the feature did. The filter itself is two properties and a module tuple; the work was in `test_browser.py` and `test_containment.py`, where fixtures built to exercise "every state" or "the project read whole" now render a subset by default. Every one of those tests was correct and none was about the filter, so the fix was to make each say out loud that it is looking at a board showing everything — a `show_everything(pilot)` helper that presses `z`, rather than reaching into `app.selection`. Two follow-on discoveries: `found()` enumerated the unfiltered `project.epics` to set a cursor index into what is now a filtered column, which was an off-by-n waiting for the first search hit past a complete epic; and a search result landing on a hidden row had to reveal the filter rather than be dropped, since the search reads every epic the project holds and would otherwise offer a row the board then refused to move to. Neither was in the story's tasks — both came out of asking which callers read the column by index.
 
 ## Story 3 — DPM's extras moved clear
 

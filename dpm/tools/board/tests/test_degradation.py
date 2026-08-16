@@ -20,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from pilot import board, lines, painted, text_of, until
+from pilot import board, lines, toasts, until
 
 from board_view import ProjectView
 from launcher import live_sessions, tmux_launcher
@@ -75,21 +75,14 @@ def projects(tmp_path, *names: str) -> list[ProjectView]:
     return views
 
 
-def reports(app) -> list[str]:
-    """What the board's notifications painted, one string per toast.
-
-    Read from the rendered toasts rather than from ``app._notifications``, for the same reason every
-    other assertion in this suite reads strips: the requirement is that the absence is *reported*,
-    and a notification the app recorded but never painted reports nothing to anybody. A toast wraps
-    to its own width, so its lines are joined — the words being looked for are as likely to land
-    either side of a line break as together.
-    """
-    return [" ".join(text_of(painted(toast))) for toast in app.screen.query("Toast")]
-
-
 def reported(app, *words: str) -> bool:
-    """Whether some report carries all of ``words`` — the project it is about, and what is wrong."""
-    return any(all(word in report for word in words) for report in reports(app))
+    """Whether some report carries all of ``words`` — the project it is about, and what is wrong.
+
+    The reports come from :func:`pilot.toasts`, which reads the rendered toasts rather than the
+    app's own record: the requirement is that the absence is *reported*, and a notification the app
+    noted but never painted reports nothing to anybody.
+    """
+    return any(all(word in report for word in words) for report in toasts(app))
 
 
 async def test_without_tmux_the_launch_keys_copy_the_command(tmp_path, binaries):
@@ -112,11 +105,11 @@ async def test_without_tmux_the_launch_keys_copy_the_command(tmp_path, binaries)
         [alpha], launch=tmux_launcher(), sessions=live_sessions, notifications=True
     ) as (app, pilot):
         await pilot.press("l")
-        await until(pilot, lambda: reports(app))
+        await until(pilot, lambda: toasts(app))
 
         launched = app.clipboard
         told = reported(app, "alpha", "tmux")
-        said = reports(app)
+        said = toasts(app)
 
         await pilot.press("o")
         await pilot.pause()
@@ -160,7 +153,7 @@ async def test_without_claude_the_launch_keys_report_the_absence(tmp_path, binar
 
     async with board([beta], launch=tmux_launcher(), notifications=True) as (app, pilot):
         await pilot.press("l")
-        await until(pilot, lambda: reports(app))
+        await until(pilot, lambda: toasts(app))
 
         with_tmux = app.clipboard
         told_with_tmux = reported(app, "beta", "claude")
@@ -172,7 +165,7 @@ async def test_without_claude_the_launch_keys_report_the_absence(tmp_path, binar
 
         with_neither = app.clipboard
         told_with_neither = reported(app, "beta", "claude")
-        said = reports(app)
+        said = toasts(app)
         rendered = lines(app, "projects")
 
     assert with_tmux == "", f"`l` without claude copied {with_tmux!r} rather than reporting"
@@ -254,11 +247,11 @@ async def test_the_report_is_about_the_selected_project(tmp_path, binaries):
         rendered = lines(app, "projects")
 
         await pilot.press("l")
-        await until(pilot, lambda: reports(app))
+        await until(pilot, lambda: toasts(app))
 
         first = reported(app, "delta", "claude")
         wrong_project = reported(app, "epsilon")
-        said = reports(app)
+        said = toasts(app)
 
         # And the same board, one row down, with the absence that has a fallback.
         provide("claude")

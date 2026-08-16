@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from pilot import board, lines, preview, styles
+from pilot import board, lines, preview, show_everything, styles
 
 from board_view import (
     STATE_STYLE,
@@ -85,7 +85,12 @@ async def test_the_three_columns_render_the_rows_they_were_given():
     projects = sample()
     alpha = projects[0]
 
-    async with board(projects) as (app, _):
+    async with board(projects) as (app, pilot):
+        # The fixture holds a complete epic and complete stories, and FR19 hides those by default.
+        # This criterion is about the three columns painting what they were handed, so the board is
+        # put in the state where that is all of it.
+        await show_everything(pilot)
+
         assert lines(app, "projects") == [row.label for row in projects]
         assert lines(app, "epics") == [row.label for row in alpha.epics]
         assert lines(app, "stories") == [row.label for row in alpha.epics[0].stories]
@@ -125,6 +130,8 @@ async def test_the_preview_beneath_a_column_follows_its_highlighted_row():
     alpha = projects[0]
 
     async with board(projects) as (app, pilot):
+        await show_everything(pilot)
+
         assert preview(app, "epic")[0] == alpha.epics[0].label
         assert preview(app, "story")[0] == alpha.epics[0].stories[0].label
 
@@ -147,7 +154,10 @@ async def test_every_derived_state_renders_in_its_own_colour():
     against itself would pass with every row rendering identically — which is what a stylesheet
     applying one class to every row produces, and it satisfies "colour carries state" as worded.
     """
-    async with board(one_of_each_state()) as (app, _):
+    async with board(one_of_each_state()) as (app, pilot):
+        # Every state, which by definition includes the three FR19 hides.
+        await show_everything(pilot)
+
         painted = styles(app, "epics")
         rows = lines(app, "epics")
 
@@ -225,6 +235,8 @@ async def test_a_project_the_board_could_not_read_is_a_row_that_says_so():
     broken = projects[1]
 
     async with board(projects) as (app, pilot):
+        await show_everything(pilot)
+
         assert lines(app, "projects")[1] == broken.label
         assert broken.unreadable in lines(app, "projects")[1]
 
@@ -252,7 +264,9 @@ def test_the_selection_pulls_its_own_indices_back_inside_the_lists_they_index():
     alpha = projects[0]
     shrunk = ProjectView(alpha.name, alpha.path, epics=alpha.epics[:1])
 
-    selection = Selection([shrunk], project=0, epic=1, story=1)
+    # Showing everything, because the clamp is what is under test and the one epic left is
+    # complete: a filtered column would make this a test of the filter emptying a list.
+    selection = Selection([shrunk], project=0, epic=1, story=1, show_retired=True)
     selection.clamp()
 
     assert (selection.epic, selection.story) == (0, 0)
@@ -278,6 +292,7 @@ async def test_an_epic_that_vanishes_from_a_refresh_moves_the_cursor_rather_than
     alpha = projects[0]
 
     async with board(projects) as (app, pilot):
+        await show_everything(pilot)
         await pilot.press("right", "down", "right", "down")
 
         assert (app.selection.epic, app.selection.story) == (1, 1)

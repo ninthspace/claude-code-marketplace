@@ -11,7 +11,7 @@ written out, with a floor that fails if the derivation ever admits every kind.
 
 from __future__ import annotations
 
-from pilot import board, lines, painted, text_of
+from pilot import board, lines, toasts
 
 from board_view import RALPH_MARKER, EpicView, ProjectView, StoryView
 from launcher import (
@@ -77,15 +77,6 @@ def recorder():
         calls.append((intent, view.name, target))
 
     return calls, launch
-
-
-def reports(app) -> list[str]:
-    """What the board's notifications painted, one string per toast.
-
-    Read from the rendered toasts rather than from the app's own record, the same rule every other
-    assertion here follows: a refusal the board noted and never painted refuses nothing to anybody.
-    """
-    return [" ".join(text_of(painted(toast))) for toast in app.screen.query("Toast")]
 
 
 async def select(pilot, *steps: int) -> None:
@@ -234,7 +225,7 @@ async def test_a_blocked_retro_or_needs_epics_row_cannot_be_selected():
 
         refused = app.ralph_selection()
         painted_rows = lines(app, "epics")
-        said = reports(app)
+        said = toasts(app)
 
         await pilot.press("l")
         await pilot.pause()
