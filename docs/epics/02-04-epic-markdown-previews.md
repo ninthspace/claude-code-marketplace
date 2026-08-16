@@ -24,6 +24,54 @@ So the input half of the control is unavailable, and the honest control drives t
 
 The criterion's text was amended to say that. The guard was kept: the resize path runs the raster on the event loop with nothing catching for it, the markdown comes from whatever wrote the rows rather than from this board, and eighteen inputs that did not raise is not a proof about the nineteenth.
 
+## Surface sweep 1 — column layout
+
+Compared against `cpm/tools/board/board.py`'s `compose` and CSS, from the repository source of both boards.
+
+**Agrees.** Three columns in a `Horizontal#columns`, each a `Vertical.col` with a title `Label`, its `OptionList`, and — for Epics and Stories — a preview panel beneath. `height: 1fr` on the lists, `border-right: solid $panel` between columns, a `1 2` padded muted title, `Header` above and `Footer` below. The Projects column's `width: auto; min-width: 24; max-width: 48` is the same declaration in both.
+
+**Difference closed — the Epics column had no legend.** The CPM board titles its middle column with the state palette (`Epics  ready  in-progress  blocked  …`), each word in the colour that state's rows are painted in; this board's title was the word `Epics`. It is the only place either board says what its colours mean, and this board carries *more* colour than that one — seven states rather than six. Closed by `board.legend()`, built from `STATE_STYLE` over `EPIC_STATES` so a state added to the model arrives in the legend rather than being the one colour left unexplained. `tests/test_legend.py` pins both halves and the derivation.
+
+**Difference recorded as deliberate — Projects does not fit its content.** The CPM board adds `#col-projects #projects { width: auto }`, which fits the column to its rows between the floor and the cap; this board takes its share up to the cap instead. Adding the rule here pins the column at 23 cells and ellipsises every name on a 200-column terminal — measured, not assumed. The cause is FR19's right-edge markers: a marked row is an expanding `Table.grid`, an expanding grid measures as its minimum, and `width: auto` on a list of them measures nothing. The CSS comment claimed the content-fitting the rule was missing for, and now says what the column actually does and why.
+
+## Surface sweep 2 — row composition
+
+Compared against `cpm/tools/board/board_view.py`'s `project_label`, `project_row_text` and the epic-row builders.
+
+**Agrees.** A project row is `name  ·  progress` with the state word dropped, exactly as CPM's `project_label` composes it. A row carrying a marker is an expanding `Table.grid` with the label in a `ratio=1` cell and the marker right-justified, which is CPM's `project_row_text`; a row without one is a plain `Text`, also CPM's. The pill is `● live`, foreground-only bold blue, for the reason both files give: the cursor bar samples the row's colour *and* its background, so a marker with a background of its own would be a second background under the blend.
+
+**Difference recorded as deliberate — the project row carries no state colour.** CPM paints its project label in `project_style(status.state)`; this board's readable project rows carry no colour of their own. The reason is that there is no such state to paint: this board's `status_model` derives state per epic, and a project-level state would have to be invented by rolling those up — a second answer to what a project's state is, in the one place a reader would trust it. Progress, the live pill and the integrity badge are what the row says instead. The dim `reading…` and bold-red unreadable rows are styled, because those are statements about the board's access rather than about the work.
+
+**Difference recorded, not closed — the multi-session pill reads the other way round.** CPM writes `● 2 live`; this board writes `● live 2`. Both suppress the count at one session, for the same stated reason. Left alone here because the wording is pinned by an earlier spec's criterion and by `tests/test_pills.py`, and re-wording it from inside this epic would edit a criterion this epic does not own. It is a one-line change in `board_view.live_pill` for whoever owns that criterion.
+
+**dpm-only, and therefore not a difference to close.** The integrity badge (FR17) and the ralph selection marker (FR14) have no CPM equivalent. CPM's `(!)` marker for an unrecognised status has no equivalent here and needs none: this board's states come from a closed vocabulary, and `style_for` refuses a state the palette does not know rather than painting it in the default.
+
+## Surface sweep 3 — CSS
+
+Compared rule by rule against the CPM board's `CSS` block.
+
+**Agrees, rule for rule.** `#columns { height: 1fr }`; `.col { width: 1fr; border-right: solid $panel }`; the Projects column's three width declarations; `height: 1fr` on the lists; the preview panels' `height: 1fr; border-top: solid $panel; padding: 0 1; background: transparent` and their bodies' `color: $text`; `.col-title { padding: 1 2; color: $text-muted }`; `OptionList { height: 1fr; background: transparent; border: none; padding: 0 1 }` and `OptionList:focus { background: transparent }`; and the block-cursor override — the same two selectors carrying the same three declarations, for the same reason, which epic 3 made a control out of.
+
+**Named differently, deliberately.** CPM's panels are `#epic-detail` / `#story-detail`; these are `#epic-preview` / `#story-preview`. The word is the difference: CPM's panel shows a file's *detail*, and this one shows a *preview* built from rows. Every declaration under them is identical.
+
+**Missing here, and recorded under column layout.** `#col-projects #projects { width: auto }` — see that record for the measurement.
+
+**Present only here, because the screens are.** The picker (FR1), the search screen (FR15) and the coverage-gaps screen (FR16) each carry an `align: center middle` and a sized, bordered container, and the CPM board has none of the three. There is nothing to compare them against, and nothing about them touches the three columns.
+
+## Surface sweep 4 — preview behaviour
+
+The surface this epic moved, so the comparison is against what stories 1 to 4 left behind rather than against what was there in the morning.
+
+**Agrees, and by porting.** `HardBreakMarkdown` rewrites soft breaks to hard ones, for the reason CPM gives and one of its own: these previews are built from rows, so a criterion and the criterion after it are two lines because they are two rows. The raster renders to segments at the panel's width, drops control segments, `rstrip`s each line and rebuilds a selectable `Content` — CPM's `markdown_content`, and the selection is why in both. The panel is a non-focusable `VerticalScroll` over a `Static`, so ← and → still step between columns and a long preview scrolls with the wheel. The width falls back to 80 before the first layout in both.
+
+**Difference closed in this board's favour — where the re-render is hooked.** CPM re-renders both panels from the app's own `on_resize`; this board re-renders each panel from that panel's own `Resize`. The app's event carries the terminal's new size and arrives before the columns have been laid out again, so a raster driven from it uses the width the panel had a moment ago — the stale layout the re-render exists to replace, one step later. It is visible as a heading wrapping onto a second line, and `tests/test_raster.py` asserts against it. The CPM board has the same shape and does not show it, because its panels are wider.
+
+**Difference closed in this board's favour — the raster names no colour system.** CPM asks for `truecolor`; this one names none, so what a preview's styles become is decided where the terminal actually is. Recorded in full under story 2's own section, with the coverage rows it closed.
+
+**Difference closed in this board's favour — the render is guarded and off the loop.** A render that raises falls back to the source itself here, and the document render runs off the event loop with the staleness check made either side of it. CPM rasterises on the message pump with nothing catching for it.
+
+**Difference recorded as deliberate — what a preview is of.** CPM reads the epic's `.md` from disk and slices the highlighted story's own `##` section out of it; this board builds both previews from the rows the tools returned and opens no projected file, which is FR7 and has a must-NOT of its own asserting it. Two consequences follow and are deliberate: this board's story preview is the story's own criteria and tasks rather than a slice of its epic's document, and this board puts no preface above a blocked epic's preview where CPM lists what it is waiting on. The blocked state is in the row's colour and the blockers are an edge query away; a preface would be board-composed prose in the one panel that otherwise shows only what the database says.
+
 ## Story 1 — Builders that emit markdown source
 
 **Status**: complete  
@@ -173,7 +221,7 @@ The guard was kept rather than dropped as unnecessary, for a reason the probe do
 
 ## Story 5 — Sweep the presentation surfaces
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: —  
 
 ### Acceptance Criteria
@@ -183,12 +231,24 @@ The guard was kept rather than dropped as unnecessary, for a reason the probe do
 
 ### Task 1 — Compare column layout and row composition across the two boards
 
-**Status**: pending  
+**Status**: complete  
 
 Each surface gets a recorded outcome: a difference closed, a difference recorded as deliberate, or a statement that the surface agrees. Reads the repository source of both boards, never the plugin cache.
 
 ### Task 2 — Compare CSS and preview behaviour across the two boards
 
-**Status**: pending  
+**Status**: complete  
 
 The same three outcomes, over the two surfaces this epic has just moved. A difference introduced by stories 1 to 4 and left unrecorded is the case this task exists to catch.
+
+### Retro
+
+- The sweep found three things, and only one of them was a difference anyone had noticed.
+
+**A CSS comment that described a rule the file does not have.** The Projects column's comment says it is "fitted to its content and capped"; the CPM board fits it with `#col-projects #projects { width: auto }` and this board never had that rule, so the column takes its share up to the cap instead. Adding the rule pins the column at 23 cells and ellipsises every name on a 200-column terminal — because FR19's marked rows are expanding `Table.grid`s, and an expanding grid measures as its minimum. So the difference stays and the comment now says what the column does. A comment asserting behaviour is the one kind of documentation a test cannot catch drifting.
+
+**A palette nothing explained.** The CPM board's Epics title is a legend and this board's was the word "Epics" — on a board carrying seven state colours rather than six. Closed, and built from `STATE_STYLE` rather than written out, so the state a later change adds is not the one colour left unexplained.
+
+**A wording difference the epic could not close.** CPM writes `● 2 live`, this board `● live 2`. It is a one-line change and it is pinned by an earlier spec's criterion and its test, so it is recorded for whoever owns that criterion rather than edited from here.
+
+The two surfaces this epic had just moved were the ones that came out cleanest, which is the argument for sweeping at the end of an epic rather than at the start of the next one: three of the four preview differences are this epic's own work and were already written down while the reason was still in hand.

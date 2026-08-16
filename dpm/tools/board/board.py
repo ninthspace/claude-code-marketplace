@@ -58,6 +58,7 @@ from board_view import (
     BADGE_STYLE,
     PILL_STYLE,
     READING_STYLE,
+    STATE_STYLE,
     UNREADABLE_STYLE,
     EpicView,
     Gap,
@@ -103,6 +104,7 @@ from launcher import (
 )
 from status_model import (
     DOCUMENT_READS,
+    EPIC_STATES,
     EPICS,
     PAGE,
     RETROS,
@@ -1269,6 +1271,24 @@ class PreviewBody(Static):
         return markdown_content(source, _panel_width(self)) if source else Content("")
 
 
+def legend() -> str:
+    """The Epics column's title: the word, then each state in the colour it is painted in (FR19).
+
+    The CPM board carries one and it is the only place either board says what its colours mean —
+    a palette a reader has to infer from which rows happen to be on screen is one they infer wrong,
+    because the state they most need to recognise is the one that is rarely there.
+
+    **Built from `STATE_STYLE`, not written out here.** A state added to the model gets a style in
+    that table or `style_for` refuses it; taking the legend from the same table is what stops the
+    board explaining six of its seven colours and saying nothing about the seventh.
+    """
+    named = "  ".join(
+        f"[{STATE_STYLE[state]}]{state.replace('_', ' ')}[/]" for state in EPIC_STATES
+    )
+
+    return f"Epics   {named}"
+
+
 def _panel_width(body: Static) -> int:
     """The width to rasterise a panel's markdown at: its content region (FR6).
 
@@ -1385,9 +1405,13 @@ class BoardApp(App[None]):
         width: 1fr;
         border-right: solid $panel;
     }
-    /* Projects is fitted to its content and capped, because its rows are names and states rather
-       than the columns to its right, which hold work and want the space. The cap is what keeps a
-       long project path from taking half the board. */
+    /* Projects is the narrow column: its rows are names and figures, and the two to its right hold
+       work and want the space. It takes its share up to the cap rather than fitting its content,
+       which is where it differs from the CPM board — that board adds `#col-projects #projects {
+       width: auto }`, and here the same rule pins the column at its 24-cell floor. The reason is
+       FR19's right-edge markers: a marked row is an expanding `Table.grid`, and an expanding grid
+       measures as its minimum, so a content-fitted column would ellipsise every name on a terminal
+       with room to spare. */
     #col-projects {
         width: auto;
         min-width: 24;
@@ -1607,7 +1631,7 @@ class BoardApp(App[None]):
                 yield Column(id="projects")
 
             with Vertical(classes="col", id="col-epics"):
-                yield Label("Epics", classes="col-title")
+                yield Label(legend(), classes="col-title")
                 yield Column(id="epics")
                 yield _preview_panel("epic")
 
