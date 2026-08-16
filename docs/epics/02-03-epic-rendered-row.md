@@ -40,7 +40,7 @@ Covers the four criteria: the three tagged unit, including the control — which
 
 ## Story 2 — The pill against the right edge
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 3  
 
 ### Acceptance Criteria
@@ -51,27 +51,33 @@ Covers the four criteria: the three tagged unit, including the control — which
 
 ### Task 1 — Compose the projects row as a grid with a right-justified pill cell
 
-**Status**: pending  
+**Status**: complete  
 
 Replaces the string suffix the DPM board appends today. Addresses placement only; the colours the pill and badge carry are the next task.
 
 ### Task 2 — Give the pill and the integrity badge their own styles over the row's status colour
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses colour independence from the row. The badge is a DPM capability with no CPM counterpart to copy, so its style is decided here rather than ported.
 
 ### Task 3 — Make the row composition follow the projects column's width
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses width-independence at any column width, not only the two the criterion names, and the re-render when that width changes.
 
 ### Task 4 — Write tests for The pill against the right edge
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the three criteria tagged unit — placement at two column widths, the colours over a differing row colour, and the rejection that what gives on a narrow row is the project name.
+
+### Retro
+
+- A right-justified cell keeps a marker at the edge only while some other cell can give. The badge and the pill with their two-space gaps are 25 cells; the Projects column's own minimum is 24 — so a row carrying both at that width has already surrendered the whole of its name, and what Rich takes next is the end of the last column, which is the pill. min_width on the marker columns does not save it: it changes the truncation from an ellipsis to a silently dropped session count, which is worse. The floor is recorded in board_view.markers and the rejection is tested at the widths where a layout is actually possible (24 with one marker, 30 and 48 with both), because a criterion asserted at a width where nothing can satisfy it is a criterion that gets edited later rather than met.
+
+Two smaller things fell out of the same task. The string form of a row and the painted form had drifted apart the moment the markers moved into cells — different order, and nearly different spacing — so both are now built from one markers() call; a per-marker suffix is a rule each marker gets right alone and wrong together. And the highlighted row loses the pill's blue, because the cursor bar paints one style across the strip: that is the CPM board's behaviour too, and it is why the colour criterion is read from a row the cursor is not on.
 
 ## Story 3 — Legible without truecolor
 

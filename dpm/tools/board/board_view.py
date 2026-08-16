@@ -86,6 +86,15 @@ READING_STYLE = "dim"
 #: makes it readable at all in a terminal that renders the dot as a box.
 LIVE = "● live"
 
+#: The pill's own colour, which is **not** the row's (FR19). Blue is unused by everything else the
+#: Projects column paints — a read row's default foreground, a dim `reading…` row, a bold red
+#: unreadable one — so the pill reads as its own thing on any row it lands on.
+#:
+#: Foreground only, and deliberately: the cursor bar samples a row's colour *and its background*
+#: from the strip, so a pill carrying a background of its own would be a second background on a
+#: highlighted row and the bar would blend toward whichever came first.
+PILL_STYLE = "bold blue"
+
 
 #: The integrity badge (FR17): a project whose `check_integrity` sweep found something wrong.
 #:
@@ -97,6 +106,15 @@ LIVE = "● live"
 #: The word is here for the reason the pill's is: a terminal that renders `⚠` as a box would leave
 #: a project's row saying nothing at all, on the one row where saying nothing is worst.
 BROKEN = "⚠ integrity"
+
+#: The badge's own colour, decided here rather than ported: the CPM board has no integrity check and
+#: therefore no badge to copy the styling of. Red because what it reports is a database that is
+#: wrong, which is the one thing on this column that is an error rather than a state — and the only
+#: other red on the board belongs to a row the badge never appears on, since a project the board
+#: could not read carries no claim about a database nobody opened.
+#:
+#: Foreground only, for :data:`PILL_STYLE`'s reason.
+BADGE_STYLE = "bold red"
 
 
 #: The marker an epic carries while it is in the ralph selection (FR14).
@@ -262,7 +280,13 @@ class ProjectView:
     violations: int = 0
 
     @property
-    def label(self) -> str:
+    def summary(self) -> str:
+        """The row's left-hand side: what the project is called and how it is getting on.
+
+        Separate from :attr:`label` because the pill and the badge are no longer part of the same
+        run of text — the board lays them out in cells of their own against the column's right edge
+        (FR19) — and the name is the part that gives when there is not room for everything.
+        """
         if self.unreadable is not None:
             named = f"{self.name}  ·  {self.unreadable}"
 
@@ -271,13 +295,24 @@ class ProjectView:
         if self.pending:
             return f"{self.name}  ·  {READING}"
 
-        # The pill and the badge both go on the end and both only when there is one, so a project
-        # with nothing running and nothing wrong renders exactly as it did before either existed. A
-        # row whose shape changed to hold a blank would put a gap in every clean project's row for
-        # the sake of the ones that are not.
-        return (
-            f"{self.name}  ·  {self.progress or NOTHING}"
-            f"{_pill_suffix(self.live)}{_badge_suffix(self.violations)}"
+        return f"{self.name}  ·  {self.progress or NOTHING}"
+
+    @property
+    def label(self) -> str:
+        """The whole row as one string — the summary with whatever markers it carries after it.
+
+        **Composed from the same pieces the board lays out**, rather than written out a second time
+        here: this is the row as anything that wants a plain string reads it, and a second spelling
+        of the pill would be a second answer to what the row says.
+
+        The pill and the badge each appear only when there is one, so a project with nothing running
+        and nothing wrong reads exactly as it did before either existed.
+        """
+        if self.unreadable is not None or self.pending:
+            return self.summary
+
+        return self.summary + "".join(
+            markers(badge=integrity_badge(self.violations), pill=live_pill(self.live))
         )
 
 
@@ -462,18 +497,26 @@ def story_preview(story: StoryView, criteria: list[dict], tasks: list[dict]) -> 
     return "\n".join(lines)
 
 
-def _pill_suffix(sessions: int) -> str:
-    """The pill as it joins a row, with its separator — empty when there is no pill."""
-    pill = live_pill(sessions)
+def markers(*, badge: str, pill: str) -> list[str]:
+    """Whichever markers a row carries, each with the gap that goes before it (FR19).
 
-    return f"  {pill}" if pill else ""
+    **The badge first and the pill outermost**, which is where the CPM board puts the pill and
+    therefore where a reader of both looks for it; dpm's badge, which that board has no equivalent
+    of, goes inboard rather than displacing it.
 
+    **Two spaces before each**, which is the gap the CPM board puts before its pill. A row carrying
+    both therefore needs 25 cells for its markers alone, and one more for whatever is left of the
+    name — so below 26 cells a row with a live session *and* a broken database cannot show both
+    whole, and what a too-narrow layout gives up is the end of the outermost one. That is a floor
+    rather than a bug to route around: the Projects column is 24 cells at its narrowest and sizes to
+    its content above that, so it is reached only by a terminal too narrow for the third column to
+    hold anything either.
 
-def _badge_suffix(broken: int) -> str:
-    """The integrity badge as it joins a row, with its separator — empty when there is none."""
-    badge = integrity_badge(broken)
-
-    return f"  {badge}" if badge else ""
+    One list rather than a suffix apiece, because the gap before a marker depends on what is beside
+    it: a rule each marker knew for itself would be a rule each one got right alone and wrong
+    together — which is how the string form and the painted row came to disagree about their order.
+    """
+    return [f"  {text}" for text in (badge, pill) if text]
 
 
 def _clamp(index: int, length: int) -> int:

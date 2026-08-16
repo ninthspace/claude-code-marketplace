@@ -41,6 +41,7 @@ from rich.color import Color
 from rich.color_triplet import ColorTriplet
 from rich.segment import Segment
 from rich.style import Style
+from rich.table import Table
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -51,6 +52,8 @@ from textual.strip import Strip
 from textual.widgets import DirectoryTree, Footer, Header, Input, Label, OptionList, Static
 
 from board_view import (
+    BADGE_STYLE,
+    PILL_STYLE,
     READING_STYLE,
     UNREADABLE_STYLE,
     EpicView,
@@ -60,6 +63,9 @@ from board_view import (
     Selection,
     StoryView,
     document_preview,
+    integrity_badge,
+    live_pill,
+    markers,
     ralph_label,
     story_preview,
     style_for,
@@ -1043,15 +1049,62 @@ def state_row(row: EpicView | StoryView, *, selected: bool = False) -> Text:
     return Text(label, style=style_for(row.state))
 
 
-def project_row(row: ProjectView) -> Text:
-    """A project row. One the board could not read says so, and one still being read says that."""
+def project_row(row: ProjectView):
+    """A project row. One the board could not read says so, and one still being read says that.
+
+    **A row carrying a marker is a grid rather than a string** (FR19). The pill and the badge are
+    fixed-width things that say something about the project as a whole, and appending them to the
+    label leaves them wherever the name happens to end — halfway across a wide column, and first in
+    line to be clipped on a narrow one. In their own right-justified cells they sit against the
+    column's edge at any width, and what gives when there is not room for everything is the name,
+    which is the part a reader can still recognise from half of it.
+
+    A row with neither is the plain `Text` it always was. A grid holding one cell would lay out the
+    same string through more machinery, and every project on a board where nothing is running and
+    nothing is wrong is that row.
+    """
     if row.unreadable is not None:
         return Text(row.label, style=UNREADABLE_STYLE)
 
     if row.pending:
         return Text(row.label, style=READING_STYLE)
 
-    return Text(row.label)
+    pill, badge = live_pill(row.live), integrity_badge(row.violations)
+
+    if not pill and not badge:
+        return Text(row.summary)
+
+    return _marked_row(row.summary, badge=badge, pill=pill)
+
+
+def _marked_row(summary: str, *, badge: str, pill: str) -> Table:
+    """``summary`` filling the column, with whichever markers it carries against the right edge.
+
+    **The pill is the outermost**, which is where the CPM board puts it and therefore where a reader
+    of both looks for it; the badge — which that board has no equivalent of — sits inboard of it.
+    Each is a cell of its own, so each keeps its own colour over whatever the row is painted in.
+
+    The summary's column is the only one that flexes, and it truncates rather than wraps: a marker
+    is a fixed handful of cells and a name is not, so a row too narrow for everything gives up the
+    end of the name and keeps both markers whole.
+
+    The markers' text — their order and the gap before each — is :func:`board_view.markers`', which
+    is also what the row's plain-string `label` is built from. Two spellings of the same row would
+    be two answers to what it says.
+    """
+    grid = Table.grid(expand=True)
+    grid.add_column(ratio=1, no_wrap=True, overflow="ellipsis")
+
+    cells = [Text(summary)]
+    styles = [style for text, style in ((badge, BADGE_STYLE), (pill, PILL_STYLE)) if text]
+
+    for text, style in zip(markers(badge=badge, pill=pill), styles):
+        grid.add_column(justify="right", no_wrap=True)
+        cells.append(Text(text, style=style))
+
+    grid.add_row(*cells)
+
+    return grid
 
 
 def _preview_panel(kind: str) -> VerticalScroll:
