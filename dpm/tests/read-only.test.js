@@ -41,7 +41,7 @@ import { targetVersion } from '../src/schema/migrate.js';
 import { applyVocabulary } from '../src/schema/seeds/index.js';
 import { start } from '../src/start.js';
 import { sha256 } from './support/hashes.js';
-import { databaseAtVersion, previousVersion } from './support/migration.js';
+import { databaseAtVersion, previousVersion, vocabularyAsOf } from './support/migration.js';
 import { recordOpen } from './support/recorders.js';
 import { runNode } from './support/run-node.js';
 import { ownedDirectory } from './support/scratch.js';
@@ -100,7 +100,10 @@ function behind(t) {
   const file = databaseAtVersion(t, PREVIOUS);
   const db = file.connect();
 
-  applyVocabulary(db);
+  // The vocabulary *that release* shipped, which is bounded by the tables it had — seeding this
+  // release's whole set into a database a version behind fails on the first table a later
+  // migration adds, and no release ever shipped that combination.
+  applyVocabulary(db, { vocabularies: vocabularyAsOf(db) });
   db.close();
 
   return file.path;

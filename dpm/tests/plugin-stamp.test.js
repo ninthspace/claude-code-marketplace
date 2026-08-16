@@ -19,14 +19,17 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { openDatabase, openDatabaseFile } from './support/database.js';
 import { registerCreators } from './support/creators.js';
-import { databaseAtVersion, previousVersion } from './support/migration.js';
+import { databaseAtVersion, vocabularyAsOf, versionBefore } from './support/migration.js';
 import { handlers, openPlanningDatabase } from './support/planning-database.js';
 import { authoredTables } from './support/introspection.js';
 import { fullCorpus } from './support/corpus.js';
-import { migrate, targetVersion } from '../src/schema/migrate.js';
+import { schemaDirectory, schemaFiles } from '../src/schema/files.js';
+import { migrate, targetVersion, versionOf } from '../src/schema/migrate.js';
 import { applyVocabulary } from '../src/schema/seeds/index.js';
 import { spineTools } from '../src/tools/index.js';
 import { open } from '../src/server/index.js';
@@ -37,7 +40,33 @@ const AT = '2026-01-01T00:00:00Z';
 /** The table this story exists to create. Named once so a rename fails here rather than everywhere. */
 const STAMP = 'plugin_stamp';
 
-const PREVIOUS = previousVersion();
+/**
+ * The version before the stamp's own migration.
+ *
+ * **Not `previousVersion()`, which this used to be.** That reads "the version before the newest
+ * one", which was the same number while `023-plugin-stamp.sql` *was* the newest and stopped being
+ * it the moment another migration landed — at which point the fixture came with the stamp table
+ * already in it and the criterion below had nothing to observe.
+ */
+const PREVIOUS = versionBefore('plugin-stamp');
+
+/** The versions a database at `from` still has to apply, in order. */
+const pendingFrom = (from) =>
+  schemaFiles().map(versionOf).filter((version) => version > from).sort((a, b) => a - b);
+
+/**
+ * The tables the migrations at `versions` create, read out of their own DDL.
+ *
+ * The alternative is a list in this file naming the tables a migration is allowed to add, which is
+ * a second description of the DDL and the copy nothing keeps in step — and this test's whole claim
+ * is that the upgrade added *nothing else*, so what counts as "else" has to come from the files.
+ */
+const tablesCreatedBy = (versions) => versions
+  .map((version) => schemaFiles().find((name) => versionOf(name) === version))
+  .flatMap((name) => [...readFileSync(join(schemaDirectory(), name), 'utf8')
+    .matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)/gi)]
+    .map((found) => found[1]))
+  .sort();
 
 /** The DDL SQLite holds for a table, or `undefined` if it has none. */
 const ddlFor = (db, table) =>
@@ -145,7 +174,7 @@ test('a database at the previous version gains the stamp table and nothing else 
   // from DDL alone holds no rows, so "no other table's contents changed" is satisfied by any
   // migration whatsoever — including one that dropped every table in the schema.
   registerCreators();
-  applyVocabulary(db);
+  applyVocabulary(db, { vocabularies: vocabularyAsOf(db) });
   fullCorpus(db, handlers(spineTools(db)));
 
   const before = contents(db);
@@ -158,23 +187,35 @@ test('a database at the previous version gains the stamp table and nothing else 
   // here. Excluding them is how an "everything else is untouched" assertion stops meaning anything.
   const migrated = migrate(db, { now: AT });
 
-  assert.deepEqual(migrated.applied, [targetVersion()], 'more than the stamp migration ran');
+  // Every migration from the stamp's own to the newest, since the fixture starts below the first
+  // of them. Derived rather than written as a list: the set grows by one each time a file lands,
+  // and a written one would send this test red for the wrong reason on every future migration.
+  assert.deepEqual(
+    migrated.applied,
+    pendingFrom(PREVIOUS),
+    'the migrations that ran are not the ones pending from the fixture\'s version',
+  );
+  assert.ok(migrated.applied.includes(versionBefore('plugin-stamp') + 1),
+    'the stamp\'s own migration was not among them, so nothing here is about the stamp');
   assert.ok(ddlFor(db, STAMP), `${STAMP} is not in the schema after the upgrade`);
 
   const after = contents(db);
 
-  // `schema_version` gained the row recording this migration, and `plugin_stamp` did not exist
-  // before. Every other table, contents included, is compared whole.
+  // `schema_version` gained a row per migration, and the tables those migrations create did not
+  // exist before. Every other table, contents included, is compared whole — and the tables allowed
+  // to be new are read out of the DDL that ran rather than named here, so a migration that created
+  // something its own file does not create still fails.
   assert.deepEqual(after[STAMP], [], 'the migration put a row in the stamp table');
   assert.deepEqual(
     Object.keys(after).filter((table) => !Object.hasOwn(before, table)).sort(),
-    [STAMP],
-    'the migration added a table other than the stamp',
+    tablesCreatedBy(migrated.applied),
+    'a migration added a table its own DDL does not create',
   );
 
   delete before.schema_version;
   delete after.schema_version;
-  delete after[STAMP];
+
+  for (const table of tablesCreatedBy(migrated.applied)) delete after[table];
 
   assert.deepEqual(after, before, 'the upgrade changed a table it should not have touched');
 });

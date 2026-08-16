@@ -34,6 +34,7 @@
  */
 
 import { AGENTS } from './agents.js';
+import { DEPENDENCY_ENDPOINTS } from './dependency-endpoints.js';
 import { DEPENDENCY_KINDS } from './dependency-kinds.js';
 import { DOCUMENT_KINDS, KIND_PARENTS } from './document-kinds.js';
 import { RETIREMENTS } from './retirements.js';
@@ -55,6 +56,12 @@ export const VOCABULARIES = [
   { table: 'agent', rows: AGENTS },
   { table: 'test_approach', rows: TEST_APPROACHES },
   { table: 'dependency_kind', rows: DEPENDENCY_KINDS },
+  {
+    table: 'dependency_kind_endpoint',
+    rows: DEPENDENCY_ENDPOINTS.map(([kind, source_kind, target_kind]) => ({
+      kind, source_kind, target_kind,
+    })),
+  },
 ];
 
 /** A table's primary key columns, in declaration order — the conflict target. */

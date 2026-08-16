@@ -61,6 +61,10 @@ const NO_CREATE_TOOL = Object.freeze({
   document_kind_parent:
     'standing — the allow-list the composite foreign key resolves against, seeded with the '
     + 'kinds it constrains. It is meaningless without a `document_kind` row it can name.',
+  dependency_kind_endpoint:
+    'standing — the allow-list register entry 6 resolves an edge\'s ends against, seeded with the '
+    + 'pairs the skills write. Like `document_kind_parent` it is meaningless without the rows it '
+    + 'constrains, and a caller able to add a pair could admit the edge it was about to make.',
   plugin_stamp:
     'standing — the server writes it on start, from its own version. A create tool would let a '
     + 'caller declare a plugin version that never wrote to this database, which is the one value '

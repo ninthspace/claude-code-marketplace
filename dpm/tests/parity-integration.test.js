@@ -287,6 +287,8 @@ const UNPROJECTED = {
   schema_version: 'the migration ledger — state about the database, not about any artefact',
   document_kind: 'the kind registry the templates are keyed by; it describes the projection',
   document_kind_parent: 'which kinds may parent which, checked at write time and never rendered',
+  dependency_kind_endpoint:
+    'which kinds an edge may join, checked at write time and by the register, and never rendered',
   number_sequence: 'the allocator\'s counter; what it hands out renders, and it does not',
   session: 'has no document_id — FR11 removed the file it used to be, and no parent can hold it',
   plugin_stamp:
@@ -355,7 +357,8 @@ test('the tables that reach no template say why, and the reason is checkable', (
 
   assert.deepEqual(
     Object.keys(UNPROJECTED).filter((table) => !writable.has(table)).sort(),
-    ['document_kind', 'document_kind_parent', 'number_sequence', 'plugin_stamp', 'schema_version'],
+    ['dependency_kind_endpoint', 'document_kind', 'document_kind_parent', 'number_sequence',
+      'plugin_stamp', 'schema_version'],
     'the unprojected set no longer matches the set no create tool writes',
   );
 });

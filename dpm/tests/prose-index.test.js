@@ -22,7 +22,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { openDatabaseFile } from './support/database.js';
-import { databaseAtVersion } from './support/migration.js';
+import { databaseAtVersion, vocabularyAsOf } from './support/migration.js';
 import { registerCreators } from './support/creators.js';
 import { spineTools } from '../src/tools/index.js';
 import { applyVocabulary } from '../src/schema/seeds/index.js';
@@ -211,7 +211,8 @@ test('rows written before the migration are indexed by it, not left behind', (t)
 
   const before = file.connect();
   registerCreators();
-  applyVocabulary(before);
+  // Version 21's own vocabulary — the tables it had. See `vocabularyAsOf`.
+  applyVocabulary(before, { vocabularies: vocabularyAsOf(before) });
   const call = handlers(spineTools(before));
 
   const spec = call.create_spec({ slug: 'backfill', title: 'Backfill' });

@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { openDatabaseFile } from './support/database.js';
-import { databaseAtVersion, previousVersion } from './support/migration.js';
+import { databaseAtVersion, versionBefore } from './support/migration.js';
 import { sha256 } from './support/hashes.js';
 import { recordedStamp, stampPlugin } from '../src/server/stamp.js';
 import { pluginVersion } from '../src/server/plugin-version.js';
@@ -66,7 +66,10 @@ test('a database started by a server at a version carries that version [integrat
 // --- Criterion 2: a database from before the stamp existed acquires it ---------------------------
 
 test('a database from before the stamp acquires the running version on the next start [integration]', (t) => {
-  const file = databaseAtVersion(t, previousVersion());
+  // The version before the stamp's own migration, not the version before the newest one: this
+  // test is about the upgrade that creates `plugin_stamp`, and `previousVersion()` stopped being
+  // that the moment another migration landed on top of it.
+  const file = databaseAtVersion(t, versionBefore('plugin-stamp'));
   const db = file.connect();
 
   // The premise: the table is not there yet. Without this the test would pass against a fixture

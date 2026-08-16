@@ -41,6 +41,12 @@ function refused(run, message) {
 const specs = (call, count = 3) => Array.from({ length: count }, (unused, index) =>
   call.create_spec({ slug: `s${index}`, title: `S${index}` }));
 
+/** ADRs under a document, for the edge kinds whose ends are decisions rather than documents. */
+const adrs = (call, parent, count = 2) => Array.from({ length: count }, (unused, index) =>
+  call.create_adr({
+    parent_id: parent.id, slug: `d${index}`, title: `D${index}`, decision: `Decision ${index}.`,
+  }));
+
 const edges = (db) => db.prepare('SELECT count(*) AS n FROM dependency').get().n;
 
 // --- Allocation ---------------------------------------------------------------------------------
@@ -143,7 +149,14 @@ test('a lineage kind may close the same loop a gating kind may not', (t) => {
   // nothing up. A tool hardcoding 'blocks' would behave identically here and diverge the moment
   // a project declared a fifth kind that gates.
   assert.ok(link('builds_on', b, a).id);
-  assert.ok(link('constrains', b, a).id);
+
+  // The same claim for the other lineage kind, between two ADRs rather than the two specs above:
+  // `constrains` joins ADRs and nothing else, so linking it spec-to-spec is now refused by the
+  // endpoint rule and would prove nothing about gating either way.
+  const [first, second] = adrs(call, a, 2);
+
+  link('constrains', first, second);
+  assert.ok(link('constrains', second, first).id);
 });
 
 test('a self-edge is refused by the schema, and reaches the caller as a bad call', (t) => {

@@ -43,8 +43,27 @@ if (!CYCLE_CHECK) {
     + 'tool has no rule to enforce and would accept every edge');
 }
 
+/**
+ * Register entry 6, found the same way and reused for the same reason.
+ *
+ * The pairs each edge kind admits are rows in `dependency_kind_endpoint`, and this tool refusing
+ * one pair while the check reports another is the disagreement neither could survive: an edge the
+ * register calls a violation and this tool will not let anyone replace. So the refusal below is
+ * defined as "the edge that makes entry 6 fail", exactly as the cycle refusal is defined as the
+ * edge that makes entry 1 fail.
+ */
+const ENDPOINT_CHECK = REGISTER.find((entry) => entry.entry === 6);
+
+if (!ENDPOINT_CHECK) {
+  throw new Error("register entry 6 (a dependency's ends are kinds that edge admits) is missing — "
+    + 'the link tool has no endpoint rule to enforce and would accept every pair');
+}
+
 /** Node ids currently reachable from themselves over gating edges. */
 const cycleNodes = (db) => new Set(CYCLE_CHECK.check(db).map((row) => row.id));
+
+/** Edge ids whose ends are kinds their edge kind does not admit. */
+const misEnded = (db) => new Set(ENDPOINT_CHECK.check(db).map((row) => row.edge_id));
 
 /** Whichever end was given, as one id — an end is a document or a story, never both. */
 const endOf = (args, side) => args[`${side}_document_id`] ?? args[`${side}_story_id`];
@@ -99,7 +118,13 @@ export function dependencyTools({ db, newId = ulid }) {
       description:
         'Link two documents or stories with a typed edge, reading source-blocks-target. '
         + 'On a supersedes edge the source is the superseded end and the target replaces it. '
-        + 'Refuses an edge that would close a cycle over a kind that gates work.',
+        + 'Refuses an edge that would close a cycle over a kind that gates work, and one whose '
+        + 'ends are document kinds its own kind does not admit.',
+      // `dependency` alone, and the endpoint table deliberately not beside it: `reads` on a
+      // mutating tool is what NFR7's closure treats as *written*, and this tool consults that
+      // table rather than writing it. Naming it here would demand a read tool for a vocabulary no
+      // caller may add to — and the refusal above already tells the caller what the kind admits,
+      // which is the discoverability a list tool would have bought.
       reads: ['dependency'],
       mutates: true,
       serverSupplied: { id: SUPPLIED.ulid },
@@ -154,6 +179,31 @@ export function dependencyTools({ db, newId = ulid }) {
         } catch (error) {
           db.exec('ROLLBACK');
           throw error;
+        }
+
+        // **This one is asked about the row rather than by before-and-after, and the difference is
+        // in what the two entries report.** Entry 1 reports the *nodes* a cycle reaches, so the
+        // only way to know whether this edge caused one is to compare the sets. Entry 6 reports the
+        // offending *edge*, so the new row's own id answers the question exactly — and a database
+        // restored with violations already in it goes on accepting unrelated edges without a
+        // snapshot being needed to say so.
+        const rejected = ENDPOINT_CHECK.check(db).find((edge) => edge.edge_id === row.id);
+
+        if (rejected) {
+          db.exec('ROLLBACK');
+
+          const admits = db
+            .prepare('SELECT source_kind, target_kind FROM dependency_kind_endpoint WHERE kind = ?')
+            .all(args.kind)
+            .map((pair) => `${pair.source_kind} → ${pair.target_kind}`);
+
+          // What was given and what is allowed, because the caller cannot see the table and the
+          // pair that was refused is rarely a typo — it is usually a kind chosen for what it means
+          // rather than for what it joins.
+          throw new ToolError(
+            `create_dependency: '${args.kind}' does not admit `
+            + `${rejected.source_kind} → ${rejected.target_kind}; it admits ${admits.join(', ')}`,
+          );
         }
 
         const introduced = [...cycleNodes(db)].filter((id) => !before.has(id));

@@ -17,6 +17,7 @@ import { openDatabaseFile } from './database.js';
 import { schemaDirectory, schemaFiles } from '../../src/schema/files.js';
 import { versionOf } from '../../src/schema/migrate.js';
 import { createRetirementGuards } from '../../src/schema/retirement.js';
+import { VOCABULARIES } from '../../src/schema/seeds/index.js';
 
 /**
  * The highest schema version below the one this server migrates to.
@@ -29,6 +30,51 @@ import { createRetirementGuards } from '../../src/schema/retirement.js';
  */
 export function previousVersion() {
   return schemaFiles().map(versionOf).sort((a, b) => a - b).at(-2);
+}
+
+/**
+ * The schema version immediately before the migration whose filename carries `slug`.
+ *
+ * **For a test about one particular migration**, where `previousVersion` is the wrong question and
+ * silently becomes a different one: a test asserting that a database gains `plugin_stamp` was
+ * written when that file was the newest, and the day another file lands "the previous version" is
+ * one that already has the table. The failure is loud here and was not free — three tests went red
+ * on the migration after it, which is the design working rather than a cost.
+ *
+ * Derived from the filename so a renamed migration fails here rather than quietly matching nothing.
+ *
+ * @param {string} slug Part of the file's name, e.g. `plugin-stamp`.
+ * @returns {number}
+ */
+export function versionBefore(slug) {
+  const file = schemaFiles().find((name) => name.includes(slug));
+
+  if (!file) throw new Error(`no schema file names '${slug}' — was the migration renamed?`);
+
+  return versionOf(file) - 1;
+}
+
+/**
+ * The shipped vocabulary narrowed to the tables a database actually has.
+ *
+ * **What a release seeded is bounded by what that release's schema held**, and a fixture built at
+ * an older version is exactly that database. Seeding this release's whole vocabulary into it fails
+ * on the first table a later migration adds — which is a fault in the fixture rather than in the
+ * seed, since no release ever shipped that combination.
+ *
+ * The filter is over the live schema rather than over a version number: the question the seed asks
+ * is whether the table is there.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {{table: string, rows: object[]}[]} [vocabularies]
+ * @returns {{table: string, rows: object[]}[]}
+ */
+export function vocabularyAsOf(db, vocabularies = VOCABULARIES) {
+  const present = new Set(
+    db.prepare("SELECT name FROM sqlite_schema WHERE type = 'table'").all().map((row) => row.name),
+  );
+
+  return vocabularies.filter(({ table }) => present.has(table));
 }
 
 /**

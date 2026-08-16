@@ -239,9 +239,10 @@ export function selfHostingCorpus(call) {
 
   // `blocks` gates work, so it is the edge FR22's readiness reads, at both the ends it admits;
   // `constrains` does not, and having both means the readiness query is answering rather than
-  // defaulting. **The ends are not interchangeable** — register entry 6 admits `builds_on` only
-  // between two specs and `constrains` only between two ADRs, so an edge kind chosen for its
-  // `gates_work` flag alone is a violation the register catches.
+  // defaulting. **The ends are not interchangeable** — `dependency_kind_endpoint` says which kinds
+  // each edge kind joins, so an edge kind chosen for its `gates_work` flag alone is refused at the
+  // write. `blocks` is the one kind with no rows there, because these two edges are exactly why:
+  // its ends may be stories, which no document-kind pair can express.
   call.create_dependency({
     kind: 'blocks', source_story_id: stories[0].id, target_story_id: stories[1].id,
   });

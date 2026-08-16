@@ -21,12 +21,19 @@
  *
  * Two entries deserve their reasoning stated where it is executed rather than only in the spec:
  *
- * - **#6 checks only the two edge kinds the register names.** `builds_on` spec→spec and
- *   `constrains` ADR→ADR are the rules stated; the rest of the matrix is deliberately unknown,
- *   because `blocks` alone spans epic→epic and story→story and inventing the remainder before
- *   dpm's own pipeline exists would fix guesses in a check. A kind with no declared rule is
- *   passed over rather than guessed at, and that is why this is a register entry and not the
- *   `dependency_kind_endpoint` table it will one day become.
+ * - **#6 reads `dependency_kind_endpoint` and declares nothing itself.** The pairs each edge kind
+ *   admits are rows, seeded from what the skills actually write — which is what this entry used to
+ *   hardcode as `builds_on` spec→spec and `constrains` ADR→ADR, and what it was wrong about: three
+ *   shipped skills write `builds_on` between other kinds, so the check reported the lineage it was
+ *   protecting. **A kind with no rows is passed over rather than read as admitting nothing**, which
+ *   is what keeps `blocks` legal: its ends may be stories, a story is not a document kind, and no
+ *   pair over that table can say what it admits. An edge with a story at either end is passed over
+ *   for the same reason and always has been — the check joins `document` at both ends.
+ *
+ *   The rule is enforced twice from this one source: `create_dependency` refuses a violating edge
+ *   at the write, by the same before-and-after comparison it uses for entry #1's cycles. Two
+ *   `WHERE` clauses would be two answers, and a disagreement between the rule and the check
+ *   produces a database this tool calls broken and the link tool will not let anyone repair.
  *
  * - **#10 checks the guards, not the rows.** "No row is written referencing a retired
  *   vocabulary row" is not decidable from a row after the fact: a row written *before* the
@@ -185,15 +192,27 @@ export const REGISTER = [
   {
     entry: 6,
     invariant: "A dependency's ends are kinds that edge admits",
-    check: (db) => db.prepare(`
+    // **Nothing to check on a database that predates the table**, which is a real caller rather
+    // than a hypothetical: `create_dependency` reuses this check, and a corpus is written through
+    // this release's tools into an older release's schema by more than one migration test. A
+    // prepare against a missing table raises at prepare time, so the guard is here and not in SQL.
+    // Reporting nothing is also the honest answer — a database with no endpoint rules has no edge
+    // that violates one, which is the same reading that leaves a kind with no rows unconstrained.
+    check: (db) => (!db
+      .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?")
+      .get('dependency_kind_endpoint') ? [] : db.prepare(`
       SELECT edge.edge_id, edge.kind, source.kind AS source_kind, target.kind AS target_kind
         FROM (${EDGE_NODES}) AS edge
         JOIN document AS source ON source.id = edge.source
         JOIN document AS target ON target.id = edge.target
-       WHERE (edge.kind = 'builds_on'   AND (source.kind <> 'spec' OR target.kind <> 'spec'))
-          OR (edge.kind = 'constrains'  AND (source.kind <> 'adr'  OR target.kind <> 'adr'))
+       WHERE EXISTS (SELECT 1 FROM dependency_kind_endpoint
+                      WHERE dependency_kind_endpoint.kind = edge.kind)
+         AND NOT EXISTS (SELECT 1 FROM dependency_kind_endpoint
+                          WHERE dependency_kind_endpoint.kind = edge.kind
+                            AND dependency_kind_endpoint.source_kind = source.kind
+                            AND dependency_kind_endpoint.target_kind = target.kind)
        ORDER BY edge.edge_id
-    `).all().map((row) => ({ ...row })),
+    `).all().map((row) => ({ ...row }))),
   },
   {
     entry: 7,
