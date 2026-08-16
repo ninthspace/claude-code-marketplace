@@ -2,7 +2,8 @@
 
 **Number**: 02-01  
 **Source spec**: 02  
-**Status**: pending  
+**Status**: complete  
+**Commit**: d018d5a  
 
 ## The host's Python floor, and why this run left it unverified
 
