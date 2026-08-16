@@ -824,7 +824,22 @@ def markdown_content(markup: str, width: int) -> Content:
     it, and on a 256-colour terminal it is the claim that decides whether a preview is legible.
 
     Trailing pad is stripped per line, so a copied selection carries no run-on whitespace.
+
+    **A source the renderer cannot take falls back to the source itself** (FR6). The markdown is
+    written by whatever produced the rows, and a preview is the one place the board renders text it
+    did not compose — so the failure is somebody else's input and the cost of it is the whole board,
+    since this also runs on the resize path where nothing catches an exception for it. Showing the
+    markdown unrendered is worse than showing it rendered and better than every other outcome: the
+    reader still has the text.
     """
+    try:
+        return _rasterised(markup, width)
+    except Exception:
+        return Content(markup)
+
+
+def _rasterised(markup: str, width: int) -> Content:
+    """The render itself. Separate so the guard above has one expression to wrap."""
     laid_out = max(width, MINIMUM_RASTER)
     console = Console(width=laid_out)
     rendered = console.render(

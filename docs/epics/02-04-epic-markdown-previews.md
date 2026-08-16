@@ -14,6 +14,16 @@ The board's own answer is to name no colour system at all. The CPM board rasteri
 
 Recorded here rather than pivoted because it amends this epic's rows only: one criterion, its approach, and two coverage rows. The source spec is untouched.
 
+## Story 4's control, amended: no input takes the renderer down
+
+Story 4's control criterion read: *"With the guard removed, the same input takes the board down — so the criterion above cannot pass against a renderer that was never at risk from it."* It cannot be satisfied as written, and the citation is the renderer's own behaviour.
+
+Eighteen pathological sources were put through `markdown_content` before the guard existed — 20,000 nested blockquotes, 2,000 nested list levels, an unclosed code fence, a 100,000-character single line, 5,000 unbalanced brackets, an emphasis storm, a ragged table, a 200-column table at a 10-cell width, a fence naming a lexer that does not exist, one containing NUL bytes, ANSI escapes, an unpaired surrogate, an empty source, whitespace only, 3,000 ordered items, and 5,000 horizontal rules. Every one of them rendered. Rich and markdown-it are tolerant by design: malformed markdown is *text*, and text is what they fall back to.
+
+So the input half of the control is unavailable, and the honest control drives the failure through the renderer instead: with the guard removed and a renderer that raises, the exception escapes into the board; with the guard, the panel paints the source unrendered and the board carries on. That demonstrates the guard is load-bearing, which is what the control is for — it just cannot also demonstrate that any particular input is dangerous.
+
+The criterion's text was amended to say that. The guard was kept: the resize path runs the raster on the event loop with nothing catching for it, the markdown comes from whatever wrote the rows rather than from this board, and eighteen inputs that did not raise is not a proof about the nineteenth.
+
 ## Story 1 — Builders that emit markdown source
 
 **Status**: complete  
@@ -133,25 +143,33 @@ The cancellation route was considered and left alone: making the preview worker 
 
 ## Story 4 — A preview it cannot render does not take the board down
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 5  
 
 ### Acceptance Criteria
 
 - A preview whose source is malformed, pathologically nested, or a single very long line renders something and leaves the board running. `[unit]`
-- control — With the guard removed, the same input takes the board down — so the criterion above cannot pass against a renderer that was never at risk from it. `[unit]`
+- control — With the guard removed, a render that raises takes the board down — so the criterion above cannot pass against a panel that was never protecting itself. No markdown source has been found that makes the renderer raise, so the control drives the failure through the renderer rather than through the input. `[unit]`
 
 ### Task 1 — Guard the preview render so a source it cannot handle yields something renderable
 
-**Status**: pending  
+**Status**: complete  
 
 Covers malformed markdown, pathological nesting and a body that is one very long line. This guard is the thing the story's control criterion removes.
 
 ### Task 2 — Write tests for A preview it cannot render does not take the board down
 
-**Status**: pending  
+**Status**: complete  
 
 Covers both criteria tagged unit, including the control — which has to fail with the guard removed, so the rejection cannot pass against a renderer that was never at risk from the input.
+
+### Retro
+
+- The story assumed a renderer that could be broken by its input, and it cannot be. Eighteen pathological sources went through the raster before any guard existed — 20,000 nested blockquotes, 2,000 list levels, an unclosed fence, a 100,000-character line, unbalanced brackets, NUL bytes, ANSI escapes, an unpaired surrogate, a 200-column table at ten cells — and every one rendered. Rich and markdown-it treat malformed markdown as text, which is the correct answer and leaves the criterion's "renders something" asserting that the output is sane rather than that a crash was caught.
+
+That made the control unsatisfiable as written ("the same input takes the board down"), so it was amended to say what a control can actually show here: the failure is driven through a renderer that raises, which demonstrates the guard is load-bearing and demonstrates nothing about any particular input. The evidence is on the epic as a section.
+
+The guard was kept rather than dropped as unnecessary, for a reason the probe does not cover: the resize path runs the raster on the event loop with nothing catching for it, the markdown comes from whatever wrote the rows rather than from this board, and eighteen inputs that did not raise is not a proof about the nineteenth. Its fallback is the source itself, so a preview that cannot be rendered still has its text on screen.
 
 ## Story 5 — Sweep the presentation surfaces
 
