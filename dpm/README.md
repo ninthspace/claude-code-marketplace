@@ -70,56 +70,55 @@ Two steps, in a repository DPM is going to keep planning artefacts in.
 **1. Install the pre-commit hook.** It regenerates both artefacts and refuses a commit
 that disagrees with the database.
 
-**Look before you link.** Git allows exactly one `pre-commit` hook, and DPM's replaces
-whatever is there rather than running it — so two commands first, from the repository
-root:
+Three commands, from the repository root — one to install it, two to check:
 
 ```sh
-git config core.hooksPath          # expect no output
-ls -l .git/hooks/pre-commit        # expect "No such file or directory"
+ln -s "$(ls -d ~/.claude/plugins/cache/*/dpm/*/hooks/pre-commit | sort -V | tail -1)" .git/hooks/pre-commit
+ls -l .git/hooks/pre-commit
+git config core.hooksPath
 ```
 
-If both come back empty, install it:
+The first line finds the newest installed DPM and links it, so there is no plugin path to
+look up and none to type. What it produces is an *absolute* path, which is the part that
+matters: a symlink's target resolves from the directory holding the link — `.git/hooks/` —
+and not from wherever you ran `ln`, so a path written relative to the repository root lands
+two levels too deep. Running DPM from a clone rather than an installed plugin, it is the
+same command with the path spelled out:
 
 ```sh
-ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+ln -s ~/src/claude-code-marketplace/dpm/hooks/pre-commit .git/hooks/pre-commit
 ```
 
-If either came back with something, read [When something else owns the
-hook](#when-something-else-owns-the-hook) before going further — including when the
-`ls` shows a symlink into an older DPM, which is the upgrade case and the one time
-`ln -sf` is the right command.
+The other two lines are there because every way this goes wrong goes wrong quietly:
 
-**`<plugin path>` has to be absolute here**, unlike everywhere else in this README. A
-symlink's target is resolved from the directory holding the *link* — `.git/hooks/` — and
-not from the directory you ran `ln` in, so a path that is correct relative to the
-repository root points two levels too deep once installed. An installed plugin is at an
-absolute path anyway; the failure only bites when you are running DPM from a clone. If
-you would rather not think about it, `ln -s "$(pwd)/…"` from the plugin directory is the
-same instruction with the question removed.
+- **`ln` says `File exists`.** Git allows exactly one `pre-commit` hook, DPM's ends in
+  `exec` and so replaces whatever is there rather than running it, and something is
+  already there. Do not reach for `-f`: read [When something else owns the
+  hook](#when-something-else-owns-the-hook), which tells the four cases apart.
+- **`ls -l` shows no link, or one whose target does not exist.** Git skips a hook it
+  cannot resolve without a warning and without failing the commit, so a broken link and no
+  link at all look identical from the outside.
+- **`git config core.hooksPath` prints a path.** Git then looks only there, and the link
+  you just made is inert however correct `ls -l` makes it look. Same section.
 
-Get it wrong and there is nothing to notice: git skips a hook it cannot resolve, without
-a warning and without failing the commit, so a broken link and no link at all look
-identical from the outside. `ls -l .git/hooks/pre-commit` after installing is the whole
-check.
-
-**`<plugin path>` carries a version, and so this link needs re-making after an upgrade.**
-An installed plugin lives at `…/plugins/cache/<marketplace>/dpm/<version>/`, an upgrade
-adds the new version beside the old rather than replacing it, and nothing re-points a
-symlink into the one you linked against. So the ordinary state after upgrading is a
-current database checked by the previous release's guard. It refuses rather than
-reporting on a schema it only partly understands — see below — but the refusal is the
-thing that tells you, so it is worth knowing why it arrives.
-
-Re-making it takes `-f`, because the link you are replacing is already there:
+**Re-run it after every upgrade, with `-f` added.** An installed plugin lives at
+`…/plugins/cache/<marketplace>/dpm/<version>/`, an upgrade installs beside the old version
+rather than replacing it, and nothing re-points a link into the one you linked against — so
+the ordinary state after upgrading is a current database checked by the previous release's
+guard. It refuses rather than reporting on a schema it only partly understands, which is
+how you find out:
 
 ```sh
-ln -sf <new plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+ln -sf "$(ls -d ~/.claude/plugins/cache/*/dpm/*/hooks/pre-commit | sort -V | tail -1)" .git/hooks/pre-commit
 ```
 
-**`-f` deletes what it replaces, without asking and without a copy.** That is what you
-want when it is DPM's own stale link and never what you want otherwise, which is why the
-check above comes first rather than this command being the one you always run.
+**`-f` deletes what it replaces, without asking and without a copy.** That is what you want
+when it is DPM's own stale link and never what you want otherwise — so `ls -l` first and
+confirm the target is an older DPM, rather than making this the command you always run.
+
+Both forms glob across marketplaces, and pick the highest version number of everything they
+find. If DPM ever reaches you from two marketplaces at once, that is the one case where the
+path is worth spelling out.
 
 The database itself is not committed — `.dpm/dpm.sql` is its committed text form, and it
 is what a checkout restores from. That restore is not a step either: on a fresh clone the
@@ -132,17 +131,20 @@ there is no window in which an unignored `dpm.db` can be staged. Commit that fil
 it reaches every clone. If you already have one, DPM leaves it exactly as it is.
 
 **2. Publish before committing.** The markdown under `docs/` is generated, and nothing
-generates it as a side effect of writing. After a skill run that changed anything:
+generates it as a side effect of writing. After a skill run that changed anything, run
+`/dpm:publish`. Then commit — both the projection and `.dpm/dpm.sql` go in the same
+commit.
 
-```sh
-node <plugin path>/dpm/bin/dpm-publish.js
-```
+Skip step 2 and the hook refuses the commit; nothing is lost, and nothing is written
+behind you. **The hook does not publish for you, and that is deliberate** — one that
+regenerated and staged the result would silently overwrite a hand-edit, which is the
+failure the guard exists to catch. So the refusal is the reminder, and running the
+publish is still yours.
 
-or run `/dpm:publish` if you are already in a session. Then commit — both the projection
-and `.dpm/dpm.sql` go in the same commit.
-
-Skip step 2 and the hook refuses the commit and names this command; nothing is lost, and
-nothing is written behind you.
+The refusal names `node <plugin path>/dpm/bin/dpm-publish.js`, because it may arrive at a
+terminal with no session open. That is the same publish without the gate: `/dpm:publish`
+shows you every file it would remove and asks first, and the binary alone does not. Reach
+for the skill whenever you are in a session, which is nearly always.
 
 ## When something else owns the hook
 
@@ -152,10 +154,10 @@ notion of a second hook at the same path. Four cases, and the check in step 1 te
 apart.
 
 **`ls` showed a symlink into an older DPM.** The upgrade case, and the only one where
-overwriting is correct:
+overwriting is correct — the install command from step 1, with `-f`:
 
 ```sh
-ln -sf <new plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
+ln -sf "$(ls -d ~/.claude/plugins/cache/*/dpm/*/hooks/pre-commit | sort -V | tail -1)" .git/hooks/pre-commit
 ```
 
 **`git config core.hooksPath` printed a path.** Something — husky, lefthook, or the
