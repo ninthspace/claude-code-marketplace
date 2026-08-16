@@ -8,12 +8,15 @@ them is paired with a planted control that must fail.
 
 from __future__ import annotations
 
+import ast
 import json
+import re
 import shutil
 import socket
 import subprocess
 import sys
 import tomllib
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -220,6 +223,222 @@ def test_uv_run_pytest_runs_the_suite_from_the_board_directory():
 
     assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
     assert "passed" in run.stdout
+
+
+# --- ENV4: the runner the suite is provisioned with --------------------------------------------
+
+
+def dev_requirements() -> dict[str, str]:
+    """The development group's requirements, as ``{distribution: stated minimum}``.
+
+    Read from the file rather than written out here, so raising a floor in `pyproject.toml` raises
+    it in the assertion too. Split on `>=` because that is the only operator this group uses; a
+    requirement written any other way lands as a `ValueError` naming the line, which is the right
+    outcome for a check whose whole subject is what the group says.
+    """
+    groups = tomllib.loads((BOARD_DIR / "pyproject.toml").read_text())["dependency-groups"]
+
+    return dict(requirement.split(">=") for requirement in groups["dev"])
+
+
+def release(version: str) -> tuple[int, ...]:
+    """A version as numbers. `0.24` is above `0.9`, which as strings it is not."""
+    return tuple(int(part) for part in re.findall(r"\d+", version))
+
+
+def at_least(installed: str, minimum: str) -> bool:
+    """Whether ``installed`` meets ``minimum``, compared numerically and padded to one length.
+
+    Padding matters in one direction only, and it is the direction this is used in: `8` states a
+    floor of `8.0.0`, so an installed `8.4.1` has to be read as three parts against one rather than
+    as a tuple that is longer and therefore greater by accident.
+    """
+    found, wanted = release(installed), release(minimum)
+    width = max(len(found), len(wanted))
+
+    return found + (0,) * (width - len(found)) >= wanted + (0,) * (width - len(wanted))
+
+
+def test_the_runner_and_its_asyncio_plugin_meet_the_minimums_the_project_states():
+    """ENV4's first half: the harness this file is running under is the one that was asked for.
+
+    Asserted against what is *installed*, through `importlib.metadata`, rather than against the
+    file that requested it — a floor stated in `pyproject.toml` and never provisioned is a claim
+    about a resolver's intentions, and this suite runs on whatever uv actually put there.
+    """
+    stated = dev_requirements()
+
+    assert {"pytest", "pytest-asyncio"} <= set(stated), (
+        f"the group states no floor for the runner or its asyncio plugin: {stated}"
+    )
+
+    for distribution, minimum in stated.items():
+        installed = metadata.version(distribution)
+
+        assert at_least(installed, minimum), (
+            f"{distribution} {installed} is below the stated minimum of {minimum}"
+        )
+
+
+def test_the_version_comparison_can_report_a_floor_that_is_not_met():
+    """The control for the comparison above, which otherwise passes by never being able to fail.
+
+    The third case is the one worth having: `0.9.0` is above `0.24` in every string ordering, so a
+    comparison that never became numeric would report a plugin two years out of date as current.
+    """
+    assert at_least("8.4.1", "8") is True
+    assert at_least("7.4.4", "8") is False
+    assert at_least("0.9.0", "0.24") is False
+
+
+# --- ENVX2 continued: what `board.py` is allowed to import --------------------------------------
+
+
+def canonical(distribution: str) -> str:
+    """A distribution name in the one form comparisons can use — see PEP 503."""
+    return re.sub(r"[-_.]+", "-", distribution).lower()
+
+
+def requirement_name(requirement: str) -> str | None:
+    """The distribution a requirement string names, or ``None`` for an optional one.
+
+    Anything behind an `extra ==` marker is left out on purpose: an extra is a dependency the
+    install did *not* take unless something asked for it, so counting one would widen the allowed
+    surface by packages that need not be present at all.
+    """
+    statement, _, marker = requirement.partition(";")
+
+    if "extra" in marker:
+        return None
+
+    return canonical(re.split(r"[\s<>=!~\[(]", statement.strip(), maxsplit=1)[0])
+
+
+def provisioned(declared: list[str]) -> set[str]:
+    """Every distribution the inline block's declarations bring with them, transitively.
+
+    **The closure rather than the literal list**, and that is what the story's own criteria ask
+    for: the markdown renderer is imported and appears in neither dependency list, because Textual
+    brings it. Written as an equality against `{"textual"}` this would be a change detector — green
+    today, and failing the moment a package the board legitimately has arrives one level down.
+    """
+    seen: set[str] = set()
+    pending = [name for name in map(requirement_name, declared) if name]
+
+    while pending:
+        distribution = pending.pop()
+
+        if distribution in seen:
+            continue
+
+        seen.add(distribution)
+
+        try:
+            requires = metadata.requires(distribution) or []
+        except metadata.PackageNotFoundError:  # declared, and not installed in this environment
+            continue
+
+        pending += [name for name in map(requirement_name, requires) if name]
+
+    return seen
+
+
+def top_level_imports(script: Path) -> set[str]:
+    """The root module of every import in ``script``, from its syntax rather than from a regex.
+
+    A regex over the source finds the same names on a good day and finds them inside strings and
+    comments on a bad one — and this is the check that decides whether the board can run where it
+    is shipped, so it reads the tree the interpreter will.
+    """
+    found: set[str] = set()
+
+    for node in ast.walk(ast.parse(script.read_text())):
+        if isinstance(node, ast.Import):
+            found |= {alias.name.split(".")[0] for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            found.add(node.module.split(".")[0])
+
+    return found
+
+
+def test_the_script_imports_only_what_it_ships_with_or_the_standard_library():
+    """ENVX2: every name `board.py` imports is one a clean `uv run` will have.
+
+    Three categories, and each is read from something rather than listed here: the interpreter's own
+    `stdlib_module_names`, the modules shipped beside the script, and the distributions the inline
+    block provisions. An import outside all three works on the harness — which has a `pyproject.toml`
+    and a `.venv` — and fails on the first run of the file as it is distributed.
+    """
+    shipped = {module.stem for module in BOARD_DIR.glob("*.py")}
+    brought = provisioned(inline_dependencies(BOARD_DIR / "board.py"))
+    packaged = {
+        module
+        for module, distributions in metadata.packages_distributions().items()
+        if any(canonical(name) in brought for name in distributions)
+    }
+
+    outside = top_level_imports(BOARD_DIR / "board.py") - sys.stdlib_module_names - shipped - packaged
+
+    assert outside == set(), (
+        f"`board.py` imports what a clean run has no way to provide: {sorted(outside)}"
+    )
+
+
+def test_the_import_sweep_finds_a_planted_import_of_something_absent(tmp_path):
+    """The control: a name in none of the three categories has to be reported.
+
+    Without it the assertion above is satisfied by a sweep that returns nothing whatever the file
+    says — and the sweep is the half most easily broken, because an `ast` walk that misses a node
+    kind reports an empty difference rather than an error.
+    """
+    planted = tmp_path / "planted.py"
+    planted.write_text("import json\nfrom nowhere.at_all import something\n")
+
+    assert top_level_imports(planted) == {"json", "nowhere"}
+
+
+def test_the_markdown_renderer_imports_and_neither_dependency_list_names_it():
+    """The renderer epic 4 builds on, and the reason it costs nothing to reach for.
+
+    Rich arrives with Textual, so the board already has a markdown renderer and a console to
+    measure with. The second half is what makes that worth asserting: a package added to either
+    list would be a new thing to provision on a clean run, and the two lists are asserted equal
+    elsewhere, so this is checked on both rather than on whichever one happened to be edited.
+    """
+    from rich.markdown import Markdown
+
+    assert Markdown("# a heading") is not None
+
+    named = {
+        requirement_name(requirement)
+        for requirement in inline_dependencies(BOARD_DIR / "board.py")
+        + tomllib.loads((BOARD_DIR / "pyproject.toml").read_text())["project"]["dependencies"]
+    }
+
+    assert "rich" not in named, (
+        f"the renderer was added as a dependency rather than taken from Textual's: {sorted(named)}"
+    )
+
+
+def test_the_python_floor_is_stated_once_and_agrees_with_itself():
+    """The checkable half of the `target` criterion — what the board *asks* for, not what it got.
+
+    Whether the deployment host meets the floor is not decidable here and is deliberately not
+    attempted: confirming "3.11 or later" on a machine running 3.11 is the false pass `target`
+    exists to stop. What this environment can settle is that the two places the board states the
+    floor have not drifted, since `uv run board.py` reads the inline block and `uv run pytest`
+    reads `pyproject.toml`, and a disagreement provisions two different interpreters.
+    """
+    script = [
+        line.removeprefix("#").strip()
+        for line in (BOARD_DIR / "board.py").read_text().splitlines()
+        if line.startswith("# requires-python")
+    ]
+    harness = tomllib.loads((BOARD_DIR / "pyproject.toml").read_text())["project"]["requires-python"]
+
+    assert script == [f'requires-python = "{harness}"'], (
+        f"the inline block and the harness ask for different interpreters: {script} and {harness}"
+    )
 
 
 # --- ENVX4: no network, and no socket outside the stdio pipes ----------------------------------

@@ -4,6 +4,14 @@
 **Source spec**: 02  
 **Status**: pending  
 
+## The host's Python floor, and why this run left it unverified
+
+Story 2's sixth criterion — the host running the board has Python 3.11 or later, and `uv run` provisions the board from its inline block there — carries `target` and nothing else, so this run did not assess it and did not count it met. Confirming a floor of 3.11 on a machine running 3.11 is precisely the false pass the tag exists to stop, and no verdict from a development machine is worth anything about a host nobody here has.
+
+What would settle it is one command on the deployment host: `uv run dpm/tools/board/board.py list` returning zero, on an interpreter the host provides. Until that runs there, the criterion stays open and its coverage row stays unmarked.
+
+What this environment *could* settle was split off and is checked: the floor is stated twice — `requires-python` in `board.py`'s inline block and again in `pyproject.toml` — and `test_the_python_floor_is_stated_once_and_agrees_with_itself` asserts the two have not drifted, since `uv run board.py` reads the first and `uv run pytest` reads the second, and a disagreement provisions two different interpreters. That is a claim about what the board asks for, which is checkable here; the claim about what the host gives it is not.
+
 ## Story 1 — A fixture project holding every state
 
 **Status**: complete  
@@ -44,7 +52,7 @@ Both were found by running the suite after the fixture grew, not by reading it. 
 
 ## Story 2 — The environment this work rests on
 
-**Status**: pending  
+**Status**: complete — Five criteria verified by test; the sixth is `target` — the host's Python floor — and is unverifiable in this environment. See the epic's section on it.  
 **Blocked by**: —  
 
 ### Acceptance Criteria
@@ -58,21 +66,29 @@ Both were found by running the suite after the fixture grew, not by reading it. 
 
 ### Task 1 — Assert the runner, the dependency agreement and the import surface
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the four claims expected to hold already: the pytest and pytest-asyncio minimums, the agreement between `pyproject.toml` and the inline block, the network guard, and `board.py`'s import surface. Expect these to pass on the first run; the value is that they keep holding.
 
 ### Task 2 — Assert the markdown renderer imports with no new dependency
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the renderer criterion only, and is the one claim in this story not already true — nothing in the board imports Rich directly today. The assertion has two halves: the import succeeds, and neither dependency list gained an entry for it.
 
 ### Task 3 — State the host's Python floor and why it cannot be checked here
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the `target` criterion. Records the condition and what would settle it rather than self-assessing it on a machine that satisfies it — confirming a version floor where the floor is met is the false pass `target` exists to stop.
+
+### Retro
+
+- Task 2's description said "nothing in the board imports Rich directly today" and `board.py` line 40 reads `from rich.text import Text`. The task was written from the spec, and the spec was written about a renderer nobody had reached for yet; the board had been importing Rich for its own text styling since the TUI landed. This is the second time in one epic that a task planned from the spec described a tree that had moved on — and it cost nothing here only because the task's own criterion was checkable against the tree rather than against the description.
+
+It also changed what the import-surface criterion can mean. Read literally — "nothing outside the standard library and the packages its own inline block declares" — `board.py` fails it today, because the block declares Textual and not Rich. The reading that holds is the one the renderer criterion forces two lines above it: what the block *provisions*, transitively. So the check resolves the closure of the declared distributions through `importlib.metadata.requires` rather than comparing against `{"textual"}`, which would have been a change detector green on the day it was written.
+
+Two of this story's six criteria turned out to be already true, three needed a test written against code that was already correct, and one is `target`. The story's real product is that the four standing claims now have something holding them.
 
 ## Dependencies
 
