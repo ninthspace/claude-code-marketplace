@@ -994,6 +994,10 @@ INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired
 INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('audit_dimension:security', 'audit_dimension', 'Security', NULL, 8, NULL);
 INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('audit_dimension:test-debt', 'audit_dimension', 'Test debt', NULL, 4, NULL);
 INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('audit_dimension:type-debt', 'audit_dimension', 'Type & contract debt', NULL, 3, NULL);
+INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('disposition:fixed', 'disposition', 'Fixed', NULL, 1, NULL);
+INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('disposition:left-alone', 'disposition', 'Left alone', NULL, 2, NULL);
+INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('disposition:needs-you', 'disposition', 'Needs you', NULL, 4, NULL);
+INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('disposition:unverified', 'disposition', 'Unverified', NULL, 3, NULL);
 INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('finding:adr-compliance', 'finding', 'ADR Compliance', NULL, 9, NULL);
 INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('finding:architectural-risks', 'finding', 'Architectural Risks', NULL, 4, NULL);
 INSERT INTO "taxonomy" ("id", "domain", "name", "singular", "position", "retired_at") VALUES ('finding:dependency-risks', 'finding', 'Dependency Risks', NULL, 7, NULL);
