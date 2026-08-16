@@ -17,6 +17,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from time import monotonic
 
+from rich.color_triplet import ColorTriplet
 from rich.segment import Segment
 from textual.command import CommandPalette
 from textual.strip import Strip
@@ -111,6 +112,39 @@ def _first_content(strip: Strip) -> Segment | None:
     return None
 
 
+def _painted(app: BoardApp, column: str):
+    """Each row's text and the style its own text was painted in, in the order they were painted."""
+    for strip in strips(app, column):
+        segment = _first_content(strip)
+
+        if segment is not None and segment.style is not None:
+            yield segment.text.strip(), segment.style
+
+
+def colours(app: BoardApp, column: str) -> dict[str, tuple[ColorTriplet, ColorTriplet]]:
+    """Row text to the truecolor foreground and background it was painted in.
+
+    **Both halves, unlike :func:`styles`**, because the cursor is a background: the board paints the
+    highlighted row in that row's own colour blended toward the surface, so a reader that dropped
+    the background could not tell a highlighted red row from an unhighlighted one.
+
+    Resolved to triplets rather than left as names, since what a test compares against is arithmetic
+    on the two colours — and `red`, `#ff0000` and `rgb(255,0,0)` are one colour under three names.
+
+    **A row painted in neither is left out rather than reported as `None`**, which is the one place
+    this differs from :func:`styles` beyond the extra half. A row with no colour of its own — the
+    dim `reading…` row — has no arithmetic to check, and a `None` in a dictionary of triplets is a
+    value every caller would have to guard against to say the same thing.
+    """
+    painted = {}
+
+    for text, style in _painted(app, column):
+        if style.color is not None and style.bgcolor is not None:
+            painted[text] = (style.color.get_truecolor(), style.bgcolor.get_truecolor())
+
+    return painted
+
+
 def styles(app: BoardApp, column: str) -> dict[str, str]:
     """Row text to the foreground colour it was painted in.
 
@@ -118,15 +152,7 @@ def styles(app: BoardApp, column: str) -> dict[str, str]:
     the cursor's background, so comparing whole styles would make one row differ from its
     neighbours for a reason that has nothing to do with the state it is in.
     """
-    painted = {}
-
-    for strip in strips(app, column):
-        segment = _first_content(strip)
-
-        if segment is not None and segment.style is not None:
-            painted[segment.text.strip()] = str(segment.style.color)
-
-    return painted
+    return {text: str(style.color) for text, style in _painted(app, column)}
 
 
 def preview(app: BoardApp, kind: str) -> list[str]:

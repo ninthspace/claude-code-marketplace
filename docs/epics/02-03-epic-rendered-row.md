@@ -6,7 +6,7 @@
 
 ## Story 1 — The cursor in the row's own colour
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 3  
 
 ### Acceptance Criteria
@@ -18,21 +18,25 @@
 
 ### Task 1 — Port InverseOptionList from the CPM board
 
-**Status**: pending  
+**Status**: complete  
 
 The render_line override that repaints the highlighted strip in the row's own colour, blended toward the background. Addresses the cursor's appearance only — the row's content composition belongs to story 2.
 
 ### Task 2 — Neutralise Textual's highlight style in the board's CSS
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the default highlight block showing through the repainted strip, which the render_line override alone does not stop. It is the thing the story's control criterion removes.
 
 ### Task 3 — Write tests for The cursor in the row's own colour
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the four criteria: the three tagged unit, including the control — which has to fail with the CSS override removed, so that a board rendering no highlight at all cannot satisfy the rejection by having nothing to find — and the one tagged feature, which drives a running board rather than the render function.
+
+### Retro
+
+- The CSS override and the render_line repaint look like two ways of doing the same thing, and they are not: the repaint reads the background it blends toward off the strip Textual handed it, so a block cursor left in the stylesheet is not a second highlight underneath the board's — it is the colour the board's own highlight gets mixed with. Removing the override paints the blocked row #6c467b (red mixed with Textual's #0178D4) instead of #760a0a (red mixed with the board's own #121212). That is what made a real control possible: the naive rejection — "the block cursor colour appears on no rendered row" — passes with the override removed, because the repaint overwrites the background either way. The rejection that has purchase asserts the painted bar is the row's colour blended toward the surface the *unhighlighted* rows share, and the control fails it by 137 in the blue channel.
 
 ## Story 2 — The pill against the right edge
 
@@ -90,3 +94,13 @@ Addresses the palette values rather than the render path, which stories 1 and 2 
 **Status**: pending  
 
 Covers the two criteria tagged unit, driving the render against a console that reports 256 colours rather than truecolor.
+
+## Retro Applied
+
+- 02 · A criterion can read as the natural test of a rule and have no purchase on it · deferred — Criteria gap. Deferred unreviewed in autonomous mode: re-judging whether a criterion has purchase on its rule is a re-planning call.
+- 02 · A criterion warranted by an ADR carries no coverage rows and is invisible to the roll-up · deferred — Criteria gap. Deferred unreviewed in autonomous mode: every criterion in epic 3 carries a coverage row, so nothing here is invisible to the roll-up; changing how ADR-warranted criteria are traced is a human's call.
+- 02 · A must-NOT control needs one arm per code path that could reach the rejected behaviour · deferred — Testing gap. Deferred unreviewed in autonomous mode: widening a control to one arm per path changes what the criteria ask for, which is a human's call.
+- 01 · A must-NOT stated as an equality is a change detector wearing a rejection's clothes · applied — Pattern worth reusing, applied autonomously. Story 1's must-NOT is about Textual's own highlight style appearing on no row; it is written as a rejection over what was rendered rather than an equality against a fixed expected strip.
+- 01 · Check a control mutation compiles into the path it is aimed at before believing the red · deferred — Testing gap. Deferred unreviewed in autonomous mode: it implies a re-planning call about how controls are written across the epic, which belongs to a human. The control this story already carries is run and read regardless.
+- 01 · Read the tree before building; expect the ratio to favour already-there · applied — Codebase discovery, applied autonomously. Epic 3 ports a renderer the CPM board already has, so the first move on every task is reading cpm/tools/board/board.py rather than designing one here.
+- 01 · Stubbed tests and a real one are not the same test at different fidelities · applied — Pattern worth reusing, applied autonomously. The story's feature criterion drives a running board through the pilot and reads painted strips; nothing here asserts against a widget's self-report.

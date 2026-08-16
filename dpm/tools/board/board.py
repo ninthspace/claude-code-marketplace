@@ -37,12 +37,17 @@ from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
 
+from rich.color import Color
+from rich.color_triplet import ColorTriplet
+from rich.segment import Segment
+from rich.style import Style
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
+from textual.strip import Strip
 from textual.widgets import DirectoryTree, Footer, Header, Input, Label, OptionList, Static
 
 from board_view import (
@@ -647,6 +652,97 @@ COMMANDS: tuple[Command, ...] = (
 )
 
 
+#: How much of a row's own colour the cursor bar carries, focused and blurred (FR4, FR19).
+#:
+#: **Muted rather than a full inverse**, which is the whole of why these are fractions. A true
+#: inverse paints the row's colour at full saturation, and on a bright state — yellow, for
+#: `in_progress` — that is a glare a reader's eye skips over rather than lands on. Blending partway
+#: toward the background keeps the bar unmistakably that row's colour and still readable.
+#:
+#: The blurred column fades further, so a board with three columns says which one the keys are
+#: talking to without any column losing its selection.
+FOCUSED_WEIGHT = 0.42
+BLURRED_WEIGHT = 0.22
+
+#: What the bar falls back to when a strip carries no colour of its own to read. A row painted in
+#: the terminal's default has no colour in its segments — `project_row` renders exactly that — and a
+#: cursor that gave up on such a row would be a cursor that vanishes on the Projects column.
+DEFAULT_SURFACE = ColorTriplet(18, 18, 18)
+DEFAULT_ROW = ColorTriplet(224, 224, 224)
+
+#: Above this luminance the bar is light enough that the surface reads as the legible foreground;
+#: below it, near-white does. Rec. 709 midpoint, in the 0–255 range :func:`_luminance` returns.
+LEGIBLE_ON_LIGHT = 128
+
+
+def _blend(row: ColorTriplet, background: ColorTriplet, weight: float) -> ColorTriplet:
+    """``row`` mixed into ``background`` by ``weight`` — 0 is all background, 1 is all row."""
+    return ColorTriplet(
+        round(row.red * weight + background.red * (1 - weight)),
+        round(row.green * weight + background.green * (1 - weight)),
+        round(row.blue * weight + background.blue * (1 - weight)),
+    )
+
+
+def _luminance(colour: ColorTriplet) -> float:
+    """``colour``'s perceived brightness (Rec. 709), which is what decides a legible foreground."""
+    return 0.2126 * colour.red + 0.7152 * colour.green + 0.0722 * colour.blue
+
+
+def _read_colours(strip: Strip) -> tuple[ColorTriplet, ColorTriplet]:
+    """The row's own colour and the background it was painted on, read from what was painted.
+
+    Read from the strip rather than from the row it came from, because the cursor is a fact about
+    the rendering and the same rule reaches every column: the Projects column's rows carry no state
+    style at all, and a bar derived from a model would have nothing to derive one from there.
+    """
+    row: ColorTriplet | None = None
+    background: ColorTriplet | None = None
+
+    for segment in strip:
+        if segment.style is None:
+            continue
+
+        if row is None and segment.text.strip() and segment.style.color:
+            row = segment.style.color.get_truecolor()
+
+        if background is None and segment.style.bgcolor:
+            background = segment.style.bgcolor.get_truecolor()
+
+    return row or DEFAULT_ROW, background or DEFAULT_SURFACE
+
+
+def cursor_strip(strip: Strip, *, focused: bool) -> Strip:
+    """``strip`` repainted as the cursor bar: its own colour, blended toward its own background.
+
+    **The colour is the row's, which is the point** (FR4, FR19). A fixed accent — Textual's default
+    block cursor, and every framework's — says the same thing on a blocked row as on a ready one, so
+    the one row a user is looking at is the one row whose state has been painted over. Blending the
+    row's own colour keeps the state on screen and adds the selection to it.
+
+    Painting one bar across the whole strip is lossless here because every board row is a single
+    colour; per-segment click metadata is carried over, so the bar costs no mouse target.
+    """
+    row, background = _read_colours(strip)
+    bar_background = _blend(row, background, FOCUSED_WEIGHT if focused else BLURRED_WEIGHT)
+    bar_foreground = background if _luminance(bar_background) > LEGIBLE_ON_LIGHT else DEFAULT_ROW
+    bar = Style(
+        color=Color.from_triplet(bar_foreground), bgcolor=Color.from_triplet(bar_background)
+    )
+
+    return Strip(
+        [
+            Segment(
+                segment.text,
+                bar + Style(meta=segment.style.meta) if segment.style else bar,
+                segment.control,
+            )
+            for segment in strip
+        ],
+        strip.cell_length,
+    )
+
+
 class Column(OptionList):
     """One of the board's three columns, with ← and → returned to the board (FR19).
 
@@ -663,12 +759,37 @@ class Column(OptionList):
 
     **A column does not scroll sideways anyway.** Its rows are labels the layout truncates, so the
     bindings being displaced reach a scroll that has nowhere to go.
+
+    **Its cursor is the row's own colour rather than a block of accent** (FR4, FR19). That cannot be
+    had from CSS: Textual drops `text-style: reverse` in the option render path, and an option's own
+    foreground wins over the component class's, so a highlight declared in the stylesheet arrives as
+    a fixed background with the row's colour still on top of it. So the strip is repainted after the
+    fact — see :func:`cursor_strip` — and the stylesheet's job is only to get the framework's own
+    block out of the way.
     """
 
     BINDINGS = [
         Binding("left", "app.focus_left", "◀ column", show=True),
         Binding("right", "app.focus_right", "column ▶", show=True),
     ]
+
+    def render_line(self, y: int) -> Strip:
+        """The line Textual painted, repainted as the cursor bar when it is the highlighted row.
+
+        The line-to-option mapping is Textual's own, so a row wrapping over two lines highlights on
+        both and a scrolled column highlights the row rather than the screen position.
+        """
+        strip = super().render_line(y)
+
+        try:
+            option_index, _ = self._lines[self.scroll_offset.y + y]
+        except IndexError:
+            return strip
+
+        if option_index != self.highlighted:
+            return strip
+
+        return cursor_strip(strip, focused=self.has_focus)
 
 
 class ProjectTree(DirectoryTree):
@@ -1070,6 +1191,17 @@ class BoardApp(App[None]):
     }
     OptionList:focus {
         background: transparent;
+    }
+    /* Take Textual's own block cursor out of the way (FR4, FR19). `Column.render_line` paints the
+       highlight itself, in the row's own colour, and it reads the background to blend toward from
+       the strip it was handed — so a framework cursor left in place is not merely a second
+       highlight underneath the first, it is the colour the first one is mixed with. At the CSS
+       layer the highlighted row therefore has to read as an ordinary row. */
+    OptionList > .option-list--option-highlighted,
+    OptionList:focus > .option-list--option-highlighted {
+        color: $foreground;
+        background: transparent;
+        text-style: none;
     }
     /* The picker (FR1). Sized rather than full-screen so the board stays visible behind it — the
        thing being added is being added *to* something, and a modal that hides it reads as having
