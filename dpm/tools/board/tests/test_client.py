@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from conftest import DPM_ROOT, STAND_IN
-from fixture_database import titles
+from fixture_database import statuses, titles
 from recording_server import transcript_of
 
 from mcp_client import PROTOCOL_VERSION, MCPClient, server_path
@@ -112,7 +112,7 @@ async def test_the_real_server_answers_over_stdio_against_a_built_database(fixtu
     # Taken from the fixture's own content, in the order it creates them, so a later story adding
     # an epic does not turn this into an assertion about a shape the fixture no longer has.
     assert [epic["title"] for epic in epics["items"]] == titles("create_epic")
-    assert {story["status"] for story in stories["items"]} == {"complete", "pending"}
+    assert {story["status"] for story in stories["items"]} == statuses("create_story")
 
 
 async def test_two_reads_in_flight_at_once_each_get_their_own_answer(fixture_project):

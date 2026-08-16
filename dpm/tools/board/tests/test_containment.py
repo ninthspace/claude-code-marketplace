@@ -45,6 +45,7 @@ from mcp_client import (
     server_path,
 )
 from registry import RegistryEntry, add_project
+from status_model import RETIRED
 
 #: How long the mixed registry is given to settle. Longer than :func:`until`'s own default because
 #: five projects are read at once and two of them spawn a real server and complete a handshake.
@@ -64,8 +65,17 @@ def expected_progress() -> str:
     Derived rather than written down for the reason every count in this suite is: a fixture that
     grows a story would otherwise turn this into a test of a stale number, and it would fail in a
     way that reads as the board mis-counting.
+
+    **A retired story leaves the denominator**, which is `progress`'s rule and has to be stated
+    here too — over the fixture's own definition rather than by calling the derivation, which would
+    make this an assertion about nothing. Written the other way, a fixture holding a withdrawn
+    story reports the board mis-counting when what changed was the expectation.
     """
-    stories = [arguments for call, arguments, _ in CONTENT if call == "create_story"]
+    stories = [
+        arguments
+        for call, arguments, _ in CONTENT
+        if call == "create_story" and arguments.get("status") not in RETIRED
+    ]
     done = sum(1 for arguments in stories if arguments.get("status") == "complete")
 
     return f"{done}/{len(stories)}"

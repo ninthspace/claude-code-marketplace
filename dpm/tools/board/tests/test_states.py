@@ -64,7 +64,11 @@ REQUIRED_STATES = {
 }
 
 #: FR11's body, where the four phrases above have to appear.
-SPEC = DPM_ROOT.parent / "docs" / "specifications" / "48-spec-dpm-board.md"
+#:
+#: Under `docs/cpm/` rather than `docs/specifications/`: this board was specified in the CPM era,
+#: and the migration to dpm parked that whole corpus one folder down, where it stays readable and
+#: out of reach of the generator that now owns `docs/specifications/`.
+SPEC = DPM_ROOT.parent / "docs" / "cpm" / "specifications" / "48-spec-dpm-board.md"
 
 
 async def state_of(root: Path, *, pool: ServerPool) -> ProjectView:

@@ -14,3 +14,8 @@ docs/plans/.cpm-cleancheck-*
 # tool registry to the entry point, which is the point at which launching the server anywhere
 # in this tree started producing the file.
 .dpm/dpm.db
+
+# The ralph loop's own state, rewritten on every iteration. An unattended run commits after
+# each story and stages everything, so without this line the loop's iteration counter lands in
+# the work's commits. The run's memory is a dpm session row, not this file.
+.claude/ralph-loop.local.md

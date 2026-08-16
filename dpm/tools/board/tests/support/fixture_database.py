@@ -20,6 +20,33 @@ from pathlib import Path
 
 from mcp_client import MCPClient
 
+#: One paragraph of :data:`LONG_DOCUMENT`, repeated to build it.
+#:
+#: **Prose in long lines, not filler in short ones.** What a render budget is measured on is the
+#: work of wrapping and painting, and a document of one-word lines carries the same character count
+#: with almost none of it. Each sentence here runs past any terminal width, so the line breaks a
+#: renderer produces are its own decision and move when the width does — which is what makes the
+#: same document usable for the width assertion and for the timing.
+PARAGRAPH = (
+    "A board renders a document at whatever width the pane happens to have, and the width is not "
+    "known until the moment it paints, so every line break in this paragraph is produced at render "
+    "time rather than stored anywhere. That is the property this document exists to exercise: a "
+    "preview built by slicing stored text would produce the same output at every width, and would "
+    "look correct in a pane that happened to be as wide as the text was written."
+)
+
+#: How many paragraphs the long document carries. Enough that a render has real work to do, and
+#: each one prefixed with its own ordinal so no two are the same string — a renderer that memoised
+#: on the text would otherwise do the work once and be timed as though it had done it forty times.
+PARAGRAPHS = 40
+
+#: A document long enough to time a render against, and long enough that its line breaks move when
+#: the width does (NFR1). Built rather than written out, so its length is a number one line above
+#: rather than a wall of text nobody reads.
+LONG_DOCUMENT = "\n\n".join(
+    f"Paragraph {index} of {PARAGRAPHS}. {PARAGRAPH}" for index in range(1, PARAGRAPHS + 1)
+)
+
 #: The fixture's shape, as calls to make in order.
 #:
 #: Written as data so a later epic can read what is in the database without running it, and so the
@@ -136,6 +163,58 @@ CONTENT = [
         "update_epic",
         {"id": "{waived_epic}", "retro_waived_at": "2026-08-14",
          "retro_waived_reason": "Nothing to reflect on"},
+        None,
+    ),
+    # The two states nothing else in this fixture reaches, and the reason they are here rather than
+    # in the one test that wants them: `status` has had four values since `020-status-lifecycle.sql`
+    # and a fixture holding two of them lets every rule about the other two pass by never meeting
+    # one. A retired epic is not a completed epic and not a pending one — it keeps its own word —
+    # and each of the two wrong readings ("terminal means done", "not pending means done") is green
+    # against a project where nothing was ever retired.
+    #
+    # Standalone under `{spec}`: neither is `complete`, so neither joins the retro candidates, and
+    # neither is `pending`, so neither joins the ready ones. They are visible to a state derivation
+    # and invisible to every ordering.
+    (
+        "create_epic",
+        {"parent_id": "{spec}", "slug": "10-09-ninth", "title": "Ninth epic",
+         "status": "superseded", "status_note": "Replaced by the eighth"},
+        "superseded_epic",
+    ),
+    (
+        "create_epic",
+        {"parent_id": "{spec}", "slug": "10-10-tenth", "title": "Tenth epic",
+         "status": "withdrawn", "status_note": "Dropped rather than delivered"},
+        "withdrawn_epic",
+    ),
+    # The same two states one level down, and they are **not** the same fact. `progress` drops a
+    # retired story from both sides of its count rather than from one, so a fixture whose retired
+    # rows were all epics would leave that branch unmet — and the branch decides whether an epic
+    # stays open for work nobody intends to do.
+    #
+    # Under `{open_epic}`, whose figure stays `1/2`: the two rows leave the count rather than
+    # joining either side of it, which is what makes their presence here an assertion about the
+    # rule rather than an adjustment to a number.
+    (
+        "create_story",
+        {"epic_id": "{open_epic}", "number": 3, "title": "A superseded story", "position": 2,
+         "status": "superseded"},
+        "superseded_story",
+    ),
+    (
+        "create_story",
+        {"epic_id": "{open_epic}", "number": 4, "title": "A withdrawn story", "position": 3,
+         "status": "withdrawn"},
+        "withdrawn_story",
+    ),
+    # The long document (NFR1). On `{later_spec}` — a spec with no epics, which is already a
+    # candidate by that role and is nothing else's decoy — so a document of this size perturbs no
+    # count, no ordering and no other preview. It is here rather than in the one test that times a
+    # render because a fixture built per test is a fixture whose *build* is being timed.
+    (
+        "create_document_section",
+        {"document_id": "{later_spec}", "heading": "A document long enough to render",
+         "body": LONG_DOCUMENT, "position": 0},
         None,
     ),
     # FR7's previews. Prose lives in `document_section` rows rather than on the document, and each
@@ -274,6 +353,19 @@ def created(tool: str) -> int:
 def titles(tool: str) -> list[str]:
     """The titles :data:`CONTENT` gives one kind of row, in the order it creates them."""
     return [arguments["title"] for call, arguments, _ in CONTENT if call == tool]
+
+
+def statuses(tool: str) -> set[str]:
+    """The statuses :data:`CONTENT` creates one kind of row in.
+
+    :func:`titles`'s counterpart for the column every status rule is stated over, and it earns its
+    place for the same reason: a set written out in a test is a transcription of the fixture, and
+    the fixture gains a status precisely when some rule about that status needs one to be reached —
+    which is the moment a transcribed set stops describing the project it claims to.
+
+    The default matches the tools': a row created without a status is `pending`.
+    """
+    return {arguments.get("status", "pending") for call, arguments, _ in CONTENT if call == tool}
 
 
 def titled(*names: str) -> set[str]:
