@@ -97,7 +97,7 @@ One deliberate divergence from CPM, in the other direction: the raster names no 
 
 ## Story 3 — The cursor stays ahead of the raster
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 5  
 
 ### Acceptance Criteria
@@ -107,21 +107,29 @@ One deliberate divergence from CPM, in the other direction: the raster names no 
 
 ### Task 1 — Discard a render whose row is no longer the highlighted one
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the stale paint — a panel showing a row the cursor has left — rather than the cost of the render itself, which is the next task.
 
 ### Task 2 — Keep the raster off the key-handling path
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses a held arrow key queueing one render per row passed over, and key handling blocking while a render runs.
 
 ### Task 3 — Write tests for The cursor stays ahead of the raster
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the feature criterion on fast cursor movement and the unit criterion holding the render of the fixture's largest document at 80 columns within 50 ms.
+
+### Retro
+
+- The staleness guard now has to be checked twice, and the second check is the one this story added. The read was already stamped and compared; the raster was not, and it is the wait that grows with the document — so a board that checked only before rendering would spend a whole render on a row the user had left and then paint it over the row they were on. The render also moved off the event loop with `asyncio.to_thread`, which is the codebase's existing idiom for the tmux poll: a markdown render is arithmetic rather than I/O, so awaiting it on the loop puts every queued keystroke behind it. The width is read on the loop and only the rendering goes to the thread.
+
+**The timing criterion is weaker than it reads, and the fixture is why.** "Rendering the largest document in the fixture at 80 columns completes within 50 ms" names a document that is about 130 characters: it renders in well under a millisecond, and a budget met by it says nothing about a board previewing a real spec. The fixture is small deliberately — every test in the suite reads it — so the test times that document *and* the same source repeated forty times, which is the size of an actual epic doc and the one that could fail. Enlarging the shared fixture to make the criterion mean what it says would be a change to every other story's ground.
+
+The cancellation route was considered and left alone: making the preview worker exclusive would stop a held key queueing reads, and it would cancel an in-flight call on a shared MCP pool to do it. The guard discards the stale result for free, and a cancelled JSON-RPC request is a different risk to take on for a queue that is already bounded by how fast a key repeats.
 
 ## Story 4 — A preview it cannot render does not take the board down
 

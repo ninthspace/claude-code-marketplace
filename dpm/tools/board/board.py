@@ -1227,18 +1227,31 @@ class PreviewBody(Static):
         self.source = ""
 
     def show(self, source: str) -> None:
-        """Put ``source`` in the panel, rendered at the width it has now."""
+        """Put ``source`` in the panel, rendered here and now.
+
+        For text short enough that rendering it costs nothing — the row's label, which goes up the
+        moment the cursor moves. A whole document is rendered off the event loop and arrives
+        through :meth:`place`; see :meth:`BoardApp._fill_preview`.
+        """
+        self.place(source, self.rasterise(source))
+
+    def place(self, source: str, content: Content) -> None:
+        """Take a raster somebody else produced, and remember the source it came from.
+
+        The pair is what a resize needs: the `Content` to paint now, and the markdown to render
+        again at the next width. A `Content` cannot be reflowed back into the markdown it came from.
+        """
         self.source = source
-        self.rasterise()
+
+        self.update(content)
 
     def on_resize(self, event: object) -> None:
         """Render the same source again, because the raster was laid out at the old width."""
-        self.rasterise()
+        self.update(self.rasterise(self.source))
 
-    def rasterise(self) -> None:
-        content = markdown_content(self.source, _panel_width(self)) if self.source else Content("")
-
-        self.update(content)
+    def rasterise(self, source: str) -> Content:
+        """``source`` at this panel's width. Pure, so it can be run off the event loop."""
+        return markdown_content(source, _panel_width(self)) if source else Content("")
 
 
 def _panel_width(body: Static) -> int:
@@ -1769,10 +1782,28 @@ class BoardApp(App[None]):
         self.run_worker(self._fill_preview(kind, project.path, row), exclusive=False)
 
     async def _fill_preview(self, kind: str, root: Path, row: EpicView | StoryView) -> None:
+        """Read the row's preview, render it, and paint it if the cursor is still on that row.
+
+        **Checked twice, because there are two waits and either can outlast the cursor.** The read
+        is the long one and the raster is the one that grows with the document; a run that checked
+        only before rendering would spend a whole raster on a row the user has left and then paint
+        it over the row they are on.
+
+        **The raster runs off the event loop**, which is what keeps a held arrow key moving: a
+        markdown render of a large document is arithmetic rather than I/O, so awaiting it on the
+        loop blocks every keystroke behind it. The width is read here, on the loop, because it is
+        the widget's — only the rendering goes to the thread.
+        """
         text = await self._reader(root, row)
 
+        if self._awaited.get(kind) != row.id:
+            return
+
+        body = self.query_one(f"#{kind}-preview-body", PreviewBody)
+        content = await asyncio.to_thread(markdown_content, text, _panel_width(body))
+
         if self._awaited.get(kind) == row.id:
-            self._paint_preview(kind, text)
+            body.place(text, content)
 
     def _paint_preview(self, kind: str, source: str) -> None:
         """Put ``source`` in ``kind``'s panel (FR6).
