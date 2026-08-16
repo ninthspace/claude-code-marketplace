@@ -4,6 +4,16 @@
 **Source spec**: 02  
 **Status**: pending  
 
+## A criterion added to story 2, and what it closes
+
+Story 2 gained a sixth criterion during the run: *"A preview the raster produced reaches a terminal reporting 256 colours as 8-bit colour and no 24-bit codes, so no colour system named where the terminal cannot be seen decides whether a preview is legible."* It is tagged `unit`, covered by `tests/test_raster.py`, and bound to NFR3 and ENVX4.
+
+**The citation is the two requirements' own text.** NFR3 names two things — "The cursor blends two colours and **the raster asks for a colour system by name**" — and ENVX4 names the same pair: "The cursor blends two colours and **the raster names a colour system**". Epic 3 delivered the cursor half of both and left them unclaimed for exactly this reason: half of each sentence was bound to nothing, because the raster did not exist yet. Story 2 built it, and none of story 2's five criteria as written reached the colour system — so the requirement would have been discharged in full by an epic that never checked the half it was written about.
+
+The board's own answer is to name no colour system at all. The CPM board rasterises with `color_system="truecolor"`, which it can afford because Rich's segments carry `Style` objects rather than escape codes and Textual downgrades them at output; the argument decides nothing there and would decide everything if the raster ever wrote its own output. Leaving it off makes the code say what the requirement says.
+
+Recorded here rather than pivoted because it amends this epic's rows only: one criterion, its approach, and two coverage rows. The source spec is untouched.
+
 ## Story 1 — Builders that emit markdown source
 
 **Status**: complete  
@@ -41,7 +51,7 @@ The must-NOT is stated as a property rather than as a search for the label that 
 
 ## Story 2 — Markdown rendered in the preview panel
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 3, Story 4, Story 5  
 
 ### Acceptance Criteria
@@ -51,30 +61,39 @@ The must-NOT is stated as a property rather than as a search for the label that 
 - Resizing the panel re-renders its contents at the new width. `[feature]`
 - The panel's renderable is built from styled text rather than being a live markdown widget, which is what leaves the rendered preview selectable. `[unit]`
 - must NOT — No markdown marker survives into the rendered output for a construct that was rendered — no `##` before a heading, no `- ` before a list item, no `**` around emphasis. `[unit]`
+- A preview the raster produced reaches a terminal reporting 256 colours as 8-bit colour and no 24-bit codes, so no colour system named where the terminal cannot be seen decides whether a preview is legible. `[unit]`
 
 ### Task 1 — Port markdown_content and HardBreakMarkdown from the CPM board
 
-**Status**: pending  
+**Status**: complete  
 
 Rasterise markdown through a Console at a given width and rebuild the segments into styled text. The rebuild is the part that matters: it is what leaves the rendered preview selectable, which a live markdown widget does not.
 
 ### Task 2 — Feed the preview panel the rasterised renderable instead of a plain string
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the panel's content only. The builders that supply the source it rasterises are story 1.
 
 ### Task 3 — Re-render the preview at the panel's new width on resize
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the raster being width-specific: a resize invalidates it, and a panel left holding the old raster shows lines broken for a width it no longer has.
 
 ### Task 4 — Write tests for Markdown rendered in the preview panel
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the five criteria — four tagged unit, and the resize one tagged feature, which drives the board rather than the render function.
+
+### Retro
+
+- The resize criterion nearly passed against a board that re-rendered nothing, and finding that out took a deliberate control. A Textual `Content` re-wraps itself to whatever panel it is in, so "the preview text changed after the resize" is true of a stale raster too — the paragraph reflows either way. What only re-rendering fixes is a construct laid out at the raster's width rather than wrapped to the panel's: a heading is *centred*, so a stale one arrives with the old width's padding still on it and spills onto a second line. That is what the criterion asserts now.
+
+The same control found a real bug. Re-rendering from the app's own `on_resize` reads the panel's width before the columns beneath have been laid out again, so it rasterises at the width the panel had a moment ago — the exact stale layout it exists to replace, one step later. The source moved onto a `PreviewBody` widget that re-renders on *its own* `Resize`, which is delivered with its new size. The CPM board drives both panels from the app's event; it gets away with it because its panels are wider and its documents wrap at paragraph level, not because the shape is right.
+
+One deliberate divergence from CPM, in the other direction: the raster names no colour system. CPM asks for `truecolor` and can afford to — Rich's segments carry `Style` objects and Textual downgrades at output — but NFR3 and ENVX4 both name the raster's colour system as a thing that must not decide legibility, and neither had a criterion reaching it. One was added, with a coverage row against each.
 
 ## Story 3 — The cursor stays ahead of the raster
 

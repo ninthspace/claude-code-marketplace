@@ -39,6 +39,8 @@ from pathlib import Path
 
 from rich.color import Color
 from rich.color_triplet import ColorTriplet
+from rich.console import Console
+from rich.markdown import Markdown
 from rich.segment import Segment
 from rich.style import Style
 from rich.table import Table
@@ -47,6 +49,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.content import Content
 from textual.screen import ModalScreen
 from textual.strip import Strip
 from textual.widgets import DirectoryTree, Footer, Header, Input, Label, OptionList, Static
@@ -772,6 +775,81 @@ def cursor_strip(strip: Strip, *, focused: bool) -> Strip:
     )
 
 
+#: The narrowest width markdown is laid out at, whatever the panel says it has (FR6). A panel
+#: reporting less than this is mid-layout rather than a width anyone is reading at, and Rich's
+#: tables and headings have nowhere to put themselves below it — the resize that follows re-renders
+#: at the real width, so nothing is stuck at the floor.
+MINIMUM_RASTER = 10
+
+#: What a panel that has not been laid out yet is rasterised at — an ordinary terminal width, so a
+#: preview rendered before the first layout reads as a document rather than as a column of single
+#: characters. See :func:`_panel_width`.
+FALLBACK_WIDTH = 80
+
+
+class HardBreakMarkdown(Markdown):
+    """`Markdown` that renders a single newline as a line break, GitHub-style (FR6).
+
+    CommonMark treats a lone newline as a *soft* break — a space — so consecutive lines collapse
+    into one run-on paragraph. The previews are built from rows, where a criterion and the criterion
+    after it are two rows and two lines, so the line structure is the content rather than the
+    source's formatting. Paragraph wrapping at the panel width is untouched: that is display
+    wrapping, and this rewrites break *tokens*.
+    """
+
+    def __init__(self, markup: str, **kwargs: object) -> None:
+        super().__init__(markup, **kwargs)
+
+        for token in self.parsed:
+            for child in token.children or []:
+                if child.type == "softbreak":
+                    child.type = "hardbreak"
+
+
+def markdown_content(markup: str, width: int) -> Content:
+    """``markup`` rasterised at ``width`` as selectable styled text (FR6).
+
+    **Rasterised rather than handed to a markdown widget, and selection is the reason.** Textual
+    maps a selection over a `Static` whose renderable is `Text` or `Content`; a live `Markdown`
+    renders to strips with no selection mapping, so a preview built that way is one a user cannot
+    copy a line out of. Rendering to segments at the panel's width and rebuilding them as `Content`
+    keeps every heading, emphasis, list and table Rich would draw and gives the selection back.
+
+    The raster is width-specific — that is what the width argument means — so the caller re-renders
+    it when the panel resizes.
+
+    **No colour system is named** (NFR3, ENVX4). The segments this produces carry `Style` objects
+    rather than escape codes, and Textual downgrades them at output against the terminal it actually
+    has; naming one here would be a claim about that terminal made in the one place that cannot see
+    it, and on a 256-colour terminal it is the claim that decides whether a preview is legible.
+
+    Trailing pad is stripped per line, so a copied selection carries no run-on whitespace.
+    """
+    laid_out = max(width, MINIMUM_RASTER)
+    console = Console(width=laid_out)
+    rendered = console.render(
+        HardBreakMarkdown(markup), console.options.update_width(laid_out)
+    )
+    text = Text()
+
+    for line in Segment.split_lines(rendered):
+        painted = Text()
+
+        for segment in line:
+            if segment.control:
+                continue
+
+            painted.append(segment.text, style=segment.style or "")
+
+        painted.rstrip()
+        text.append_text(painted)
+        text.append("\n")
+
+    text.rstrip()
+
+    return Content.from_rich_text(text)
+
+
 class Column(OptionList):
     """One of the board's three columns, with ← and → returned to the board (FR19).
 
@@ -1130,13 +1208,59 @@ def _marked_row(summary: str, *, badge: str, pill: str) -> Table:
     return grid
 
 
+class PreviewBody(Static):
+    """A preview panel's body: markdown source, rasterised at whatever width the panel has (FR6).
+
+    **The source is held here rather than on the app, and the re-render is this widget's own
+    `Resize` rather than the app's.** The app's event carries the *terminal's* new size and arrives
+    before the columns beneath it have been laid out again, so a raster driven from it reads the
+    width the panel had a moment ago — which is the stale layout the re-render exists to replace,
+    written one step later. A widget's own `Resize` is delivered with its new size, which is the
+    only width worth rasterising at.
+    """
+
+    def __init__(self, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+
+        #: The markdown last put in this panel. Held because the raster is width-specific and a
+        #: painted `Content` cannot be reflowed back into the markdown it came from.
+        self.source = ""
+
+    def show(self, source: str) -> None:
+        """Put ``source`` in the panel, rendered at the width it has now."""
+        self.source = source
+        self.rasterise()
+
+    def on_resize(self, event: object) -> None:
+        """Render the same source again, because the raster was laid out at the old width."""
+        self.rasterise()
+
+    def rasterise(self) -> None:
+        content = markdown_content(self.source, _panel_width(self)) if self.source else Content("")
+
+        self.update(content)
+
+
+def _panel_width(body: Static) -> int:
+    """The width to rasterise a panel's markdown at: its content region (FR6).
+
+    `content_size` is what the widget has *inside* its padding and border, which is where the text
+    goes. Before the first layout it is zero and so is `size`, and a raster at zero would lay every
+    paragraph out one character wide — so the fallback is a width a document reads at, and the
+    resize that follows the first layout re-renders at the real one.
+    """
+    width = body.content_size.width or body.size.width
+
+    return width if width > 0 else FALLBACK_WIDTH
+
+
 def _preview_panel(kind: str) -> VerticalScroll:
     """The read-only panel beneath a column, holding the highlighted row's preview.
 
     ``can_focus`` is off so that ← / → still steps between the three lists rather than through a
     panel that has nothing to select. Long previews scroll with the wheel.
     """
-    panel = VerticalScroll(Static(id=f"{kind}-preview-body"), id=f"{kind}-preview")
+    panel = VerticalScroll(PreviewBody(id=f"{kind}-preview-body"), id=f"{kind}-preview")
     panel.can_focus = False
 
     return panel
@@ -1627,13 +1751,11 @@ class BoardApp(App[None]):
         the browser before a pool is bound to it — the label is all there is, which is the right
         answer rather than a blank panel.
         """
-        body = self.query_one(f"#{kind}-preview-body", Static)
-
         if row is None:
-            body.update("")
+            self._paint_preview(kind, "")
             return
 
-        body.update(row.label)
+        self._paint_preview(kind, row.label)
 
         project = self.selection.current_project
 
@@ -1650,7 +1772,15 @@ class BoardApp(App[None]):
         text = await self._reader(root, row)
 
         if self._awaited.get(kind) == row.id:
-            self.query_one(f"#{kind}-preview-body", Static).update(text)
+            self._paint_preview(kind, text)
+
+    def _paint_preview(self, kind: str, source: str) -> None:
+        """Put ``source`` in ``kind``'s panel (FR6).
+
+        Everything a panel shows goes through here, the row's label included: a placeholder painted
+        some other way would be the one thing the panel could not render again on a resize.
+        """
+        self.query_one(f"#{kind}-preview-body", PreviewBody).show(source)
 
     # --- navigation ----------------------------------------------------------
 
