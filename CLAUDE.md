@@ -4,7 +4,15 @@
 
 This repository migrated from CPM to DPM on 2026-08-16. Two rules follow, and both are permanent.
 
-**Never hand-write into the folders DPM generates.** `plans`, `briefs`, `specifications`, `epics`, `reviews`, `retros`, `quick`, `discussions`, `communications`, `audits`, `runbooks` and `library` under `docs/` are regenerated from `.dpm/dpm.db` whenever DPM publishes. Anything written there by hand is competing with a generator and is lost at the next regeneration. The pre-commit guard (`.git/hooks/pre-commit`, symlinked into the DPM plugin) refuses the commit and names what diverged; it deliberately fixes nothing, because a hook that regenerated and staged the result would silently overwrite the edit. Move the content into the database instead — that is what the guard is asking for.
+**Never hand-write into the folders DPM generates.** `plans`, `briefs`, `specifications`, `epics`, `reviews`, `retros`, `quick`, `discussions`, `communications`, `audits`, `runbooks` and `library` under `docs/` are regenerated from `.dpm/dpm.db` whenever DPM publishes. Anything written there by hand is competing with a generator and is lost at the next regeneration. The pre-commit guard (`.git/hooks/pre-commit`) refuses the commit and names what diverged; it deliberately fixes nothing, because a hook that regenerated and staged the result would silently overwrite the edit. Move the content into the database instead — that is what the guard is asking for.
+
+**The guard is symlinked at `dpm/hooks/pre-commit` in this working tree, not at a release in the plugin cache**, and it is the one repository where that is right. A cache path carries a version, so an ordinary project's link goes stale on upgrade; here the guard would go stale against the schema being *written three directories away*. On 2026-08-16 it did: schema 24 landed under `dpm/src/schema/`, this project's own database migrated to it, and the 0.5.0 guard refused the commit because it knew 23 — correctly, since a guard cannot project a database newer than itself. Pointing the link at the working tree makes that skew structurally impossible, because the guard and the schema are now the same checkout. Re-make it the same way if it is ever lost:
+
+```sh
+ln -sf "$(git rev-parse --show-toplevel)/dpm/hooks/pre-commit" .git/hooks/pre-commit
+```
+
+**The MCP server has no equivalent fix, and a schema bump costs one reinstall.** The server is always the *installed* plugin, so once this project's `.dpm/dpm.db` migrates past the installed release's target it is served read-only — DPM reads work and every write is refused — until the plugin is reinstalled at the new version. That is not a fault to diagnose: it is version skew reported exactly as designed. Do not resolve it by holding the schema back, either. `self-hosting.test.js` compares the vocabulary a release ships against the committed `.dpm/dpm.sql`, so a release whose dump predates its own schema fails its own suite; the database migrates with the release, and the reinstall follows.
 
 **The CPM-era corpus lives under `docs/cpm/` and never moves back.** 140 planning documents across nine folders. It stays readable, greppable and in git exactly as it was, and DPM cannot see it: DPM only looks one folder deep, so `docs/cpm/` is permanently out of reach. Cite it by that path.
 
