@@ -40,23 +40,33 @@ is the same coverage stated honestly, which is the whole argument for it.
 
 ## The rule that survived, and the one that did not
 
-**Survived**: nothing here is transcribed. Every reader still *parses the document* — the register
-tables, the conversion headings, the coverage columns — rather than holding its own copy of what
-those documents say. `tests/support/register.js` exists precisely to stop a hand-kept array drifting
-from its source, and reading a frozen file keeps that intact. Scanning also still beats listing:
-`readdirSync` over this directory picks up every register section in it, so a reader cannot silently
-omit one.
+**Survived**: nothing here is transcribed. Every reader still *parses the document* — the false-pass
+register's table, the conversion headings, the coverage columns — rather than holding its own copy
+of what those documents say. `tests/support/register.js` exists precisely to stop a hand-kept array
+drifting from its source, and reading a frozen file keeps that intact. Scanning also still beats
+listing: `readdirSync` over this directory is what finds every conversion story in it, so a reader
+cannot silently omit one.
 
 **Did not**: growth. These files are a snapshot and will never gain a row. Editing them to record
 something new would be writing a planning document into a test fixture, which is not what this is
 for.
 
-## The open work this directory names
+## The self-hosting register is not read from here any more
 
-**A dpm-era self-hosting register has no home.** The register's claim is that it is itself the thing
-under test — a condition discovered later is added to it, and the check fails until that condition
-has a test. Against a snapshot, "later" stopped being reachable. Carrying the register into dpm, so
-the scan reads rows and can grow again, is the fix and it has not been specified. Until it is, these
-checks assert that the CPM-era register closed: true, and permanently true.
+This directory briefly carried a fourth reader. `self-hosting.test.js` swept these epics for their
+`### Self-hosting register` tables and asserted that no entry was OPEN; the snapshot froze that
+sweep, and the note here said a dpm-era register needed a home.
 
-Do not add files here to work around that. It is a spec, not a fixture edit.
+It was retired on 2026-08-16 instead, and the reasoning is in that file's header. Briefly: the sweep
+asserted that somebody had written CLOSED in a table, while the claim with teeth — that the five
+shapes the register was opened for survive a round trip — is a separate test that reads the
+database. The register's own history is the argument, since all five entries were found by reaching
+for something and watching it fail and none by reading. Its slot now holds an assertion of that
+kind: every vocabulary term the release ships must be present in this project's committed database,
+which is the check that would have caught the most recent such failure by itself.
+
+The register tables are still here, inside these epics, as the record of what was found and how each
+entry closed. Nothing reads them.
+
+Do not add files here. This is a snapshot, and a planning document written into a test directory is
+not a planning document.

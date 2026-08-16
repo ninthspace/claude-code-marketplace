@@ -5,10 +5,23 @@
  *   document in it. Its completeness is derived rather than listed" [feature]
  * - "The loaded corpus passes `PRAGMA foreign_key_check` and every entry in the invariant register"
  *   [integration]
- * - "Every entry in the self-hosting register is closed, or explicitly waived with a recorded
- *   reason; no entry remains OPEN" [integration]
  * - "must NOT — a corpus artefact loads with content dropped because no column held it, and the
  *   load reports success" [integration]
+ *
+ * **A fourth criterion — "every entry in the self-hosting register is closed, or explicitly waived;
+ * no entry remains OPEN" — was retired on 2026-08-16, and what replaced it is the third test
+ * below.** The register was a markdown table in Epic 47-01's Notes, and the check swept the epic
+ * files for its status column. Two things ended it. The repository migrated from CPM to dpm, so
+ * epics from 51 onwards are rows rather than files and no later entry could reach a file sweep
+ * whatever path it was given. And the check was only ever a documentary one: it asserted that
+ * somebody had written CLOSED in a table, while the claim with teeth — that the five shapes the
+ * register was opened for survive a round trip — is the third test in this file and reads the
+ * database, not the register.
+ *
+ * What the register was *for* is better served by an assertion than by a table. Its own history
+ * says so: all five entries were found by reaching for something and watching it fail, none by
+ * reading. So the slot now holds the check that would have caught the most recent such failure
+ * automatically — a vocabulary this release ships being absent from the project that ships it.
  *
  * **This is the build's standing acceptance check, and it has a history.** Asking whether dpm could
  * hold a real planning corpus is what produced all five self-hosting register entries, every one of
@@ -27,30 +40,17 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { openPlanningDatabase, handlers } from './support/planning-database.js';
+import { start } from '../src/start.js';
+import { VOCABULARIES } from '../src/schema/seeds/index.js';
 import { selfHostingCorpus } from './support/self-hosting.js';
 import { spineTools } from '../src/tools/index.js';
 import { project, renderDocument } from '../src/projection/index.js';
 import { identifiers } from '../src/projection/naming.js';
 import { resolve } from '../src/projection/markers.js';
-
-/**
- * The frozen spec-47 corpus under `tests/corpus-snapshot/`, not the repository's `docs/`.
- *
- * **What this costs, stated because the scan below argues the opposite.** `registerSections()` is
- * written to pick up an entry raised by an epic written later, and against a fixture no later epic
- * can arrive. That property was already lost, though, and not by this line: the repository migrated
- * from CPM to dpm, so epics from 51 onwards are rows in `.dpm/dpm.db` rather than files under
- * `docs/epics/` — a path into `docs/cpm/` would scan a parked archive while reading as though it
- * still watched the live corpus. A fixture is the same coverage, said honestly.
- *
- * **A dpm-era register has no home yet**, and that is the open work this note exists to name.
- * Carrying the register into dpm, so the scan reads rows and grows again, is the fix; until then
- * this asserts that the CPM-era register closed, which is true and permanently true.
- */
-const EPICS = join(import.meta.dirname, 'corpus-snapshot', 'epics');
 
 /** Open a database, load the corpus, and hand back everything a test here needs. */
 function loaded(t) {
@@ -242,85 +242,102 @@ test('the loaded corpus passes foreign_key_check and every invariant register en
     'the graph is too small for this to be a different test from the per-entry ones');
 });
 
-// --- Criterion 3: the self-hosting register has no OPEN entry ------------------------------------
+// --- Criterion 3: the vocabularies this release ships reached the project it ships from ----------
 
 /**
- * Every `### Self-hosting register` section across the epics, as raw text keyed by file.
+ * The primary key columns of a table, read off the schema in front of us.
  *
- * Scanned rather than listed, so an entry raised by an epic written later is picked up. The
- * register's home is Epic 47-01's Notes; the other epics carry sections of the same name scoping
- * which entries bear on them, and an entry can be reopened in any of them.
+ * `seeds/index.js` has a private one of these for its `ON CONFLICT` target. Deriving rather than
+ * listing is the same reason as everywhere else in this file: a key that changes moves this
+ * comparison with it, and a hand-kept list of key columns is a second statement of the schema that
+ * nothing keeps true.
  */
-function registerSections() {
-  const sections = new Map();
+function primaryKeyOf(db, table) {
+  return db.prepare('SELECT name FROM pragma_table_info(?) WHERE pk > 0 ORDER BY pk')
+    .all(table).map((row) => row.name);
+}
 
-  for (const file of readdirSync(EPICS).filter((name) => /-epic-.*\.md$/.test(name))) {
-    const lines = readFileSync(join(EPICS, file), 'utf8').split('\n');
-    const start = lines.findIndex((line) => /^#{2,4} Self-hosting register/.test(line));
-    if (start === -1) continue;
+/**
+ * Which vocabulary rows a release ships that the project's own committed database does not hold.
+ *
+ * A function returning problems rather than a run of assertions, so the reading can be driven
+ * against a database with the defect planted — which is the only way to know it reads at all.
+ *
+ * **Matched on the primary key, not on the whole row.** A project may legally retire a term, which
+ * sets `retired_at` and leaves everything else; and a release that changes a term's `position`
+ * leaves an existing project on the old one, because seeding inserts what is absent and never
+ * updates what is present. Comparing whole rows would report both as drift. The key is what
+ * "present" means here.
+ *
+ * `swept` comes back beside `missing` because a comparison that read nothing reports nothing
+ * missing, and from the assertion's side the two are the same observation.
+ */
+function unseeded(shipped, held) {
+  const missing = [];
+  let swept = 0;
 
-    const rest = lines.slice(start + 1);
-    const end = rest.findIndex((line) => /^#{1,4} /.test(line));
+  for (const { table } of VOCABULARIES) {
+    const key = primaryKeyOf(shipped, table);
+    const where = key.map((column) => `${column} = ?`).join(' AND ');
 
-    sections.set(file, (end === -1 ? rest : rest.slice(0, end)).join('\n'));
+    for (const row of shipped.prepare(`SELECT ${key.join(', ')} FROM ${table}`).all()) {
+      swept += 1;
+
+      const values = key.map((column) => row[column]);
+      const found = held.prepare(`SELECT count(*) AS rows FROM ${table} WHERE ${where}`).get(...values);
+
+      if (found.rows === 0) missing.push(`${table}: ${values.join('/')}`);
+    }
   }
 
-  return sections;
+  return { missing: missing.sort(), swept };
 }
 
 /**
- * The numbered entries in a register section, each as `{ number, subject, status }`.
+ * This project's own database, as the dump committed beside it.
  *
- * **The status column and not the word.** A first cut swept the section text for the word `OPEN`
- * and failed on 47-09, whose notes narrate *"it held five OPEN entries when this epic was
- * written"* — a sentence about the register's history, in a section whose own table has no status
- * to give. Reading the column distinguishes an entry's state from prose that mentions a state,
- * and a section tabulating something other than entry status contributes nothing rather than
- * everything.
+ * **The dump and not `.dpm/dpm.db`**, which is gitignored and absent from a clean checkout — a
+ * check that skipped itself when the file was missing would report a clean pass it never computed.
+ * The dump is the committed record of what this project's database holds, so it is both always
+ * present and the thing a reader would be misled by if it were wrong.
  */
-function registerEntries(text) {
-  const rows = text.split('\n').filter((line) => line.trim().startsWith('|'));
-  const heading = rows.findIndex((line) => /\|\s*Status\s*\|/.test(line));
-  if (heading === -1) return [];
+const DUMP = join(import.meta.dirname, '..', '..', '.dpm', 'dpm.sql');
 
-  const columns = rows[heading].split('|').map((cell) => cell.trim());
-  const status = columns.indexOf('Status');
+test('every vocabulary term this release ships is in the project database it ships from', (t) => {
+  const shipped = start(':memory:').db;
+  t.after(() => shipped.close());
 
-  return rows.slice(heading + 1)
-    .map((line) => line.split('|').map((cell) => cell.trim()))
-    .filter((cells) => cells.length === columns.length && /^\d+$/.test(cells[1]))
-    .map((cells) => ({ number: cells[1], subject: cells[2], status: cells[status] }));
-}
+  const held = new DatabaseSync(':memory:');
+  t.after(() => held.close());
+  held.exec(readFileSync(DUMP, 'utf8'));
 
-test('no entry in the self-hosting register remains OPEN', () => {
-  const sections = registerSections();
+  const { missing, swept } = unseeded(shipped, held);
 
-  assert.ok(sections.size > 0, 'no epic carries a self-hosting register section');
+  // The floor is over what the release ships, so it moves when a vocabulary does. Without it a
+  // `VOCABULARIES` that had stopped enumerating would report nothing missing over nothing read.
+  assert.ok(swept >= 50,
+    `the comparison read ${swept} shipped terms — it is not reading the vocabularies`);
 
-  const entries = [...sections].flatMap(([file, text]) =>
-    registerEntries(text).map((entry) => ({ file, ...entry })));
+  assert.deepEqual(missing, [],
+    'a vocabulary term this release seeds is absent from the project\'s committed database — the '
+    + 'skills that name its domain will read an empty vocabulary and render nothing, reporting '
+    + 'success. Start a server against .dpm/dpm.db and publish');
 
-  // **The sweep having something to read is half the claim.** A register whose rows were deleted
-  // has no OPEN entry either, and it passes the negative check in exactly the shape a closed
-  // register does — so the count is asserted before the states are.
-  assert.ok(entries.length >= 5,
-    `the register sweep found ${entries.length} entries across ${sections.size} sections — it had five`);
+  // **The control is the incident.** On 2026-08-16 this project's database held four taxonomy
+  // domains and the release shipped five: `disposition` had never been seeded, because the running
+  // server predated the release and `publish` deliberately opens without starting. Every skill
+  // naming that domain would have read nothing and said nothing. Deleting the same four rows is
+  // what that state looked like, and the comparison has to report it.
+  held.exec("DELETE FROM taxonomy WHERE domain = 'disposition'");
 
-  assert.deepEqual(
-    entries.filter((entry) => !/^(CLOSED|WAIVED)\b/.test(entry.status))
-      .map((entry) => `${entry.file} #${entry.number}: ${entry.subject} is ${entry.status}`),
-    [], 'a self-hosting register entry is neither closed nor explicitly waived');
+  const planted = unseeded(shipped, held);
 
-  // And the control: the same reading over a section written the way a reopened entry would be,
-  // in a table shaped like the register's own.
-  const planted = registerEntries([
-    '| # | Entry | Status | Closed by |',
-    '|---|---|---|---|',
-    '| 6 | Something the corpus needs | OPEN | — |',
-  ].join('\n'));
-
-  assert.deepEqual(planted, [{ number: '6', subject: 'Something the corpus needs', status: 'OPEN' }],
-    'the reading does not recognise an OPEN entry');
+  assert.deepEqual(planted.missing, [
+    'taxonomy: disposition:fixed',
+    'taxonomy: disposition:left-alone',
+    'taxonomy: disposition:needs-you',
+    'taxonomy: disposition:unverified',
+  ], 'the comparison does not read — a whole domain was removed and it reported nothing');
 });
 
 // --- Criterion 4 (must NOT): content dropped, and the load reporting success ----------------------
