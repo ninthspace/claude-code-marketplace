@@ -12,6 +12,7 @@
  * must either accept that or disconnect.
  */
 
+import { pluginVersion } from './plugin-version.js';
 import { RPC_ERRORS, failure, isRequest, isValidMessage, success } from './rpc.js';
 
 /**
@@ -28,8 +29,55 @@ export const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 /** What the server offers when the client asks for something it does not know. */
 export const PREFERRED_PROTOCOL = SUPPORTED_PROTOCOLS[0];
 
-/** Named once so the tests and the handshake cannot disagree about it. */
-export const SERVER_INFO = { name: 'dpm', version: '0.1.0' };
+/** What this server calls itself. The one part of its identity that is not read from anywhere. */
+const NAME = 'dpm';
+
+/**
+ * What the handshake answers when the manifest cannot be read.
+ *
+ * **Not `0.0.0`, and the difference matters to a client.** A version-shaped string is one a client
+ * may compare, and comparing it succeeds — it just answers that this server is older than every
+ * release there has ever been, which is a claim nobody made. `unknown` fails a comparison instead,
+ * and a comparison that fails is a question the client can see it did not get an answer to. It is
+ * the same distinction FR5 draws between `none` and `unknown` one layer down: *checked and found
+ * nothing* is not *could not check*.
+ */
+export const UNKNOWN_VERSION = 'unknown';
+
+/**
+ * The `serverInfo` block the handshake answers with, resolved rather than written here.
+ *
+ * **It was a literal, and the literal was wrong for three releases.** `'0.1.0'` was correct when
+ * this module was written and was never touched again; by the time anyone read it `package.json`
+ * said `0.4.0`, and every session since had been announcing a version that had not existed for
+ * months. Nothing caught it because nothing compared the two — the handshake test asserted the
+ * name and the schema version and walked past the version between them. A value maintained by
+ * remembering to maintain it is one that drifts silently, which is the whole subject of the spec
+ * this fix came out of.
+ *
+ * So it comes from the manifest, through the same resolver the database stamp uses. One file states
+ * this plugin's version, and everything that reports it reads that file.
+ *
+ * **The version is a parameter for the reason it is one on `pluginVersion` itself**: the fallback
+ * below is reachable only when the manifest is unreadable, and a fallback no test can reach is
+ * indistinguishable from dead code.
+ *
+ * @param {string|null} [version] The version to announce. Defaults to this plugin's own.
+ * @returns {{name: string, version: string}}
+ */
+export function serverIdentity(version = pluginVersion()) {
+  return { name: NAME, version: version ?? UNKNOWN_VERSION };
+}
+
+/**
+ * Named once so the tests and the handshake cannot disagree about it.
+ *
+ * Resolved at module load rather than per call: the manifest cannot change under a running process
+ * in any layout this ships in — the host copies a whole package into a version directory it never
+ * writes to again — so a read per handshake would buy nothing and put a filesystem error on the
+ * path of the first message a client sends.
+ */
+export const SERVER_INFO = serverIdentity();
 
 /**
  * @typedef {object} Tool

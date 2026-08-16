@@ -25,6 +25,8 @@ one without the other and the suite fails on the half that moved.
 - [`dpm` — the retirement abort message the tool layer parses](#dpm--the-retirement-abort-message-the-tool-layer-parses)
 - [`dpm` ↔ the harness — the MCP tool name prefix](#dpm--the-harness--the-mcp-tool-name-prefix)
 - [`dpm:status` ↔ `dpm/tools/board` — the status-model reconciliation record](#dpmstatus--dpmtoolsboard--the-status-model-reconciliation-record)
+- [`dpm` ↔ the harness — the plugin cache layout the neighbour check reads](#dpm--the-harness--the-plugin-cache-layout-the-neighbour-check-reads)
+- [`dpm` ↔ the harness — the four files that state dpm's version](#dpm--the-harness--the-four-files-that-state-dpms-version)
 
 ---
 
@@ -167,6 +169,105 @@ mechanically.
 **What asserts it.** `dpm/tools/board/tests/test_contract.py` reconciles this table's first column
 against the contract's rule headings, in both directions and over a floor, so a rule added to the
 contract fails until it appears here and a disposition for a rule that no longer exists fails too.
+
+---
+
+## `dpm` ↔ the harness — the plugin cache layout the neighbour check reads
+
+**The record.** `dpm/src/server/neighbour.js` assumes that an installed plugin lives in a
+**version-named directory**, and that **every version of that plugin installed on the machine is a
+sibling of it under one parent**. Today the harness satisfies both:
+`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`, so a server running from
+`.../dpm/0.3.0` finds `0.4.0` beside it. The check derives its own directory from
+`import.meta.url`, reads that directory's **parent**, non-recursively, once, and compares the
+sibling names as versions using `parseVersion` from `src/server/node-floor.js`. It reads nothing
+else — no registry, no `installed_plugins.json`, no environment variable, no network.
+
+None of that layout is dpm's to guarantee. It is the harness's, it is undocumented as a contract,
+and the whole mechanism rests on two properties of it that a reorganisation could drop
+independently: that the directory is *named for the version*, and that the versions are *siblings*.
+
+**Why it needs a record.** The failure mode when the layout changes is silence, which is the same
+failure this check was built to break. A cache reorganised so that versions no longer sit side by
+side produces a listing with nothing version-shaped in it, and the check answers *could not check*
+— correctly, honestly, and forever, on every machine, while reporting no skew that anyone would
+act on. Nothing throws and no test goes red, because every test constructs its own layout rather
+than reading the real cache (ENVX2, and the reason for it). The three-state verdict is what keeps
+this from being worse: could-not-check is a distinct answer from no-skew, so a reader who looks
+sees that nothing was checked. But nobody looks at a diagnostic that has quietly stopped
+diagnosing, which is why this is written down rather than left to the code.
+
+**What can break it.** A harness change to where plugins are unpacked, or to how the directories
+are named — a content hash instead of a version, a flat directory with the version in the filename,
+one directory per marketplace-and-version pair. Also a sweep that removes older versions: the
+neighbour check sees a newer release only while the older one it is running from still has a
+newer *sibling*, so a cache pruned to one directory reports could-not-check. That last case is
+FR8's territory — consulting the installation registry — and it is deferred, not solved.
+
+**What asserts it.** Nothing can, and that is the point of the entry. Every test of the check
+builds its own sibling directories under a temporary root, because a test that read the real cache
+would pass on the author's machine for reasons unrelated to the code being correct. So the suite
+proves the check reads *a* layout of this shape and can prove nothing about whether the host still
+produces one. What is asserted is the honesty of the failure: `dpm/tests/neighbour.test.js` pins
+that an unreadable or unrecognisable root yields could-not-check rather than no-skew, and
+`dpm/tests/cross-tools.test.js` pins that the state reaches `check_integrity`'s response as a
+value rather than as prose. **The layout assumption itself is checked by a person reading this.**
+
+---
+
+## `dpm` ↔ the harness — the four files that state dpm's version
+
+**The record.** Releasing dpm means writing the same version into **four files by hand**, and each
+is read by a different reader before any of dpm's own code runs:
+
+| File | Read by | What it decides |
+|---|---|---|
+| `dpm/package.json` | dpm itself, via `pluginVersion()` | what the server announces at handshake, and what the database stamp records |
+| `dpm/.claude-plugin/plugin.json` | the harness, on install | that the plugin is installable, and what it is |
+| `.claude-plugin/marketplace.json` (the `dpm` entry) | the harness, on catalogue read | that the release is *findable* — which version an install resolves to |
+| `README.md` (the `### DPM …` heading) | a person | which version the documentation below it describes |
+
+`package.json` is the one dpm follows. `src/server/plugin-version.js` reads it, `src/server/mcp.js`
+resolves `SERVER_INFO.version` from it at module load, and `src/server/stamp.js` writes it into the
+database. **Nothing in the running server reads the other three**, and nothing derives any of the
+four from another — the harness resolves the plugin before dpm exists to be asked, and the README is
+read by nobody but a human.
+
+**Why it needs a record.** There was a fourth, and it was wrong for three releases. `SERVER_INFO`
+in `src/server/mcp.js` was the literal `'0.1.0'`, correct when it was written and never touched
+again; by the time anyone read it `package.json` said `0.4.0`, and every session in between had been
+announcing a version that had not existed for months. Nothing caught it because nothing compared it
+to anything — the handshake test asserted the server's *name* and its *schema version* and stepped
+over the version between them. That one is now fixed by deletion rather than by discipline: it is
+read, not written, so it cannot lag.
+
+The remaining four cannot be collapsed the same way, so they are compared instead. The failure they
+produce is not a crash. A `plugin.json` left behind at a bump installs cleanly into a cache directory
+named for one version while the server inside answers with another — and `neighbour.js` reads
+directory names, so dpm's own skew diagnostic fires on a correct install and reports staleness that
+is not there. A diagnostic that cries wolf is spent, which is a worse outcome than the silence the
+whole version-skew spec was written to break.
+
+**What can break it.** A release that edits some of the four — which is not hypothetical. The check
+below was written naming three, the release later that same day bumped exactly those three, and the
+README heading went out at the previous version. It is the site with no machine reader, so it is the
+one a release forgets. Also a harness change to where the catalogue lives or what key names a
+plugin's version in it — the reading finds the `dpm` entry by `plugins[].name` and reads `version`,
+neither of which is dpm's to guarantee. And a checkout publishing `dpm/` on its own, where the
+catalogue and the README are legitimately absent.
+
+**What asserts it.** `dpm/tests/reachability.test.js` — `versionProblems()` compares all four and
+two tests drive it, one against the real files and one against planted half-bumps. Two halves are
+**conditional**: the catalogue and the README sit one directory above the plugin and are genuinely
+absent from an installed copy, so a missing one is named with a `t.diagnostic` rather than skipped
+quietly. The controls construct their own inputs, so the reading is exercised either way.
+
+**The README binding is weaker than the other three and deliberately so.** It matches a heading with
+a regex, where the others read a JSON field. A heading reworded past the pattern reports *no version
+stated*, which fails rather than passes — the weakness costs a false alarm, never a false pass.
+
+Verified by mutation on 2026-08-16: a lagging `plugin.json`, a lagging catalogue entry, and a lagging
+README heading each fail the first test by name.
 
 ---
 

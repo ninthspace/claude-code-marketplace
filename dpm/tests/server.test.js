@@ -20,13 +20,13 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { advertisedTools, main, open, serve } from '../src/server/index.js';
 import { IGNORE_FILE, IGNORE_PATTERN } from '../src/server/ignore.js';
-import { dispatch, methods, negotiate, PREFERRED_PROTOCOL, SUPPORTED_PROTOCOLS } from '../src/server/mcp.js';
+import { dispatch, methods, negotiate, PREFERRED_PROTOCOL, SERVER_INFO, serverIdentity, SUPPORTED_PROTOCOLS, UNKNOWN_VERSION } from '../src/server/mcp.js';
 import { takeLines } from '../src/server/transport.js';
 import { targetVersion } from '../src/schema/migrate.js';
 import { assertNodeFloor, floorMessage, meetsFloor, REQUIRED_NODE } from '../src/server/node-floor.js';
 import { filterWarnings, isSqliteExperimental } from '../src/server/warnings.js';
 import { sha256 } from './support/hashes.js';
-import { javascriptFilesUnder } from './support/sources.js';
+import { javascriptFilesUnder, packageManifest } from './support/sources.js';
 import { openDatabaseFile } from './support/database.js';
 import { openPlanningDatabase } from './support/planning-database.js';
 import { recordOpen, recordStarts } from './support/recorders.js';
@@ -85,7 +85,7 @@ test('the refusal names both the required version and the one in use', () => {
 });
 
 test('package.json states the same floor the code enforces', () => {
-  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  const manifest = packageManifest();
 
   // Two copies of one number, which is the drift this project keeps finding. The test is what
   // makes them one fact.
@@ -223,6 +223,12 @@ test('the real binary serves a session over real pipes', async (t) => {
 
   assert.equal(info.name, 'dpm');
 
+  // From the spawned binary rather than the module, because the version is resolved from the
+  // manifest at load and the question is what a *client* is told. The in-process test below reads
+  // the same two values; this one proves they survive a real launch.
+  assert.equal(info.version, packageManifest().version,
+    'the binary announces a version the manifest does not state');
+
   // The schema version reaches a client through the handshake and nowhere else: the connection is
   // not open when `initialize` is answered (AD12 defers it to the first call) and no read tool
   // reports it. A client caching derived answers needs it, because an entry produced under an
@@ -308,7 +314,7 @@ test('the entry point reaches the server through a dynamic import, not a hoisted
 });
 
 test('dpm has no dependency to install, which is the checkable half of NFR1', () => {
-  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  const manifest = packageManifest();
 
   // NFR1's criterion is `[target]` — only a clean clone on a real host can close it. What can
   // be checked here is that there is nothing to install and nothing to build: no dependency
@@ -757,6 +763,28 @@ test('protocol negotiation echoes a version it knows and offers its own otherwis
   assert.equal(negotiate('1999-01-01'), PREFERRED_PROTOCOL);
   assert.equal(negotiate(undefined), PREFERRED_PROTOCOL);
   assert.equal(SUPPORTED_PROTOCOLS[0], PREFERRED_PROTOCOL, 'the preferred one is the newest');
+});
+
+test('the version the handshake announces is the version the manifest states', () => {
+  // **The assertion that was missing for three releases.** `SERVER_INFO.version` was the literal
+  // `'0.1.0'` while `package.json` said `0.4.0`, and no test in the suite read the two together —
+  // the end-to-end handshake test above checks the name and the schema version and steps over the
+  // version between them. A value nothing compares is a value that drifts, and this is the compare.
+  assert.equal(SERVER_INFO.name, 'dpm');
+  assert.equal(SERVER_INFO.version, packageManifest().version,
+    'the server announces a version its own manifest does not state');
+
+  // And it is a real one, so a manifest that lost its `version` cannot satisfy the line above by
+  // making both sides the fallback.
+  assert.notEqual(SERVER_INFO.version, UNKNOWN_VERSION);
+  assert.match(SERVER_INFO.version, /^\d+\.\d+\.\d+/, 'the manifest states something that is not a version');
+
+  // **The unreadable-manifest branch**, which is reachable in production and would otherwise be a
+  // fallback nothing exercises. `pluginVersion` answers `null` for a manifest that is missing,
+  // unparseable, or silent about its version, and a handshake has to answer with something.
+  assert.equal(serverIdentity(null).version, UNKNOWN_VERSION);
+  assert.equal(serverIdentity(null).name, 'dpm', 'the name is not conditional on the version');
+  assert.equal(serverIdentity('9.9.9').version, '9.9.9', 'a version given is a version announced');
 });
 
 test('a message split across chunk boundaries is parsed once and whole', () => {

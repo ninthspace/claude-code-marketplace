@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { openDatabase } from './support/database.js';
-import { javascriptFilesUnder } from './support/sources.js';
+import { javascriptFilesUnder, packageManifest } from './support/sources.js';
 import {
   auditEnvironment, auditImports, auditReach, auditWrites, importGraph, withoutComments,
 } from './support/sweeps.js';
@@ -152,7 +152,7 @@ test('no import in src/ or bin/ resolves outside node: builtins and this tree [u
 // --- ENV1: no install step ------------------------------------------------------------------------
 
 test('the suite runs from a clean checkout with no install step [integration]', () => {
-  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  const manifest = packageManifest();
 
   assert.deepEqual(manifest.dependencies ?? {}, {});
   assert.deepEqual(manifest.devDependencies ?? {}, {});

@@ -289,6 +289,9 @@ const UNPROJECTED = {
   document_kind_parent: 'which kinds may parent which, checked at write time and never rendered',
   number_sequence: 'the allocator\'s counter; what it hands out renders, and it does not',
   session: 'has no document_id — FR11 removed the file it used to be, and no parent can hold it',
+  plugin_stamp:
+    'the version of the plugin that last wrote this database — state about the reader, not about '
+    + 'any artefact, and it is the one row a stale server reads to find out that it is one',
 };
 
 test('every table populated through its own tool reaches the projection, or is accounted for', (t) => {
@@ -341,7 +344,7 @@ test('the tables that reach no template say why, and the reason is checkable', (
   assert.ok(db.prepare('SELECT count(*) AS n FROM session').get().n > 0,
     'no session row was written, so its absence from the projection proves nothing');
 
-  // The remaining four are reachable by no create tool at all, which is the structural form of
+  // The remaining five are reachable by no create tool at all, which is the structural form of
   // "not artefact state": Story 1's parity test exempts exactly these, and this is the same set
   // seen from the projection's end.
   const writable = new Set(
@@ -352,7 +355,7 @@ test('the tables that reach no template say why, and the reason is checkable', (
 
   assert.deepEqual(
     Object.keys(UNPROJECTED).filter((table) => !writable.has(table)).sort(),
-    ['document_kind', 'document_kind_parent', 'number_sequence', 'schema_version'],
+    ['document_kind', 'document_kind_parent', 'number_sequence', 'plugin_stamp', 'schema_version'],
     'the unprojected set no longer matches the set no create tool writes',
   );
 });

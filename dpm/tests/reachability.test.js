@@ -80,6 +80,140 @@ export function declarationProblems(manifest, root) {
   return problems;
 }
 
+/**
+ * The marketplace catalogue, one directory above the plugin. Absent in an installed copy — the host
+ * unpacks `dpm/` into a version directory and does not bring the catalogue with it — so its reading
+ * is conditional below, and the control that makes the reading mean anything does not depend on it.
+ */
+const CATALOGUE = join(DPM, '..', '.claude-plugin', 'marketplace.json');
+
+/** The repository README, which states dpm's version in a heading. Absent for the same reason. */
+const README = join(DPM, '..', 'README.md');
+
+/** The heading that carries it. Prose, and the only version site that is not a JSON field. */
+const HEADING = /^#+ DPM — .*\(v(\d+\.\d+\.\d+)\)/m;
+
+/**
+ * Where three files disagree about which version of dpm this is, or nothing.
+ *
+ * **Three files state it and nothing derived one from another**, which is a shape this repository
+ * has already been bitten by: `SERVER_INFO.version` in `src/server/mcp.js` was a fourth, held at
+ * `0.1.0` through three releases because nothing compared it to anything. That one is fixed by
+ * removing it — it reads `package.json` now — and these three cannot be, because each is read by a
+ * different reader before any of dpm's code runs. `package.json` is what the server and the database
+ * stamp resolve; `plugin.json` is what the harness reads to install; the catalogue entry is what it
+ * reads to *find* a release. So they are compared instead.
+ *
+ * **The catalogue is optional and the other two are not.** A missing catalogue means this is not the
+ * marketplace checkout; a missing entry in a catalogue that exists means the plugin was renamed or
+ * dropped, and that is a problem rather than an absence.
+ *
+ * **The README is the fourth and it is prose**, which is why it is here rather than trusted to a
+ * reader's eye: the release that this check was written during bumped three files and missed it, and
+ * the heading is the version a person sees first. A regex over a heading is a weaker binding than a
+ * JSON field and the weakness is stated rather than hidden — a heading reworded past the pattern
+ * reports as *no version stated*, which is a failure and not a pass.
+ *
+ * @param {object} manifests `package`, `plugin`, and `catalogue`/`readme` or null.
+ * @returns {string[]}
+ */
+export function versionProblems({ package: pkg, plugin, catalogue, readme }) {
+  const problems = [];
+  const stated = pkg.version;
+
+  if (typeof stated !== 'string' || stated.length === 0) return ['package.json states no version'];
+  if (plugin.version !== stated) problems.push(`plugin.json says ${plugin.version}, package.json says ${stated}`);
+
+  if (catalogue !== null) {
+    const entry = (catalogue.plugins ?? []).find(({ name }) => name === 'dpm');
+
+    if (!entry) problems.push('the marketplace catalogue lists no dpm plugin');
+    else if (entry.version !== stated) problems.push(`the catalogue says ${entry.version}, package.json says ${stated}`);
+  }
+
+  if (readme !== null) {
+    const heading = readme.match(HEADING);
+
+    if (!heading) problems.push('the README states no dpm version in a heading this can read');
+    else if (heading[1] !== stated) problems.push(`the README says ${heading[1]}, package.json says ${stated}`);
+  }
+
+  return problems;
+}
+
+test('every manifest that states dpm\'s version states the same one', (t) => {
+  const catalogue = existsSync(CATALOGUE) ? JSON.parse(readFileSync(CATALOGUE, 'utf8')) : null;
+  const readme = existsSync(README) ? readFileSync(README, 'utf8') : null;
+
+  const manifests = {
+    package: JSON.parse(readFileSync(join(DPM, 'package.json'), 'utf8')),
+    plugin: JSON.parse(readFileSync(MANIFEST, 'utf8')),
+    catalogue,
+    readme,
+  };
+
+  assert.deepEqual(versionProblems(manifests), []);
+
+  // Named rather than silently skipped. A conditional read that goes quiet is how a check stops
+  // checking without anyone noticing, and the control below runs either way.
+  if (catalogue === null) t.diagnostic('no marketplace catalogue beside this checkout; the catalogue was not compared');
+  if (readme === null) t.diagnostic('no repository README beside this checkout; the heading was not compared');
+
+  // **The versions the harness reads are directory-shaped, and the neighbour check reads directory
+  // names.** A release whose `plugin.json` lagged its `package.json` would be unpacked into a
+  // directory named for one while the server inside answered with the other, and `neighbour.js`
+  // would report a skew that is not one — the diagnostic firing on a correct install, which is
+  // worse than the silence it was built to break.
+  assert.match(manifests.package.version, /^\d+\.\d+\.\d+/, 'a version the cache can name a directory after');
+});
+
+test('a manifest left behind at a bump is reported, not passed over', () => {
+  // The condition, planted. Each of these is a half-bumped release, and each is invisible from
+  // inside the file that is right — which is the whole reason for a comparison rather than a rule
+  // in each file.
+  const pkg = { version: '9.9.9' };
+  const plugin = { version: '9.9.9' };
+  const catalogue = { plugins: [{ name: 'cpm', version: '3.0.0' }, { name: 'dpm', version: '9.9.9' }] };
+  const readme = '# Marketplace\n\n### DPM — Data-Modelled Planning Method (v9.9.9)\n\nProse.\n';
+  const whole = { package: pkg, plugin, catalogue, readme };
+
+  assert.deepEqual(versionProblems(whole), []);
+
+  assert.deepEqual(versionProblems({ ...whole, plugin: { version: '9.9.8' } }),
+    ['plugin.json says 9.9.8, package.json says 9.9.9']);
+
+  const stale = { plugins: [{ name: 'dpm', version: '9.9.8' }] };
+  assert.deepEqual(versionProblems({ ...whole, catalogue: stale }),
+    ['the catalogue says 9.9.8, package.json says 9.9.9']);
+
+  assert.deepEqual(versionProblems({ ...whole, catalogue: { plugins: [{ name: 'cpm', version: '3.0.0' }] } }),
+    ['the marketplace catalogue lists no dpm plugin']);
+
+  // **The README half — the site this check was written without, and which the very next release
+  // then missed.** Three files were bumped and the heading a reader sees first was not.
+  assert.deepEqual(versionProblems({ ...whole, readme: readme.replace('9.9.9)', '9.9.8)') }),
+    ['the README says 9.9.8, package.json says 9.9.9']);
+
+  // A heading reworded past the pattern is a failure, not a quiet pass. This is the one binding
+  // here that reads prose rather than a field, so it is the one that can rot without anyone
+  // touching a version at all.
+  assert.deepEqual(versionProblems({ ...whole, readme: '### DPM planning (0.1.0)\n' }),
+    ['the README states no dpm version in a heading this can read']);
+
+  // Several wrong at once reports each, so a run that fixes one does not go green over the rest.
+  assert.equal(versionProblems({
+    ...whole,
+    plugin: { version: '9.9.8' },
+    catalogue: stale,
+    readme: readme.replace('9.9.9)', '9.9.6)'),
+  }).length, 3);
+
+  // And absent really is absent rather than empty — an empty catalogue reports a missing entry and
+  // an empty README an unreadable heading, which is what the null checks distinguish.
+  assert.deepEqual(versionProblems({ ...whole, catalogue: null, readme: null }), []);
+  assert.deepEqual(versionProblems({ ...whole, package: { version: '' } }), ['package.json states no version']);
+});
+
 test('the plugin manifest declares a server whose entry point exists', () => {
   const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'));
 

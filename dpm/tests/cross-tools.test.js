@@ -14,10 +14,13 @@ import assert from 'node:assert/strict';
 import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { REGISTER } from '../src/integrity/register.js';
+import { neighbourSkew } from '../src/server/neighbour.js';
+import { SOURCE } from '../src/server/skew.js';
+import { pluginCache } from './support/plugin-cache.js';
 
-function surface(t) {
+function surface(t, options = {}) {
   const db = openPlanningDatabase(t);
-  const tools = spineTools(db);
+  const tools = spineTools(db, options);
 
   return { db, tools, call: handlers(tools) };
 }
@@ -281,3 +284,174 @@ test('the integrity tool takes no arguments and refuses any', (t) => {
   assert.match(error.message, /unknown argument 'limit'/);
   assert.ok(call.check_integrity({}).entries.length > 0);
 });
+
+// --- Epic 1 story 5: the version skew, reported where a session will read it ----------------------
+//
+// The two rejections here are about the report's *shape*, and both would go unnoticed by every
+// assertion above. A skew folded into `ok` still reports the skew; a skew pushed into `entries`
+// still reports the skew. Each is a correct diagnostic delivered through a channel that already
+// means something else, and the cost lands on the reader rather than on the writer.
+
+/**
+ * A skew verdict as a check would produce it, without a plugin cache to build (ENVX2).
+ *
+ * `source` is on it because the composer selects its sentence table from that field — the same
+ * reason the real detectors put it there. A stub without one is not a weaker stub; it is a record
+ * the composer cannot speak for at all.
+ */
+const skewOf = (state, extra = {}) => () => ({ source: SOURCE.neighbour, state, running: '0.3.0', ...extra });
+
+/** The stamp check's stub, so an assertion about the other half is read against a known one. */
+const stampOf = (state, extra = {}) => () => ({ source: SOURCE.stamp, state, running: '0.3.0', ...extra });
+
+/** Both checks quiet, which is what makes an assertion about one of them about that one. */
+const quiet = { skew: skewOf('none'), stamp: stampOf('none', { recorded: '0.3.0' }) };
+
+test('the integrity report carries the skew even when there is none [integration]', (t) => {
+  const report = surface(t, quiet).call.check_integrity({});
+
+  // The criterion is presence, not truthiness. A field written only when a skew was found is
+  // indistinguishable from a field a server too old to know about skews never wrote — which is the
+  // silence this spec exists to break, reproduced one level up.
+  assert.ok(Object.hasOwn(report, 'skew'), 'the report has no skew field at all');
+  assert.equal(report.skew.state, 'none');
+  assert.equal(report.skew.neighbour.state, 'none');
+  assert.match(report.skew.neighbour.message, /no newer version is installed/);
+});
+
+test('a reported skew names both versions and what to do about it [integration]', (t) => {
+  const report = surface(t, { ...quiet, skew: skewOf('found', { newest: '0.4.0' }) })
+    .call.check_integrity({});
+  const skew = report.skew.neighbour;
+
+  assert.equal(report.skew.state, 'found',
+    'a found verdict did not reach the field a caller reads first');
+  assert.equal(skew.state, 'found');
+  assert.equal(skew.running, '0.3.0');
+  assert.equal(skew.newest, '0.4.0');
+
+  // The sentence has to carry all three, because the state and the versions reach a human only
+  // through it. A message naming the problem and not the remedy leaves a reader with a correct
+  // diagnosis and nothing to do — and the remedy here is not obvious: which version a server runs
+  // is chosen by the client at launch, so nothing short of a restart moves it.
+  assert.match(skew.message, /0\.3\.0/);
+  assert.match(skew.message, /0\.4\.0/);
+  assert.match(skew.message, /[Rr]estart the session/);
+});
+
+test('a directory read that throws produces could-not-check and a successful response [integration]',
+  (t) => {
+    const angry = () => { throw new Error('EACCES: permission denied'); };
+
+    // The control first: the reader really throws, so what follows is containment rather than a
+    // reader that quietly answered.
+    assert.throws(angry, /EACCES/, 'the provoking reader does not throw');
+
+    // **The root is named rather than resolved, and that is the whole test.** Written as
+    // `currentSkew(angry)`, this passed with the error handling deleted — the real plugin root is a
+    // working tree named for the checkout, so the check answers could-not-check on the name and
+    // never reaches the reader at all. It asserted containment and exercised a short circuit. A
+    // version-shaped root is what makes the read happen, and the mutation then fails as it should.
+    const { call } = surface(t, { skew: () => neighbourSkew('/cache/dpm/0.3.0', angry) });
+
+    let report;
+    assert.doesNotThrow(() => { report = call.check_integrity({}); },
+      'the tool call failed over a diagnostic that was only ever advisory');
+
+    assert.equal(report.skew.state, 'unknown');
+    assert.equal(report.ok, true, 'a failed skew check reported the database as unsound');
+    assert.match(report.skew.message, /nothing was checked/,
+      'the sentence lets a reader mistake a check that could not run for one that found nothing');
+  });
+
+test('a skew does not change whether the database is reported as sound [integration]', (t) => {
+  const { call } = surface(t, { skew: skewOf('found', { newest: '0.4.0' }) });
+  const report = call.check_integrity({});
+
+  // `ok` answers one question — are the rows internally consistent — and under a skew they are.
+  // The reader is stale; the data is not. Folding the two together would fire the corruption alarm
+  // on every session running an older plugin against a perfectly good database, and would leave
+  // nobody able to tell the two situations apart afterwards.
+  assert.equal(report.ok, true, 'a version skew was reported as a data-integrity failure');
+  assert.equal(report.entries.every((entry) => entry.held), true);
+  assert.deepEqual(report.orphans, []);
+
+  // The control: `ok` can still say false, so the assertion above is an answer and not a constant.
+  const { call: broken, db } = surface(t, { skew: skewOf('none') });
+  db.exec('PRAGMA foreign_keys = OFF');
+  db.prepare(`INSERT INTO document
+      (id, kind, numbering, sequence, slug, title, parent_id, parent_kind, created_at, updated_at)
+      VALUES ('adr-x', 'adr', 'child', 1, 'x', 'An ADR', 'nothing', 'spec', '2026-01-01', '2026-01-01')`)
+    .run();
+  db.prepare("INSERT INTO adr (document_id, decision_status, decision) VALUES ('adr-x', 'superseded', 'd')")
+    .run();
+  db.exec('PRAGMA foreign_keys = ON');
+
+  assert.equal(broken.check_integrity({}).ok, false, 'this report cannot say false, so it says nothing');
+});
+
+test('a skew does not appear among the register entries [integration]', (t) => {
+  const { call } = surface(t, { skew: skewOf('found', { newest: '0.4.0' }) });
+  const report = call.check_integrity({});
+
+  // `entries` is derived from `REGISTER` and held to it by a parity test. A skew in there is either
+  // a fabricated register entry or a broken derivation, and both read to anyone looking at the
+  // report as data corruption rather than as a stale reader.
+  assert.deepEqual(
+    report.entries.map((entry) => entry.entry),
+    REGISTER.map((entry) => entry.entry),
+    'the entry roll gained or lost a row',
+  );
+
+  const versionish = report.entries.filter((entry) => /\d+\.\d+\.\d+/.test(JSON.stringify(entry)));
+  assert.deepEqual(versionish, [], 'a version number reached the register roll');
+});
+
+// --- Epic 1 story 7: the whole path, end to end ---------------------------------------------------
+//
+// The tests above stub the verdict, which is the right shape for asserting how the *report* treats
+// one — but between them they never run the check itself. A resolver that read the wrong directory,
+// a comparison that answered backwards, or a field wired to a stub and to nothing else would leave
+// every one of them passing. These two build a real cache on disk, run a real tool call against it,
+// and read the answer out of the response.
+
+test('a real cache holding a higher sibling reaches check_integrity as a named skew [integration]',
+  (t) => {
+    const { root } = pluginCache(t, ['0.3.0', '0.4.0'], { running: '0.3.0', prefix: 'dpm-cross-' });
+    const { call } = surface(t, { ...quiet, skew: () => neighbourSkew(root) });
+
+    const report = call.check_integrity({});
+
+    assert.equal(report.skew.state, 'found', 'the roll-up did not carry a real found verdict');
+    assert.equal(report.skew.neighbour.state, 'found');
+    assert.equal(report.skew.neighbour.running, '0.3.0');
+    assert.equal(report.skew.neighbour.newest, '0.4.0');
+    assert.match(report.skew.neighbour.message, /0\.4\.0/);
+
+    // The separation, asserted where it matters rather than only where it was decided: the rows are
+    // sound and the reader is stale, and this is the response a session actually receives.
+    assert.equal(report.ok, true, 'a stale reader was reported as a corrupt database');
+    assert.equal(report.entries.every((entry) => entry.held), true);
+  });
+
+test('a real root that is not a version directory reaches it as could-not-check [integration]',
+  (t) => {
+    // FR1b end to end: a plugin loaded from a working tree. The directory is named for the checkout,
+    // nothing is wrong, and nothing can be concluded — which has to arrive as its own state rather
+    // than as the reassuring one, all the way out to the caller.
+    const { root } = pluginCache(t, ['main'], { running: 'main', prefix: 'dpm-cross-' });
+    const { call } = surface(t, { ...quiet, skew: () => neighbourSkew(root) });
+
+    const report = call.check_integrity({});
+
+    assert.equal(report.skew.neighbour.state, 'unknown');
+    assert.notEqual(report.skew.neighbour.state, 'none', 'a check that could not run reported no skew');
+    assert.ok(report.skew.neighbour.reason, 'nothing says why the check could not run');
+
+    // **And the roll-up says `unknown` although the other check said `none`.** A summary that let
+    // the reassuring answer win would report *checked, nothing stale* for a session in which one of
+    // the two checks never ran — FR5's failure, arriving one level above where it was fixed.
+    assert.equal(report.skew.stamp.state, 'none', 'the other half is not the quiet one this assumes');
+    assert.equal(report.skew.state, 'unknown', 'a could-not-check was rolled up as checked-and-clear');
+    assert.equal(report.ok, true, 'a check that could not run was reported as a data failure');
+  });

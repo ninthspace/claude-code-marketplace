@@ -24,14 +24,23 @@
 
 import { checkIntegrity } from '../../integrity/check.js';
 import { REGISTER } from '../../integrity/register.js';
+import { currentSkew } from '../../server/neighbour.js';
+import { skewReport } from '../../server/skew.js';
+import { stampSkew } from '../../server/stamp.js';
 import { defineTool } from '../convention.js';
 
 /**
  * @param {object} context
  * @param {import('node:sqlite').DatabaseSync} context.db
+ * @param {() => object} [context.skew] The neighbour check. A parameter for the reason `now` and
+ *   `newId` are: pointing it at a constructed layout is the only way to assert the field without
+ *   reading whatever the author's machine happens to have installed (ENVX2).
+ * @param {(db: object) => object} [context.stamp] The database-stamp check, a parameter for the
+ *   same reason — this checkout's own version is whatever `package.json` says today, so a test that
+ *   could not name it could assert only that the two agree.
  * @returns {object[]}
  */
-export function integrityTools({ db }) {
+export function integrityTools({ db, skew = currentSkew, stamp = stampSkew }) {
   return [
     defineTool({
       name: 'check_integrity',
@@ -60,7 +69,22 @@ export function integrityTools({ db }) {
           rows: failed.get(entry)?.rows ?? [],
         }));
 
+        // **The one thing in this report that is not about the data.** A stale server under-seeds
+        // and under-reports without failing anything, and the only component positioned to notice
+        // is the stale server itself — every other part of a fresh session is fresh. Nothing in a
+        // Claude session reads MCP stderr, so a tool response is the only channel that arrives.
+        //
+        // Two checks, because there are two ways to be stale and they are independent: a newer
+        // release installed beside this one, and a newer release having written this database from
+        // someone else's machine. Either can hold without the other.
+        const verdicts = [skew(), stamp(db)];
+
         return {
+          // **Untouched, and deliberately.** `ok` says the database is internally consistent, and
+          // under a skew it still is: the rows are sound and the reader is stale. Folding the two
+          // together would make a diagnostic about the process indistinguishable from a finding
+          // about the data, and would fire the integrity alarm on every session running an older
+          // plugin against a perfectly good database.
           ok: report.ok,
           // Kept from `checkIntegrity` rather than recomputed, so the two cannot drift about what
           // counts as a check. The orphan sweep is the one that is not a register entry, which is
@@ -68,6 +92,23 @@ export function integrityTools({ db }) {
           checked: report.checked,
           entries,
           orphans: report.orphans,
+          // Top-level, beside `entries` and `orphans` rather than inside either (AD1). `entries` is
+          // derived from `REGISTER` and held to it by a parity test; a skew in there would be a
+          // fabricated register entry or a broken derivation, and both read as corruption.
+          //
+          // Present in every state, including `none`. A reader can then tell a check that ran and
+          // found nothing from a server too old to know how to check at all — the field's absence
+          // means the second, and the second is what this whole spec is about.
+          //
+          // **One field for two checks**, shaped by `skewReport` rather than here — a read-only
+          // launch reports the same two verdicts by a different route, and one shape built in two
+          // places is how two responses start describing one session differently.
+          //
+          // Note for the next author: the phrase above is deliberately unquoted. `server.test.js`
+          // sweeps every source file for import specifiers textually, and a quoted phrase after the
+          // word from reads to it as a dependency on a package by that name. It failed the suite
+          // when this comment was first written.
+          skew: skewReport(verdicts),
         };
       },
     }),

@@ -37,22 +37,21 @@ import { DATABASE } from '../src/db/location.js';
 import { main, open } from '../src/server/index.js';
 import { IGNORE_FILE } from '../src/server/ignore.js';
 import { LAUNCHED_READ_ONLY, READ_ONLY_ENV, READ_ONLY_FLAG, readOnlyRequested } from '../src/server/read-only.js';
-import { schemaFiles } from '../src/schema/files.js';
-import { targetVersion, versionOf } from '../src/schema/migrate.js';
+import { targetVersion } from '../src/schema/migrate.js';
 import { applyVocabulary } from '../src/schema/seeds/index.js';
 import { start } from '../src/start.js';
 import { sha256 } from './support/hashes.js';
-import { databaseAtVersion } from './support/migration.js';
+import { databaseAtVersion, previousVersion } from './support/migration.js';
 import { recordOpen } from './support/recorders.js';
 import { runNode } from './support/run-node.js';
 import { ownedDirectory } from './support/scratch.js';
 import { BIN, HELLO, NO_OVERRIDE, call, repliesFrom, wire } from './support/session.js';
+import { packageManifest } from './support/sources.js';
 import { sessionOutput } from './support/streams.js';
 
 const ROOT = join(import.meta.dirname, '..');
 
-/** The highest schema version below the one this server migrates to. */
-const PREVIOUS = schemaFiles().map(versionOf).sort((a, b) => a - b).at(-2);
+const PREVIOUS = previousVersion();
 
 /**
  * The bytes of a file, as something `sha256` can take.
@@ -395,7 +394,7 @@ test('the write refusal comes from the connection and the served set, not from a
 // --- Criterion 7: node:sqlite alone ---------------------------------------------------------------
 
 test('the read-only mode is node:sqlite and nothing else, with no dependency added [unit]', (t) => {
-  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  const manifest = packageManifest();
 
   assert.deepEqual(manifest.dependencies ?? {}, {});
   assert.deepEqual(manifest.devDependencies ?? {}, {});

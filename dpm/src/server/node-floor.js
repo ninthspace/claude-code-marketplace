@@ -63,6 +63,23 @@ export function meetsFloor(current, required = REQUIRED_NODE) {
   return true;
 }
 
+/**
+ * Whether `candidate` is strictly above `reference`, with anything unparseable answering no.
+ *
+ * `meetsFloor` answers *at or above*, and both callers here need to tell equal from higher: the
+ * neighbour check reports a skew only for a version genuinely newer than the running one, and the
+ * database stamp is written only on an increase (FR2a). Composed from `meetsFloor` in both
+ * directions rather than comparing components again, so the NaN handling that makes an unreadable
+ * version fail every comparison holds here for free.
+ *
+ * @param {string} candidate
+ * @param {string} reference
+ * @returns {boolean}
+ */
+export function isAbove(candidate, reference) {
+  return meetsFloor(candidate, reference) && !meetsFloor(reference, candidate);
+}
+
 /** What the user is told. Names both versions, because either alone leaves them guessing. */
 export const floorMessage = (current, required = REQUIRED_NODE) =>
   `dpm requires Node >=${required} and this is Node ${current}. ` +

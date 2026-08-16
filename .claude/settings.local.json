@@ -2,6 +2,7 @@
   "outputStyle": "Terse",
   "permissions": {
     "allow": [
+      "mcp__plugin_dpm_dpm",
       "Bash(git add:*)",
       "Bash(find:*)",
       "Bash(sed:*)",

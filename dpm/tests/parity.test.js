@@ -42,7 +42,7 @@ function surface(t) {
  * check failed and the entries went. A deferral that cannot outlive the work it defers to is the
  * difference between deferring and quietly exempting.
  *
- * What is left is four standing exemptions, and each names why a caller must never write the
+ * What is left is five standing exemptions, and each names why a caller must never write the
  * table at all.
  */
 const NO_CREATE_TOOL = Object.freeze({
@@ -61,6 +61,10 @@ const NO_CREATE_TOOL = Object.freeze({
   document_kind_parent:
     'standing — the allow-list the composite foreign key resolves against, seeded with the '
     + 'kinds it constrains. It is meaningless without a `document_kind` row it can name.',
+  plugin_stamp:
+    'standing — the server writes it on start, from its own version. A create tool would let a '
+    + 'caller declare a plugin version that never wrote to this database, which is the one value '
+    + 'the backward-skew check reads to decide whether it is stale.',
 });
 
 /**

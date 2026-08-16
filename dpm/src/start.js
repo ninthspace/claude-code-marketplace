@@ -11,11 +11,16 @@
  * into, so a release that adds both a table and a term for it works only this way round; and
  * the connection has to enforce foreign keys before either, or the whole schema is advisory
  * for the duration of the upgrade.
+ *
+ * **Four steps since Epic 2, and the fourth is last for the same kind of reason.** The stamp is
+ * written into a table a migration creates, so it cannot precede `migrate`; and it records that
+ * this server *wrote* here, which is only true once the writing has happened.
  */
 
 import { openConnection } from './db/connection.js';
 import { migrate } from './schema/migrate.js';
 import { applyVocabulary } from './schema/seeds/index.js';
+import { stampPlugin } from './server/stamp.js';
 
 /**
  * Open a database, bring it up to date, and hand it back ready to serve.
@@ -31,15 +36,24 @@ export function start(location, options = {}) {
   const db = openConnection(location);
   const migrated = migrate(db, options);
 
-  // A database this plugin is too old for gets neither of the two write steps. Seeding is an
-  // insert into vocabulary tables whose shape a later release may have changed, and the guards
-  // are derived from a schema this server can only see part of; both are how an older release
-  // would damage a newer database while believing it had done nothing. See `migrate.js`.
+  // A database this plugin is too old for gets none of the write steps. Seeding is an insert into
+  // vocabulary tables whose shape a later release may have changed, and the guards are derived from
+  // a schema this server can only see part of; both are how an older release would damage a newer
+  // database while believing it had done nothing. See `migrate.js`.
+  //
+  // **The stamp is skipped here for a reason of its own, on top of that one.** A database ahead of
+  // this server was last written by a plugin newer than this one, so the stamp already holds a
+  // version above ours — `stampPlugin` would decline the write anyway. It is skipped rather than
+  // left to decline because the table may not exist: a database from a release before the stamp
+  // migration is *behind* rather than ahead, but a database from far enough ahead could have had it
+  // renamed, and a `SELECT` against a table that is not there throws.
+  const skipped = { skipped: 'schema version is ahead of this server' };
+
   return {
     db,
     migrated,
     ahead: migrated.ahead,
-    vocabulary: migrated.ahead ? { skipped: 'schema version is ahead of this server' }
-      : applyVocabulary(db, options),
+    vocabulary: migrated.ahead ? skipped : applyVocabulary(db, options),
+    stamp: migrated.ahead ? skipped : stampPlugin(db, options),
   };
 }

@@ -16,6 +16,8 @@ import { DUMP_FILE, restoreIfMissing as restoreFromDump } from './from-dump.js';
 import { writeIgnore as writeIgnoreFile } from './ignore.js';
 import { SERVER_INFO, dispatch, methods } from './mcp.js';
 import { LAUNCHED_READ_ONLY, readOnlyRequested } from './read-only.js';
+import { SKEW, skewMessage } from './skew.js';
+import { stampSkew } from './stamp.js';
 import { log, readMessages, writeMessage } from './transport.js';
 import { openConnection } from '../db/connection.js';
 import { currentVersion, targetVersion } from '../schema/migrate.js';
@@ -236,6 +238,21 @@ export function open(location, {
   }
 
   const { db, migrated } = start(location);
+
+  // **FR6's line, and it carries the stamp skew rather than the neighbour one.** The neighbour check
+  // is usually quiet at open — the upgrade that makes it interesting lands mid-session, which is why
+  // it is re-evaluated on every report instead. The stamp is the opposite: it is a fact about the
+  // file just opened, known here and unchanged for the session.
+  //
+  // **Only `found` speaks** (NFR1 of spec 49 — a clean session is silent on stderr, which is what
+  // makes a line that does appear worth reading). `none` is the ordinary case and would be noise on
+  // every open; `unknown` is the ordinary case for a project this release has never migrated, and a
+  // warning nobody can act on trains the reader to skip the ones they can. Both still reach
+  // `check_integrity`, where a caller asked for them.
+  const stamp = stampSkew(db);
+
+  if (stamp.state === SKEW.found) log(skewMessage(stamp));
+
   const tools = spineTools(db);
 
   // NFR7's lockout case, decided here rather than at launch because that is where it can be:

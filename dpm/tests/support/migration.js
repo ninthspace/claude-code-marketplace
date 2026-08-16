@@ -19,6 +19,19 @@ import { versionOf } from '../../src/schema/migrate.js';
 import { createRetirementGuards } from '../../src/schema/retirement.js';
 
 /**
+ * The highest schema version below the one this server migrates to.
+ *
+ * Derived from the files rather than written down, for the same reason `targetVersion` is: a test
+ * pinning "the previous version" to a number goes stale on the next migration while continuing to
+ * pass, having quietly become a test about some particular older release.
+ *
+ * @returns {number}
+ */
+export function previousVersion() {
+  return schemaFiles().map(versionOf).sort((a, b) => a - b).at(-2);
+}
+
+/**
  * A temp-file database carrying the schema as of `version`, and nothing later.
  *
  * The DDL is applied and recorded by hand rather than by calling `migrate`, which is the

@@ -15,6 +15,11 @@
  */
 
 import { ulid } from '../id/ulid.js';
+// The neighbour check, threaded through `context` so the integrity tool can report it. `src/tools/`
+// reaching into `src/server/` closes no cycle: that module imports the filesystem, the path
+// helpers and the version parser, and nothing else.
+import { currentSkew } from '../server/neighbour.js';
+import { stampSkew } from '../server/stamp.js';
 import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
 import { integrityTools } from './cross/integrity.js';
@@ -94,8 +99,14 @@ export function readOnlyTools(tools, { reason }) {
     : tool));
 }
 
-export function spineTools(db, { now = () => new Date().toISOString(), newId = ulid, root = '.' } = {}) {
-  const context = { db, now, newId, root };
+export function spineTools(
+  db,
+  {
+    now = () => new Date().toISOString(), newId = ulid, root = '.',
+    skew = currentSkew, stamp = stampSkew,
+  } = {},
+) {
+  const context = { db, now, newId, root, skew, stamp };
 
   // **The kinds come from `document_kind`, not from a list here.** A hand-kept enumeration in this
   // file is what left eleven kinds without tools through Epic 47-03 and had the breakdown that

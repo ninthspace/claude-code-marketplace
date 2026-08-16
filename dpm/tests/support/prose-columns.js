@@ -295,6 +295,9 @@ const NOT_PROSE = {
   'a verbatim copy of prose written elsewhere, kept so a binding can be hashed — the words are searchable where they were written': [
     'coverage.spec_fragment',
   ],
+  'a release version, written by the server from its own and read by comparison rather than by search': [
+    'plugin_stamp.version',
+  ],
 };
 
 /**
