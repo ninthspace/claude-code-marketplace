@@ -81,7 +81,7 @@ Two smaller things fell out of the same task. The string form of a row and the p
 
 ## Story 3 — Legible without truecolor
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: —  
 
 ### Acceptance Criteria
@@ -91,15 +91,23 @@ Two smaller things fell out of the same task. The string form of a row and the p
 
 ### Task 1 — Choose blend and pill colours that survive a 256-colour downgrade
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the palette values rather than the render path, which stories 1 and 2 deliver. What is at stake is that the blend and the pill remain distinguishable once the terminal has quantised them.
 
 ### Task 2 — Write tests for Legible without truecolor
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the two criteria tagged unit, driving the render against a console that reports 256 colours rather than truecolor.
+
+### Retro
+
+- The failure this story is about was already on the board and invisible from here: a blurred cursor on a dark green (complete) row is #0e2a0e, a legible tint in 24-bit colour, and palette entry 16 — pure black — once a 256-colour terminal quantises it, against a surface at entry 233. Every other state was clear; nothing in the code said which of the seven would collapse, which is the argument for building the fixture from status_model.EPIC_STATES rather than from a sample.
+
+The fix is one constant and it is in the right place: the bar is mixed into a background lifted 8% toward the row default rather than into the raw surface, so a near-black row colour still lands on a colour. Raising the blurred weight would have fixed the same case by making every blurred column louder, which is the distinction between focused and blurred that story 1 spent the weights on.
+
+Two measurement lessons. Luminance is the wrong metric for "distinguishable" on this board — Rec. 709 weights red at a fifth, so a blocked row's bar (#5f0000 quantised) is 2 from the surface by luminance and 77 in the channel a reader actually sees; the check compares widest single channel instead. And the quantisation is Rich's own downgrade rather than a nearest-colour rule written in the test, because a second colour model would agree with the terminal until the day it did not.
 
 ## Retro Applied
 

@@ -680,6 +680,19 @@ DEFAULT_ROW = ColorTriplet(224, 224, 224)
 #: below it, near-white does. Rec. 709 midpoint, in the 0–255 range :func:`_luminance` returns.
 LEGIBLE_ON_LIGHT = 128
 
+#: How far the bar's background is lifted off the row's before the row's own colour is mixed in.
+#:
+#: **This is what keeps a dark row's cursor visible on a terminal without truecolor** (NFR1). A
+#: blurred bar on a dark green row is `#0e2a0e`, which is a legible tint of the background in
+#: 24-bit colour and quantises to palette entry 16 — pure black — on a 256-colour terminal, where
+#: the surface is entry 233. The bar disappears into a background it is two shades darker than.
+#:
+#: Mixing into a background already a step toward the light lands the same row on entry 22, a dark
+#: green, and leaves every other state where it was: the states that were already clear of the
+#: surface are clear of it by the same margin, because the lift moves what the colour is mixed
+#: *into* rather than how much of it there is.
+SURFACE_LIFT = 0.08
+
 
 def _blend(row: ColorTriplet, background: ColorTriplet, weight: float) -> ColorTriplet:
     """``row`` mixed into ``background`` by ``weight`` — 0 is all background, 1 is all row."""
@@ -693,6 +706,16 @@ def _blend(row: ColorTriplet, background: ColorTriplet, weight: float) -> ColorT
 def _luminance(colour: ColorTriplet) -> float:
     """``colour``'s perceived brightness (Rec. 709), which is what decides a legible foreground."""
     return 0.2126 * colour.red + 0.7152 * colour.green + 0.0722 * colour.blue
+
+
+def lifted(background: ColorTriplet) -> ColorTriplet:
+    """``background`` a step toward the light — what a cursor bar is mixed into (NFR1).
+
+    See :data:`SURFACE_LIFT`. The step is the same for every row, so what the bar carries is still
+    the row's own colour and the difference between two rows is still the difference between their
+    two colours.
+    """
+    return _blend(DEFAULT_ROW, background, SURFACE_LIFT)
 
 
 def _read_colours(strip: Strip) -> tuple[ColorTriplet, ColorTriplet]:
@@ -730,7 +753,7 @@ def cursor_strip(strip: Strip, *, focused: bool) -> Strip:
     colour; per-segment click metadata is carried over, so the bar costs no mouse target.
     """
     row, background = _read_colours(strip)
-    bar_background = _blend(row, background, FOCUSED_WEIGHT if focused else BLURRED_WEIGHT)
+    bar_background = _blend(row, lifted(background), FOCUSED_WEIGHT if focused else BLURRED_WEIGHT)
     bar_foreground = background if _luminance(bar_background) > LEGIBLE_ON_LIGHT else DEFAULT_ROW
     bar = Style(
         color=Color.from_triplet(bar_foreground), bgcolor=Color.from_triplet(bar_background)

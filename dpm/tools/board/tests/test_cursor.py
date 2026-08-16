@@ -27,7 +27,7 @@ from rich.style import Style
 from textual.color import Color
 from textual.strip import Strip
 
-from board import BLURRED_WEIGHT, FOCUSED_WEIGHT, BoardApp, _blend, cursor_strip
+from board import BLURRED_WEIGHT, FOCUSED_WEIGHT, BoardApp, _blend, cursor_strip, lifted
 from board_view import EpicView, ProjectView
 
 #: A background to blend toward in the pure tests. Any colour would do — what the assertions turn on
@@ -109,7 +109,7 @@ def the_cursor_is_the_board_s_own(app, column: str, *, colour=None, focused: boo
         assert len(others) == 1, f"the {column} column's rows do not share one colour: {others}"
         colour = others.pop()
 
-    expected = _blend(colour, surface, FOCUSED_WEIGHT if focused else BLURRED_WEIGHT)
+    expected = _blend(colour, lifted(surface), FOCUSED_WEIGHT if focused else BLURRED_WEIGHT)
 
     assert background == expected, (
         f"the cursor on {text!r} is painted {background}, not that row's own colour {colour} "
@@ -160,12 +160,12 @@ def test_the_bar_carries_the_row_s_own_colour_blended_toward_the_background():
     _, green_bar = bar_of(cursor_strip(a_row("green"), focused=True))
 
     assert red_bar != green_bar, f"a red row and a green row highlight identically: {red_bar}"
-    assert red_bar == _blend(red, SURFACE, FOCUSED_WEIGHT), red_bar
-    assert green_bar == _blend(green, SURFACE, FOCUSED_WEIGHT), green_bar
+    assert red_bar == _blend(red, lifted(SURFACE), FOCUSED_WEIGHT), red_bar
+    assert green_bar == _blend(green, lifted(SURFACE), FOCUSED_WEIGHT), green_bar
 
     faint = bar_of(cursor_strip(a_row("red"), focused=False))[1]
 
-    assert faint == _blend(red, SURFACE, BLURRED_WEIGHT), faint
+    assert faint == _blend(red, lifted(SURFACE), BLURRED_WEIGHT), faint
     assert faint != red_bar, "a blurred column's bar is as loud as the focused one's"
 
 
