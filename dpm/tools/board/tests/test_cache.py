@@ -278,7 +278,9 @@ async def test_a_force_refresh_bypasses_the_cache_and_a_clear_removes_it(
 
             assert calls(transcript) == surveyed, "an ordinary refresh went back to the servers"
 
-            await pilot.press("R")
+            # Driven by action rather than by key: `R` is the CPM board's clear-cache (FR19), and
+            # the forced re-read is a dpm extra whose own key arrives with the rest of them.
+            await app.run_action("force_refresh")
             await until(
                 pilot,
                 lambda: not any(row.pending for row in app.selection.projects),
@@ -293,7 +295,7 @@ async def test_a_force_refresh_bypasses_the_cache_and_a_clear_removes_it(
 
             assert path.exists(), "nothing was written, so the clear below removes nothing"
 
-            await pilot.press("ctrl+k")
+            await pilot.press("R")
             await pilot.pause()
 
             assert not path.exists(), "the cleared cache is still on disk"

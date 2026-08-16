@@ -950,12 +950,22 @@ class BoardApp(App[None]):
         # by reading the footer at the moment they happen to need it; one that is only in the
         # palette costs two keystrokes forever. Registering is rare enough to want the palette and
         # common enough to want the key.
-        ("ctrl+n", "register", "Register"),
-        # FR13's pair. `R` rather than `r`: the shifted key is the deliberate one, and a board whose
-        # unshifted `r` re-read every project would spawn a dozen servers on a typo. `ctrl+k` for
-        # the clear, because forgetting the cache is rare and wants a key nothing else is near.
-        ("R", "force_refresh", "Re-read"),
-        ("ctrl+k", "clear_cache", "Clear cache"),
+        #
+        # **`a` and `x`, which is what the CPM board binds them to** (FR19). Both boards are opened
+        # by the same people in the same week, and a key that adds a project on one and does
+        # something else on the other is worse than a key that does nothing: muscle memory does not
+        # check which board it is looking at. The palette entries stay — this gives each a key it
+        # did not have.
+        ("a", "register", "Add"),
+        ("x", "unregister", "Remove"),
+        # FR13's pair, on the CPM board's letters. `r` re-reads and `R` empties the cache, which is
+        # the opposite of the shifted-key reasoning this board was written with — and the reasoning
+        # loses, because agreement between the two boards is the thing being asked for and a board
+        # deciding for itself which key is the careful one is how they came apart. The forced
+        # re-read, which the CPM board has no equivalent of, is a dpm extra and takes a key clear of
+        # this map in story 3.
+        ("r", "refresh", "Refresh"),
+        ("R", "clear_cache", "Clear cache"),
         # FR15, bound and in the palette for the reason registering is: a search is the thing a user
         # opens the board to do when they cannot remember which project something is in, and that is
         # exactly the moment they will not want to go looking for it in a menu.

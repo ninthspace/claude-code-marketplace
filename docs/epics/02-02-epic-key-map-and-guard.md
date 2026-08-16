@@ -6,7 +6,7 @@
 
 ## Story 1 — CPM's key meanings restored
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 5, Story 6  
 
 ### Acceptance Criteria
@@ -17,15 +17,21 @@
 
 ### Task 1 — Rebind r, R, a and x to CPM's meanings
 
-**Status**: pending  
+**Status**: complete  
 
 Addresses the first two criteria. `R` takes clear-cache back from the forced re-read, which moves in story 3; `r` and `x` are new bindings rather than moved ones, because refresh and unregister exist on this board today as palette entries with no key.
 
 ### Task 2 — Write tests for CPM's key meanings restored
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the criteria tagged `feature` and `integration`. The rejection is the cross-board one, so it uses story 5's reader — which means this task lands its full weight only once story 5 exists.
+
+### Retro
+
+- The parity rejection needed a translation table before it could say anything, and that is the finding worth carrying into story 5. The two boards name the same capability differently — `add_project` here is `register` there, `remove_project` is `unregister`, `copy` is `copy_command`, `open_plain` is `open` — so a check comparing raw action names reports four disagreements that are only spellings, and goes on reporting them after somebody fixes the real ones, until nobody reads the output. `tests/support/key_maps.py` therefore carries a `SAME_MEANING` map, and the comparison is over the *intersection* of the two maps rather than an equality between them, which is also what story 5's own must-NOT asks for.
+
+Three of this board's keys had to give way, and one piece of reasoning had to be overruled rather than reconciled: this board bound `R` to the forced re-read on the argument that a shifted key is the deliberate one and an unshifted `r` would spawn a dozen servers on a typo. The CPM board binds `r` to refresh and `R` to clear-cache. The reasoning is good and it loses, because agreement between the two boards is the thing being asked for and a board deciding for itself which key is the careful one is exactly how they came apart. The forced re-read is now unbound until story 3 gives it `ctrl+r`, so `test_cache.py` drives it by action for one story.
 
 ## Story 2 — Hide retired work
 

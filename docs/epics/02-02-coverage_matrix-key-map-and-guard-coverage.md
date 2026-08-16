@@ -8,9 +8,9 @@
 
 | # | Requirement | Spec Text | Story Criterion | Covered by | Test Approach | Verified |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | FR1 | `r` refreshes, `R` clears the cache, `a` registers a project, `x` unregisters the highlighted one | Driving a running board: `r` re-reads every registered project, `R` empties the cache, `a` opens the register picker, and `x` unregisters the highlighted project. | Story 1 | `[feature]` |  |
-| 2 | FR1 | A capability the DPM board reaches only through the command palette today gains its CPM key. | Refresh and unregister are reachable by key, not only through the command palette as they are today. | Story 1 | `[feature]` |  |
-| 3 | FR1 | Every key the CPM board binds carries the same meaning on the DPM board | must NOT — No key the CPM board binds does something different on the DPM board. | Story 1 | `[integration]` |  |
+| 1 | FR1 | `r` refreshes, `R` clears the cache, `a` registers a project, `x` unregisters the highlighted one | Driving a running board: `r` re-reads every registered project, `R` empties the cache, `a` opens the register picker, and `x` unregisters the highlighted project. | Story 1 | `[feature]` | ✓ |
+| 2 | FR1 | A capability the DPM board reaches only through the command palette today gains its CPM key. | Refresh and unregister are reachable by key, not only through the command palette as they are today. | Story 1 | `[feature]` | ✓ |
+| 3 | FR1 | Every key the CPM board binds carries the same meaning on the DPM board | must NOT — No key the CPM board binds does something different on the DPM board. | Story 1 | `[integration]` | ✓ |
 | 4 | FR1 | `z` shows or hides retired work | A board opened over a project holding complete, superseded, withdrawn and live rows shows only the live ones; `z` reveals all four groups; `z` again returns to the first state. | Story 2 | `[feature]` |  |
 | 5 | FR2 | Retired work is hidden when the board opens and `z` toggles it | A board opened over a project holding complete, superseded, withdrawn and live rows shows only the live ones; `z` reveals all four groups; `z` again returns to the first state. | Story 2 | `[feature]` |  |
 | 6 | FR2 | Each press says which way it went | Each press says which way it went, so a board that was already showing everything is distinguishable from one that has just been told to. | Story 2 | `[feature]` |  |

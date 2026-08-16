@@ -16,6 +16,7 @@ from io import StringIO
 from pathlib import Path
 
 from pilot import board, lines, until
+from wiring import registry_wiring
 
 from board import PickerScreen, ProjectTree, registry_views, run_cli
 from registry import add_project, list_projects, remove_project
@@ -33,14 +34,7 @@ def registry(tmp_path: Path) -> Path:
 
 def wired(tmp_path: Path, picker_root: Path) -> dict:
     """The injections `_browse_with` makes, pointed at a registry the test owns."""
-    file = registry(tmp_path)
-
-    return {
-        "picker_root": picker_root,
-        "reload": lambda: registry_views(list_projects(registry_file=file)),
-        "register": lambda path: add_project(str(path), None, registry_file=file),
-        "unregister": lambda path: remove_project(str(path), registry_file=file),
-    }
+    return registry_wiring(registry(tmp_path), picker_root=picker_root)
 
 
 async def choose(app, pilot, path: Path) -> None:
@@ -59,7 +53,7 @@ async def choose(app, pilot, path: Path) -> None:
 
 
 async def open_picker(pilot, app) -> None:
-    await pilot.press("ctrl+n")
+    await pilot.press("a")
     await until(pilot, lambda: isinstance(app.screen, PickerScreen), timeout=2.0)
 
 
