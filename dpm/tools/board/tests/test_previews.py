@@ -55,7 +55,7 @@ async def test_an_epics_preview_is_its_row_and_its_sections(fixture_project):
             pool, fixture_project, EpicView(epic["id"], epic["title"], "ready")
         )
 
-    assert text.splitlines()[0] == "Second epic"
+    assert text.splitlines()[0] == "# Second epic", "the preview's first line is the title as a heading"
 
     for section in sections_of("open_epic"):
         assert section["heading"] in text, f"a section heading is missing: {section['heading']}"

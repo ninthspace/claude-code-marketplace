@@ -6,7 +6,7 @@
 
 ## Story 1 — Builders that emit markdown source
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 5  
 
 ### Acceptance Criteria
@@ -17,21 +17,27 @@
 
 ### Task 1 — Rewrite document_preview to emit markdown
 
-**Status**: pending  
+**Status**: complete  
 
 The document's title as a heading and each section's heading as a heading beneath it. Addresses the source the builder returns; how the panel renders it is story 2.
 
 ### Task 2 — Rewrite story_preview to emit markdown
 
-**Status**: pending  
+**Status**: complete  
 
 Criteria and tasks as markdown lists, with a task's description subordinate to its task rather than beside it. The plain-text scaffolding labels go here, not somewhere else.
 
 ### Task 3 — Write tests for Builders that emit markdown source
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the three criteria tagged unit. The existing tests/test_previews.py pins the plain-text shapes these builders no longer produce, so its assertions move with them rather than being left to fail.
+
+### Retro
+
+- The rewrite was four lines of builder and the whole of the risk was in how it gets checked. Asserting a leading `#` would have been a second markdown parser written in the test file, so both must criteria are read from `rich.markdown.Markdown(source).parsed` — the markdown-it token stream story 2's panel will actually rasterise. That paid immediately on the nesting criterion: "subordinate to the task" is a claim about the content column the `- ` marker leaves, not about two spaces, and the token's `level` is the only thing that knows. The old shape (`  {description}`, no marker) is a lazy paragraph continuation and merges into the task's own inline token, which the level check catches as a missing key rather than as a passing test.
+
+The must-NOT is stated as a property rather than as a search for the label that was there. `Acceptance criteria:` in nobody's output is satisfied by a builder that renames it to `Criteria:`; what the check asks is that every line the builder contributed *itself* — every line whose text, after its list marker, appears in none of the rows — is markdown structure. Its control is the old composition, and the failure names the label it found.
 
 ## Story 2 — Markdown rendered in the preview panel
 

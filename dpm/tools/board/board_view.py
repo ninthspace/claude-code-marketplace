@@ -458,11 +458,16 @@ def document_preview(document: dict, sections: list[dict]) -> str:
     A section whose body is empty still shows its heading. That is not padding: a read that forgot
     ``include_body`` returns every heading and no text, and a preview that hid empty sections would
     render an *apparently reasonable* outline instead of showing that the prose is missing.
+
+    **Markdown source, not display text** (FR6). The title is a level-1 heading and each section a
+    level-2 one beneath it, so the panel can rasterise the structure the rows already have — a
+    section's own body is markdown as it was written, and nothing here escapes or reflows it.
     """
-    lines = [document.get("title") or document.get("id", "")]
+    lines = [f"# {document.get('title') or document.get('id', '')}"]
 
     for section in sections:
-        lines += ["", section.get("heading") or "", (section.get("body") or "").rstrip()]
+        heading = f"## {section.get('heading') or ''}".rstrip()
+        lines += ["", heading, "", (section.get("body") or "").rstrip()]
 
     return "\n".join(lines).rstrip()
 
@@ -478,21 +483,28 @@ def story_preview(story: StoryView, criteria: list[dict], tasks: list[dict]) -> 
     read that forgot ``include_body`` returns a row per criterion carrying no criterion, so the
     fallback is the id rather than an empty bullet: a preview of blank lines reads as a story
     nobody wrote criteria for, and an id reads as something missing.
+
+    **Markdown source, not display text** (FR6). The two groups are headings rather than the bare
+    ``Acceptance criteria:`` label they used to be — a label ending in a colon is a paragraph to
+    every markdown renderer, and it reads as prose sitting above a list rather than as the list's
+    own title. A task's description is a *nested* item rather than a second line beside its task:
+    two spaces is the indent the ``- `` marker leaves, and it is what makes the description belong
+    to the task instead of to whatever follows it.
     """
-    lines = [story.title]
+    lines = [f"# {story.title}"]
 
     if criteria:
-        lines += ["", "Acceptance criteria:"]
+        lines += ["", "## Acceptance criteria", ""]
         lines += [f"- {row.get('text') or row['id']}" for row in criteria]
 
     if tasks:
-        lines += ["", "Tasks:"]
+        lines += ["", "## Tasks", ""]
 
         for row in tasks:
             lines.append(f"- {row.get('title') or row['id']}")
 
             if row.get("description"):
-                lines.append(f"  {row['description']}")
+                lines.append(f"  - {row['description']}")
 
     return "\n".join(lines)
 

@@ -2,7 +2,17 @@
 
 **Number**: 02-03  
 **Source spec**: 02  
-**Status**: pending  
+**Status**: complete  
+
+## What this epic left unclaimed, and why
+
+Three of the four requirements this epic delivers against are left without a coverage claim. Every coverage row under them is verified; what is missing in each case is an obligation in the requirement's own sentence that no bound fragment reaches, and a claim is a judgement rather than a sum of rows.
+
+**FR4 — "as the CPM board's `InverseOptionList` paints it".** The three bound fragments cover the muted bar, the row's own colour and the rejection of Textual's block, and all four rows are verified. Nothing compares the two renderers, and this epic deliberately made them differ: `SURFACE_LIFT` mixes the bar into a background lifted 8% toward the row default, which the CPM board does not do. That divergence is NFR3's — without it a dark green row's cursor quantises to pure black on a 256-colour terminal — and it is the right call, but it means "as that board paints it" is now true of the design and not of the arithmetic. Someone who wants the clause discharged should decide whether the CPM board should take the same lift.
+
+**NFR3 and ENVX4 — the raster half.** Both sentences name two things: the cursor, which blends two colours, and the markdown raster, which asks for a colour system by name. This epic delivered the cursor half and tested it against a console reporting 256 colours. The raster does not exist yet — it is epic 4, story 2 — so half of each requirement is bound to nothing. They are the natural claims to make at the end of epic 4 rather than here.
+
+FR5 is claimed. Its clauses — the right edge at any column width, and each marker keeping its own colour over the row's — are each bound to a verified criterion, and the width clause is exercised at both the column's minimum and its maximum as well as across a resize.
 
 ## Story 1 — The cursor in the row's own colour
 
