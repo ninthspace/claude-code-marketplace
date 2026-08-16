@@ -2,7 +2,7 @@
 
 **Number**: 02-04  
 **Source spec**: 02  
-**Status**: pending  
+**Status**: complete  
 
 ## A criterion added to story 2, and what it closes
 
