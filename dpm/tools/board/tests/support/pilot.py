@@ -22,6 +22,7 @@ from textual.command import CommandPalette
 from textual.strip import Strip
 from textual.widget import Widget
 from textual.widgets import OptionList
+from textual.widgets._footer import FooterKey
 
 from board import BoardApp
 
@@ -131,6 +132,30 @@ def styles(app: BoardApp, column: str) -> dict[str, str]:
 def preview(app: BoardApp, kind: str) -> list[str]:
     """What the preview panel beneath ``kind``'s column painted."""
     return lines(app, f"{kind}-preview-body")
+
+
+def footer(app: BoardApp) -> dict[str, str]:
+    """What the footer is documenting: each key it printed, by its binding name, to its label.
+
+    Keyed by ``key`` rather than by ``key_display`` so a caller can compare it against a binding
+    table without translating `left` into `←` on the way — the display form is the footer's own
+    rendering of the same key, and asserting on it would make this a test of Textual.
+
+    Read from the `FooterKey` widgets the footer actually built rather than from `BINDINGS`, which
+    is the whole point of asking: a binding shadowed by one nearer the focused widget is bound,
+    works, and prints nothing — Textual answers `left` with the option list's own scroll binding
+    unless the column takes the key back. Comparing the table with itself would report a footer
+    that never appeared.
+
+    The command palette's own entry is left out. It is Textual's rather than the board's, added by
+    the footer independently of `BINDINGS`, and a comparison against the board's map would have to
+    special-case it at every call site instead of here.
+    """
+    return {
+        entry.key: entry.description
+        for entry in app.screen.query(FooterKey)
+        if entry.description != "palette"
+    }
 
 
 def toasts(app: BoardApp) -> list[str]:

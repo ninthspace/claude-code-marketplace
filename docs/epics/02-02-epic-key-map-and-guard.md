@@ -95,7 +95,7 @@ Covers the three extra keys driven through a running board, and the rejection re
 
 ## Story 4 — Footer and palette wording
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 6  
 
 ### Acceptance Criteria
@@ -105,21 +105,25 @@ Covers the three extra keys driven through a running board, and the rejection re
 
 ### Task 1 — Align the footer labels with CPM's wording
 
-**Status**: pending  
+**Status**: complete  
 
 Only where the action is the same one — DPM-only capabilities keep their own labels, having nothing on the other board to match.
 
 ### Task 2 — Update the palette entries for actions that now have keys
 
-**Status**: pending  
+**Status**: complete — No entry needed rewording. Every palette help string was checked against the keys stories 1 and 3 added: none names a key, none claims a capability is palette-only, and every entry's action resolves to a method on the app. The obligation now sits in a test rather than in prose — `test_nothing_is_documented_that_no_key_or_entry_reaches` fails if a palette entry ever starts describing something nothing reaches.  
 
 Refresh and unregister gained keys in story 1, so their palette entries now describe a capability reachable two ways. Addresses the palette half of the must-NOT.
 
 ### Task 3 — Write tests for footer and palette wording
 
-**Status**: pending  
+**Status**: complete  
 
 Covers both directions of the must-NOT — no label for an unbound key, and no bound key without a label. Either alone is satisfied by a board that documents nothing.
+
+### Retro
+
+- Reading the footer from the widgets it built rather than from `BINDINGS` found a bug that had been shipping since the board's first story: `OptionList` inherits horizontal scroll bindings, and while a column has focus they sit nearer the focused widget than the app's own, so Textual answered `left` with "Scroll Left" carrying `show=False` and the footer printed neither arrow. Both keys worked — a column that cannot scroll sideways declines its own binding and lets it bubble — so every existing test passed and the only symptom was two undocumented keys. A `Column(OptionList)` subclass re-declaring `left`/`right` against the app's actions puts the board's meaning at the near end of the chain, where the footer reads. The general lesson: when a criterion is about what a user *sees*, the artefact to read is the one the framework built, not the table the framework was built from — a comparison between the table and itself reports a footer that never appeared. The same shape would hide a shadowed binding in any Textual app with a focusable scrolling widget.
 
 ## Story 5 — The cross-board parity check
 

@@ -39,6 +39,7 @@ from pathlib import Path
 
 from rich.text import Text
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
@@ -646,6 +647,30 @@ COMMANDS: tuple[Command, ...] = (
 )
 
 
+class Column(OptionList):
+    """One of the board's three columns, with ← and → returned to the board (FR19).
+
+    `OptionList` inherits horizontal scroll bindings from its scrolling ancestor, and those sit
+    *nearer* the focused widget than the app's own — so while a column has focus, `active_bindings`
+    answers `left` with "Scroll Left", carrying `show=False`, and the footer prints neither. The
+    keys still move focus, because a column that cannot scroll sideways declines its own binding and
+    lets it bubble; what is lost is only the line in the footer that says so, which is exactly the
+    thing this story is about.
+
+    Re-declaring them here puts the board's meaning at the near end of the chain, where the footer
+    reads. The actions are the app's, so there is one implementation of moving between columns and
+    this is a second route to it rather than a second copy of it.
+
+    **A column does not scroll sideways anyway.** Its rows are labels the layout truncates, so the
+    bindings being displaced reach a scroll that has nowhere to go.
+    """
+
+    BINDINGS = [
+        Binding("left", "app.focus_left", "◀ column", show=True),
+        Binding("right", "app.focus_right", "column ▶", show=True),
+    ]
+
+
 class ProjectTree(DirectoryTree):
     """A directory tree with the files taken out — the thing being chosen is a directory (FR1).
 
@@ -988,14 +1013,19 @@ class BoardApp(App[None]):
         # opens it to do — and each is in the palette too, so the capability is discoverable
         # without the footer being read at the moment it happens to be needed.
         ("l", "launch", "Launch"),
-        ("o", "open", "Open"),
+        # "Open project" rather than "Open", which is CPM's wording for the same action: a footer
+        # reading `o Open` beside `l Launch` invites the reading that `o` opens whatever the cursor
+        # is on, and what it opens is the project.
+        ("o", "open", "Open project"),
         ("t", "attach", "Attach"),
         ("c", "copy_command", "Copy"),
         # FR14. A key and no palette entry, unlike everything else here: the palette acts on the
         # board as a whole and this acts on the row under the cursor, so an entry would run against
         # whichever row the palette happened to leave highlighted rather than the one a user was
         # looking at when they opened it.
-        ("space", "toggle_ralph", "Select"),
+        # "Ralph-select", which is CPM's wording: a bare "Select" beside a column the cursor already
+        # selects a row in says nothing, and what this marks a row *for* is the thing worth naming.
+        ("space", "toggle_ralph", "Ralph-select"),
     ]
 
     CSS = """
@@ -1214,16 +1244,16 @@ class BoardApp(App[None]):
         with Horizontal(id="columns"):
             with Vertical(classes="col", id="col-projects"):
                 yield Label("Projects", classes="col-title")
-                yield OptionList(id="projects")
+                yield Column(id="projects")
 
             with Vertical(classes="col", id="col-epics"):
                 yield Label("Epics", classes="col-title")
-                yield OptionList(id="epics")
+                yield Column(id="epics")
                 yield _preview_panel("epic")
 
             with Vertical(classes="col", id="col-stories"):
                 yield Label("Stories", classes="col-title")
-                yield OptionList(id="stories")
+                yield Column(id="stories")
                 yield _preview_panel("story")
 
         yield Footer()

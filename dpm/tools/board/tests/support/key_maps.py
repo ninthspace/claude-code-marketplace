@@ -54,12 +54,15 @@ SAME_MEANING = {
 }
 
 
-def app_bindings(source: Path, title: str) -> dict[str, str]:
-    """The key map of the class in ``source`` whose ``TITLE`` is ``title``, as ``{key: action}``.
+def binding_tuples(source: Path, title: str) -> list[tuple[str, ...]]:
+    """Every `BINDINGS` entry of the class in ``source`` whose ``TITLE`` is ``title``, as tuples.
 
     Found by the title rather than by the class's name or by taking the longest `BINDINGS` in the
     file: a name is a thing somebody renames without meaning anything by it, and "the longest one"
     is a rule that quietly starts answering about a modal screen the day one grows a fifth key.
+
+    The whole tuple rather than the first two elements, because the third is the footer label and
+    story 4 compares those as story 1 compares the actions.
     """
     for node in ast.walk(ast.parse(source.read_text())):
         if not isinstance(node, ast.ClassDef):
@@ -77,17 +80,29 @@ def app_bindings(source: Path, title: str) -> dict[str, str]:
         if not (isinstance(named, ast.Constant) and named.value == title):
             continue
 
-        return {
-            binding.elts[0].value: binding.elts[1].value
-            for binding in assigned["BINDINGS"].elts
-        }
+        return [tuple(part.value for part in binding.elts) for binding in assigned["BINDINGS"].elts]
 
     raise AssertionError(f"{source} holds no class titled {title!r}")
+
+
+def app_bindings(source: Path, title: str) -> dict[str, str]:
+    """That class's key map as ``{key: action}``."""
+    return {key: action for key, action, *_ in binding_tuples(source, title)}
 
 
 def cpm_bindings() -> dict[str, str]:
     """The CPM board's key map, read from the repository's own copy of its source."""
     return app_bindings(CPM_BOARD, CPM_TITLE)
+
+
+def cpm_labels() -> dict[str, str]:
+    """The CPM board's footer wording, as ``{key: label}``.
+
+    Read from that board's source for the same reason its actions are: it is a different
+    application with its own dependencies, and importing it here would run somebody else's module
+    to read a list of tuples.
+    """
+    return {key: label for key, _, label, *_ in binding_tuples(CPM_BOARD, CPM_TITLE)}
 
 
 def extras(cpm: dict[str, str], dpm: dict[str, str]) -> dict[str, str]:
