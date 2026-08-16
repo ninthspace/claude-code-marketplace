@@ -31,6 +31,7 @@ import {
   skillSource, toolNames, reachable, section, prose, recorder, recoveries, bindings,
   seedStartup, driveStartup,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'audit';
 const source = skillSource(SKILL);
@@ -404,4 +405,23 @@ test('the skill recovers nothing by reading a generated file', (t) => {
 
   assert.ok(recoveries(regressed, PARSES).length >= 4,
     'the sweep passed a file that names a path, builds a filename, parses a header and composes an id');
+});
+
+// --- Spec 50 FR6: each audit finding is reported with its disposition ----------------------------
+
+test('the audit reports each finding under the disposition its row gives it', () => {
+  const step = section(source, 'Step 4: Write the audit');
+
+  assert.notEqual(step, '', 'the write step still exists');
+  assert.deepEqual(dispositionProblems(step, 'audit Step 4'), []);
+
+  // The site-specific half: `recommendation` is what separates an action from a record, and the
+  // dimension nothing here could sweep is the case that would otherwise be reported as a clean one.
+  assert.match(step, /carrying a `recommendation`/, 'an actionable finding is not routed');
+  assert.match(step, /could not sweep/, 'a dimension this environment could not reach is not routed');
+  assert.match(step, /An audit changes nothing/,
+    'nothing says the first block is empty by construction, so an empty one reads as an omission');
+
+  assert.ok(dispositionProblems(`${step}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a step that writes a label out');
 });

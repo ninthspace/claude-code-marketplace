@@ -38,8 +38,9 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
   skillSource, toolNames, prose, instructions, recorder, recoveries, sweep, bindings, reachable,
-  seedStartup, driveStartup, SQL, CONSTRUCTIONS,
+  seedStartup, driveStartup, SQL, CONSTRUCTIONS, section,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'archive';
 const source = skillSource(SKILL);
@@ -433,4 +434,30 @@ test('the archive skill recovers nothing by reading a generated file', (t) => {
   assert.ok(recoveries(regressed, PARSES).length >= 5,
     'the sweep passed a file that globs, parses a back-reference, matches slugs, and moves files '
     + 'into a mirrored archive tree');
+});
+
+// --- Spec 50 FR8: stamped and skipped are dispositions, not a private pair -----------------------
+
+test('the sweep reports by disposition and keeps no wording of its own', () => {
+  // The rule closes Phase 4 rather than opening `## Output`, because what `archive` reports is what
+  // the decide-and-stamp loop did — `## Output` is about the rows it left behind.
+  const rule = section(source, 'Phase 4');
+
+  assert.notEqual(rule, '', 'the decide-and-stamp phase still exists');
+  assert.deepEqual(dispositionProblems(rule, 'archive Phase 4'), []);
+
+  assert.match(rule, /stamped is archived\s+now/, 'a stamped document is not routed');
+  assert.match(rule, /skipped was seen and deliberately left/, 'a skipped document is not routed');
+
+  // The third state the old pair had no room for. A run stopped midway is the case where "stamped
+  // and skipped" is a complete account of what happened and a misleading account of where things
+  // stand, which is precisely what a disposition names and a pair of outcomes cannot.
+  assert.match(rule, /never reached before it stopped is waiting on the reader/,
+    'a run stopped midway reports nothing waiting, so an interrupted sweep reads as a finished one');
+
+  assert.doesNotMatch(rule, /Report what was stamped and what was skipped/,
+    'the private wording survives beside the shared rule');
+
+  assert.ok(dispositionProblems(`${rule}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a rule that writes a label out');
 });

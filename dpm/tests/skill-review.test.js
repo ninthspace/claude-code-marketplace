@@ -37,6 +37,7 @@ import {
   skillSource, toolNames, section, prose, recorder, recoveries, bindings, reachable, seedStartup,
   driveStartup,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'review';
 const source = skillSource(SKILL);
@@ -475,4 +476,25 @@ test('the skill recovers nothing by reading a generated file', (t) => {
 
   assert.ok(recoveries(regressed, PARSES).length >= 4,
     'the sweep passed a file that names a path, builds a filename, suffixes a story and parses a roster');
+});
+
+// --- Spec 50 FR6: each finding's disposition comes from its own two columns ----------------------
+
+test('remediation reports each finding under the disposition its columns give it', () => {
+  const step = section(source, 'Step 5: Remediation');
+
+  assert.notEqual(step, '', 'the remediation step still exists');
+  assert.deepEqual(dispositionProblems(step, 'review Step 5'), []);
+
+  // The site-specific half: all three states the step already distinguishes are routed, and it is
+  // the *link* that decides rather than the severity — a review that sorted by severity would put
+  // an actioned critical above an unanswered warning, which is the ordering FR4 exists to stop.
+  assert.match(step, /carrying a `remediation_task_id`/, 'an actioned finding is not routed');
+  assert.match(step, /`rejected` finding/, 'a rejected finding is not routed');
+  assert.match(step, /left `open` with no task/, 'the finding still awaiting a decision is not routed');
+  assert.match(step, /Derived from the rows rather than said alongside them/,
+    'the dispositions sit beside the columns rather than being derived from them');
+
+  assert.ok(dispositionProblems(`${step}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a step that writes a label out');
 });

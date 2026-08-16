@@ -145,6 +145,15 @@ nothing is deleted.
 decided against — a criterion that was not achieved is recorded as not met with a note saying why,
 which is a different and more honest thing than a criterion quietly dropped.
 
+**Report each criterion under the disposition its own row gives it.** Read the terms from
+`mcp__plugin_dpm_dpm__list_taxonomy` in the `disposition` domain and render them in `position` order.
+The column decides, not the sentence: `met` true is a criterion whose work is in the codebase now;
+`met` false whose `note` records a deliberate decision is one seen and not acted on; `met` false
+because nothing here could perform the check is still open, and the `note` says what would close it;
+and `met` still unset at close is waiting on the reader, so it says what would settle it and where.
+Three of those are a record and one is an action, which is the distinction a closing summary exists
+to draw.
+
 **The observation is mandatory, carries exactly one category, and hangs off this record rather than
 a retro.** `quick_id` is its origin, the same way `story_id` is for work done under an epic, so
 `/dpm:retro` gathers it later by setting `retro_id` and the origin is never cleared. Write it even

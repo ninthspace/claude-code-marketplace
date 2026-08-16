@@ -91,7 +91,7 @@ export function vocabularies(context) {
   return [
     ...vocabularyTools(context, {
       table: 'taxonomy',
-      noun: 'a controlled term — an observation category, finding category, audit dimension or severity',
+      noun: 'a controlled term — an observation category, finding category, audit dimension, severity or report disposition',
       key: ['id'],
       fields: {
         id: {
@@ -102,7 +102,7 @@ export function vocabularies(context) {
         domain: {
           type: 'string',
           minLength: 1,
-          description: "'observation', 'finding', 'audit_dimension' or 'severity'",
+          description: "'observation', 'finding', 'audit_dimension', 'severity' or 'disposition'",
         },
         name: { type: 'string', minLength: 1, description: "canonical form, e.g. 'Testing Gaps'" },
         singular: { type: 'string', description: 'per-item display form, where it differs' },

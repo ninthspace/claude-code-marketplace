@@ -133,7 +133,13 @@ would be recording a conclusion nobody reached — over the one the user did rea
 with no error and nothing to compare against afterwards.
 
 Each call lands as it is made, so a run stopped midway leaves what it already archived archived.
-Report what was stamped and what was skipped.
+
+**Report by disposition**: read the terms from `mcp__plugin_dpm_dpm__list_taxonomy` in the
+`disposition` domain and render them in `position` order. A document this run stamped is archived
+now; one skipped was seen and deliberately left, with the reason it was skipped; and a document the
+run never reached before it stopped is waiting on the reader, naming what is left to sweep. That last
+is the case a run stopped midway has to say out loud — the rows it did write look identical either
+way.
 
 ## Output
 

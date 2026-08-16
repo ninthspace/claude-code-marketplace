@@ -1,5 +1,6 @@
 /**
- * The four `taxonomy` domains, transcribed from a real CPM project's output.
+ * The five `taxonomy` domains. The first four are transcribed from a real CPM project's output;
+ * `disposition` comes from spec 50.
  *
  * **Ids are stable slugs, not ULIDs.** AD9 makes every id a ULID because ids are minted by
  * the tool surface and only have to be unique. These are not minted — they are the same
@@ -64,6 +65,20 @@ const AUDIT_DIMENSION = [
   ['documentation-drift', 'Documentation drift'],
 ];
 
+/**
+ * What a report says about each thing it mentions, so a reader can tell an action from a record.
+ *
+ * `position` is the order a report renders them in, which puts the one thing the reader has to
+ * act on last and alone — the same reason `audit_dimension` carries a fixed order rather than an
+ * alphabetical one. It is not the order the spec lists them in prose.
+ */
+const DISPOSITION = [
+  ['fixed', 'Fixed'],
+  ['left-alone', 'Left alone'],
+  ['unverified', 'Unverified'],
+  ['needs-you', 'Needs you'],
+];
+
 function domain(name, terms) {
   return terms.map(([slug, term, singular = null], index) => ({
     id: `${name}:${slug}`,
@@ -80,4 +95,5 @@ export const TAXONOMY = [
   ...domain('finding', FINDING),
   ...domain('severity', SEVERITY),
   ...domain('audit_dimension', AUDIT_DIMENSION),
+  ...domain('disposition', DISPOSITION),
 ];

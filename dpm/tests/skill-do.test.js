@@ -32,6 +32,7 @@ import {
   skillSource, toolNames, reachable, section, recorder, recoveries, bindings,
   seedStartup, driveStartup,
 } from './support/skills.js';
+import { domainTerms } from './support/vocabulary.js';
 
 const SKILL = 'do';
 const source = skillSource(SKILL);
@@ -437,6 +438,76 @@ test('the retro gate disposes of each observation, and the verification gate wai
   // And a control on the ordering assertion itself: the gate is checkable only because a story
   // really did have more than one task under it.
   assert.equal(result.worked[0].tasks.length, 2);
+});
+
+// --- Spec 50: the report is derived from the rows, and names no label ----------------------------
+
+/** The disposition domain's labels, from the seed — the strings the file must not carry. */
+const LABELS = domainTerms('disposition').map((row) => row.name);
+
+test('Step 8 derives its report from the rows rather than narrating beside them', () => {
+  const step = section(source, '8. Epic summary');
+
+  assert.notEqual(step, '', 'the epic summary step still exists');
+
+  // The three row sources the criterion names, each said to be where a report item comes from.
+  assert.match(step, /`mcp__plugin_dpm_dpm__list_coverage`/, 'the coverage rows are not read');
+  assert.match(step, /coverage row this run verified/,
+    'no rule maps a coverage row to what the reader has to do about it');
+  assert.match(step, /change moment resolved by amending a row/,
+    'a resolved change moment carries no disposition, so it reads the same as one that did not land');
+  assert.match(step, /could not reach/,
+    'a change moment whose artefact was missed is not separated from one that was reached');
+
+  // The derivation is the claim, not the presence of a list: a step that named the same four
+  // groups while leaving the run free to label them by feel would match every assertion above.
+  assert.match(step, /takes its disposition from that row's state/,
+    'the report is described beside the rows rather than derived from them');
+
+  // The observation exclusion — FR3 applied at this site. Without it the summary reabsorbs the
+  // retro's input, which is the narration the derivation replaced.
+  assert.match(step, /not a report item/,
+    'a story observation is left able to appear in the summary with no disposition to carry');
+});
+
+test('the autonomous section reports through the shared vocabulary and keeps no rule of its own', () => {
+  const autonomous = section(source, 'Autonomous mode');
+
+  assert.notEqual(autonomous, '', 'the autonomous section still exists');
+
+  // **Both halves, because presence alone passes with the old phrasing still in place.** A section
+  // carrying the shared rule *and* its own standalone instruction has two vocabularies, which is
+  // the state FR7 exists to end rather than an intermediate one.
+  assert.match(autonomous, /applied with nobody watching changed this run/,
+    'the two sets are no longer distinguished by what the reader has to do about them');
+  assert.match(autonomous, /waiting on a human to read it/,
+    'a deferred-unreviewed lesson is not marked as waiting on anyone');
+  assert.doesNotMatch(autonomous, /surface the two sets/i,
+    'the standalone instruction survives beside the shared rule, so the run has two vocabularies');
+});
+
+test('the skill names the disposition domain and writes none of its labels', () => {
+  assert.equal(LABELS.length, 4, 'the seed carries the labels this sweep is looking for');
+
+  assert.match(source, /`disposition` domain/,
+    'the skill reports dispositions without naming the domain the terms come from');
+  assert.match(source, /mcp__plugin_dpm_dpm__list_taxonomy/,
+    'the domain is named but never read, so the terms are still coming from somewhere else');
+
+  // **The must-NOT, and it is the reason the domain reference above is worth anything.** A file
+  // that named the domain and then wrote the four labels out would satisfy every positive check
+  // while putting the vocabulary back in prose, where a project's own term never reaches it.
+  for (const label of LABELS) {
+    assert.equal(source.includes(label), false,
+      `the skill hardcodes the label '${label}' instead of reading it from the domain`);
+  }
+
+  // The control. Every label is a phrase this file could plausibly have used, so the sweep has to
+  // be shown finding one before an empty result means anything.
+  const regressed = `${source}\n\nReport each item as ${LABELS.join(', ')}.`;
+
+  assert.ok(LABELS.some((label) => regressed.includes(label)),
+    'the sweep passed a file that writes every label out in one line');
 });
 
 // --- Criterion 5 (must NOT): no recovery by reading what was written -----------------------------

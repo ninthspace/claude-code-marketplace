@@ -269,8 +269,26 @@ that needed more than one red, a test command that returned failures, a story le
 change moment resolved by amending a row. With no signal, skipping is permitted and the skip is **stated with
 its reason**, so the absence is a decision rather than an oversight.
 
-**Report** the per-story refactoring outcomes from the session `state`, then offer the next ready
-epic from `mcp__plugin_dpm_dpm__list_epic` with `ready: true`.
+**Report by disposition, derived rather than narrated.** Read the terms from
+`mcp__plugin_dpm_dpm__list_taxonomy` in the `disposition` domain and render the summary in their
+`position` order. Every item comes from a row and takes its disposition from that row's state, not
+from how the sentence reads once written — the same distinction the coverage claim above draws,
+turned on the report itself:
+
+- a coverage row this run verified, a change moment resolved by amending a row, and a refactoring
+  pass that ran — the repository is different now;
+- a criterion recorded `target-only`, and any check this environment cannot perform — still open,
+  saying what would close it;
+- a refactoring pass skipped or reverted — seen and not acted on, with its reason;
+- a criterion unmet and continued past, a requirement left unclaimed, and a change moment whose
+  artefact this run could not reach — still waiting on the reader, so each names what to do and
+  where.
+
+A story observation is `/dpm:retro`'s input and not a report item: nothing is waiting on the reader
+for it, and repeating it here is narration. The per-story refactoring outcomes come from the session
+`state` and are dispositioned by the third and first clauses above.
+
+Then offer the next ready epic from `mcp__plugin_dpm_dpm__list_epic` with `ready: true`.
 
 ## Change moments
 
@@ -305,8 +323,9 @@ The retro gate branches by category rather than deferring everything. **Codebase
 **patterns worth reusing** are additive and low-ambiguity, so they are applied and carried into the
 run; **scope surprises, criteria gaps, complexity underestimates and testing gaps** each imply a
 re-planning call that belongs to a human, so they are deferred. Record both with
-`mcp__plugin_dpm_dpm__create_retro_application`, and surface the two sets **separately** in the Step 8 summary —
-what changed the run with nobody watching is not the same as what nobody has read yet.
+`mcp__plugin_dpm_dpm__create_retro_application`, and report them at Step 8 under the dispositions
+that already separate them: a lesson applied with nobody watching changed this run, while a lesson
+deferred unreviewed is waiting on a human to read it.
 
 `/dpm:pivot` is never invoked: it is interactive, and calling it produces exactly the stall this
 branch exists to prevent. A change moment that would have gone there amends **this epic's rows and

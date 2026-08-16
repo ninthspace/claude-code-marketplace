@@ -83,8 +83,14 @@ inventory already came back in — never meets that refusal.
 
 ## Output
 
-The rows are the output, by their absence. Report what was deleted, what was left, and anything the
-database refused, with its reason.
+The rows are the output, by their absence. **Report by disposition**: read the terms from
+`mcp__plugin_dpm_dpm__list_taxonomy` in the `disposition` domain and render them in `position` order.
+A row this run deleted is gone from the database now; a row the user chose to keep was seen and
+deliberately left; and a deletion the database refused is waiting on the reader, carrying the
+refusal's own reason and what would clear it.
+
+The refusals are the only part of that report anyone has to act on, and a run that lists them among
+the deletions has hidden the one thing it could not do inside everything it did.
 
 ## Guidelines
 

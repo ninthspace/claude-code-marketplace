@@ -38,8 +38,9 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
   skillSource, toolNames, prose, instructions, recorder, recoveries, sweep, bindings, reachable,
-  seedStartup, driveStartup, SQL, CONSTRUCTIONS,
+  seedStartup, driveStartup, SQL, CONSTRUCTIONS, section,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'pivot';
 const source = skillSource(SKILL);
@@ -485,4 +486,24 @@ test('the skill recovers nothing by reading a generated file', (t) => {
   assert.ok(recoveries(regressed, PARSES).length >= 8,
     'the sweep passed a file that globs, parses two fields, matches slugs, builds partial chains '
     + 'and edits a verification cell in a companion file');
+});
+
+// --- Spec 50 FR6: the tasks a pivot puts in doubt are reported with their disposition ------------
+
+test('Phase 4 reports each affected task under the disposition the amendment gives it', () => {
+  const phase = section(source, 'Phase 4: Tasks affected');
+
+  assert.notEqual(phase, '', 'the affected-tasks phase still exists');
+  assert.deepEqual(dispositionProblems(phase, 'pivot Phase 4'), []);
+
+  // The site-specific half. `pivot` derives from *which criteria moved* rather than from a column
+  // on the task, so both sides of that split are routed — and the phase's own "change nothing" rule
+  // is what makes the disposition the whole of its output.
+  assert.match(phase, /under a criterion this pivot changed/, 'a task in doubt is not routed');
+  assert.match(phase, /whose own criteria did not move/, 'a task left untouched is not routed');
+  assert.match(phase, /\*\*Change nothing\.\*\*/,
+    'the phase no longer refuses to act, so a disposition here would be describing its own edits');
+
+  assert.ok(dispositionProblems(`${phase}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a phase that writes a label out');
 });

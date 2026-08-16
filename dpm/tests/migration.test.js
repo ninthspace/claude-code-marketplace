@@ -33,6 +33,11 @@ const taxonomyRow = (db, id) => ({ ...db.prepare('SELECT * FROM taxonomy WHERE i
 /** Where a version-7 database stops: the last file whose tables Story 2 had not yet added. */
 const OLD = 7;
 
+/** Spec 50's dispositions in render order, transcribed rather than imported from the seed. */
+const DISPOSITION = [
+  'disposition:fixed', 'disposition:left-alone', 'disposition:unverified', 'disposition:needs-you',
+];
+
 test('a database behind the release is migrated forward on start, with no user action', (t) => {
   const file = databaseAtVersion(t, OLD);
 
@@ -213,6 +218,50 @@ test('an upgrade never resurrects a term the project retired', (t) => {
   );
   assert.equal(vocabulary.inserted.taxonomy.inserted, 1, 'while the absent term was inserted');
   assert.ok(taxonomyRow(db, 'audit_dimension:performance').name, 'which is the control');
+});
+
+test('a database from before spec 50 gains the disposition terms on its next open', (t) => {
+  // **The DDL and nothing else** — `databaseAtVersion` applies every schema file and never runs
+  // the vocabulary pass. That makes the emptiness below a statement about where the terms come
+  // from, which is ENVX3's actual claim. A pinned version number would say only that the release
+  // is the version it is, and would go stale on the next unrelated migration.
+  const file = databaseAtVersion(t, targetVersion());
+
+  const before = file.connect();
+  assert.ok(tableExists(before, 'taxonomy'), 'a fully migrated database, not one missing the table');
+  assert.equal(
+    before.prepare("SELECT count(*) AS n FROM taxonomy WHERE domain = 'disposition'").get().n,
+    0,
+    'and no .sql file put a disposition in it, so what arrives below arrived from the seed',
+  );
+  before.close();
+
+  const first = start(file.path);
+
+  assert.deepEqual(
+    first.db.prepare("SELECT id FROM taxonomy WHERE domain = 'disposition' ORDER BY position").all()
+      .map((row) => row.id),
+    DISPOSITION,
+    'the four terms arrive on open — no migration to write, no user action to take',
+  );
+
+  // A project that removed one it did not want, and added one of its own. The second is the
+  // control, and it is the stronger of the two: a pass that reset the domain to the shipped list
+  // would restore the deleted term — satisfying a naive test — while deleting the project's.
+  first.db.prepare("DELETE FROM taxonomy WHERE id = 'disposition:needs-you'").run();
+  first.db.prepare(
+    "INSERT INTO taxonomy (id, domain, name, position) VALUES ('disposition:escalated', 'disposition', 'Escalated', 5)",
+  ).run();
+  first.db.close();
+
+  const { db, vocabulary } = start(file.path);
+
+  assert.ok(taxonomyRow(db, 'disposition:needs-you').name, 'the removed term is put back');
+  assert.equal(vocabulary.inserted.taxonomy.inserted, 1, 'and it is the only one the pass wrote');
+  assert.ok(
+    taxonomyRow(db, 'disposition:escalated').name,
+    'while the project\'s own disposition survives, which is what makes this a vocabulary and not a list',
+  );
 });
 
 test('an upgrade does not rewrite the text of a term rows already reference', (t) => {

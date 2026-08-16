@@ -35,8 +35,9 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
   skillSource, toolNames, prose, instructions, recorder, recoveries, sweep, bindings, reachable,
-  SQL, CONSTRUCTIONS,
+  SQL, CONSTRUCTIONS, section,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'clean';
 const source = skillSource(SKILL);
@@ -337,4 +338,26 @@ test('the clean skill recovers nothing by reading a generated file', (t) => {
   assert.ok(recoveries(regressed, PARSES).length >= 6,
     'the sweep passed a file that globs a filename stem, pairs companions by suffix, stats for age '
     + 'and removes files');
+});
+
+// --- Spec 50 FR8: the private wording is replaced, not supplemented ------------------------------
+
+test('the output reports by disposition and keeps no wording of its own', () => {
+  const output = section(source, 'Output');
+
+  assert.notEqual(output, '', 'the output section still exists');
+  assert.deepEqual(dispositionProblems(output, 'clean\'s Output'), []);
+
+  // The three outcomes `clean` already produces, each routed by what it asks of the reader.
+  assert.match(output, /deleted is gone from the database now/, 'a deletion is not routed');
+  assert.match(output, /chose to keep was seen and\s+deliberately left/, 'a kept row is not routed');
+  assert.match(output, /refused is waiting on the reader/, 'a refusal is not routed');
+
+  // **The replacement half, and it is the half Story 4's first sweep rests on.** A section carrying
+  // the shared rule *and* its own list has two vocabularies, which is the state this replaces.
+  assert.doesNotMatch(output, /Report what was deleted, what was left/,
+    'the private wording survives beside the shared rule');
+
+  assert.ok(dispositionProblems(`${output}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a section that writes a label out');
 });

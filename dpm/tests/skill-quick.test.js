@@ -33,6 +33,7 @@ import {
   skillSource, toolNames, reachable, section, prose, instructions, recorder, recoveries, bindings,
   seedStartup, driveStartup,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'quick';
 const source = skillSource(SKILL);
@@ -379,4 +380,27 @@ test('the skill recovers nothing by reading a generated file', (t) => {
 
   assert.ok(recoveries(regressed, PARSES).length >= 5,
     'the sweep passed a file that names a path, builds a filename, reads a file back and overwrites it');
+});
+
+// --- Spec 50 FR6: the closing report is derived from `met` ---------------------------------------
+
+test('the close reports each criterion under the disposition its `met` column gives it', () => {
+  const step = section(source, 'Step 4: Close the record');
+
+  assert.notEqual(step, '', 'the closing step still exists');
+  assert.deepEqual(dispositionProblems(step, 'quick Step 4'), []);
+
+  // The site-specific half: the tri-state is what decides, and all three of its states are routed.
+  // Without this the shared reading above is satisfied by a step that names the domain and then
+  // leaves the writer to sort the criteria by feel.
+  assert.match(step, /`met` true/, 'a met criterion is not routed');
+  assert.match(step, /`met` false/, 'a criterion decided against is not routed');
+  assert.match(step, /`met` still unset at close/, 'the undecided third state is not routed');
+  assert.match(step, /The column decides, not the sentence/,
+    'the dispositions are described beside the column rather than derived from it');
+
+  // The control on the label sweep, which is the assertion most likely to pass for the wrong
+  // reason: it has to be shown catching a label before an empty result means anything.
+  assert.ok(dispositionProblems(`${step}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a step that writes a label out');
 });

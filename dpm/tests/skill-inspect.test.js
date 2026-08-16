@@ -28,8 +28,9 @@ import { spineTools } from '../src/tools/index.js';
 import { DEFAULT_LIMIT } from '../src/tools/convention.js';
 import {
   skillSource, toolNames, reachable, prose, recorder, recoveries, bindings,
-  seedStartup, driveStartup,
+  seedStartup, driveStartup, section,
 } from './support/skills.js';
+import { dispositionProblems } from './support/vocabulary.js';
 
 const SKILL = 'inspect';
 const source = skillSource(SKILL);
@@ -349,4 +350,29 @@ test('must NOT — the skill recovers an entity by reading a generated markdown 
 
   assert.ok(recoveries(regressed, PARSES).length >= 4,
     'the sweep passed a file that walks directories, reads a matrix, follows a field and sources a script');
+});
+
+// --- Spec 50 FR8: an inspection reports dispositions without acting ------------------------------
+
+test('the report names the disposition domain and routes the unread files to the reader', () => {
+  const step = section(source, '6. Report');
+
+  assert.notEqual(step, '', 'the report step still exists');
+  assert.deepEqual(dispositionProblems(step, 'inspect Step 6'), []);
+
+  assert.match(step, /An inspection changes nothing/,
+    'nothing says the first block is empty by construction, so an empty one reads as an omission');
+  assert.match(step, /could not check is still open/, 'an unresolvable claim is not routed');
+
+  // **FR5's boundary at the site most likely to cross it.** Step 5's unread files come from a pass
+  // that ran out of road, which is a fact about the run — so they are the reader's. A skill that
+  // filed them as unverifiable would satisfy every other assertion here while making Step 5's whole
+  // disclosure free.
+  assert.match(step, /unread files belong in that last block, not among the unchecked/,
+    'the unread files are not routed to the reader');
+  assert.match(step, /fact about the run rather than about the\s+environment/,
+    'nothing says why they are not unverifiable, so the distinction is a rule with no reason');
+
+  assert.ok(dispositionProblems(`${step}\nEach one is Fixed.`, 'planted').length >= 1,
+    'the sweep passed a step that writes a label out');
 });

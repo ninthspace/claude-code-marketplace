@@ -19,7 +19,7 @@
 
 CREATE TABLE taxonomy (
   id          TEXT NOT NULL PRIMARY KEY,
-  domain      TEXT    NOT NULL,   -- 'observation','finding','audit_dimension','severity'
+  domain      TEXT    NOT NULL,   -- 'observation','finding','audit_dimension','severity','disposition'
   name        TEXT    NOT NULL,   -- canonical form, e.g. 'Patterns Worth Reusing'
   singular    TEXT,               -- per-item display form, e.g. 'Pattern worth reusing'
   position    INTEGER NOT NULL,

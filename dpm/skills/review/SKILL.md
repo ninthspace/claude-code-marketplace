@@ -168,6 +168,14 @@ Where the user declines, or a finding is judged not worth acting on, `mcp__plugi
 `status` to `rejected` with the reason said aloud. Lowest-severity findings are informational and
 stay `open` unless the user says otherwise.
 
+**Report each finding under the disposition those two columns already give it.** Read the terms from
+`mcp__plugin_dpm_dpm__list_taxonomy` in the `disposition` domain and render them in `position` order.
+A finding carrying a `remediation_task_id` has a task answering it, so the plan is different now and
+the reader has only to read it; a `rejected` finding was seen and deliberately not acted on, and
+carries the reason; and a finding left `open` with no task is waiting on the reader to decide, so it
+names the decision. Derived from the rows rather than said alongside them — a review whose findings
+are summarised in prose puts the one still needing a decision beside the eleven that do not.
+
 ### Step 6: Handoff
 
 - `/dpm:pivot` to amend the epic or its spec from what the review found

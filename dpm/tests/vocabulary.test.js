@@ -14,8 +14,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openPlanningDatabase as planning } from './support/planning-database.js';
-import { retire } from './support/vocabulary.js';
+import { readFileSync } from 'node:fs';
+import { openPlanningDatabase as planning, handlers } from './support/planning-database.js';
+import { spineTools } from '../src/tools/index.js';
+import { retire, domainTerms, dispositionProblems } from './support/vocabulary.js';
 import { authoredTables, columnNames, foreignKeys, triggerNames } from './support/introspection.js';
 import { create } from './fixtures/index.js';
 import { childDocument, retroDocument, rootDocument } from './fixtures/planning.js';
@@ -30,6 +32,20 @@ import { VOCABULARIES } from '../src/schema/seeds/index.js';
 const PARITY_ENUMERATION = [
   'problem_brief', 'product_brief', 'spec', 'epic', 'coverage_matrix', 'review', 'retro',
   'quick', 'discussion', 'communication', 'audit', 'runbook', 'library', 'adr',
+];
+
+/**
+ * The dispositions a report may carry, transcribed from spec 50's FR1 and deliberately **not**
+ * imported from `seeds/taxonomy.js` — for the reason `PARITY_ENUMERATION` above is transcribed.
+ *
+ * In the order a report renders them, because that order *is* FR4 and `position` is where it
+ * lives: the one thing the reader has to act on comes last and alone.
+ */
+const DISPOSITION_ENUMERATION = [
+  'disposition:fixed',
+  'disposition:left-alone',
+  'disposition:unverified',
+  'disposition:needs-you',
 ];
 
 /** A spec, and a review and an audit hanging off it — what `finding` and `audit_finding` need. */
@@ -107,6 +123,125 @@ test('a first start puts every term the release ships into an empty database', (
     VOCABULARIES.find(({ table }) => table === 'agent').rows.length,
     'the count is capable of disagreeing, so the agreement above was found rather than assumed',
   );
+});
+
+test('the disposition domain and spec 50\'s enumeration name each other, in both directions', (t) => {
+  const db = planning(t);
+
+  // **Read through the tool, not the table.** FR10 claims the four terms are "readable via
+  // `list_taxonomy`", and a skill that needs them has no other way in — a `SELECT` here would
+  // pass against a domain the tool surface cannot reach, which is the whole of what FR10 buys.
+  const raw = handlers(spineTools(db));
+  const rows = raw.list_taxonomy({ domain: 'disposition', limit: 100 }).items;
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    DISPOSITION_ENUMERATION,
+    'a disposition in one and not the other is a vocabulary the spec and the seed disagree about',
+  );
+
+  // Ordering is FR4, and it is data rather than prose only if `position` carries it. `list_taxonomy`
+  // orders by that column, so the `deepEqual` above is already an assertion about render order —
+  // this pins the values so a domain positioned 4,3,2,1 cannot satisfy it by luck of the sort.
+  assert.deepEqual(
+    rows.map((row) => row.position),
+    [1, 2, 3, 4],
+    'positioned 1..4 with no gap — Needs you last, which is the point of fixing the order at all',
+  );
+
+  // The floor case. A two-way comparison of two empty sets is the one comparison a set difference
+  // cannot fail, so a domain that seeded nothing has to be caught by something other than the
+  // reconcile above.
+  assert.ok(rows.length > 0, 'the domain has terms, so the reconcile compared something');
+  assert.deepEqual(
+    raw.list_taxonomy({ domain: 'no-such-domain', limit: 100 }).items,
+    [],
+    'and an unseeded domain reads empty rather than erroring, which is what makes that check load-bearing',
+  );
+
+  // The control. Without it the reconcile passes against a reading incapable of disagreeing.
+  db.prepare('DELETE FROM taxonomy WHERE id = ?').run('disposition:needs-you');
+  assert.notDeepEqual(
+    raw.list_taxonomy({ domain: 'disposition', limit: 100 }).items.map((row) => row.id),
+    DISPOSITION_ENUMERATION,
+    'the comparison is capable of disagreeing, so the agreement above was found rather than assumed',
+  );
+});
+
+test('the readings four skill suites rest on can each fail, and say what failed', () => {
+  // **Written because four suites now delegate to these and none of them would notice.** A
+  // `dispositionProblems` that returned `[]` on everything, or a `domainTerms` that returned `[]`
+  // for a misspelt domain, leaves every caller green — the caller's `deepEqual(…, [])` is satisfied
+  // by a reading that has stopped looking, which is the same shape as a reading that found nothing.
+  assert.deepEqual(domainTerms('disposition').map((row) => row.id), DISPOSITION_ENUMERATION);
+
+  assert.throws(
+    () => domainTerms('dispositions'),
+    /no seeded terms in the 'dispositions' domain/,
+    'a misspelt domain returns an empty list, and every sweep driven off it then passes over nothing',
+  );
+
+  // A section that does everything right, so the reading is shown returning nothing for a reason.
+  const good = 'Read the terms from `mcp__plugin_dpm_dpm__list_taxonomy` in the `disposition` '
+    + 'domain and render them in `position` order.';
+
+  assert.deepEqual(dispositionProblems(good, 'the good section'), []);
+
+  // Then each way a section can be wrong, separately — a helper that collapsed to one check would
+  // still pass the two assertions above.
+  assert.deepEqual(
+    dispositionProblems(good.replace('`disposition` domain', 'usual four'), 'S'),
+    ['S reports dispositions without naming the domain they come from'],
+  );
+  assert.deepEqual(
+    dispositionProblems(good.replace('mcp__plugin_dpm_dpm__list_taxonomy', 'the list above'), 'S'),
+    ['S names the domain but never reads it, so the terms come from elsewhere'],
+  );
+  assert.deepEqual(
+    dispositionProblems(good.replace('`position` order', 'whatever order reads best'), 'S'),
+    ['S leaves the render order to the writer, so the actionable block can land first'],
+  );
+
+  // And the label sweep names the label it found, one problem per label rather than one for the set.
+  assert.deepEqual(
+    dispositionProblems(`${good} Report each as Fixed or Needs you.`, 'S'),
+    [
+      "S hardcodes the label 'Fixed' instead of reading it from the domain",
+      "S hardcodes the label 'Needs you' instead of reading it from the domain",
+    ],
+  );
+});
+
+test('every surface that enumerates the taxonomy domains names all of them', () => {
+  // Three files list the domains in prose, in three different phrasings, and every one of them is
+  // read by somebody: the column comment by a maintainer, and the tool's `noun` and `domain`
+  // description by the model deciding what to write. A domain added to the seed and to none of
+  // these is a vocabulary that exists and cannot be found — which is how `disposition` was nearly
+  // shipped with two of the three still saying four.
+  const surfaces = ['src/schema/008-vocabularies.sql', 'src/tools/vocabulary.js']
+    .map((path) => [path, readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')]);
+
+  const domains = [...new Set(VOCABULARIES.find(({ table }) => table === 'taxonomy').rows
+    .map((row) => row.domain))];
+
+  assert.ok(domains.length >= 5, `only ${domains.length} domains found, so the sweep is not looking`);
+
+  for (const [path, text] of surfaces) {
+    for (const domain of domains) {
+      // Either spelling counts: the column comment quotes the raw value, while the `noun` reads as
+      // English — "audit dimension", "report disposition". Both name the domain; neither is wrong.
+      assert.ok(
+        text.includes(domain) || text.includes(domain.replaceAll('_', ' ')),
+        `${path} enumerates the taxonomy domains and does not name '${domain}'`,
+      );
+    }
+  }
+
+  // The control. Without it a surface that had been emptied of every domain name would pass, since
+  // `includes` over a file this large is a low bar and the loop above never proves it can fail.
+  for (const [path, text] of surfaces) {
+    assert.equal(text.includes('provenance'), false, `${path} names a domain the seed has never had`);
+  }
 });
 
 test('every persona the roster carries is usable on both columns that name one', (t) => {

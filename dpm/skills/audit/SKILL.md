@@ -194,6 +194,15 @@ The sections, in order:
 **Do not write a Findings section.** The findings are rows, and the projection renders and orders
 them; a section holding a second copy disagrees with the rows the first time either is touched.
 
+**Report each finding under the disposition its row gives it.** Read the terms from
+`mcp__plugin_dpm_dpm__list_taxonomy` in the `disposition` domain and render them in `position` order.
+A finding carrying a `recommendation` is waiting on the reader and names the change and where; one
+without is a record of something seen and left; and a dimension this environment could not sweep is
+still open, with what would close it — the same thing Open Questions holds, said as a disposition
+rather than only as a section. An audit changes nothing, so the first disposition never has items
+and never appears; a report that opens with the second is the honest shape of an audit rather than a
+gap in it, and the same rule **No padding** applies to a dimension applies to a disposition.
+
 **No padding.** A dimension that found nothing contributes no rows and no narrative. Never write
 "Nothing material" or "N/A" for it — an absent category signals confidence, and a placeholder
 signals box-ticking.

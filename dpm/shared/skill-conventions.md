@@ -132,6 +132,48 @@ a summary.
 The test is whether someone reading only the narration still knows where they are and what was
 decided.
 
+### Disposition
+
+Every item a report mentions carries one of four dispositions, and the disposition names what the
+**reader** has to do about it rather than what you did:
+
+- **Fixed** — the repo is different now; read it and carry on.
+- **Left alone** — it was seen and deliberately not acted on; nothing is waiting.
+- **Unverified** — the check was impossible here, so the claim is still open; the reason names what
+  would close it.
+- **Needs you** — it is waiting on the reader, and nothing else in the report is.
+
+The four are the `disposition` domain. Read them with `list_taxonomy` and render them in the
+`position` order the domain carries, rather than transcribing the labels or the order into a skill.
+
+**The label follows the reader's obligation, not your action.** Something fixed that is also worth a
+glance is Fixed with the note attached, never Needs you. A Needs you that absorbs "and you may want
+to look at this" stops meaning anything, and the one item that was genuinely waiting is then lost
+among the ones that were not.
+
+**An item that fits none of the four is not reported.** Work considered and rejected, the steps
+taken to reach an answer, and a restatement of what the reader has just approved carry no
+disposition, because there is nothing for the reader to do with any of them.
+
+**A disposition with no items is not rendered at all** — no heading, no "nothing to report" line.
+The same rule one level up: a block saying it is empty is a block the reader has to read to learn
+there was nothing in it, and a report whose four headings are always present costs its reader four
+readings to find the one or two that carry anything. A run that fixed everything it touched says so
+in one block and stops. Absence is read from the absence of the heading, so the surviving blocks
+still arrive in the order above and the reader may still stop once the actionable one has passed.
+
+**In a report, the order is fixed** — Fixed, Left alone, Unverified, then Needs you last and
+together, each one written as an imperative naming the action and where to take it. A reader who
+stops after the third block has missed nothing that was waiting for them, which is what fixing the
+order buys. This is the arrangement of a report; something unexpected found mid-work is still said
+when it turns up, and carries its disposition there.
+
+**Unverified means the check is impossible in this environment**, and the item says why. Two cases
+qualify, both structural: a `target` criterion, whose environment nobody here has, and a must-NOT
+with no control, where nothing available can make the check fail. A reason about how the run went —
+the tests fail, it was not implemented, there was no time — is **Needs you** instead, however
+genuinely it blocked you.
+
 ### Correcting yourself
 
 Narrate a correction to something said earlier when the error would change the user's conclusions

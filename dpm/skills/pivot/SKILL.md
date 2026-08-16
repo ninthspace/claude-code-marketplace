@@ -159,6 +159,14 @@ For each story whose criteria changed, `mcp__plugin_dpm_dpm__list_task` on it, a
 in doubt and why. **Change nothing.** What an amendment means for work already under way is the
 user's call; this skill's job is to make sure they are looking at it.
 
+**Report each task under the disposition the amendment gives it**, derived from which criteria moved
+rather than judged task by task. Read the terms from `mcp__plugin_dpm_dpm__list_taxonomy` in the
+`disposition` domain and render them in `position` order. A task under a criterion this pivot changed
+is waiting on the reader, and says which criterion moved and what it now asks; a task under an
+amended story whose own criteria did not move was looked at and is untouched; and the amendments
+themselves are in the rows already. Because this phase changes nothing, everything it reports is
+either a record or a decision — which is exactly why the two must not arrive in one paragraph.
+
 ### Phase 5: Retro
 
 A pivot usually reflects a lesson. Offer `/dpm:retro` on the amended artefact, and take no for an
