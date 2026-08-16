@@ -90,6 +90,29 @@ def cpm_bindings() -> dict[str, str]:
     return app_bindings(CPM_BOARD, CPM_TITLE)
 
 
+def extras(cpm: dict[str, str], dpm: dict[str, str]) -> dict[str, str]:
+    """The dpm board's own capabilities — the actions the CPM board has no equivalent of.
+
+    Translated through :data:`SAME_MEANING` before the comparison, so a capability both boards have
+    under two names is not reported as one board's extra and then required to move off a key it is
+    entitled to share.
+    """
+    shared = {SAME_MEANING.get(action, action) for action in cpm.values()}
+
+    return {key: action for key, action in dpm.items() if action not in shared}
+
+
+def extras_on_cpm_keys(cpm: dict[str, str], dpm: dict[str, str]) -> dict[str, str]:
+    """The dpm-only capabilities sitting on a key the CPM board binds, as ``{key: action}``.
+
+    The same rule as :func:`disagreements` read from the other end, and it is worth having both:
+    that one asks what each of CPM's keys does here, and this asks where each of this board's own
+    capabilities has been put. A key CPM does not bind at all is free — that is the whole point of
+    an extra — and the ones this returns are the extras that took a key already spoken for.
+    """
+    return {key: action for key, action in extras(cpm, dpm).items() if key in cpm}
+
+
 def disagreements(cpm: dict[str, str], dpm: dict[str, str]) -> dict[str, tuple[str, str]]:
     """The keys the two boards both bind and bind to different things, as ``{key: (cpm, dpm)}``.
 

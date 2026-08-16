@@ -11,55 +11,18 @@ worded "driving a running board" is the key being pressed and the thing happenin
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 
 from key_maps import cpm_bindings, disagreements
 from pilot import board, lines, until
-from wiring import registry_wiring
+from wiring import registered, surveyed
 
 from board import COMMANDS, BoardApp, PickerScreen
-from board_view import ProjectView
 from registry import list_projects
 
 #: How long a key's effect is given to land. The board answers in one frame; this is slack for a
 #: loaded machine rather than a wait for anything in particular.
 SETTLE = 2.0
-
-
-def surveyed(record: list) -> callable:
-    """A survey that reads nothing and records every project it was asked about.
-
-    The real one spawns a server per project. What these criteria are about is *which rows the
-    board asked for*, which is the argument this receives, so a survey that answered honestly would
-    add a subprocess per assertion and tell them nothing they do not already have.
-    """
-    async def survey(project: ProjectView, *, fresh: bool = False) -> ProjectView:
-        record.append((project.path, fresh))
-
-        return replace(project, pending=False)
-
-    return survey
-
-
-def registered(tmp_path: Path, *paths: Path) -> tuple[list[ProjectView], dict, Path]:
-    """A registry already holding ``paths``: its rows, the injections, and the file itself.
-
-    The rows are handed to the board as its opening state rather than left to be reloaded, because
-    that is how the real launch does it — `reload` is what a *refresh* reaches for, and a board
-    that had to call it to show anything would make the first test below pass on the mount.
-
-    The registry file is this test's own, which matters more here than anywhere: these tests
-    unregister a project by pressing a key, and the one thing worse than a failing test is one that
-    passes after removing somebody's project from their board.
-    """
-    file = tmp_path / "registry.json"
-    injections = registry_wiring(file)
-
-    for path in paths:
-        injections["register"](path)
-
-    return injections["reload"](), injections, file
 
 
 async def test_r_re_reads_every_registered_project(tmp_path, project):

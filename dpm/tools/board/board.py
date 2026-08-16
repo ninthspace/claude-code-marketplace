@@ -971,6 +971,11 @@ class BoardApp(App[None]):
         # that board hides `complete` because complete is all its model has, and this one hides
         # everything `status_model` calls finished. Same key, same gesture, more rows.
         ("z", "toggle_retired", "Show/hide done"),
+        # FR13's other half, and a dpm extra: the CPM board has no forced re-read, so this
+        # capability needs a key CPM leaves alone rather than the shifted letter it used to have.
+        # `ctrl+r` and not `R`, which is now the clear — the two were swapped by story 1, and a
+        # forced re-read landing on the key that empties the cache is the worst of the pairings.
+        ("ctrl+r", "force_refresh", "Force refresh"),
         # FR15, bound and in the palette for the reason registering is: a search is the thing a user
         # opens the board to do when they cannot remember which project something is in, and that is
         # exactly the moment they will not want to go looking for it in a menu.

@@ -69,7 +69,7 @@ Covers all four criteria, including the control that widens the filter to hide a
 
 ## Story 3 — DPM's extras moved clear
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: Story 5, Story 6  
 
 ### Acceptance Criteria
@@ -79,15 +79,19 @@ Covers all four criteria, including the control that widens the filter to hide a
 
 ### Task 1 — Move the forced re-read to ctrl+r
 
-**Status**: pending  
+**Status**: complete  
 
 Frees `R` for story 1's clear-cache and leaves `ctrl+k` unused. Search and gaps keep the keys they have; this task is only the eviction.
 
 ### Task 2 — Write tests for DPM's extras
 
-**Status**: pending  
+**Status**: complete  
 
 Covers the three extra keys driven through a running board, and the rejection read from CPM's map by story 5's reader.
+
+### Retro
+
+- A must-NOT over a comparison between two sets needs a floor assertion or it verifies nothing, and the floor has to name the specific things expected in the set rather than assert it is non-empty. "No dpm extra sits on a CPM key" is what an empty extras set says too, and there are several plausible ways for that set to empty itself by accident — the AST reader failing to find CPM's class, a `SAME_MEANING` entry swallowing a capability CPM does not actually have. Naming `force_refresh`, `search` and `coverage_gaps` and asserting each is being read as an extra is what distinguishes a rejection that holds from one that has stopped looking. The planted control confirmed it: binding `force_refresh` to `z` produced "`z` is this board's force_refresh and the cpm board binds it to toggle_complete", which names the key and both meanings rather than reporting that two maps differ.
 
 ## Story 4 — Footer and palette wording
 
