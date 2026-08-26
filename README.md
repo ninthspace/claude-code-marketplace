@@ -281,7 +281,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### DPM — Data-Modelled Planning Method (v0.5.4)
+### DPM — Data-Modelled Planning Method (v0.5.5)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 
@@ -317,6 +317,8 @@ ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
 **If either check came back with something**, the DPM README's [When something else owns the hook](./dpm/README.md#when-something-else-owns-the-hook) covers it — a stale link from a previous release, a hook manager that has moved the directory, the `pre-commit` framework, or a hook of your own to run alongside.
 
 **Re-make that symlink after each DPM upgrade**, with `ln -sf` since the old link is in the way. A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
+
+**A link that has gone missing is the case nothing reports.** `.git/hooks/` is not tracked, so the link does not survive a re-clone or anything that rewrites the directory — and git skips a hook it cannot find without a warning and without failing the commit. Unlike the stale-link case above, there is no refusal to notice: commits simply go in unchecked. Since 0.5.5 the first tool call of a session looks for the hook and writes one line to stderr when there is nothing there; it warns on absence only, and stays quiet outside a repository, in a linked worktree, and where `core.hooksPath` has moved the hooks directory. The DPM README's [First run](./dpm/README.md#first-run) has the detail, and two shell functions that fold the manual checks into the linking commands.
 
 The database is created on the first tool call rather than at launch, so a session in a directory that does not use DPM leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
 

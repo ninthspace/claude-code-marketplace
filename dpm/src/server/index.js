@@ -13,6 +13,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { RPC_ERRORS, failure } from './rpc.js';
 import { DUMP_FILE, restoreIfUnwritten as restoreFromDump } from './from-dump.js';
+import { unguardedMessage } from './hook-check.js';
 import { writeIgnore as writeIgnoreFile } from './ignore.js';
 import { SERVER_INFO, dispatch, methods } from './mcp.js';
 import { LAUNCHED_READ_ONLY, readOnlyRequested } from './read-only.js';
@@ -153,12 +154,16 @@ export const aheadMessage = (found, supported) =>
  *   call rather than three, so the *options it was given* are the only thing that distinguishes it
  *   from an ordinary open — and a recorder that saw the call and not the options would read the
  *   same either way.
+ * @param {typeof unguardedMessage} [options.checkHook] The fifth seam. Injected so a test can put
+ *   the check in a directory of its own rather than in whatever repository the suite is running
+ *   inside — a check that reads the *real* `.git/hooks/` answers differently on a developer's
+ *   machine and in CI, and would be asserting on the checkout rather than on the code.
  * @param {boolean} [options.readOnly] Resolved once by `main` (spec 48, AD1).
  * @returns {import('./mcp.js').Tool[]} The tool table `tools/call` dispatches against.
  */
 export function open(location, {
   start = startDatabase, writeIgnore = writeIgnoreFile, restore = restoreFromDump,
-  connect = openConnection, readOnly = false,
+  connect = openConnection, checkHook = unguardedMessage, readOnly = false,
 } = {}) {
   // **The read-only bring-up is one step where the ordinary one is five, and the four it leaves
   // out are the requirement** (spec 48, NFR1 and ENVX3). No directory is created, no ignore file
@@ -222,6 +227,16 @@ export function open(location, {
 
     mkdirSync(directory, { recursive: true });
     writeIgnore(directory);
+
+    // **The one unasked-for line dpm can say about the repository rather than the database.** The
+    // guard is a symlink into `.git/hooks/`, which git does not track, so it goes missing on a
+    // re-clone and says nothing when it does — and unlike the stale-link case below, which refuses
+    // the next commit and names itself, there is no event to notice. This is the only code dpm
+    // runs in the repository without being asked, so it is the only place the absence can surface.
+    // Reported on the same terms as the restore above: unusual, actionable, and silent otherwise.
+    const unguarded = checkHook(directory);
+
+    if (unguarded !== null) log(unguarded);
   }
 
   // Between the ignore file and the open, because those are the only two places it can go: after

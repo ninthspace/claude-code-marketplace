@@ -18,7 +18,9 @@ DPM parses prose.
   **absolute** target), and run `/dpm:publish` before committing. Both are under *First
   run*.
 - **Re-make that symlink after every DPM upgrade.** Releases install side by side and
-  re-point nothing, so the link keeps running the release you installed it from.
+  re-point nothing, so the link keeps running the release you installed it from. A *stale*
+  link refuses and tells you; a *missing* one is silent, and `.git/hooks/` is not tracked —
+  so `ls -l .git/hooks/pre-commit` is worth running when you come back to a repository.
 - **A refused commit is telling you which of four things happened**, and each has a
   different fix — publishing when you should have imported destroys what you pulled. The
   refusal names the command; *When the guard refuses* explains the choice.
@@ -119,6 +121,51 @@ confirm the target is an older DPM, rather than making this the command you alwa
 Both forms glob across marketplaces, and pick the highest version number of everything they
 find. If DPM ever reaches you from two marketplaces at once, that is the one case where the
 path is worth spelling out.
+
+**A stale link announces itself; a missing one never does.** Those are two different
+failures and only the first is self-reporting. A link into an older release produces a
+refusal that names the release it ran from, so you find out at the next commit. A link that
+is *gone* — `.git/hooks/` is not tracked, so it does not survive a re-clone, a fresh
+`git init`, or anything that rewrites the directory — produces nothing at all. Git skips a
+hook it cannot find without a warning and without failing the commit, so the working state
+and the unguarded one are indistinguishable from the outside, and every commit after it goes
+in unchecked. Run `ls -l .git/hooks/pre-commit` when you arrive in a repository you have not
+committed to for a while; it is the only thing that tells you.
+
+**dpm says so itself, on the one case it can be sure of.** The first tool call of a session
+looks for `.git/hooks/pre-commit` on its way to the database, and writes a line to stderr when
+there is nothing there — the same channel, and the same terms, as the restore report: unusual,
+actionable, silent otherwise. It warns on *absence* and on nothing else. A hook that exists and
+is not dpm's may well be dispatching to dpm, and a warning that fired every session on a
+correctly configured repository is one you would learn to skip. It also stays quiet outside a
+repository, in a linked worktree, and where `core.hooksPath` has moved the hooks directory —
+three states where `.git/hooks/` is not the question.
+
+Two shell functions, if the rest is a check you would rather not remember:
+
+```sh
+dpm-link() {
+    ln -s "$(ls -d ~/.claude/plugins/cache/*/dpm/*/hooks/pre-commit | sort -V | tail -1)" .git/hooks/pre-commit
+    ls -l .git/hooks/pre-commit
+    git config core.hooksPath
+}
+
+dpm-relink() {
+    ln -sf "$(ls -d ~/.claude/plugins/cache/*/dpm/*/hooks/pre-commit | sort -V | tail -1)" .git/hooks/pre-commit
+    ls -l .git/hooks/pre-commit
+}
+```
+
+`dpm-link` is step 1 with both checks attached, so `File exists` still stops you and sends
+you to [When something else owns the hook](#when-something-else-owns-the-hook) rather than
+being forced past. `dpm-relink` is the upgrade command, kept separate precisely so that `-f`
+is something you reach for deliberately — it prints what it made, which is the confirmation
+the target really was an older DPM. Both run from the repository root.
+
+**Neither belongs in a repository that develops DPM itself.** They link into the installed
+plugin, which carries a version; a checkout that is *editing the schema* needs a guard from
+the same checkout, or the guard goes stale against a schema three directories away. Link
+that one at the working tree instead.
 
 The database itself is not committed — `.dpm/dpm.sql` is its committed text form, and it
 is what a checkout restores from. That restore is not a step either: on a fresh clone the
