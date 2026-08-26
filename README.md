@@ -142,7 +142,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v3.11.0)
+### Claude Planning Method (v3.12.0)
 
 **Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
 
@@ -281,7 +281,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### DPM — Data-Modelled Planning Method (v0.5.1)
+### DPM — Data-Modelled Planning Method (v0.5.2)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 

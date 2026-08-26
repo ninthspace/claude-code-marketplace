@@ -285,6 +285,29 @@ Narrate a correction to something you said earlier when the error would change t
 
 Opus 5 reaches for self-correction more readily than earlier models. In a facilitated conversation that reads as a running commentary on your own earlier wording, and it spends attention the user was giving to the decision in front of them.
 
+## Disposition
+
+How a report says what became of each thing it mentions. It governs the closing summary of any skill that reports outcomes — `do`, `quick`, `review`, `audit`, `inspect`, `pivot`, `archive`, `clean` — and each of those names its own items against it.
+
+Every item a report mentions carries one of four dispositions, and the disposition names what the **reader** has to do about it rather than what you did:
+
+- **Fixed** — the repo is different now; read it and carry on.
+- **Left alone** — it was seen and deliberately not acted on; nothing is waiting.
+- **Unverified** — the check was impossible here, so the claim is still open; the reason names what would close it.
+- **Needs you** — it is waiting on the reader, and nothing else in the report is.
+
+**The label follows the reader's obligation, not your action.** Something fixed that is also worth a glance is Fixed with the note attached, never Needs you. A Needs you that absorbs "and you may want to look at this" stops meaning anything, and the one item that was genuinely waiting is then lost among the ones that were not.
+
+**An item that fits none of the four is not reported.** Work considered and rejected, the steps taken to reach an answer, and a restatement of what the reader has just approved carry no disposition, because there is nothing for the reader to do with any of them.
+
+**A disposition with no items is not rendered at all** — no heading, no "nothing to report" line. A block saying it is empty is a block the reader has to read to learn there was nothing in it, and a report whose four headings are always present costs its reader four readings to find the one or two that carry anything. A run that fixed everything it touched says so in one block and stops. Absence is read from the absence of the heading, so the surviving blocks still arrive in the order below and the reader may still stop once the actionable one has passed.
+
+**In a report, the order is fixed** — Fixed, Left alone, Unverified, then Needs you last and together, each one written as an imperative naming the action and where to take it. A reader who stops after the third block has missed nothing that was waiting for them, which is what fixing the order buys. This is the arrangement of a report; something unexpected found mid-work is still said when it turns up, per **Conversational Output** above, and carries its disposition there.
+
+**Unverified means the check is impossible in this environment**, and the item says why. Two cases qualify, both structural: a `[target]` criterion, whose deployment environment nobody here has, and a must-NOT with no control, where nothing available can make the check fail. A reason about how the run went — the tests fail, it was not implemented, there was no time — is **Needs you** instead, however genuinely it blocked you.
+
+**A skill names its own items and does not restate the four.** The definitions are here; a skill that copies them is a second copy of them, and the copy is the one no reader reconciles when this one changes. What a skill states is which of its own artefacts land where — a criterion's tag and checkbox, a finding's autofix outcome, a file the run never reached.
+
 ## Written Deliverable Length
 
 Applies to every skill that writes a file — specs, briefs, ADRs, epics, coverage matrices, reviews, audits, retros, communications, and completion records alike.

@@ -48,7 +48,9 @@ Expand the user's selection into the concrete list of file paths to remove — e
 rm -f -- "<path>"   # for each confirmed path
 ```
 
-Delete nothing the user did not name and confirm. After removal, report which files were deleted (and that any others listed were left untouched).
+Delete nothing the user did not name and confirm. After removal, report by the shared **Disposition** convention. A path this run removed is **Fixed** — it is gone from disk now. A file listed in the inventory and not named, including this session's own `CURRENT` files, is **Left alone**. An `rm` that failed is **Needs you**, carrying the error and what would clear it.
+
+The failures are the only part of that report anyone has to act on, and a run that lists them among the deletions has hidden the one thing it could not do inside everything it did.
 
 ## Guidelines
 

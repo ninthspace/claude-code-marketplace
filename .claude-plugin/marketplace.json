@@ -43,7 +43,7 @@
       "name": "cpm",
       "source": "./cpm",
       "description": "Claude Planning Method — facilitated planning with multi-perspective party mode for Claude Code, tuned for Claude Opus 5. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-      "version": "3.11.0",
+      "version": "3.12.0",
       "keywords": [
         "planning",
         "discovery",
@@ -66,7 +66,7 @@
       "name": "dpm",
       "source": "./dpm",
       "description": "Data-Modelled Planning Method — SQLite-backed persistence for planning artefacts. Artefacts are rows, cross-artefact references are foreign keys, and markdown is a generated one-way projection. Skills write through typed MCP tools; nothing parses prose.",
-      "version": "0.5.1",
+      "version": "0.5.2",
       "keywords": [
         "planning",
         "sqlite",

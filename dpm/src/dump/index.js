@@ -1,9 +1,10 @@
 /**
  * The deterministic dump (FR8, NFR4, AD4).
  *
- * Schema first with triggers before any row, then the rows. The committed form of the database
- * is this file, and AD4 stakes the whole branching story on it merging as ordinary text — which
- * is only true if the same state produces the same bytes every time.
+ * Schema first with the index triggers before any row, then the rows, then the triggers that
+ * react to edits. The committed form of the database is this file, and AD4 stakes the whole
+ * branching story on it merging as ordinary text — which is only true if the same state
+ * produces the same bytes every time.
  *
  * **Not `sqlite3 .dump`**, for three reasons the spec executed rather than reasoned about: it
  * emits FTS5 shadow tables as hex blobs, it orders rows by storage order, and it does not exist
@@ -51,7 +52,11 @@ export function dump(db) {
   // LF is the only separator every part produces, so the file needs no normalisation pass —
   // and a normalisation pass is what would hide a CRLF creeping in from a value rather than
   // from the format. Values are emitted verbatim; only the framing is fixed here.
-  const sql = `${PREAMBLE}${schema.sql}${rows.sql}`;
+  //
+  // Four parts, not three: the triggers that maintain a derived index come before the rows so
+  // the index rebuilds from them, and every other trigger comes after so that replaying a row
+  // is not mistaken for editing it. `schema.js` holds the reasoning and the predicate.
+  const sql = `${PREAMBLE}${schema.sql}${rows.sql}${schema.deferred}`;
 
   if (!sql.endsWith(LF)) {
     throw new Error('dump does not end in a newline — a statement was emitted without one');

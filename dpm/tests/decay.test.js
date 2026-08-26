@@ -15,8 +15,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { openPlanningDatabase as planning } from './support/planning-database.js';
+import { openDatabase } from './support/database.js';
 import { triggerNames } from './support/introspection.js';
 import { claimComplete, claimState } from '../src/coverage/claim.js';
+import { dump } from '../src/dump/index.js';
+import { restore } from '../src/restore/index.js';
 import { create } from './fixtures/index.js';
 import { childDocument, rootDocument } from './fixtures/planning.js';
 
@@ -354,4 +357,45 @@ test('completeness is a claim, and nothing derives it from what is bound', (t) =
     fragment.length < text.length,
     'the fragment does not tile the text, which under a derived rule would forbid the claim just made',
   );
+});
+
+// --- Decay is an answer to an edit, and a restore is not an edit ---------------------------------
+
+/**
+ * The claim columns are a recorded fact — a time and a hash — and nothing regenerates them. So a
+ * dump carries them, and a restore has to give them back.
+ *
+ * It did not. The dump emitted every trigger before any row, and replaying the `coverage` rows
+ * fired `requirement_unclaim_on_coverage_insert` once each, clearing the very claims the file had
+ * carried faithfully three hundred lines earlier. Measured on this project's own database: 40 of
+ * 54 requirements lost both columns, and the only reason it surfaced is that `rebuild` refuses a
+ * dump that does not survive its own restore.
+ *
+ * The fix is in the dump's ordering — index triggers before the rows because the index is derived
+ * and is not in the file, everything else after — so the assertion here is on the round-trip
+ * rather than on the emission order. Ordering is how it is fixed today; surviving the restore is
+ * what has to remain true however it is fixed tomorrow.
+ */
+test('a claim survives the restore of the dump that carried it [integration]', (t) => {
+  const db = planning(t);
+  const { requirement } = boundCoverage(db);
+
+  claimComplete(db, requirement.id, '2026-08-02T00:00:00Z');
+
+  // Control. Without it, a fixture that stopped producing a claim would leave both assertions
+  // below comparing two absences and reporting green — the shape retro 30 records.
+  assert.equal(claimState(db, requirement.id).claimed, true, 'the fixture made a claim to lose');
+
+  const before = dump(db).sql;
+  const restored = openDatabase(t);
+
+  restore(restored, before);
+
+  assert.equal(
+    claimState(restored, requirement.id).claimed,
+    true,
+    'the replayed coverage row decayed the claim it was dumped alongside',
+  );
+
+  assert.equal(dump(restored).sql, before, 'the dump did not survive its own restore');
 });

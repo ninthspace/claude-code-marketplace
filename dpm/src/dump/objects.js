@@ -74,6 +74,39 @@ export function isShadowOf(type, name, owners) {
 }
 
 /**
+ * Whether `object` is a trigger that maintains one of `owners` — an FTS5 index.
+ *
+ * **This is the predicate that decides whether a trigger fires during a restore**, and the two
+ * answers are both load-bearing. A trigger maintaining a derived index has to fire: the index
+ * is not in the dump, and restoring `document_section` row by row is the only thing that
+ * rebuilds it. Every other trigger must not fire, because a restore is a replay and not an
+ * edit — `requirement_unclaim_on_coverage_insert` decays a claim when a user adds coverage,
+ * and replaying the coverage rows made it decay 40 claims the dump had just carried faithfully.
+ * The claim stamps are recorded facts, not derived state; the FTS index is the reverse. Only
+ * the trigger's own body distinguishes them.
+ *
+ * **Matching is on the body rather than on the name.** The naming convention holds today —
+ * `document_fts_insert`, `entry_fts_requirement_update` — and `isShadowOf` above relies on it
+ * for a different purpose. Relying on it here would mean a future index trigger named off-
+ * convention gets deferred, restores into an empty index, and reports success: false-pass
+ * register #3, arriving through the fix for a different one. What the trigger writes to is the
+ * fact being asked about, and it is in the SQL SQLite stored.
+ *
+ * A trigger that merely *reads* a virtual table is classified as maintaining it, and that is
+ * deliberate: the misclassification puts it before the rows, which is where every trigger sits
+ * today, so the error is inert in the one direction it can occur.
+ *
+ * @param {SchemaObject} object
+ * @param {string[]} owners
+ * @returns {boolean}
+ */
+export function maintainsVirtualTable(object, owners) {
+  return object.type === 'trigger'
+    && typeof object.sql === 'string'
+    && owners.some((owner) => object.sql.includes(owner));
+}
+
+/**
  * @typedef {object} SchemaObject
  * @property {string} type   `table`, `index`, `trigger` or `view`.
  * @property {string} name

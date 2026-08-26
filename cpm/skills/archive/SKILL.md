@@ -135,10 +135,9 @@ Move the selected files to `docs/archive/` with mirrored subdirectory structure.
    - Continue with the remaining files (always complete the batch)
    - Record the error for the failed file
 
-5. **Report results**: Present a summary to the user:
-   - How many files were moved successfully
-   - Which files failed and why (if any)
-   - The archive paths where files were moved
+5. **Report results**: Present a summary to the user, arranged by the shared **Disposition** convention. A file this run moved is **Fixed** — it is at its archive path now, and the report names that path. A candidate the user chose not to archive, and a spec the completeness guard deliberately left in place because it still owns live work, are **Left alone** with the reason each was kept. A move that failed, and any file the run never reached before it stopped, are **Needs you**: each names the error or the remaining sweep, and where.
+
+   That last case is the one a run stopped midway has to say out loud. Since every `mv` lands as it is made, a partial batch leaves the files it already moved moved, and the archive directory looks identical whether the run finished or gave up — the report is the only place the difference exists.
 
 *Workflow complete — delete the progress file.*
 

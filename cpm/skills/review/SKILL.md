@@ -399,6 +399,12 @@ When the epic is complete or no epic doc exists, create Claude Code tasks direct
 
    Include one row per finding that generated a task. The Task column uses the Claude Code task subject.
 
+#### Report by Disposition
+
+Close the run by reporting each finding under the disposition the remediation step already gave it, per the shared **Disposition** convention. A finding that became a remediation task — in the epic's story or as a standalone task — is **Fixed**: the plan is different now, and the reader has only to read it. A finding the user declined to remediate is **Left alone**, carrying the reason it was declined. A finding this run could not check against the codebase, because the artefact it concerns is not reachable from here, is **Unverified** and says what would close it. A finding left with no task — an informational one below the autofix threshold, or one raised where autofix was skipped entirely — is **Needs you**, and names the decision it is waiting on.
+
+Derive this from what the remediation step did, not from how the findings read in prose. A review whose findings are summarised as a paragraph puts the one still needing a decision beside the eleven that do not, which is the whole thing the arrangement prevents.
+
 ### Step 5: Pipeline Handoff
 
 After autofix (or after skipping it), offer the user options for what to do next. The options adapt based on the epic's status.

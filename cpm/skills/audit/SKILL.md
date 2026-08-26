@@ -374,6 +374,14 @@ For example: `Effort: S×12, M×7, L×3`. The `×` is a multiplication sign (U+0
 
 When a count is zero, omit that scale value from the line — `Effort: S×4, M×2` rather than `Effort: S×4, M×2, L×0`.
 
+#### 3h. Report by disposition
+
+The deliverable is a file with fixed sections; the report **about** it, in conversation, is arranged by the shared **Disposition** convention instead, and each finding takes its disposition from a cell the table already carries. A finding with a Recommendation is **Needs you**, and names the change and where. A finding with none, and every entry in "Things that look bad but are actually fine", is **Left alone** — something seen and deliberately not acted on. A dimension this environment could not sweep is **Unverified**, with what would close it, which is the same thing Open Questions holds, said as a disposition rather than only as a section.
+
+**An audit changes nothing, so the first disposition never has items and never appears.** A report that opens with Left alone is the honest shape of an audit rather than a gap in it, and the rule that a dimension finding nothing contributes no narrative applies to an empty disposition in exactly the same way.
+
+This governs the conversational report only. The deliverable's own required sections — section 6 above especially — are unaffected: a section that must appear even when it has one entry is a rule about the file, and an empty disposition rendering no heading is a rule about the report.
+
 ### Step 4: Pipeline Handoffs
 
 After the deliverable is saved, present a single `AskUserQuestion` offering four ways to flow the findings into the rest of the cpm pipeline:

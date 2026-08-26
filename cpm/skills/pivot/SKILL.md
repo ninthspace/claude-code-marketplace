@@ -140,6 +140,10 @@ Identify tasks that may be affected by the changes. Skip this step if no tasks e
 
 4. **Graceful skip**: If no tasks are matched, or if no epic stories were modified, skip this step silently.
 
+**Report each task under the disposition the amendment gives it**, per the shared **Disposition** convention, derived from which criteria moved rather than judged task by task. A task under a criterion this pivot changed is **Needs you**, and says which criterion moved and what it now asks. A task under an amended story whose own criteria did not move was looked at and is untouched — **Left alone**. The amendments themselves are **Fixed**: the documents are different now, and Step 2 and Step 3 already list them.
+
+Because this step changes nothing about the tasks, everything it reports about them is either a record or a decision — which is exactly why the two must not arrive in one paragraph.
+
 ### Step 5: Retro Handoff (optional)
 
 After Step 4, offer to capture the lesson behind this pivot. Pivots almost always reflect a learning worth feeding forward — surfacing the offer here prevents the loop from closing prematurely.

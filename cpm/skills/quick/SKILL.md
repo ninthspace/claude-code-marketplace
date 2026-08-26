@@ -255,6 +255,8 @@ Re-read the acceptance criteria from the spec file written in Step 2. Verify eac
 
 If the user chooses "Fix now", address the gaps and re-verify. Iterate until criteria are met or the user decides to proceed.
 
+**Report each criterion under the disposition its own verdict gives it**, per the shared **Disposition** convention. A criterion verified against the codebase is **Fixed** — the work is in the repo now. A criterion the user chose to record as-is, having decided it should not be pursued, is **Left alone** with that decision as its reason. A `[target]` criterion is **Unverified**, since no run here has the deployment environment it needs, and it says what would close it. A criterion recorded as-is because the work was not done, and a test failure the user chose to continue past, are **Needs you**, each naming the action and where to take it. Three of those are a record and one is an action, which is the distinction a closing summary exists to draw — and a run that met every criterion renders one block and stops.
+
 #### Write Completion Record
 
 The completion record **replaces** the spec file written in Step 2. Use the same path (`docs/quick/{nn}-quick-{slug}-spec.md`) and update it in-place using the Write tool — changing the status from "Confirmed — awaiting execution" to "Complete" and adding the execution details:

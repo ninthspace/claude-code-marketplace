@@ -183,6 +183,18 @@ In conversation, lead with the finding: the one sentence that characterises this
 Then the axis and what sits either side of it, where the change sits in the repository, what
 it traces to, what you verified, and what you did not read.
 
+**Arrange what follows the lead by disposition**, per the shared **Disposition** convention.
+An inspection changes nothing, so the first disposition never has items and never appears.
+Something checked and found sound is a record — seen and deliberately left. A claim this
+environment could not check is still open, and says what would close it. Anything the reader
+has to act on comes last and together, each item naming the action and where to take it.
+
+**Step 5's unread files belong in that last block, not among the unchecked.** A pass that did
+not reach them had road left and ran out of it, which is a fact about the run rather than
+about the environment — so they are the reader's to read. Filing them as something nothing
+here could have checked is the one move that would make Step 5's disclosure cost nothing,
+which is the whole of what it is for.
+
 ## Publishing
 
 An artifact can be published from this output on request — follow the shared **Artifact Publishing** procedure. It is always separately confirmed, and never the default.

@@ -321,53 +321,6 @@ CREATE UNIQUE INDEX dependency_edge ON dependency (
   coalesce(source_document_id, -1), coalesce(source_story_id, -1),
   coalesce(target_document_id, -1), coalesce(target_story_id, -1)
 );
-CREATE TRIGGER coverage_unverify_on_criterion_edit
-AFTER UPDATE OF text ON story_criterion
-WHEN OLD.text <> NEW.text
-BEGIN
-  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
-   WHERE story_criterion_id = NEW.id;
-END;
-CREATE TRIGGER coverage_unverify_on_requirement_edit
-AFTER UPDATE OF text ON requirement
-WHEN OLD.text <> NEW.text
-BEGIN
-  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
-   WHERE requirement_id = NEW.id;
-END;
-CREATE TRIGGER coverage_unverify_on_fragment_edit
-AFTER UPDATE OF spec_fragment ON coverage
-WHEN OLD.spec_fragment <> NEW.spec_fragment
-BEGIN
-  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
-   WHERE id = NEW.id;
-END;
-CREATE TRIGGER requirement_unclaim_on_coverage_insert
-AFTER INSERT ON coverage
-BEGIN
-  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
-   WHERE id = NEW.requirement_id;
-END;
-CREATE TRIGGER requirement_unclaim_on_coverage_delete
-AFTER DELETE ON coverage
-BEGIN
-  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
-   WHERE id = OLD.requirement_id;
-END;
-CREATE TRIGGER requirement_unclaim_on_fragment_edit
-AFTER UPDATE OF spec_fragment ON coverage
-WHEN OLD.spec_fragment <> NEW.spec_fragment
-BEGIN
-  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
-   WHERE id = NEW.requirement_id;
-END;
-CREATE TRIGGER requirement_unclaim_on_text_edit
-AFTER UPDATE OF text ON requirement
-WHEN OLD.text <> NEW.text
-BEGIN
-  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
-   WHERE id = NEW.id;
-END;
 CREATE VIRTUAL TABLE document_fts USING fts5(heading, body, section_id UNINDEXED);
 CREATE TRIGGER document_fts_insert
 AFTER INSERT ON document_section
@@ -756,162 +709,6 @@ CREATE TABLE dependency_kind_endpoint (
   target_kind  TEXT NOT NULL REFERENCES document_kind(kind),
   PRIMARY KEY (kind, source_kind, target_kind)
 );
-CREATE TRIGGER criterion_approach_tag_not_retired_on_insert
-    BEFORE INSERT ON criterion_approach FOR EACH ROW
-    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: criterion_approach.tag references a retired test_approach row');
-    END;
-CREATE TRIGGER criterion_approach_tag_not_retired_on_update
-    BEFORE UPDATE OF tag ON criterion_approach FOR EACH ROW
-    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: criterion_approach.tag references a retired test_approach row');
-    END;
-CREATE TRIGGER story_criterion_approach_tag_not_retired_on_insert
-    BEFORE INSERT ON story_criterion_approach FOR EACH ROW
-    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: story_criterion_approach.tag references a retired test_approach row');
-    END;
-CREATE TRIGGER story_criterion_approach_tag_not_retired_on_update
-    BEFORE UPDATE OF tag ON story_criterion_approach FOR EACH ROW
-    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: story_criterion_approach.tag references a retired test_approach row');
-    END;
-CREATE TRIGGER finding_severity_id_severity_domain_not_retired_on_insert
-    BEFORE INSERT ON finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: finding.severity_id, finding.severity_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER finding_severity_id_severity_domain_not_retired_on_update
-    BEFORE UPDATE OF severity_id, severity_domain ON finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: finding.severity_id, finding.severity_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER finding_category_id_category_domain_not_retired_on_insert
-    BEFORE INSERT ON finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.category_id AND domain = NEW.category_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: finding.category_id, finding.category_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER finding_category_id_category_domain_not_retired_on_update
-    BEFORE UPDATE OF category_id, category_domain ON finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.category_id AND domain = NEW.category_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: finding.category_id, finding.category_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER finding_agent_not_retired_on_insert
-    BEFORE INSERT ON finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: finding.agent references a retired agent row');
-    END;
-CREATE TRIGGER finding_agent_not_retired_on_update
-    BEFORE UPDATE OF agent ON finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: finding.agent references a retired agent row');
-    END;
-CREATE TRIGGER observation_category_taxonomy_id_taxonomy_domain_not_retired_on_insert
-    BEFORE INSERT ON observation_category FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.taxonomy_id AND domain = NEW.taxonomy_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: observation_category.taxonomy_id, observation_category.taxonomy_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER observation_category_taxonomy_id_taxonomy_domain_not_retired_on_update
-    BEFORE UPDATE OF taxonomy_id, taxonomy_domain ON observation_category FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.taxonomy_id AND domain = NEW.taxonomy_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: observation_category.taxonomy_id, observation_category.taxonomy_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER observation_category_observation_id_not_retired_on_insert
-    BEFORE INSERT ON observation_category FOR EACH ROW
-    WHEN (SELECT retired_at FROM observation WHERE id = NEW.observation_id) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: observation_category.observation_id references a retired observation row');
-    END;
-CREATE TRIGGER observation_category_observation_id_not_retired_on_update
-    BEFORE UPDATE OF observation_id ON observation_category FOR EACH ROW
-    WHEN (SELECT retired_at FROM observation WHERE id = NEW.observation_id) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: observation_category.observation_id references a retired observation row');
-    END;
-CREATE TRIGGER audit_finding_severity_id_severity_domain_not_retired_on_insert
-    BEFORE INSERT ON audit_finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: audit_finding.severity_id, audit_finding.severity_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER audit_finding_severity_id_severity_domain_not_retired_on_update
-    BEFORE UPDATE OF severity_id, severity_domain ON audit_finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: audit_finding.severity_id, audit_finding.severity_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER audit_finding_dimension_id_dimension_domain_not_retired_on_insert
-    BEFORE INSERT ON audit_finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.dimension_id AND domain = NEW.dimension_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: audit_finding.dimension_id, audit_finding.dimension_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER audit_finding_dimension_id_dimension_domain_not_retired_on_update
-    BEFORE UPDATE OF dimension_id, dimension_domain ON audit_finding FOR EACH ROW
-    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.dimension_id AND domain = NEW.dimension_domain) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: audit_finding.dimension_id, audit_finding.dimension_domain references a retired taxonomy row');
-    END;
-CREATE TRIGGER artifact_document_artifact_id_not_retired_on_insert
-    BEFORE INSERT ON artifact_document FOR EACH ROW
-    WHEN (SELECT retired_at FROM artifact WHERE id = NEW.artifact_id) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: artifact_document.artifact_id references a retired artifact row');
-    END;
-CREATE TRIGGER artifact_document_artifact_id_not_retired_on_update
-    BEFORE UPDATE OF artifact_id ON artifact_document FOR EACH ROW
-    WHEN (SELECT retired_at FROM artifact WHERE id = NEW.artifact_id) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: artifact_document.artifact_id references a retired artifact row');
-    END;
-CREATE TRIGGER dependency_kind_not_retired_on_insert
-    BEFORE INSERT ON dependency FOR EACH ROW
-    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: dependency.kind references a retired dependency_kind row');
-    END;
-CREATE TRIGGER dependency_kind_not_retired_on_update
-    BEFORE UPDATE OF kind ON dependency FOR EACH ROW
-    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: dependency.kind references a retired dependency_kind row');
-    END;
-CREATE TRIGGER document_agent_agent_not_retired_on_insert
-    BEFORE INSERT ON document_agent FOR EACH ROW
-    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: document_agent.agent references a retired agent row');
-    END;
-CREATE TRIGGER document_agent_agent_not_retired_on_update
-    BEFORE UPDATE OF agent ON document_agent FOR EACH ROW
-    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: document_agent.agent references a retired agent row');
-    END;
-CREATE TRIGGER dependency_kind_endpoint_kind_not_retired_on_insert
-    BEFORE INSERT ON dependency_kind_endpoint FOR EACH ROW
-    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: dependency_kind_endpoint.kind references a retired dependency_kind row');
-    END;
-CREATE TRIGGER dependency_kind_endpoint_kind_not_retired_on_update
-    BEFORE UPDATE OF kind ON dependency_kind_endpoint FOR EACH ROW
-    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
-    BEGIN
-      SELECT RAISE(ABORT, 'retired: dependency_kind_endpoint.kind references a retired dependency_kind row');
-    END;
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (1, '1970-01-01T00:00:00Z');
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (2, '1970-01-01T00:00:00Z');
 INSERT INTO "schema_version" ("version", "applied_at") VALUES (3, '1970-01-01T00:00:00Z');
@@ -1271,6 +1068,42 @@ Two mutations, run and reverted, because a suite that goes green is not the same
 A fourth needed `vocabularyAsOf`: a fixture at an older schema version was being seeded with *this* release''s whole vocabulary, which fails on the first table a later migration adds. What a release seeded is bounded by what that release''s schema held.
 
 **What the reader has to do about it.** This migration takes the schema to 24, and dpm 0.5.0 targets 23. Once this project''s own `.dpm/dpm.db` is migrated, the installed 0.5.0 server sees a database ahead of it and serves this project read-only — which is spec 1''s protection working exactly as designed, and it means DPM writes here need a build carrying this migration. The version bump and the reinstall are what restore them.', 3, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z04X38ASC0AFW8MV6F3HMJ', '01M0Z04X2W3E7M5T9W6VJRR6KB', 'The change', 'DPM 0.4.0 gave every report a disposition: each item a run mentions carries one of Fixed, Left alone, Unverified or Needs you, named for what the *reader* must do rather than for what the run did. CPM had no equivalent, so a CPM skill''s closing summary was prose whose actionable item had to be found by reading all of it. This ports the convention.
+
+One thing does not port unchanged, and it decides the placement. In DPM the convention is a `###` under `## Conversational Output`, which costs nothing because a DPM skill reads the whole shared file once per run. CPM''s `Conversational Output` is a `CORE_SECTIONS` entry, and `conventions-core.sh` emits a core section *in full, subsections included*, into every session in this repository from both SessionStart hooks. Nesting it there would charge every session — including every session that invokes no skill at all — for a rule only reporting skills use. So in CPM it is a sibling `## Disposition` placed immediately after `## Conversational Output`: one line of index in the hook''s extract, read in full by the skills that name it. `CORE_SECTIONS` is not touched, which is CLAUDE.md''s own test applied — the rule is reached from a skill, and a skill that names it can read it.
+
+The second difference is smaller. DPM reads the four terms from `list_taxonomy` in the `disposition` domain so a skill never transcribes the labels or their order; CPM has no taxonomy table, so the four are written literally in the shared section and the skills reference the section by name.', 1, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z04X3BF0ZQRF455ATCNXQT', '01M0Z04X2W3E7M5T9W6VJRR6KB', 'Files affected', '- `cpm/shared/skill-conventions.md` — new `## Disposition` section after `## Conversational Output`.
+- `cpm/skills/do/SKILL.md` — Step 8, the batch summary.
+- `cpm/skills/quick/SKILL.md` — Step 4, the completion record''s verification report.
+- `cpm/skills/review/SKILL.md` — Steps 4 and 5, findings by what remediation did with them.
+- `cpm/skills/audit/SKILL.md` — Step 3, findings; an audit changes nothing, so Fixed never appears.
+- `cpm/skills/inspect/SKILL.md` — Step 6; Step 5''s unread files are Needs you rather than Unverified.
+- `cpm/skills/pivot/SKILL.md` — Step 4, tasks by which criteria moved under them.
+- `cpm/skills/archive/SKILL.md` — Step 4, documents stamped, skipped, or never reached.
+- `cpm/skills/clean/SKILL.md` — Step 3, files deleted, kept, or refused.
+- `cpm/hooks/tests/test-disposition-convention.sh` — new suite; `run-all-tests.sh` discovers it by glob.', 2, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z04X3DB0D817995EHBT3HY', '01M0Z04X2W3E7M5T9W6VJRR6KB', 'What changed', 'The shared file gained the four dispositions and the four rules that make them mean anything, plus a fifth that is CPM''s own: a skill names its own items and does not restate the definitions, which is the job DPM''s `list_taxonomy` call does there.
+
+Eight skills gained a paragraph mapping their own artefacts onto the four. `do` — coverage rows marked, gates passed, refactoring passes, amendments and auto-applied lessons as Fixed; skipped or reverted passes and an auto-skipped retro as Left alone; `[target]` criteria as Unverified; criteria unmet-but-continued, failing tests, deferred-unreviewed observations and artefacts left out of step as Needs you. `quick` — the verdict on each criterion. `review` — what remediation did with each finding. `audit` — the Recommendation cell. `inspect` — plus the unread-files rule. `pivot` — tasks by which criteria moved. `archive` — moves, guard-kept specs, failures and a batch stopped midway. `clean` — deletions, files left, and failed removals.
+
+Two skills needed the rules reconciled rather than repeated, and both say so where the tension is. `do`''s retro outcome and criterion-amendments block must speak when empty — an amendment that leaves nothing upstream out of step writes no field, so its absence cannot be read from an absent heading. `audit`''s section 6 is non-negotiable in the deliverable; the convention governs the conversational report and not the file.', 3, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z04X3FH49KH19KBXVTQQX7', '01M0Z04X2W3E7M5T9W6VJRR6KB', 'How it was verified', '`bash cpm/hooks/tests/test-disposition-convention.sh` — 23 assertions in 23 tests, all passing. Five are controls, and they are the ones worth naming. A slice-width control fails if the awk range swallows the rest of the file. A non-empty control on the label extractor fails if the bullet format changes, which would otherwise compare empty against empty and report green. An emission control asserts the extract carries a core section''s body, without which "the Disposition body is absent" is satisfied by an emitter that produced nothing. And two negative controls: `brief` must not reference the convention, and no skill may reproduce three or more of the four definitions in place of naming its own items.
+
+`bash cpm/hooks/tests/run-all-tests.sh` — every suite green except `test-environmental-integration.sh`, which fails five assertions on a coverage baseline predating the CPM-to-DPM migration. Diagnosed, shown, and accepted as pre-existing; see criterion 5''s note.', 4, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z05YZ4QER1YNW1ASPG32VE', '01M0Z05YYS3TW9P6GF4D5E29NT', 'The change', '`dpm-import.js` refused to rebuild this project''s database, reporting that the dump did not survive its own restore. It was right to.
+
+The dump emitted every trigger before any row, which is deliberate and load-bearing for one class of trigger: an FTS5 index is not carried in the file, so restoring `document_section` row by row is the only thing that rebuilds it. But the same ordering also replayed the `coverage` rows through `requirement_unclaim_on_coverage_insert`, whose job is to decay a completeness claim when a user adds coverage. A restore is a replay, not an edit. Forty of this project''s fifty-four requirements lost both `coverage_claimed_at` and `coverage_claim_hash` — recorded facts, with a time and a hash, that nothing regenerates.
+
+The fix splits the triggers by what they write to. A trigger that maintains a virtual table goes before the rows, because the thing it maintains is derived and absent from the file. Every other trigger goes after them, because replaying a row is not editing it. The retirement guards are deferred by the same rule; they write nothing, so deferring them costs only their validation during the replay, and `checkIntegrity` runs over the restored database afterwards holding the same invariants from the register.', 1, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z05YZ58BR0AD0C664QAFMG', '01M0Z05YYS3TW9P6GF4D5E29NT', 'Files affected', '- `dpm/src/dump/objects.js` — new `maintainsVirtualTable` predicate, matching on the trigger''s body rather than its name.
+- `dpm/src/dump/schema.js` — `dumpSchema` returns `sql` and `deferred`, each in `sqlite_schema` order so the same database still produces the same bytes.
+- `dpm/src/dump/index.js` — four parts, not three: preamble, schema, rows, deferred triggers.
+- `dpm/tests/decay.test.js` — the regression, in the suite that owns the decay triggers.
+- `.dpm/dpm.sql` and `.dpm/dpm.db` — this project''s own artefacts, repaired and re-emitted.', 2, NULL);
+INSERT INTO "document_section" ("id", "document_id", "heading", "body", "position", "superseded_at") VALUES ('01M0Z05YZ67XQWVMB93PJKKBEY', '01M0Z05YYS3TW9P6GF4D5E29NT', 'How it was found', 'Not by the suite. 818 tests passed over the defect, and the existing assertion that a refused rebuild leaves the database unreplaced cannot see it either — its before and after are indistinguishable by the slugs it compares.
+
+What found it was `rebuild`''s round-trip check, on real data, during an unrelated import. That is the check earning its keep: it compares the dump a restored database produces against the dump it was built from, and refuses rather than committing a state nobody reviewed.', 3, NULL);
 INSERT INTO "library_document" ("document_id", "document_kind", "doc_type", "source") VALUES ('01M04XXNBGJS968318HYM0WAM8', 'library', 'coding-standards', 'docs/cpm/library/lessons-learned.md — carried over from CPM at the 2026-08-16 migration, with its amendment blocks folded into the body');
 INSERT INTO "library_scope" ("document_id", "scope") VALUES ('01M04XXNBGJS968318HYM0WAM8', 'do');
 INSERT INTO "adr" ("document_id", "document_kind", "decision_status", "decision") VALUES ('01M051JPHA56Z9A2VTMBV2EWHY', 'adr', 'accepted', 'A skew is reported in a new top-level field of `check_integrity`''s response, separate from `entries` and `orphans` and carrying its own verdict and could-not-check state, leaving `ok` a statement about the data alone.');
@@ -1322,10 +1155,22 @@ INSERT INTO "adr_option_tradeoff" ("option_id", "axis", "assessment") VALUES ('0
 INSERT INTO "adr_option_tradeoff" ("option_id", "axis", "assessment") VALUES ('01M05KMARFQVGJ4770HTT9RN2S', 'complexity', 'Holds the existing module boundary rather than moving it. The one new concept is that a preview builder''s output is markdown, which is what FR6a states.');
 INSERT INTO "adr_option_tradeoff" ("option_id", "axis", "assessment") VALUES ('01M05KMARFQVGJ4770HTT9RN2S', 'cost', 'The existing preview tests move rather than being rewritten — they assert on strings before and after.');
 INSERT INTO "quick" ("document_id", "document_kind", "closed_at") VALUES ('01M0659D8ZXWYSFXE6M8ZM3CM2', 'quick', '2026-08-16T21:10:00Z');
+INSERT INTO "quick" ("document_id", "document_kind", "closed_at") VALUES ('01M0Z04X2W3E7M5T9W6VJRR6KB', 'quick', '2026-08-26T11:50:00.000Z');
+INSERT INTO "quick" ("document_id", "document_kind", "closed_at") VALUES ('01M0Z05YYS3TW9P6GF4D5E29NT', 'quick', '2026-08-26T13:30:00.000Z');
 INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M065A6R98HEFWKCHBPWA8RJ6', '01M0659D8ZXWYSFXE6M8ZM3CM2', '`check_integrity` on this project''s own database returns `ok: true`, with entry 6 held and no row reported.', 1, 'Verified against a copy of this project''s own `.dpm/dpm.db`, migrated to schema 24 by the new code: all thirteen register entries hold, and entry 6 returns no rows where it previously named edge 01M05J88V2WYQPDEFCZJM1G89J. The MCP server running in the session that made this change is the installed 0.5.0, whose schema target is 23, so its own `check_integrity` answers for a database it has not migrated — hence the copy, which is the same rows against the code under test.', 0);
 INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M065A8SA2KTD0M8ZKEQSK536', '01M0659D8ZXWYSFXE6M8ZM3CM2', 'Every `builds_on` edge a shipped skill instructs is either admitted by entry 6 or no longer instructed: spec → problem_brief, spec → product_brief, spec → discussion, and library document → audit are each covered by a test that writes the edge and reads the register''s verdict.', 1, '`tests/dependency-endpoints.test.js`, first test: every pair a shipped skill instructs is written through `create_dependency` and then read back through register entry 6 — spec→spec, spec→problem_brief, spec→product_brief, spec→discussion and library→audit for `builds_on`, adr→adr for `constrains` and for `supersedes`. Each row in the table names the skill and step that writes it. Driven by mutation: restoring the old hardcoded rule fails that test with "''builds_on'' does not admit spec → problem_brief".', 1);
 INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M065AATMZWEFMSK5BV0RCJD2', '01M0659D8ZXWYSFXE6M8ZM3CM2', 'A pair the rule does not admit is still reported, named by edge id and by both end kinds — so the fix is a widened rule rather than a deleted check.', 1, 'Two tests, because the rule is now enforced in two places: an epic→spec `builds_on` is refused at the write with both the pair and the admitted set in the message and no row left in the table, and an edge written past the tool is reported by entry 6 with its id and both end kinds. The control deletes `builds_on`''s endpoint rows and shows the same call accepted, so the refusal is the data rather than the code.', 2);
 INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M065ABV4S5M19640QS41P1A4', '01M0659D8ZXWYSFXE6M8ZM3CM2', 'The register''s prose at `dpm/src/integrity/register.js:24` says what entry 6 now admits and why, rather than describing the spec→spec-only rule it replaced.', 1, '`src/integrity/register.js:24` now says the entry reads `dependency_kind_endpoint` and declares nothing itself, why a kind with no rows is unconstrained rather than admitting nothing, that a story-ended edge is passed over, and that `create_dependency` enforces the same rule from the same source. The paragraph it replaced described the spec→spec rule and its deferral.', 3);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z04X2Y7M1144ZQKTDGNB2H', '01M0Z04X2W3E7M5T9W6VJRR6KB', '`cpm/shared/skill-conventions.md` carries a top-level `## Disposition` section naming Fixed, Left alone, Unverified and Needs you in that order.', 1, '`## Disposition` sits between `## Conversational Output` and `## Written Deliverable Length`. The suite reads the four labels out of the section’s own bullets and compares the sequence, with a non-empty control so a changed bullet format cannot pass as an empty match.', 1);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z04X308V5Z3F00SB8HRE0C', '01M0Z04X2W3E7M5T9W6VJRR6KB', '`CORE_SECTIONS` in `cpm/hooks/lib/conventions-core.sh` is unchanged, and the hook’s extract names Disposition in its index line without emitting the section’s body.', 1, 'Running the hook against the real shared file emits "Disposition" in the index line and not the body; a control assertion proves the extract emits a core section’s body, so the absence is meaningful. A fourth assertion checks no `### Disposition` exists, since a nested one would be emitted in full by a hook whose CORE_SECTIONS never names it.', 2);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z04X32VCAZKR0YK20YDDWE', '01M0Z04X2W3E7M5T9W6VJRR6KB', 'Each of `do`, `quick`, `review`, `audit`, `inspect`, `pivot`, `archive` and `clean` instructs its closing report to use the convention, naming that skill’s own items rather than restating the four definitions.', 1, 'All eight reference it by name and each maps its own artefacts. A negative control confirms `brief` does not, and a further assertion confirms no skill reproduces the four definitions in place of naming its own items.', 3);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z04X34H45JPG5YWJQW43G3', '01M0Z04X2W3E7M5T9W6VJRR6KB', 'The section states the four rules that give it teeth: the label follows the reader’s obligation rather than the run’s action; a disposition with no items renders no heading at all; an item fitting none of the four is not reported; and Unverified means the check was structurally impossible here, so a failure about how the run went is Needs you.', 1, 'All four are present and each is asserted by its own literal. Two skills needed the rules reconciled rather than repeated: `do`’s retro outcome and criterion-amendments block must speak when empty, and `audit`’s required section 6 is a rule about the file rather than the report.', 4);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z04X35HVYVZVBH5PQACDBT', '01M0Z04X2W3E7M5T9W6VJRR6KB', '`cpm/hooks/tests/test-disposition-convention.sh` asserts criteria 1 to 3 with a negative control proving the assertions discriminate, and `bash cpm/hooks/tests/run-all-tests.sh` stays green.', 0, 'Half met, and recorded as not met rather than rounded up. The new suite passes 23 of 23. `run-all-tests.sh` is not green: `test-environmental-integration.sh` fails five assertions because `fixtures/coverage-baseline-46.tsv` was captured when CPM’s 46 specs lived in `docs/specifications/`, and the corpus has since moved to `docs/cpm/specifications/` while DPM publishes two of its own there — 48 on disk against a baseline of 46. That suite reads none of the ten files this change touches. Accepted as pre-existing at the Step 4 gate.', 5);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z05YYVN4B47BXBB5JXMPVY', '01M0Z05YYS3TW9P6GF4D5E29NT', 'A dump whose requirements carry completeness claims restores into a database that still carries them.', 1, 'Asserted over the mechanism rather than over the ordering: `decay.test.js` builds a claimed requirement with a bound coverage row, dumps, restores into a fresh database, and reads the claim back. Ordering is how it is fixed today; surviving the restore is what has to stay true however it is fixed tomorrow.', 1);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z05YYXJSC8HZ3M4ZGCCJDX', '01M0Z05YYS3TW9P6GF4D5E29NT', 'The dump emits the triggers that maintain a derived index before the rows, and every other trigger after them.', 1, '`dumpSchema` returns two halves and `dump` composes PREAMBLE, schema, rows, deferred. The split is `maintainsVirtualTable`, which asks what the trigger writes to rather than what it is called — a naming-convention test would defer a future index trigger and restore into an empty index, which is the false pass the existing exclusion logic already warns about.', 2);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z05YYZ8HXB7PDJRWJ2ARMQ', '01M0Z05YYS3TW9P6GF4D5E29NT', 'The regression fails without the fix.', 1, 'Verified by reverting the composition in `dump/index.js` to the old order and re-running: 13 pass, 1 fail, and the failing one is the new test.', 3);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z05YZ0Y8NGXYMSK759V6Z3', '01M0Z05YYS3TW9P6GF4D5E29NT', '`node --test` stays green across the whole DPM suite.', 1, '819 tests, 819 passing. 818 before the new test, and none of them had caught the defect — the round-trip guard in `rebuild` was the only thing that did.', 4);
+INSERT INTO "quick_criterion" ("id", "quick_id", "text", "met", "note", "position") VALUES ('01M0Z05YZ25EJ04AK4ZNM71JXN', '01M0Z05YYS3TW9P6GF4D5E29NT', 'This project’s committed dump and database carry the 40 claims, in the new ordering, with the guard clean.', 1, 'The committed dump was in the old ordering, so restoring it would still have decayed the claims. Repaired by restoring it, re-asserting each claim through `claimComplete` with the recorded timestamp, and refusing unless every one of the 40 hashes reproduced from the bound set — all 40 did, so the values were recovered rather than invented. The re-emitted dump is byte-identical in size to the committed one and has a zero-line difference when sorted: a pure reordering. `dpm-guard.js` reports 21 projected files and the dump matching the database.', 5);
 INSERT INTO "requirement" ("id", "spec_id", "spec_kind", "label", "class", "moscow", "exclusion", "parent_id", "text", "position", "coverage_claimed_at", "coverage_claim_hash") VALUES ('01M050SJFST75N3GFZ64WNPTND', '01M050N7S7YF827QD2CH0TVTFK', 'spec', 'FR1', 'functional', 'must', NULL, NULL, 'The server reports when a newer version of the plugin is installed alongside the version it is running from.', 0, '2026-08-16T00:00:00Z', '7454a44e4cf40e7772d9305bae30cf75da18e6c76ed8473cad438ba227b50ae4');
 INSERT INTO "requirement" ("id", "spec_id", "spec_kind", "label", "class", "moscow", "exclusion", "parent_id", "text", "position", "coverage_claimed_at", "coverage_claim_hash") VALUES ('01M050SM0JB72VCAW0BVRQCXG6', '01M050N7S7YF827QD2CH0TVTFK', 'spec', 'FR2', 'functional', 'must', NULL, NULL, 'The database records the version of the plugin that last wrote to it. The record is made by a server that writes, and never by one that only observes — a read-only launch leaves it as it found it.', 3, '2026-08-16T00:00:00Z', '077d414560b00537f48c593d00caa06139b751548280cb3454f34475b99077e2');
 INSERT INTO "requirement" ("id", "spec_id", "spec_kind", "label", "class", "moscow", "exclusion", "parent_id", "text", "position", "coverage_claimed_at", "coverage_claim_hash") VALUES ('01M050SSS6FCCYF8A9QZWQZ7DY', '01M050N7S7YF827QD2CH0TVTFK', 'spec', 'FR1a', 'functional', 'must', NULL, '01M050SJFST75N3GFZ64WNPTND', 'The neighbour check is evaluated at the moment it is reported, never cached from server start. The observed failure arrived twenty hours into a running session, when a check evaluated at start had already found nothing and been right to.', 1, '2026-08-16T00:00:00Z', '71204268ee98a567f4f02359408d1234a5d6957c45ef3a3044f427799f303808');
@@ -2004,6 +1849,8 @@ INSERT INTO "observation_category" ("observation_id", "taxonomy_id", "taxonomy_d
 INSERT INTO "observation_category" ("observation_id", "taxonomy_id", "taxonomy_domain") VALUES ('01M062VE1JBRT4FK9787DVDS2B', 'observation:codebase-discoveries', 'observation');
 INSERT INTO "observation_category" ("observation_id", "taxonomy_id", "taxonomy_domain") VALUES ('01M062VE1JBRT4FK9787DVDS2B', 'observation:patterns-worth-reusing', 'observation');
 INSERT INTO "observation_category" ("observation_id", "taxonomy_id", "taxonomy_domain") VALUES ('01M066BJ1BBFZEJ7P7KYQBS5F0', 'observation:testing-gaps', 'observation');
+INSERT INTO "observation_category" ("observation_id", "taxonomy_id", "taxonomy_domain") VALUES ('01M0Z04X3FH49KH19KBXVTQQX8', 'observation:codebase-discoveries', 'observation');
+INSERT INTO "observation_category" ("observation_id", "taxonomy_id", "taxonomy_domain") VALUES ('01M0Z05YZ67XQWVMB93PJKKBEZ', 'observation:codebase-discoveries', 'observation');
 INSERT INTO "retro_application" ("id", "retro_id", "retro_kind", "applied_to_id", "theme", "disposition", "note") VALUES ('01M05SGVJQ1KHP582CJTJ94WSA', '01M0578Z9Z2AQGTMB8SVN74YR1', 'retro', '01M05NNYYBX6XYRMND1CN4M4TY', 'Read the tree before building; expect the ratio to favour already-there', 'applied', 'Autonomous run: codebase discoveries are additive and low-ambiguity, so this one is applied. It changes Step 1 of every task in this epic — the board already has 36 test files, a tests/support/fixture_database.py and a conftest carrying sandbox, netguard and built_fixture, so each criterion is checked against the tree before anything is written.');
 INSERT INTO "retro_application" ("id", "retro_id", "retro_kind", "applied_to_id", "theme", "disposition", "note") VALUES ('01M05SGZ49PWBQGVHM20NC7X1K', '01M0578Z9Z2AQGTMB8SVN74YR1', 'retro', '01M05NNYYBX6XYRMND1CN4M4TY', 'A must-NOT stated as an equality is a change detector wearing a rejection''s clothes', 'applied', 'Autonomous run: a pattern worth reusing, so applied. Story 2''s ENVX2 criterion is about the import surface, which is exactly the shape that bit in retro 1 — it is stated over the category (standard library plus the inline block''s own packages, everything else a relative path) rather than as an exact list.');
 INSERT INTO "retro_application" ("id", "retro_id", "retro_kind", "applied_to_id", "theme", "disposition", "note") VALUES ('01M05SH1W3E1H8HCZ70YEPAR14', '01M0578Z9Z2AQGTMB8SVN74YR1', 'retro', '01M05NNYYBX6XYRMND1CN4M4TY', 'Stubbed tests and a real one are not the same test at different fidelities', 'applied', 'Autonomous run: a pattern worth reusing, so applied. Story 1''s fixture is the thing that makes the real end of that pair possible for this spec — its criteria are tagged integration precisely because a stubbed database would assert the contract and never that the board and the database are connected.');
@@ -2083,7 +1930,7 @@ INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('discu
 INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('epic', '01M050N7S7YF827QD2CH0TVTFK', 2);
 INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('epic', '01M05J7VD7PWH32KWMND9MGHMN', 4);
 INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('library', NULL, 1);
-INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('quick', NULL, 1);
+INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('quick', NULL, 3);
 INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('retro', NULL, 4);
 INSERT INTO "number_sequence" ("kind", "parent_id", "next_value") VALUES ('spec', NULL, 2);
 INSERT INTO "dependency_kind" ("kind", "gates_work", "position", "retired_at") VALUES ('blocks', 1, 1, NULL);
@@ -2285,6 +2132,8 @@ INSERT INTO "observation" ("id", "retro_id", "retro_kind", "story_id", "quick_id
 INSERT INTO "observation" ("id", "retro_id", "retro_kind", "story_id", "quick_id", "quick_kind", "position", "text", "synthesis", "note", "library_doc_id", "library_doc_kind", "retired_at", "retired_reason") VALUES ('01M062V71Z2266JNG0PY2F5RE8', '01M062TDTJ5QX1JH6T69J4FEXW', 'retro', NULL, NULL, NULL, 2, 'The timing criterion names the fixture''s largest document, and the fixture''s largest document is about 130 characters. It renders in well under a millisecond, so "within 50 ms at 80 columns" was a budget nothing could fail — a criterion that reads as a performance bound and is in fact a bound on the fixture. The test times that document and the same source repeated forty times, which is the size of a real epic doc and the one that could actually blow the budget, and the shortfall is recorded rather than fixed: enlarging a fixture every test in the suite reads would change the ground under three other stories to make one criterion mean what it says.', 'A criterion that quantifies over a shared fixture inherits that fixture''s size, and a fixture kept small on purpose is the wrong thing to quantify over. Where a threshold is about the production shape, name the shape — "a document of N lines" — and let the test build it, so the criterion cannot be satisfied by the test data being small.', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "observation" ("id", "retro_id", "retro_kind", "story_id", "quick_id", "quick_kind", "position", "text", "synthesis", "note", "library_doc_id", "library_doc_kind", "retired_at", "retired_reason") VALUES ('01M062VE1JBRT4FK9787DVDS2B', '01M062TDTJ5QX1JH6T69J4FEXW', 'retro', NULL, NULL, NULL, 3, 'Three times this epic the right answer was to ask the runtime the question rather than to model it. Story 1''s criteria are read from `rich.markdown.Markdown(source).parsed` — the same markdown-it token stream story 2 rasterises — rather than from a leading `#`, which would have been a second markdown parser living in a test file; that is what caught "subordinate to the task", since a two-space indent with no marker is a lazy paragraph continuation that merges into the parent''s inline token, and only the token''s `level` knows. Story 2''s re-render moved onto the widget''s own `Resize`, which carries the panel''s new size, because the app''s `on_resize` fires before the columns beneath are laid out and rasterises at the width the panel had a moment ago. Story 3''s render went to `asyncio.to_thread`, the idiom the tmux poll already uses, with the width read on the loop and only the arithmetic off it.', 'Where the framework already models the thing under test — a parse, a layout, a size — read its answer instead of writing a parallel one, and prefer the event delivered *to the widget* over the one delivered to the app. The CPM board drives both panels from the app''s resize and gets away with it because its panels are wide and its documents wrap at paragraph level; that is luck holding a design up, not the design being right.', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO "observation" ("id", "retro_id", "retro_kind", "story_id", "quick_id", "quick_kind", "position", "text", "synthesis", "note", "library_doc_id", "library_doc_kind", "retired_at", "retired_reason") VALUES ('01M066BJ1BBFZEJ7P7KYQBS5F0', NULL, NULL, NULL, '01M0659D8ZXWYSFXE6M8ZM3CM2', 'quick', 0, 'A test that derives "the previous version" from the files goes stale exactly as a written number does — three tests about the `plugin_stamp` migration silently became tests about a database that already had the table, and only a migration landing on top of it could ever have revealed that, which is an argument for naming the migration a test is about rather than its distance from the newest one.', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO "observation" ("id", "retro_id", "retro_kind", "story_id", "quick_id", "quick_kind", "position", "text", "synthesis", "note", "library_doc_id", "library_doc_kind", "retired_at", "retired_reason") VALUES ('01M0Z04X3FH49KH19KBXVTQQX8', NULL, NULL, NULL, '01M0Z04X2W3E7M5T9W6VJRR6KB', 'quick', 0, 'Porting a convention between the two plugins is not a copy, because what a rule costs differs: DPM’s shared file is read once per run so nesting is free, while CPM’s is injected by a SessionStart hook that emits a core section in full, making the choice between `##` and `###` the load-bearing decision — and one that reads as correct prose either way, so only a test over the hook’s output can tell the two apart.', NULL, 'Applies to any future DPM-to-CPM port: check what the CPM hook does with the section before choosing its heading level.', NULL, NULL, NULL, NULL);
+INSERT INTO "observation" ("id", "retro_id", "retro_kind", "story_id", "quick_id", "quick_kind", "position", "text", "synthesis", "note", "library_doc_id", "library_doc_kind", "retired_at", "retired_reason") VALUES ('01M0Z05YZ67XQWVMB93PJKKBEZ', NULL, NULL, NULL, '01M0Z05YYS3TW9P6GF4D5E29NT', 'quick', 0, 'A trigger that maintains derived state and a trigger that reacts to an edit look identical in the schema and must be treated as opposites by anything that replays rows; the dump had one rule for both, and the only thing that noticed was a round-trip check over real data.', NULL, 'The general shape: any bulk-load path has to ask, per trigger, whether it is rebuilding something absent from the file or responding to an intent nobody had.', NULL, NULL, NULL, NULL);
 INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M04XXNBGJS968318HYM0WAM8', 'library', 'root', 1, NULL, 'lessons-learned', 'Promoted Retro Lessons', 'complete', 'In force. Each entry names the retro observation it came from; that observation is retired at source, so a lesson lives here or there and never in both.', NULL, NULL, NULL, NULL, '2026-08-16T09:19:53.712Z', '2026-08-16T09:19:53.712Z', NULL, NULL);
 INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M050N7S7YF827QD2CH0TVTFK', 'spec', 'root', 1, NULL, 'version-skew-detection', 'Version skew detection', 'complete', 'Approved 2026-08-16. Sequenced so the neighbour check ships before the database stamp — the stamp alone would not have caught the incident that prompted the work.', NULL, NULL, NULL, NULL, '2026-08-16T10:07:43.399Z', '2026-08-16T10:36:46.162Z', NULL, NULL);
 INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M051JPHA56Z9A2VTMBV2EWHY', 'adr', 'child', NULL, 1, 'skew-report-shape', 'Where a version skew appears in the integrity report', 'complete', NULL, '01M050N7S7YF827QD2CH0TVTFK', 'spec', NULL, NULL, '2026-08-16T10:23:48.778Z', '2026-08-16T10:25:13.372Z', NULL, NULL);
@@ -2312,6 +2161,8 @@ INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug",
 INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M060H7JNGNZ6SJ8NBC13KVKH', 'retro', 'root', 3, NULL, 'the-rendered-row', 'The rendered row — what the strips said and the widget did not', 'complete', NULL, '01M05NP14C3GCH372FM6NN2T5S', 'epic', NULL, NULL, '2026-08-16T19:24:46.549Z', '2026-08-16T19:24:46.549Z', NULL, NULL);
 INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M062TDTJ5QX1JH6T69J4FEXW', 'retro', 'root', 4, NULL, 'markdown-previews', 'Markdown previews — the controls that discriminated, and the ones that could not', 'complete', NULL, '01M05NP15VPTJKBNK0B2HQ4XCZ', 'epic', NULL, NULL, '2026-08-16T20:04:45.010Z', '2026-08-16T20:04:45.010Z', NULL, NULL);
 INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M0659D8ZXWYSFXE6M8ZM3CM2', 'quick', 'root', 1, NULL, 'builds-on-endpoints', 'Integrity entry 6 refuses the builds_on edges dpm''s own skills write', 'complete', 'Delivered as resolution 2 — the pairs are rows in dependency_kind_endpoint, read by register entry 6 and enforced at create_dependency. Needs a plugin build carrying schema 24 before dpm can write to this project again.', NULL, NULL, NULL, NULL, '2026-08-16T20:47:53.119Z', '2026-08-16T21:06:37.465Z', NULL, NULL);
+INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M0Z04X2W3E7M5T9W6VJRR6KB', 'quick', 'root', 2, NULL, 'cpm-disposition-convention', 'The disposition convention, retrofitted into CPM as a section no session pays for unasked', 'complete', 'Delivered. Criterion 5 recorded not met: the new suite is green, but `run-all-tests.sh` carries five pre-existing failures from a stale coverage baseline, accepted at the Step 4 gate.', NULL, NULL, NULL, NULL, '2026-08-26T12:19:03.387Z', '2026-08-26T12:19:03.409Z', NULL, NULL);
+INSERT INTO "document" ("id", "kind", "numbering", "number", "sequence", "slug", "title", "status", "status_note", "parent_id", "parent_kind", "archived_at", "commit_sha", "created_at", "updated_at", "retro_waived_at", "retro_waived_reason") VALUES ('01M0Z05YYS3TW9P6GF4D5E29NT', 'quick', 'root', 3, NULL, 'restore-is-a-replay-not-an-edit', 'A restore replayed the coverage rows through the decay triggers and cleared 40 claims', 'complete', 'Delivered. Found by rebuild’s round-trip check during an unrelated import; the 819-test suite had passed over it.', NULL, NULL, NULL, NULL, '2026-08-26T12:19:38.072Z', '2026-08-26T12:19:38.091Z', NULL, NULL);
 INSERT INTO "story" ("id", "epic_id", "epic_kind", "number", "title", "status", "status_note", "position", "plan") VALUES ('01M052PPSQZFX5YAE75ZZQKBTX', '01M052GWNT4AY7KXAR34WVS29E', 'epic', 1, 'Test scaffolding for a plugin cache layout', 'complete', NULL, 0, 0);
 INSERT INTO "story" ("id", "epic_id", "epic_kind", "number", "title", "status", "status_note", "position", "plan") VALUES ('01M052PRC8AKV31ND1YD9TYMQ8', '01M052GWNT4AY7KXAR34WVS29E', 'epic', 2, 'Resolve the running plugin''s version and its neighbours', 'complete', NULL, 1, 0);
 INSERT INTO "story" ("id", "epic_id", "epic_kind", "number", "title", "status", "status_note", "position", "plan") VALUES ('01M052PT0XX69QRRH81SA6WS0B', '01M052GWNT4AY7KXAR34WVS29E', 'epic', 3, 'Compare versions and produce a three-state verdict', 'complete', NULL, 2, 0);
@@ -2433,3 +2284,206 @@ INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VA
 INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('builds_on', 'spec', 'spec');
 INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('constrains', 'adr', 'adr');
 INSERT INTO "dependency_kind_endpoint" ("kind", "source_kind", "target_kind") VALUES ('supersedes', 'adr', 'adr');
+CREATE TRIGGER coverage_unverify_on_criterion_edit
+AFTER UPDATE OF text ON story_criterion
+WHEN OLD.text <> NEW.text
+BEGIN
+  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
+   WHERE story_criterion_id = NEW.id;
+END;
+CREATE TRIGGER coverage_unverify_on_requirement_edit
+AFTER UPDATE OF text ON requirement
+WHEN OLD.text <> NEW.text
+BEGIN
+  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
+   WHERE requirement_id = NEW.id;
+END;
+CREATE TRIGGER coverage_unverify_on_fragment_edit
+AFTER UPDATE OF spec_fragment ON coverage
+WHEN OLD.spec_fragment <> NEW.spec_fragment
+BEGIN
+  UPDATE coverage SET verified_at = NULL, binding_hash = NULL
+   WHERE id = NEW.id;
+END;
+CREATE TRIGGER requirement_unclaim_on_coverage_insert
+AFTER INSERT ON coverage
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = NEW.requirement_id;
+END;
+CREATE TRIGGER requirement_unclaim_on_coverage_delete
+AFTER DELETE ON coverage
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = OLD.requirement_id;
+END;
+CREATE TRIGGER requirement_unclaim_on_fragment_edit
+AFTER UPDATE OF spec_fragment ON coverage
+WHEN OLD.spec_fragment <> NEW.spec_fragment
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = NEW.requirement_id;
+END;
+CREATE TRIGGER requirement_unclaim_on_text_edit
+AFTER UPDATE OF text ON requirement
+WHEN OLD.text <> NEW.text
+BEGIN
+  UPDATE requirement SET coverage_claimed_at = NULL, coverage_claim_hash = NULL
+   WHERE id = NEW.id;
+END;
+CREATE TRIGGER criterion_approach_tag_not_retired_on_insert
+    BEFORE INSERT ON criterion_approach FOR EACH ROW
+    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: criterion_approach.tag references a retired test_approach row');
+    END;
+CREATE TRIGGER criterion_approach_tag_not_retired_on_update
+    BEFORE UPDATE OF tag ON criterion_approach FOR EACH ROW
+    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: criterion_approach.tag references a retired test_approach row');
+    END;
+CREATE TRIGGER story_criterion_approach_tag_not_retired_on_insert
+    BEFORE INSERT ON story_criterion_approach FOR EACH ROW
+    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: story_criterion_approach.tag references a retired test_approach row');
+    END;
+CREATE TRIGGER story_criterion_approach_tag_not_retired_on_update
+    BEFORE UPDATE OF tag ON story_criterion_approach FOR EACH ROW
+    WHEN (SELECT retired_at FROM test_approach WHERE tag = NEW.tag) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: story_criterion_approach.tag references a retired test_approach row');
+    END;
+CREATE TRIGGER finding_severity_id_severity_domain_not_retired_on_insert
+    BEFORE INSERT ON finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: finding.severity_id, finding.severity_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER finding_severity_id_severity_domain_not_retired_on_update
+    BEFORE UPDATE OF severity_id, severity_domain ON finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: finding.severity_id, finding.severity_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER finding_category_id_category_domain_not_retired_on_insert
+    BEFORE INSERT ON finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.category_id AND domain = NEW.category_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: finding.category_id, finding.category_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER finding_category_id_category_domain_not_retired_on_update
+    BEFORE UPDATE OF category_id, category_domain ON finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.category_id AND domain = NEW.category_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: finding.category_id, finding.category_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER finding_agent_not_retired_on_insert
+    BEFORE INSERT ON finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: finding.agent references a retired agent row');
+    END;
+CREATE TRIGGER finding_agent_not_retired_on_update
+    BEFORE UPDATE OF agent ON finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: finding.agent references a retired agent row');
+    END;
+CREATE TRIGGER observation_category_taxonomy_id_taxonomy_domain_not_retired_on_insert
+    BEFORE INSERT ON observation_category FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.taxonomy_id AND domain = NEW.taxonomy_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: observation_category.taxonomy_id, observation_category.taxonomy_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER observation_category_taxonomy_id_taxonomy_domain_not_retired_on_update
+    BEFORE UPDATE OF taxonomy_id, taxonomy_domain ON observation_category FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.taxonomy_id AND domain = NEW.taxonomy_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: observation_category.taxonomy_id, observation_category.taxonomy_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER observation_category_observation_id_not_retired_on_insert
+    BEFORE INSERT ON observation_category FOR EACH ROW
+    WHEN (SELECT retired_at FROM observation WHERE id = NEW.observation_id) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: observation_category.observation_id references a retired observation row');
+    END;
+CREATE TRIGGER observation_category_observation_id_not_retired_on_update
+    BEFORE UPDATE OF observation_id ON observation_category FOR EACH ROW
+    WHEN (SELECT retired_at FROM observation WHERE id = NEW.observation_id) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: observation_category.observation_id references a retired observation row');
+    END;
+CREATE TRIGGER audit_finding_severity_id_severity_domain_not_retired_on_insert
+    BEFORE INSERT ON audit_finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: audit_finding.severity_id, audit_finding.severity_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER audit_finding_severity_id_severity_domain_not_retired_on_update
+    BEFORE UPDATE OF severity_id, severity_domain ON audit_finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.severity_id AND domain = NEW.severity_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: audit_finding.severity_id, audit_finding.severity_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER audit_finding_dimension_id_dimension_domain_not_retired_on_insert
+    BEFORE INSERT ON audit_finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.dimension_id AND domain = NEW.dimension_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: audit_finding.dimension_id, audit_finding.dimension_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER audit_finding_dimension_id_dimension_domain_not_retired_on_update
+    BEFORE UPDATE OF dimension_id, dimension_domain ON audit_finding FOR EACH ROW
+    WHEN (SELECT retired_at FROM taxonomy WHERE id = NEW.dimension_id AND domain = NEW.dimension_domain) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: audit_finding.dimension_id, audit_finding.dimension_domain references a retired taxonomy row');
+    END;
+CREATE TRIGGER artifact_document_artifact_id_not_retired_on_insert
+    BEFORE INSERT ON artifact_document FOR EACH ROW
+    WHEN (SELECT retired_at FROM artifact WHERE id = NEW.artifact_id) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: artifact_document.artifact_id references a retired artifact row');
+    END;
+CREATE TRIGGER artifact_document_artifact_id_not_retired_on_update
+    BEFORE UPDATE OF artifact_id ON artifact_document FOR EACH ROW
+    WHEN (SELECT retired_at FROM artifact WHERE id = NEW.artifact_id) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: artifact_document.artifact_id references a retired artifact row');
+    END;
+CREATE TRIGGER dependency_kind_not_retired_on_insert
+    BEFORE INSERT ON dependency FOR EACH ROW
+    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: dependency.kind references a retired dependency_kind row');
+    END;
+CREATE TRIGGER dependency_kind_not_retired_on_update
+    BEFORE UPDATE OF kind ON dependency FOR EACH ROW
+    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: dependency.kind references a retired dependency_kind row');
+    END;
+CREATE TRIGGER document_agent_agent_not_retired_on_insert
+    BEFORE INSERT ON document_agent FOR EACH ROW
+    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: document_agent.agent references a retired agent row');
+    END;
+CREATE TRIGGER document_agent_agent_not_retired_on_update
+    BEFORE UPDATE OF agent ON document_agent FOR EACH ROW
+    WHEN (SELECT retired_at FROM agent WHERE name = NEW.agent) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: document_agent.agent references a retired agent row');
+    END;
+CREATE TRIGGER dependency_kind_endpoint_kind_not_retired_on_insert
+    BEFORE INSERT ON dependency_kind_endpoint FOR EACH ROW
+    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: dependency_kind_endpoint.kind references a retired dependency_kind row');
+    END;
+CREATE TRIGGER dependency_kind_endpoint_kind_not_retired_on_update
+    BEFORE UPDATE OF kind ON dependency_kind_endpoint FOR EACH ROW
+    WHEN (SELECT retired_at FROM dependency_kind WHERE kind = NEW.kind) IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'retired: dependency_kind_endpoint.kind references a retired dependency_kind row');
+    END;
