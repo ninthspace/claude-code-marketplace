@@ -281,7 +281,7 @@ v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, ex
 
 ---
 
-### DPM — Data-Modelled Planning Method (v0.5.2)
+### DPM — Data-Modelled Planning Method (v0.5.3)
 
 **Planning artefacts as database rows, with markdown as a generated projection**
 

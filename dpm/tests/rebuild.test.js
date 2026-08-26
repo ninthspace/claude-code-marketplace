@@ -86,7 +86,17 @@ test('a dump that does not survive its own restore is refused [integration]', (t
   // failed to restore would have been refused one step earlier. A hand-added comment is exactly
   // that — SQLite ignores it, and the dumper never emits one — and it is also the realistic route
   // in, since the committed dump is a text file somebody can open.
-  const edited = `${repo.sql}-- a line somebody added by hand\n`;
+  //
+  // **It describes a different database from the one on disk, and that is load-bearing.** Edited
+  // from `repo.sql`, the refused rebuild's staging database holds the slug the real one already
+  // holds, so the assertion below compares `['already-here']` against `['already-here']` and
+  // passes whether the database was replaced or not. It did pass, for a rebuild that replaced the
+  // database before checking anything — a rename ahead of the round-trip check, found in the field
+  // and invisible here.
+  const edited = `${dumpHolding('would-have-replaced-it')}-- a line somebody added by hand\n`;
+
+  assert.notDeepEqual(before, ['would-have-replaced-it'],
+    'control: the refused dump describes a different database, so a replacement would show');
 
   const refusal = refusalFrom(() => rebuild(edited, { root: repo.root, location: LOCATION }));
 

@@ -1,8 +1,9 @@
 /**
  * Rebuilding the database from a dump and bringing the tree back into agreement (FR8, AD16).
  *
- * Restore into a staging file, move it into place, prove the dump survives its own restore,
- * publish both artefacts, and re-guard. The merge has done this since epic 47-04; the import does
+ * Restore into a staging file, prove the dump survives its own restore, move it into place,
+ * publish both artefacts, and re-guard. **The check sits before the move**, so a refusal is a
+ * database the run declined to replace rather than a report about one it already had. The merge has done this since epic 47-04; the import does
  * exactly the same thing with a dump that arrived in a pull rather than one produced by a
  * three-way merge, and **AD16 is AD11's reasoning applied a second time**: two implementations of
  * "rebuild the database from a dump" disagree the first time either end changes, and the
@@ -111,6 +112,24 @@ export function rebuild(sql, { root, location }) {
 
     try {
       restore(fresh, sql);
+
+      // **The dump has to survive its own restore, and the check is stated rather than inferred.**
+      // Before publish existed this call site wrote `sql` to disk and let the guard compare
+      // `dump(db)` against it, so a file that restored into a database dumping differently failed.
+      // `publish` writes what the database dumps, which makes that comparison trivially true — the
+      // check would have disappeared into the refactor without anything reporting its absence.
+      //
+      // **It asks the staging database, before the rename, and that is the whole point of having
+      // one.** Asked after, the refusal is a report about a replacement that has already happened:
+      // the run says it will not commit a state nobody reviewed while the state nobody reviewed is
+      // already the database. Observed doing exactly that — an import refused, having first
+      // replaced a one-document database with a twenty-seven-document one.
+      if (dump(fresh).sql !== sql) {
+        throw new RebuildError(
+          'dpm: the dump did not survive its own restore — the database it produced dumps '
+          + 'differently, so committing it would commit a state nobody reviewed.',
+        );
+      }
     } finally {
       fresh.close();
     }
@@ -122,24 +141,17 @@ export function rebuild(sql, { root, location }) {
     // is a file a user finds, cannot identify, and may well delete the wrong sibling of.
     discard(staging);
 
+    // A refusal composed above already names what it refused and why. Only an error arriving from
+    // somewhere else needs the restore framing, and wrapping both would bury the round-trip
+    // message inside a sentence about a restore that in fact succeeded.
+    if (error instanceof RebuildError) throw error;
+
     throw new RebuildError(`dpm: the dump did not restore into ${location} — ${error.message}`);
   }
 
   const db = openConnection(target);
 
   try {
-    // **The dump has to survive its own restore, and the check is stated rather than inferred.**
-    // Before publish existed this call site wrote `sql` to disk and let the guard compare
-    // `dump(db)` against it, so a file that restored into a database dumping differently failed.
-    // `publish` writes what the database dumps, which makes that comparison trivially true — the
-    // check would have disappeared into the refactor without anything reporting its absence.
-    if (dump(db).sql !== sql) {
-      throw new RebuildError(
-        'dpm: the dump did not survive its own restore — the database it produced dumps '
-        + 'differently, so committing it would commit a state nobody reviewed.',
-      );
-    }
-
     // **Both artefacts, one call, and the orphan rule is not restated here.** A renumbered
     // document's old file is on disk and no document produces it, which is what the guard already
     // knows how to recognise; `publish` removes exactly what the guard would report, so the two
