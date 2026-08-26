@@ -17,11 +17,15 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { DUMP_FILE, restoreIfMissing } from '../src/server/from-dump.js';
+import { openConnection } from '../src/db/connection.js';
+import { applySchema } from '../src/schema/index.js';
+import { applyVocabulary } from '../src/schema/seeds/index.js';
+import { DUMP_FILE, restoreIfUnwritten } from '../src/server/from-dump.js';
 import { open } from '../src/server/index.js';
 import { commitDump, dumpHolding } from './support/dumps.js';
+import { surface } from './support/git.js';
 import { recordOpen } from './support/recorders.js';
 import { runNode } from './support/run-node.js';
 import { ownedDirectory as scratch } from './support/scratch.js';
@@ -114,6 +118,80 @@ test('a first open finding a database leaves it alone, whatever the dump holds [
     'with the database gone the same dump did not restore, so the check above proves nothing');
 });
 
+// --- The case "no file" was too narrow by: present, and never written to ---------------------------
+
+test('a database that was created and never written to restores from a dump that arrives later [integration]', async (t) => {
+  const SLUG = 'arrived-after-the-empty-database-did';
+
+  const directory = ownedDirectory(t);
+  const location = join(directory, '.dpm', 'dpm.db');
+
+  // No dump in the directory yet, so this session creates the database and restores nothing into
+  // it — and it writes no artefact, which is the whole condition under test. This is not a
+  // contrived state: it is what a clone opened once before its dump was pulled ends up in, and it
+  // is what this repository was in for three months.
+  const first = await runNode([BIN], wire([HELLO, LIST(2)]), NO_OVERRIDE, { cwd: directory });
+
+  assert.deepEqual(slugsFrom(first), [], 'the seeding session found rows it should not have');
+  assert.equal(existsSync(location), true, 'the seeding session left no database to be empty');
+
+  commitDump(directory, dumpHolding(SLUG));
+
+  const second = await runNode([BIN], wire([HELLO, LIST(2)]), NO_OVERRIDE, { cwd: directory });
+
+  assert.deepEqual(slugsFrom(second), [SLUG],
+    'the empty database stopped the dump beside it from ever restoring');
+
+  // And it says so, in the terms of the thing that happened: a user who can see a `dpm.db` sitting
+  // there is not helped by a line claiming there was no database (FR10).
+  assert.match(second.stderr, /held no planning artefacts/,
+    `the replacement was silent or misreported: ${JSON.stringify(second.stderr)}`);
+});
+
+test('a corpus somebody cleared is not resurrected, because the sequences it allocated remain', (t) => {
+  const directory = ownedDirectory(t);
+  const location = join(directory, '.dpm', 'dpm.db');
+
+  mkdirSync(join(directory, '.dpm'), { recursive: true });
+
+  // A database that held planning work and holds none now — the state a user reaches by deleting
+  // their documents, and the one an over-broad "is it empty" test cannot tell from a database that
+  // was never used. The numbers it handed out are what separates them: DPM does not reclaim them,
+  // so a sequence row outlives the document that caused it.
+  const db = applySchema(openConnection(location));
+
+  try {
+    applyVocabulary(db);
+    surface(db).create_spec({ slug: 'deleted-on-purpose', title: 'Written, then cleared' });
+    db.prepare('DELETE FROM document').run();
+
+    assert.equal(db.prepare('SELECT count(*) AS n FROM document').get().n, 0,
+      'the fixture did not clear the corpus, so it is not the state this is about');
+    assert.ok(db.prepare('SELECT count(*) AS n FROM number_sequence').get().n > 0,
+      'clearing the corpus took the sequences with it, and nothing here can tell the cases apart');
+  } finally {
+    db.close();
+  }
+
+  commitDump(directory, dumpHolding('would-have-come-back'));
+
+  assert.equal(restoreIfUnwritten(location), false, 'a corpus somebody cleared was restored over');
+
+  // **The control, and without it this passes for a restore that declines on everything.** Same
+  // location, same dump, same emptied `document` table — the one difference is that the sequences
+  // are gone too, which is the only signal the previous line rests on.
+  const emptied = openConnection(location);
+
+  try {
+    emptied.prepare('DELETE FROM number_sequence').run();
+  } finally {
+    emptied.close();
+  }
+
+  assert.equal(restoreIfUnwritten(location), 'unwritten',
+    'with the sequences gone it still declined, so the check above proves nothing');
+});
+
 // --- Where in the sequence it sits, and when it declines ------------------------------------------
 
 test('the restore runs after the ignore file and before the open, and only when the database is absent', (t) => {
@@ -144,10 +222,10 @@ test('the restore runs after the ignore file and before the open, and only when 
   // dump beside the location, and the in-memory template the tool list is advertised from.
   const bare = ownedDirectory(t);
 
-  assert.equal(restoreIfMissing(join(bare, '.dpm', 'dpm.db')), false,
+  assert.equal(restoreIfUnwritten(join(bare, '.dpm', 'dpm.db')), false,
     'restored with no dump to restore from');
   assert.equal(existsSync(join(bare, '.dpm')), false, 'the declined restore created a directory anyway');
-  assert.equal(restoreIfMissing(':memory:'), false);
+  assert.equal(restoreIfUnwritten(':memory:'), false);
 });
 
 // --- A restore that fails leaves nothing behind --------------------------------------------------
@@ -165,7 +243,7 @@ test('a restore that fails removes the database it created, so the next attempt 
 
   const failed = (error) => error.name === 'RestoreFailed' && /document_kind_parent/.test(error.message);
 
-  assert.throws(() => restoreIfMissing(location), failed);
+  assert.throws(() => restoreIfUnwritten(location), failed);
 
   // **This is the line the cleanup exists for.** `restore()` rolls back, so nothing was written —
   // but opening the connection created the file, and a file that exists is precisely what stops the
@@ -174,12 +252,12 @@ test('a restore that fails removes the database it created, so the next attempt 
   assert.equal(existsSync(location), false, 'a failed restore left the database file it created');
 
   // So the next attempt still finds the fault rather than quietly serving nothing.
-  assert.throws(() => restoreIfMissing(location), failed);
+  assert.throws(() => restoreIfUnwritten(location), failed);
 
   // And the undo removed only what it created: fix the dump and the same location restores.
   commitDump(directory, dumpHolding('arrives-once-the-dump-is-sound'));
 
-  assert.equal(restoreIfMissing(location), true);
+  assert.equal(restoreIfUnwritten(location), 'absent');
   assert.equal(existsSync(location), true);
 });
 

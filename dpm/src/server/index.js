@@ -12,7 +12,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { RPC_ERRORS, failure } from './rpc.js';
-import { DUMP_FILE, restoreIfMissing as restoreFromDump } from './from-dump.js';
+import { DUMP_FILE, restoreIfUnwritten as restoreFromDump } from './from-dump.js';
 import { writeIgnore as writeIgnoreFile } from './ignore.js';
 import { SERVER_INFO, dispatch, methods } from './mcp.js';
 import { LAUNCHED_READ_ONLY, readOnlyRequested } from './read-only.js';
@@ -233,8 +233,17 @@ export function open(location, {
   // came from a file rather than from anything in this session. The ordinary create says nothing:
   // that is the spec's Deferred list, and 49-01's NFR1 criterion — a clean session is silent on
   // stderr — is what makes a line here visible at all.
-  if (restore(location)) {
+  // **Two sentences, because the user's position differs.** Told a database was absent, they learn
+  // where their rows came from. Told one was present and empty, they learn that a file they may
+  // well know they have was replaced — and a line saying "no database at …" about a path they can
+  // see a file at is the kind of report that gets read as a bug in the reporter.
+  const restored = restore(location);
+
+  if (restored === 'absent') {
     log(`no database at ${location} — restored it from the ${DUMP_FILE} beside it`);
+  } else if (restored === 'unwritten') {
+    log(`the database at ${location} held no planning artefacts — replaced it from the `
+      + `${DUMP_FILE} beside it`);
   }
 
   const { db, migrated } = start(location);

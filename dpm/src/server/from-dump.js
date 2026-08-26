@@ -1,5 +1,5 @@
 /**
- * Restoring the committed dump into a database that does not exist yet (FR6, AD14).
+ * Restoring the committed dump into a database that holds no planning artefacts (FR6, AD14).
  *
  * The README has said since it was written that `.dpm/dpm.sql` is what a checkout restores from,
  * and until now nothing performed it — `restore()` was reachable only from the conflicted-merge
@@ -7,11 +7,34 @@
  * (49-01) is what makes this placeable: the first open is now a decision point rather than
  * something that already happened at launch.
  *
- * **Only when there is no database, and that asymmetry is the whole of AD14.** Restoring into
- * nothing can lose nothing, so it needs no confirmation and gets none; restoring *over* an
- * existing database can lose everything in it, so this never does it, whatever the dump says. A
- * user who wants that asks for it through the import path, which is a different thing with
- * different protections.
+ * **Only when the database holds nothing anyone could want, and that asymmetry is the whole of
+ * AD14.** Restoring into nothing can lose nothing, so it needs no confirmation and gets none;
+ * restoring *over* planning work can lose everything, so this never does it, whatever the dump
+ * says. A user who wants that asks for it through the import path, which is a different thing
+ * with different protections.
+ *
+ * **"Nothing" originally meant "no file", and that was too narrow by exactly one case.** A
+ * database can be present and have never held an artefact — created by a run that opened it and
+ * wrote nothing, or by a version whose first call created the file before deciding anything. It
+ * then sits beside a dump full of rows, and `existsSync` alone declines to restore forever. Every
+ * read succeeds by returning nothing, which is indistinguishable from a project with no planning
+ * yet, so the condition is silent in both directions. Observed in this repository: a database
+ * created empty on 13 August, a committed dump holding 27 documents beside it, and three months
+ * of DPM work invisible to every session that opened it.
+ *
+ * **The test for "never held an artefact" is `document` and `number_sequence` both empty**, and
+ * the second half is what makes it safe. Every planning artefact is a document, and every document
+ * allocates a number — so a user who deliberately cleared their corpus still has the sequences,
+ * numbers not being reclaimed, and is never restored over. Seeded vocabulary, `schema_version` and
+ * `plugin_stamp` are written by starting the server rather than by anyone planning, so they do not
+ * count as use; a session row does not either, being run state that a restore is welcome to
+ * replace. Anything this cannot positively prove empty — an unreadable file, a database with no
+ * schema at all — declines, because the promise is only ever made in one direction.
+ *
+ * **An existing file is removed rather than restored into.** The dump carries its own
+ * `CREATE TABLE` statements, so it needs a database with no schema; a database that has been
+ * opened has one. Removing a file this function has just proved holds nothing is the same act as
+ * never having had it, which is the case immediately below.
  *
  * **AD14 has a third case, and the paragraph above is what makes it easy to get wrong: under a
  * read-only server, never** (spec 49, FR12). The safety argument for the automatic restore rests
@@ -53,7 +76,39 @@ import { restore as restoreDump } from '../restore/index.js';
 export const DUMP_FILE = 'dpm.sql';
 
 /**
- * Restore the dump beside `location` into it, if and only if `location` does not exist.
+ * Whether the database at `location` has never held a planning artefact.
+ *
+ * **Both halves, and the failure direction is chosen rather than incidental.** `document` empty
+ * says there is nothing there now; `number_sequence` empty says there never was. Either alone is
+ * wrong in a way that matters — the first would restore over a corpus somebody cleared on purpose,
+ * and the second is not a claim about content at all.
+ *
+ * Anything that stops this answering — a file SQLite will not open, a database with no schema in
+ * it — is `false`. The caller is deciding whether to delete a file, so "could not tell" and "has
+ * been used" have to reach it as the same answer.
+ *
+ * @param {string} location
+ * @param {typeof openConnection} connect
+ * @returns {boolean}
+ */
+function unwritten(location, connect) {
+  let db;
+
+  try {
+    db = connect(location, { readOnly: true });
+
+    const counted = (table) => db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n;
+
+    return counted('document') === 0 && counted('number_sequence') === 0;
+  } catch {
+    return false;
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * Restore the dump beside `location` into it, if and only if `location` holds no planning artefact.
  *
  * Runs before `start()` rather than against the connection it returns: the dump carries its own
  * `CREATE TABLE` statements, so it needs a database with no schema, and `start()` migrates and
@@ -68,16 +123,26 @@ export const DUMP_FILE = 'dpm.sql';
  *   and a test that read the rows afterwards would pass whether the restore ran in the right
  *   place, the wrong place, or not at all.
  * @param {typeof openConnection} [options.connect]
- * @returns {boolean} Whether a restore ran, so the caller can report the unusual case (FR10).
+ * @returns {false|'absent'|'unwritten'} Which case restored, so the caller can report the unusual
+ *   one accurately (FR10) — the two differ in what the user is being told happened to a file they
+ *   may know they have. `false` when nothing ran.
  */
-export function restoreIfMissing(
+export function restoreIfUnwritten(
   location, { restore = restoreDump, connect = openConnection } = {},
 ) {
-  if (location === ':memory:' || existsSync(location)) return false;
+  if (location === ':memory:') return false;
 
   const dump = join(dirname(location), DUMP_FILE);
 
   if (!existsSync(dump)) return false;
+
+  const present = existsSync(location);
+
+  if (present && !unwritten(location, connect)) return false;
+
+  // Proved empty a line ago, so this removes nothing anyone could want — and it is what lets the
+  // restore below run against a database with no schema, which is the only kind a dump fits.
+  if (present) rmSync(location, { force: true });
 
   const db = connect(location);
 
@@ -92,5 +157,5 @@ export function restoreIfMissing(
 
   db.close();
 
-  return true;
+  return present ? 'unwritten' : 'absent';
 }

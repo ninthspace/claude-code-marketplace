@@ -11,7 +11,7 @@
 
 import { openConnection } from '../../src/db/connection.js';
 import { start } from '../../src/start.js';
-import { restoreIfMissing } from '../../src/server/from-dump.js';
+import { restoreIfUnwritten } from '../../src/server/from-dump.js';
 import { writeIgnore } from '../../src/server/ignore.js';
 
 /**
@@ -57,19 +57,19 @@ export function recordStarts(underlying = start) {
  * @param {typeof start} [underlying] The real bring-up. Every seam delegates, so nothing is
  *   simulated: the directory the caller passes ends up with the same contents either way.
  * @param {(directory: string) => boolean} [underlyingIgnore] The real ignore write.
- * @param {typeof restoreIfMissing} [underlyingRestore] The real restore.
+ * @param {typeof restoreIfUnwritten} [underlyingRestore] The real restore.
  * @param {typeof openConnection} [underlyingConnect] The real connection open.
  * @returns {{
  *   events: string[],
  *   connections: Array<{location: string, readOnly: boolean, db: object}>,
  *   start: typeof start,
  *   writeIgnore: (directory: string) => boolean,
- *   restore: typeof restoreIfMissing,
+ *   restore: typeof restoreIfUnwritten,
  *   connect: typeof openConnection,
  * }}
  */
 export function recordOpen(
-  underlying = start, underlyingIgnore = writeIgnore, underlyingRestore = restoreIfMissing,
+  underlying = start, underlyingIgnore = writeIgnore, underlyingRestore = restoreIfUnwritten,
   underlyingConnect = openConnection,
 ) {
   const events = [];
