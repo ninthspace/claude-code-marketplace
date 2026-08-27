@@ -81,3 +81,74 @@ export function specWithEpic(db) {
 
   return { spec, epic };
 }
+
+/**
+ * A coverage matrix under an epic under a spec — the only two-deep chain the seeded parentage
+ * allows, and the one shape that tells the two derivations apart.
+ *
+ * **The epic's sequence is deliberately not 1.** `identifierOf` takes a child's number from the
+ * document immediately below the root — the *epic's* sequence — while `document_child_number`
+ * allocates per parent, so every matrix is sequence 1 under its own epic. A chain whose epic is
+ * also sequence 1 makes the right derivation and the wrong one agree, and a comparison over it
+ * passes whichever the implementation does. With the epic at 3 the matrix is `47-03` derived from
+ * its epic and `47-01` derived from itself, so the wrong answer is visible.
+ *
+ * `specWithEpic` is left alone rather than extended: its epic at sequence 1 is what a dozen other
+ * tests already assert against.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {{spec: object, epic: object, matrix: object}}
+ */
+export function matrixUnderEpic(db) {
+  const spec = rootDocument(db, 'spec', { number: 47, slug: 'substrate' });
+  const epic = childDocument(db, 'epic', spec, { sequence: 3, slug: 'identity' });
+  const matrix = childDocument(db, 'coverage_matrix', epic, { sequence: 1, slug: 'identity' });
+
+  return { spec, epic, matrix };
+}
+
+/**
+ * The two documents that have no human identifier, and the kinds they need to exist at all.
+ *
+ * **Neither can be built from the seeded vocabulary, which is the finding worth stating.** All
+ * fourteen seeded kinds are `root` or `child`, and `document.numbering` is pinned to its kind's by
+ * a foreign key — so there is no seeded kind a `numbering = 'none'` row could take. The same
+ * pinning rules out a child with no root-numbered ancestor: every child kind's allowed parents
+ * are root-numbered, so the chain always terminates at a number. Both cases are legal in the
+ * schema and unreachable through the seeds, so the fixture registers two kinds of its own.
+ *
+ * They exist to be unnameable rather than to be read, so nothing else should come to depend on
+ * them: a test that wants an ordinary document wants `rootDocument` or `childDocument`.
+ *
+ * **`scratch_leaf` is allowed under a spec as well as under `scratch`**, so the one kind has both
+ * a nameable and an unnameable row and a single list can hold the two together. Without the second
+ * parentage there is no such list anywhere in the schema — every unnameable row would be the only
+ * row of its kind — and "a list must not lose rows or raise when one row among them cannot be
+ * named" would have nothing to be checked against.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {{unnumbered: object, orphan: object}} A `numbering = 'none'` document, and a
+ *   child-numbered document whose only ancestor is that one.
+ */
+export function unnameableDocuments(db) {
+  create(db, 'document_kind', { kind: 'scratch', dir: 'scratch', numbering: 'none' });
+  create(db, 'document_kind', { kind: 'scratch_leaf', dir: 'scratch', numbering: 'child' });
+  create(db, 'document_kind_parent', { kind: 'scratch_leaf', parent_kind: 'scratch' });
+  create(db, 'document_kind_parent', { kind: 'scratch_leaf', parent_kind: 'spec' });
+
+  const unnumbered = create(db, 'document', {
+    kind: 'scratch',
+    numbering: 'none',
+    number: null,
+    sequence: null,
+    slug: 'unnumbered',
+    title: 'A document with no number by construction',
+  });
+
+  const orphan = childDocument(db, 'scratch_leaf', unnumbered, {
+    slug: 'orphan',
+    title: 'A child whose chain reaches no root',
+  });
+
+  return { unnumbered, orphan };
+}

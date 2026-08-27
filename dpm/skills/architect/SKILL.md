@@ -20,7 +20,10 @@ Deliverable Length**, **Cross-References** and **Artifact Publishing** from it.
 
 Resolve the document these decisions belong to, in this order.
 
-1. If `$ARGUMENTS` names a document id, read it with the tool for its kind.
+1. If `$ARGUMENTS` names a document — a ULID, or a human reference as another skill printed it —
+   read it with the tool for its kind. A reference goes through
+   `mcp__plugin_dpm_dpm__resolve_reference` first, which returns the row it names or refuses; a
+   ULID is already the id and needs no resolving.
 2. Otherwise `mcp__plugin_dpm_dpm__list_product_brief`, and offer the results with `AskUserQuestion`. Fall back
    to `mcp__plugin_dpm_dpm__list_problem_brief`, then `mcp__plugin_dpm_dpm__list_spec`, then `mcp__plugin_dpm_dpm__list_discussion`.
    **Ask which one; never take the most recent.**

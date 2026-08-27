@@ -18,7 +18,7 @@
 
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { javascriptFilesUnder } from './sources.js';
+import { javascriptFilesUnder, sourceNamesUnder } from './sources.js';
 
 const FIXTURES_DIRECTORY = join(import.meta.dirname, '..', 'fixtures');
 
@@ -67,6 +67,4 @@ export function fixtureDisciplineBypasses() {
 }
 
 /** The fixture modules the check read, so a check that found nothing can prove it looked. */
-export function fixtureSourcesChecked() {
-  return javascriptFilesUnder(FIXTURES_DIRECTORY).map((path) => basename(path));
-}
+export const fixtureSourcesChecked = () => sourceNamesUnder(FIXTURES_DIRECTORY);

@@ -34,6 +34,40 @@ export function javascriptFilesUnder(directory) {
 }
 
 /**
+ * The same walk as names rather than paths — what a check read, so one that found nothing can
+ * prove it looked at something.
+ *
+ * A sweep reporting a clean pass it never computed is the false pass this project keeps
+ * rediscovering, and the answer each time is the same pair: the finding, and the corpus the
+ * finding was looked for in. Two sweeps had written this line for themselves before a third
+ * wanted it.
+ *
+ * @param {string} directory
+ * @returns {string[]}
+ */
+export const sourceNamesUnder = (directory) => javascriptFilesUnder(directory).map(
+  (path) => path.slice(path.lastIndexOf('/') + 1),
+);
+
+/**
+ * The same walk in the shape the sweeps take: repo-relative name, and text.
+ *
+ * `auditImports`, `auditEnvironment`, `auditReach` and `auditWrites` all read `{name, text}`, and
+ * every suite calling one had written this map for itself. The name is relative to `dpm/` because
+ * that is what a complaint quotes back, and an absolute path in a failure message says where the
+ * checkout is rather than which file is wrong.
+ *
+ * @param {string} directory
+ * @returns {Array<{name: string, text: string}>}
+ */
+export const sweepSourcesUnder = (directory) => {
+  const root = join(import.meta.dirname, '..', '..');
+
+  return javascriptFilesUnder(directory)
+    .map((file) => ({ name: file.replace(`${root}/`, ''), text: readFileSync(file, 'utf8') }));
+};
+
+/**
  * dpm's own `package.json`, parsed.
  *
  * Five suites assert over this file — that nothing is declared to install, that the engine floor

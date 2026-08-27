@@ -21,15 +21,33 @@
 import { ProjectionError } from './naming.js';
 
 /**
- * The marker form, and the capture that gets resolved.
+ * The marker form: anything written in the shape, whatever it carries.
  *
- * `[^}]+` rather than a ULID shape on purpose. A marker naming something that is not an id at all
- * must be *caught*, not skipped — a pattern that only matched well-formed ULIDs would treat a
- * typo as ordinary prose and ship it, which is the one outcome total resolution exists to rule
- * out. The `g` flag is shared state on a `RegExp` object; every use below is `matchAll` or
- * `replaceAll`, both of which reset `lastIndex`, and no code should call `.test()` on it.
+ * The `g` flag is shared state on a `RegExp` object; every use below is `matchAll` or `replaceAll`,
+ * both of which reset `lastIndex`, and no code should call `.test()` on it.
  */
 export const MARKER = /\{\{ref:([^}]+)\}\}/g;
+
+/**
+ * A marker that is *attempting* to name a document — the one that resolves, and the one that raises.
+ *
+ * **The payload is not narrowed to a well-formed ULID, and the reason is the one this module was
+ * written around.** A marker carrying a typo — a transposed character, a lowercase letter, an id
+ * from somewhere else — must be caught rather than skipped: a pattern matching only valid ULIDs
+ * would read a botched reference as ordinary prose and ship it, which is the single outcome total
+ * resolution exists to rule out.
+ *
+ * What it does exclude is a payload that was never an id at all. A document explaining the
+ * convention writes the form out — `{{ref:<id>}}` — and a resolver that could not tell that from a
+ * reference would refuse to render every document that documents itself. Prose about the marker is
+ * the case, not a hypothetical: fifteen rows across the spec that introduced this convention write
+ * it, and until the two were told apart none of those documents could be published at all.
+ *
+ * The line between them is the payload's alphabet. An attempt at an id is alphanumeric throughout;
+ * a placeholder is not, because what makes it read as a placeholder to a person — the brackets in
+ * `<id>`, an ellipsis, a space — is exactly what puts it outside that set.
+ */
+export const REFERENCE = /\{\{ref:([0-9A-Za-z]+)\}\}/g;
 
 /**
  * Replace every marker in `text` with its target's current human identifier.
@@ -49,7 +67,7 @@ export const MARKER = /\{\{ref:([^}]+)\}\}/g;
 export function resolve(text, identifiers, where) {
   if (typeof text !== 'string') return text;
 
-  return text.replaceAll(MARKER, (marker, id) => {
+  return text.replaceAll(REFERENCE, (marker, id) => {
     const identifier = identifiers.get(id);
 
     if (identifier === undefined) {

@@ -30,7 +30,7 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
   skillSource, toolNames, reachable, section, recorder, recoveries, bindings,
-  seedStartup, driveStartup,
+  seedStartup, driveStartup, CALLABLE,
 } from './support/skills.js';
 import { domainTerms } from './support/vocabulary.js';
 
@@ -243,6 +243,13 @@ function run(call, fixture) {
 
   select();
 
+  // Step 8: the close. Read unfiltered, because "no ready story" is not "every story done" — a
+  // story retired or held by a blocker is absent from the ready list and is not a finished one.
+  const stories = call.list_story({ epic_id: fixture.lifecycle.id }).items;
+  const closed = stories.every((story) => story.status === 'complete');
+
+  if (closed) call.update_epic({ id: fixture.lifecycle.id, status: 'complete' });
+
   // Step 8: the roll-up, and the completeness claim that is a judgement rather than a sum.
   const requirements = call.list_requirement({ spec_id: fixture.spec.id }).items;
   const rollUp = requirements.map((requirement) => ({
@@ -258,7 +265,7 @@ function run(call, fixture) {
 
   const nextEpic = call.list_epic({ ready: true }).items;
 
-  return { readyEpics, observations, dispositions, readiness, worked, rollUp, nextEpic };
+  return { readyEpics, observations, dispositions, readiness, worked, closed, rollUp, nextEpic };
 }
 
 // --- Criterion 1: status and verification are written, not asserted ------------------------------
@@ -318,6 +325,76 @@ test('a do run writes status through update tools and records verification as a 
 
   // The three directions of the binding to the file, all reported at once.
   assert.deepEqual(bindings(source, tools, { used, passed }), []);
+});
+
+// --- The epic close: the one status nothing else in dpm writes -----------------------------------
+
+test('an epic whose stories are all complete is closed, and what waited on it becomes ready', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call } = recorder(tools);
+  const fixture = project(tools);
+  const raw = handlers(tools);
+
+  const result = run(call, fixture);
+
+  // The status itself, read back off the row rather than off the run's return.
+  assert.ok(result.closed, 'the run judged the epic finished from its stories');
+  assert.equal(raw.read_epic({ id: fixture.lifecycle.id }).status, 'complete');
+
+  // **And what that releases**, which is why the status matters rather than merely being tidy.
+  // `durability` blocks on `lifecycle`; it was held at the start of the run and is offered now.
+  assert.deepEqual(result.readyEpics.map((epic) => epic.id), [fixture.lifecycle.id],
+    'the blocked epic was not offered while its blocker was open');
+  assert.deepEqual(result.nextEpic.map((epic) => epic.id), [fixture.durability.id],
+    'and the close is what put it on offer — nothing restated the edge');
+
+  // The second reader of the column. `/dpm:retro`'s triage classifies the epics whose status is
+  // `complete`, so an epic that never gets closed never reaches the decision about its own retro:
+  // the waive path would have an empty working set for every epic dpm has ever finished.
+  assert.deepEqual(raw.list_epic({}).items.filter((epic) => epic.status === 'complete')
+    .map((epic) => epic.id), [fixture.lifecycle.id],
+    'the triage query has something to classify');
+
+  const step = section(source, '8. Epic summary');
+
+  assert.match(step, new RegExp(`${CALLABLE}update_epic`),
+    'and the file names the tool that writes it, in its callable form');
+});
+
+test('an epic with a story not complete is left pending, whether or not anything is ready', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const call = handlers(tools);
+  const fixture = project(tools);
+
+  const finished = (epic) => call.list_story({ epic_id: epic }).items
+    .every((story) => story.status === 'complete');
+
+  for (const task of call.list_task({ story_id: fixture.first.id }).items) {
+    call.update_task({ id: task.id, status: 'complete' });
+  }
+
+  call.update_story({ id: fixture.first.id, status: 'complete' });
+
+  assert.equal(finished(fixture.lifecycle.id), false,
+    'a story still pending is a story the epic is waiting on');
+
+  // **The control the rule turns on: "nothing ready" is not "everything done".** A story retired
+  // halfway empties the ready list without finishing anything, so a close keyed off that query
+  // would close an epic over work somebody stopped — which is the case the file sends to a gate.
+  call.update_story({ id: fixture.second.id, status: 'withdrawn' });
+
+  assert.deepEqual(call.list_story({ epic_id: fixture.lifecycle.id, ready: true }).items, [],
+    'no story is workable now');
+  assert.equal(finished(fixture.lifecycle.id), false, 'and the epic is still not finished');
+  assert.equal(call.read_epic({ id: fixture.lifecycle.id }).status, 'pending',
+    'so the status is left alone');
+
+  const step = section(source, '8. Epic summary');
+
+  assert.match(step, /superseded|withdrawn/,
+    'and the file says a retired story is a judgement rather than a count');
 });
 
 // --- Criterion 2: readiness is the dependency query ----------------------------------------------

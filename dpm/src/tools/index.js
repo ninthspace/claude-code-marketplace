@@ -30,6 +30,7 @@ import { artifactTools } from './entity/artifacts.js';
 import { milestoneTools } from './entity/milestones.js';
 import { reviewRetroTools } from './entity/review-retro.js';
 import { listTools } from './list.js';
+import { referenceTools } from './reference.js';
 import { searchTools } from './search.js';
 import { sessionTools } from './session.js';
 import { coverageTools } from './spine/coverage.js';
@@ -178,6 +179,11 @@ export function spineTools(
     // it belongs to no entity type: what it returns is a hit naming one, and the entity vocabulary
     // it accepts is read out of the schema at build time.
     ...searchTools(context),
+
+    // FR7's other direction, beside `search` for the same reason: it belongs to no entity type.
+    // What separates the two is what comes back — a hit naming a row, against the row itself —
+    // which is why this one declares `document` as its table and `search` declares an index.
+    ...referenceTools(context),
 
     // FR11's table. It sits here rather than in Epic 47-05 — where the parity enumeration counts
     // it — because session lifecycle is a server concern every skill needs from the first

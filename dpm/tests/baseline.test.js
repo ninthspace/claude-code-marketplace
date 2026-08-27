@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { openDatabase } from './support/database.js';
-import { javascriptFilesUnder, packageManifest } from './support/sources.js';
+import { packageManifest, sweepSourcesUnder } from './support/sources.js';
 import {
   auditEnvironment, auditImports, auditReach, auditWrites, importGraph, withoutComments,
 } from './support/sweeps.js';
@@ -30,8 +30,7 @@ import { assertNodeFloor, meetsFloor, REQUIRED_NODE } from '../src/server/node-f
 const ROOT = join(import.meta.dirname, '..');
 
 /** Every source under a directory, as the sweeps take them: repo-relative name, and text. */
-const sourcesUnder = (...parts) => javascriptFilesUnder(join(ROOT, ...parts))
-  .map((file) => ({ name: file.replace(`${ROOT}/`, ''), text: readFileSync(file, 'utf8') }));
+const sourcesUnder = (...parts) => sweepSourcesUnder(join(ROOT, ...parts));
 
 // --- The comment stripper the other sweeps rest on ----------------------------------------------
 

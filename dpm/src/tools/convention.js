@@ -24,6 +24,10 @@
  * consciously classified; what it cannot be is neither, silently.
  */
 
+// FR2: the reference a tool returns is `identifierOf`'s answer, reached through the map builder
+// beside it. `src/tools/` reaching into `src/projection/` closes no cycle — that module imports
+// nothing at all, which is what makes it the one authority on the numbering rule.
+import { identifiers } from '../projection/naming.js';
 import { RPC_ERRORS } from '../server/rpc.js';
 
 /**
@@ -105,11 +109,24 @@ const PAGE_ARGUMENTS = {
 };
 
 /**
- * Drop the body columns from whatever a handler returned.
+ * Apply a per-row transform to whatever a handler returned.
  *
- * Understands the two shapes a dpm tool returns — one row, or a page of them — and nothing else.
- * A tool returning a third shape would silently pass through unfiltered, which is why `defineTool`
- * only ever hands this the result of a tool that declared `body` in the first place.
+ * **The two shapes a dpm tool returns — one row, or a page of them — and nothing else.** A tool
+ * returning a third shape passes through untransformed, which is why `defineTool` only ever hands
+ * this the result of a tool that declared the thing being applied. Both wrappers below take that
+ * same risk on the same terms, so the walk lives here once rather than being written twice and
+ * gaining a third shape in only one of them.
+ *
+ * @param {object} value
+ * @param {(row: object) => object} row
+ * @returns {unknown}
+ */
+const overRows = (value, row) => (Array.isArray(value.items)
+  ? { ...value, items: value.items.map(row) }
+  : row(value));
+
+/**
+ * Drop the body columns from whatever a handler returned.
  *
  * @param {unknown} value
  * @param {string[]} body
@@ -121,13 +138,45 @@ export function withoutBody(value, body) {
   // treats those as different however identical their contents.
   if (body.length === 0 || value === null || typeof value !== 'object') return value;
 
-  const strip = (row) => Object.fromEntries(
+  return overRows(value, (row) => Object.fromEntries(
     Object.entries(row).filter(([column]) => !body.includes(column)),
-  );
+  ));
+}
 
-  if (Array.isArray(value.items)) return { ...value, items: value.items.map(strip) };
+/**
+ * The field a document row's human identifier arrives on.
+ *
+ * **Named because it is read somewhere other than where it is written.** It is not a column of any
+ * table — FR1 asks for a field on the returned row and ENVX4 forbids a migration — so anything
+ * needing to know dpm's returned-row vocabulary has nowhere else to look. `naming.test.js` is the
+ * first such reader: NFR5 requires every tool name to be a whole word the schema holds, its check
+ * builds that vocabulary from `PRAGMA table_info`, and `resolve_reference` is named for a word
+ * that is real and is not a column. The rule was right and its reading was one epic out of date.
+ */
+export const REFERENCE_FIELD = 'reference';
 
-  return strip(value);
+/**
+ * Put each document row's human identifier on it as `reference` (FR1).
+ *
+ * **The map is the argument, not the database.** The identifier of every document is one query
+ * (`identifiers`), and computing it here per row would make a fifty-row page fifty-one round
+ * trips — NFR1's bound, and the one criterion a per-row lookup would fail while satisfying every
+ * other. Taking the map already built is what makes that impossible to get wrong here.
+ *
+ * **A document that cannot be named comes back with `null`, and the call returns normally**
+ * (FR3). `identifiers` omits the rows it cannot derive — a `numbering = 'none'` document, a child
+ * with no root-numbered ancestor, a parentage cycle — so an absent entry is the expected case
+ * rather than an error, and a list never loses a row or raises because one row among its rows has
+ * no name.
+ *
+ * @param {Map<string, string>} references id → identifier, from `identifiers(db)`.
+ * @param {unknown} value One row, or a page of them.
+ * @returns {unknown}
+ */
+export function withReference(references, value) {
+  if (value === null || typeof value !== 'object') return value;
+
+  return overRows(value, (row) => ({ ...row, [REFERENCE_FIELD]: references.get(row.id) ?? null }));
 }
 
 /** The JSON Schema keywords `validate` understands. Anything else in a schema is a mistake. */
@@ -268,12 +317,22 @@ export function validate(schema, args, where) {
  *   from the verb in the name: NFR7 keeps a database from a newer plugin readable by serving its
  *   read tools and refusing its write ones, and the default a forgotten declaration would fall
  *   into is the one that writes to a schema this server does not understand.
+ * @param {boolean} [tool.documentRows] Whether the rows this tool returns are `document` rows, and
+ *   so carry a `reference` (FR1). Declared rather than inferred from `table`, because `table` names
+ *   the table a tool *reads or writes* and a tool can read `document` while returning something
+ *   else — a count, a preview, a hit. What the caller receives is the question here, and only the
+ *   tool knows it.
+ * @param {import('node:sqlite').DatabaseSync} [tool.db] The handle the reference is derived
+ *   against. Required with `documentRows` and refused without it.
  * @param {(args: object) => unknown} tool.handler Receives arguments already validated against
  *   `inputSchema` — see the wrapping below.
  * @returns {object} The tool, frozen.
  */
 export function defineTool(tool) {
-  const { name, table, description, reads, handler, body = [], paged = false, mutates } = tool;
+  const {
+    name, table, description, reads, handler, body = [], paged = false, mutates,
+    db = null, documentRows = false,
+  } = tool;
   const writes = tool.writes ?? (tool.mutates ? [table] : []);
 
   // Exported names carry no server prefix: the harness dispatches
@@ -301,6 +360,16 @@ export function defineTool(tool) {
     throw new Error(`${name}: declares mutates: false and writes ${writes.join(', ')}`);
   }
   if (!Array.isArray(body)) throw new Error(`${name}: 'body' must be an array of column names`);
+  // The two halves of FR1's declaration, refused apart rather than merged over. A tool claiming
+  // document rows with no handle would attach nothing and look exactly like a tool that had no
+  // documents to name; a handle on a tool that attaches nothing is a dependency it does not have,
+  // and the next reader would take it as evidence the tool reads the database when it does not.
+  if (documentRows && !db) {
+    throw new Error(`${name}: declares documentRows and was given no 'db' to derive them from`);
+  }
+  if (db && !documentRows) {
+    throw new Error(`${name}: takes a 'db' but does not declare documentRows — nothing uses it`);
+  }
   if (typeof mutates !== 'boolean') {
     throw new Error(`${name}: 'mutates' must be declared — NFR7 serves reads to a database this `
       + 'server is too old for, and an undeclared tool would be served as one');
@@ -357,7 +426,15 @@ export function defineTool(tool) {
       // The default is the summary, and it is applied here rather than materialised in `validate`
       // — an absent argument and an explicit `false` mean the same thing to a read, and neither
       // may become a `true` the caller did not send.
-      return checked.include_body ? result : withoutBody(result, body);
+      const shown = checked.include_body ? result : withoutBody(result, body);
+
+      // **After the body strip, and once per call.** `reference` is derived rather than stored, so
+      // it is not a body column and must survive a summary read — a caller that did not ask for
+      // the bodies still needs to be able to name what came back. `identifiers` is called here
+      // rather than per row: it is one query for the whole corpus, so the statement count for a
+      // fifty-row page is the same as for a single read, and the same against a corpus of two
+      // hundred documents as against one of ten.
+      return documentRows ? withReference(identifiers(db), shown) : shown;
     },
   });
 }

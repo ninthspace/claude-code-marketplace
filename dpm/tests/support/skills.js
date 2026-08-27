@@ -349,6 +349,31 @@ export const RECOVERY = [
 ];
 
 /**
+ * A document id standing where a person is meant to read or type something — FR5 and FR6.
+ *
+ * **The placeholder is the shape, because it is the one a skill's output actually carries.** A
+ * skill file holds no real ULID to find; what it holds is `{epic id}` inside a command it tells a
+ * person to run, and the id only becomes visible when the run substitutes one. So the reading is
+ * over the brace form, and it is deliberately not a reading for ULIDs: a check for the literal
+ * matches nothing in this corpus and passes over every leak in it.
+ *
+ * **`{{ref:<id>}}` is the correct form and is exempted by shape rather than by name.** Its inner
+ * `<id>` sits inside a marker the renderer resolves, which is the opposite of interpolating an id
+ * into prose, and the double brace is what tells the two apart without a list of allowed strings.
+ *
+ * The reading says nothing about a skill's *argument contract* — `$ARGUMENTS names a document id`
+ * is a sentence about what a tool call receives, not one a person is asked to type a ULID into, and
+ * widening this to catch it would report nine skills for describing their own input correctly.
+ * Making that input accept a reference as well is a separate story with its own criteria.
+ */
+export const NAMED_BY_ID = [
+  {
+    pattern: /(?<!\{)\{[^{}]*\bid\b[^{}]*\}(?!\})/,
+    why: 'a document id interpolated where a person reads or types — a reference belongs there',
+  },
+];
+
+/**
  * FR3's clause: a statement, never a keyword list — and two readings, because the keywords divide
  * into two kinds.
  *

@@ -213,6 +213,33 @@ repository: none has an id, so each is named plainly in the prose as what it is.
 something that cannot be resolved is refused at render time, so inventing one to look consistent
 turns a loose reference into a projection that will not build.
 
+## Naming a Document
+
+**Say the reference and the title** — `<reference>`, then the document's own title, taken from the
+row you already hold. That pair is what a person can read back to you, type as an argument, and find
+in the rendered tree, and every list or read tool returns the reference on the row beside the columns
+it was asked for — so the naming costs the run nothing it has not already paid for.
+
+The reference goes in as the row gave it, never written out from memory: a number typed into a
+sentence is correct on the day it is typed, which is the failure Cross-References describes at
+length and the reason this section carries no worked example of one.
+
+**The id keeps the two places it works**: a tool argument and a foreign key. Both are read by
+software that has the row in hand, and neither is read aloud.
+
+**Where a reference is `null`, say the title and the kind and say the document has no reference
+yet.** A row comes back unnamed when it is numbered `none` or when its parentage reaches no
+root-numbered ancestor — legitimate states, not failures — and the honest sentence is *the untitled
+scratch document, which has no reference yet*. Reaching for the id instead answers a question the
+person did not ask, in a string they cannot use.
+
+**This governs what is said; Cross-References governs what is stored.** They are separate because
+the answers differ: a sentence spoken now is read once and a sentence written into a body is
+re-rendered for as long as the row lives. So a document named inside stored prose — a body, a plan,
+a decision, an observation — is written `{{ref:<id>}}` and resolved at render, for the reasons that
+section gives. Speaking a reference and storing a marker are the same rule under one derivation:
+both end at the identifier the projection computes.
+
 ## Artifact Publishing
 
 A skill may publish an HTML artifact from its output **on request**. It is always separately

@@ -16,7 +16,9 @@ This skill uses **Gate Presentation**, **Conversational Output**, **Cross-Refere
 
 ## Input
 
-1. If `$ARGUMENTS` names an epic id, work that epic.
+1. If `$ARGUMENTS` names an epic — a ULID, or a human reference as another skill printed it — work
+   that epic. A reference goes through `mcp__plugin_dpm_dpm__resolve_reference` first, which returns
+   the row it names or refuses; a ULID is already the id and needs no resolving.
 2. Otherwise `mcp__plugin_dpm_dpm__list_epic` with `ready: true`. That is the epics still `pending` with no
    blocker short of `complete` — a query over the edges, not a status anyone maintains. One result
    is auto-selected; several go to `AskUserQuestion` showing each title.
@@ -249,6 +251,21 @@ Silent. The next pending task under this story, or — when there is none — th
 
 ### 8. Epic summary
 
+**Close the epic.** Read its stories unfiltered. Complete throughout is a finished epic, and
+`mcp__plugin_dpm_dpm__update_epic` with `status: 'complete'` is what says so — the same one-step
+move Step 6 makes on a story, at the level above it.
+
+**Nothing else in dpm sets that column**, so an epic left `pending` is not merely untidy. It goes on
+being offered by `mcp__plugin_dpm_dpm__list_epic` with `ready: true` as work still to do, it goes on holding whatever
+edges into it gate on `complete`, and it never reaches `/dpm:retro`'s triage, which classifies the
+epics whose `status` is `complete` and can only ever see an empty set without this.
+
+Two cases are not a count and are not this run's to decide. Where any story is `superseded` or
+`withdrawn`, whether the retired work was part of what the epic promised is a judgement the rows do
+not answer — put it to `AskUserQuestion` and leave the status until it is answered. Where any story is
+still `pending`, the epic is unfinished: `mcp__plugin_dpm_dpm__list_dependency` on that story says
+what holds it, and that is the report rather than a status.
+
 **Roll up the coverage.** `mcp__plugin_dpm_dpm__list_requirement` on the epic's source spec, and
 `mcp__plugin_dpm_dpm__list_coverage` on each, both with `include_body` — the judgement below weighs bound
 `spec_fragment`s against the requirement's own `text`, and both are withheld by default. A
@@ -332,6 +349,12 @@ branch exists to prevent. A change moment that would have gone there amends **th
 nothing else**, and every artefact it could not reach gets a section on the epic naming the change,
 the target, the story, and the citation that licensed it. One per artefact left out of step, so none
 is silently covered by another's.
+
+**Step 8's close runs on the count and stops at the judgement.** Complete throughout closes the epic
+as it does with a human present — the rows say it, and leaving it open would make an unattended run
+the one that quietly stops releasing work. A retired story does not: the status stays `pending` and
+the epic gets a section naming which story was retired and that the close is waiting on a reader,
+because an epic closed over work nobody decided to drop is a judgement taken with nobody watching.
 
 **The source spec is read and never written.** It is the fixed point the run is measured against, so
 a run able to edit it can move its own goalposts.

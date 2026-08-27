@@ -15,6 +15,7 @@
  */
 
 import { ToolError } from './convention.js';
+import { refuseBareUlids } from './prose-refusal.js';
 
 /**
  * The abort a retirement guard raises, and the qualified columns it blames.
@@ -110,6 +111,10 @@ export function insert(db, table, values, where, key = 'id') {
       throw new ToolError(`${where}: no value supplied for ${table}.${column}`);
     }
   }
+  // Before the statement is built, so a refused body is a call that did nothing rather than one
+  // that has to be rolled back. FR16's whole claim is that the bad prose never enters.
+  refuseBareUlids(db, table, values, where);
+
   const sql = `INSERT INTO ${table} (${columns.join(', ')}) `
     + `VALUES (${columns.map(() => '?').join(', ')})`;
 
@@ -198,6 +203,10 @@ export function updateByKey(db, table, key, values, where) {
   const keyColumns = Object.keys(key);
 
   if (columns.length === 0) throw new ToolError(`${where}: nothing to update`);
+
+  // An update reaches prose the same way a create does — an amended body is the commonest way a
+  // bare id would arrive, since it is written after the document it names already exists.
+  refuseBareUlids(db, table, values, where);
 
   const sql = `UPDATE ${table} SET ${columns.map((column) => `${column} = ?`).join(', ')} `
     + `WHERE ${keyColumns.map((column) => `${column} = ?`).join(' AND ')}`;

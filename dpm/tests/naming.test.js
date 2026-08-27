@@ -24,6 +24,7 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { openDatabaseFile } from './support/database.js';
 import { authoredTables } from './support/introspection.js';
 import { readOnlyTools, spineTools, versionSkew } from '../src/tools/index.js';
+import { REFERENCE_FIELD } from '../src/tools/convention.js';
 import { start } from '../src/start.js';
 import { targetVersion } from '../src/schema/migrate.js';
 
@@ -59,7 +60,17 @@ function vocabulary(db) {
     db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
   const kinds = db.prepare('SELECT kind FROM document_kind').all().map((row) => row.kind);
 
-  return { tables: new Set(tables), words: new Set([...tables, ...columns, ...kinds]) };
+  // **And the fields dpm returns that are not columns of anything.** Until epic 03-01 there were
+  // none, so reading the schema was the whole vocabulary; that epic put `reference` on every
+  // document row a list or read tool hands back, deriving it rather than storing it (ENVX4 forbids
+  // a migration for it). NFR5's rule is that a tool name is a whole word rather than an
+  // abbreviation, and `resolve_reference` is named for a word every caller of this server already
+  // sees — so the rule admits it and only this reading did not. Imported from where the field is
+  // produced, so a second one arrives here by being produced rather than by anyone editing a list.
+  return {
+    tables: new Set(tables),
+    words: new Set([...tables, ...columns, ...kinds, REFERENCE_FIELD]),
+  };
 }
 
 /** The part of a tool name after `<verb>_`. */

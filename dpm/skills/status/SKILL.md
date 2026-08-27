@@ -124,15 +124,19 @@ order of the table is the priority order.** `/dpm:do`, `/dpm:epics` and `/dpm:re
 relative order because it is the candidate ordering in `dpm/shared/status-model.md`: work that can
 start now, then work that needs planning, then the follow-up on work already done.
 
+**Each command is written out with the target's reference in it**, which every row of the lists
+above already carries beside its columns. The command is then one a reader can copy, and the skill
+it names accepts what it was given — see **Naming a Document** in the shared conventions.
+
 | What the rows say | What to recommend |
 |---|---|
 | Nothing at all | `/dpm:discover` or `/dpm:brief` |
-| An epic the `ready` filter returns | `/dpm:do {epic id}` |
+| An epic the `ready` filter returns | `/dpm:do` and the epic's reference |
 | An epic held by an incomplete blocker | Nothing to run — name the blocker from the edge that holds it; the action is to unblock |
-| Specs but no epics | `/dpm:epics {spec id}` |
-| Briefs but no specs | `/dpm:spec {brief id}` |
+| Specs but no epics | `/dpm:epics` and the spec's reference |
+| Briefs but no specs | `/dpm:spec` and the brief's reference |
 | A retired epic, or one whose only incomplete stories are retired | Nothing — it will not be worked, and no retro is owed on it |
-| A complete epic, no retro, no `retro_waived_at` | `/dpm:retro {epic id}` |
+| A complete epic, no retro, no `retro_waived_at` | `/dpm:retro` and the epic's reference |
 | A complete epic carrying `retro_waived_at` | Nothing — it is settled |
 | A session in flight | Resume it — name the skill and its `phase` |
 | Uncommitted changes | Commit before starting new work |

@@ -49,7 +49,7 @@ import { vocabularyReferences, guardName } from '../schema/retirement.js';
 // copies would let this check and the renderer disagree about what a marker is — silently in the
 // direction that matters, since a narrower pattern here reports clean on something the renderer
 // then refuses to render.
-import { MARKER } from '../projection/markers.js';
+import { REFERENCE } from '../projection/markers.js';
 
 /** How far a reachability walk goes before giving up. A backstop, not a limit anyone reaches. */
 const MAX_DEPTH = 64;
@@ -332,7 +332,7 @@ function danglingMarkers(db) {
         .all();
 
       for (const row of rows) {
-        for (const [, id] of String(row[column.name]).matchAll(MARKER)) {
+        for (const [, id] of String(row[column.name]).matchAll(REFERENCE)) {
           if (documents.has(id)) continue;
 
           dangling.push({

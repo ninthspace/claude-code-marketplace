@@ -20,7 +20,10 @@ This skill uses **Gate Presentation**, **Conversational Output**, **Written Deli
 
 Resolve what is being reviewed, in this order.
 
-1. If `$ARGUMENTS` names a document id, `mcp__plugin_dpm_dpm__read_epic` on it.
+1. If `$ARGUMENTS` names a document — a ULID, or a human reference as another skill printed it —
+   `mcp__plugin_dpm_dpm__read_epic` on it. A reference goes through
+   `mcp__plugin_dpm_dpm__resolve_reference` first, which returns the row it names or refuses; a
+   ULID is already the id and needs no resolving.
 2. Otherwise `mcp__plugin_dpm_dpm__list_epic` and offer the results with `AskUserQuestion`, showing each title.
    **Ask which one; never take the most recent.**
 3. If there are none, say so and stop — there is nothing to review.

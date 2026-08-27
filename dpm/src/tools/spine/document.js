@@ -244,6 +244,12 @@ export function documentTools({ db, now, newId }, { kind, detail = null }) {
         : `Read one ${kind} by id.`,
       reads: detail ? ['document', detail.table] : ['document'],
       mutates: false,
+      // FR1. Declared here rather than on the whole factory because the create and update tools
+      // return the same shape and are not what the requirement is about: a skill names a document
+      // it has just read or listed, and a reference on a write's return would be a second place
+      // for the field to arrive from with nothing asserting the two agree.
+      db,
+      documentRows: true,
       // Declared empty rather than omitted: `document` holds a title, a slug and a status note,
       // and none of them is a body. A tool with nothing to withhold says so.
       body: [],

@@ -197,19 +197,78 @@ export function ancestryOf(byId, document) {
  * @returns {Map<string, string>} id → identifier.
  */
 export function identifiers(db) {
+  const map = new Map();
+
+  for (const { row, identifier } of named(db)) map.set(row.id, identifier);
+
+  return map;
+}
+
+/**
+ * Every document that can be named, paired with its identifier — one query and one walk.
+ *
+ * The two maps below are the same reading in opposite directions, and this is the reading. It is
+ * not exported: what a caller wants is one of the two maps, and a third shape of the same fact
+ * would be a third thing to keep in step.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {Generator<{row: object, identifier: string}>}
+ */
+function* named(db) {
   const rows = db.prepare(`
     SELECT id, kind, numbering, number, sequence, parent_id FROM document ORDER BY id
   `).all();
 
   const byId = new Map(rows.map((row) => [row.id, row]));
-  const map = new Map();
 
   for (const row of rows) {
+    let identifier;
+
     try {
-      map.set(row.id, identifierOf(row, ...ancestryOf(byId, row)));
+      identifier = identifierOf(row, ...ancestryOf(byId, row));
     } catch (error) {
       if (!(error instanceof ProjectionError)) throw error;
+      continue;
     }
+
+    yield { row, identifier };
+  }
+}
+
+/**
+ * The same fact read backwards: which documents answer to an identifier a person typed.
+ *
+ * **Here rather than in the resolver, for the reason `pathOf` calls `identifierOf` rather than
+ * rebuilding the number.** FR2's guarantee is that the reference has one derivation, so what a
+ * skill prints, what a filename embeds and what a `{{ref:<id>}}` marker resolves to cannot
+ * disagree. Reading it backwards is bound by the same rule and fails the same way: a resolver
+ * that split `47-03` into a number and a sequence and queried `document` for them would be a
+ * second derivation, and it would go on answering — with the wrong document — the first time the
+ * numbering rule changed. Building the same map and looking in it cannot drift, because there is
+ * nothing to drift from.
+ *
+ * **The value is a list, and a single match is a list of one.** Two documents legitimately share
+ * an identifier — an epic and its coverage matrix take the same `{spec}-{sequence}`, which
+ * `identifierOf` explains at length and the kind in the filename is what keeps apart. A map that
+ * collapsed them would have to choose, and the choice would be invisible: the caller would get a
+ * document rather than a refusal, and nothing in the answer would say another one matched. So the
+ * collision survives the lookup, and what to do about it is the caller's to decide.
+ *
+ * An unnameable document is absent, which is the only coherent answer: it has no identifier, so
+ * there is no reference for it to be found by.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {Map<string, Array<{id: string, kind: string}>>} identifier → the documents it names.
+ */
+export function documentsByIdentifier(db) {
+  const map = new Map();
+
+  for (const { row, identifier } of named(db)) {
+    const found = map.get(identifier);
+    const entry = { id: row.id, kind: row.kind };
+
+    if (found) found.push(entry);
+    else map.set(identifier, [entry]);
   }
 
   return map;

@@ -298,6 +298,30 @@ test('resolve is total — no placeholder, no pass-through', () => {
   assert.throws(() => resolve('{{ref:typo}}', names, 'where.js'), /where\.js.*\{\{ref:typo\}\}/s);
 });
 
+test('a document explaining the marker form renders it, and a botched one still refuses', () => {
+  const names = new Map([['a', '47']]);
+
+  // **Prose about the convention is not a reference to resolve.** A spec that introduces the form
+  // writes it out, and a resolver unable to tell that from a reference refuses to render every
+  // document that documents itself — which is not hypothetical: fifteen rows of the spec that
+  // introduced this convention write the form, and none of those documents could be published.
+  for (const placeholder of ['{{ref:<id>}}', '{{ref:<ULID>}}', '{{ref:…}}', '{{ref:the id}}']) {
+    assert.equal(resolve(`written as ${placeholder}`, names, 'x'), `written as ${placeholder}`,
+      `${placeholder} is prose about the form and is left as written`);
+  }
+
+  // And the exclusion is by alphabet rather than by a list of placeholders, so the typo class the
+  // totality rule exists for is still caught: every one of these is alphanumeric throughout, which
+  // is what an attempt at an id looks like and what a placeholder never does.
+  for (const botched of ['{{ref:01JNOSUCHDOCUMENT}}', '{{ref:A}}', '{{ref:aa}}']) {
+    assert.throws(() => resolve(`see ${botched}`, names, 'x'), /names no document/,
+      `${botched} is an attempt at an id and is refused rather than shipped`);
+  }
+
+  // The two live in one string, which is the case a document about references actually produces.
+  assert.equal(resolve('{{ref:a}} is written {{ref:<id>}}', names, 'x'), '47 is written {{ref:<id>}}');
+});
+
 test('must NOT — a projected body carries a number no row produced', (t) => {
   const { db, call } = surface(t);
   const { spec, other } = corpus(db, call);

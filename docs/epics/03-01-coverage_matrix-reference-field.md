@@ -1,0 +1,31 @@
+# Coverage — the reference on every document row
+
+**Number**: 03-01  
+**Source epic**: 03-01  
+**Status**: pending  
+
+## Coverage
+
+| # | Requirement | Spec Text | Story Criterion | Covered by | Test Approach | Verified |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | FR1 | Every document row returned by a `list_*` or `read_*` tool carries its human identifier as a field alongside the row's own columns | Every tool in the built registry whose name begins `list_` or `read_` and whose returned rows are `document` rows carries a `reference` field on each row. The set of such tools is enumerated from the registry itself, never from a written list of tool names. | Story 2 | `[integration]` | ✓ |
+| 2 | FR1 | carries its human identifier as a field alongside the row's own columns | must NOT — The check must not invoke `defineTool` directly. It calls the registered handlers against a real database, so a wrapper that works in isolation but was never wired to any tool fails. | Story 2 | `[integration]` | ✓ |
+| 3 | FR2 | what a skill prints, what a projection filename embeds and what a `{{ref:<id>}}` marker resolves to cannot disagree | For every document in a fixture corpus, the `reference` a tool returns equals the identifier embedded in that document's `pathOf` filename. | Story 2 | `[integration]` | ✓ |
+| 4 | FR2 | The field is produced by calling `identifierOf()` in `dpm/src/projection/naming.js` | must NOT — The expected value must not be recomputed by calling `identifierOf` in the check. An assertion comparing the wrapper's answer against the function the wrapper calls has two outcomes that produce the same observed value, and it passes forever. | Story 2 | `[integration]` | ✓ |
+| 5 | FR2 | rather than by re-deriving the numbering rule | control — The fixture contains a `coverage_matrix` under an epic under a spec, so a derivation taking the document's own `sequence` rather than its epic's produces a different answer and the comparison fails. Without that row the two derivations agree and the criterion above verifies nothing. | Story 1 | `[integration]` | ✓ |
+| 6 | FR3 | comes back with the field empty and the call still succeeds | A `numbering = 'none'` document, and a child-numbered document with no root-numbered ancestor, each come back with `reference` set to null and the call returns normally. | Story 2 | `[integration]` | ✓ |
+| 7 | FR3 | A list never fails because one row among its rows cannot be named. | must NOT — A list containing one unnameable document among nameable ones must not lose rows or raise. Every row comes back, and only the unnameable one carries null. | Story 2 | `[integration]` | ✓ |
+| 8 | FR3 | no root-numbered ancestor, `numbering = 'none'` | The fixture holds a document with no root-numbered ancestor, `numbering = 'none'` — one of each — so the unnameable cases have rows to be observed against. | Story 1 | `[integration]` | ✓ |
+| 9 | NFR1 | Computing the reference costs a bounded number of database queries per tool call rather than one per returned row. | The statement count for a fifty-row list is the same against a ten-document corpus and a two-hundred-document one. | Story 2 | `[integration]` | ✓ |
+| 10 | NFR2 | and this work leaves both empty | `dpm/package.json` declares empty `dependencies` and empty `devDependencies` after this work. | Story 4 | `[unit]` | ✓ |
+| 11 | NFR4 | Every existing test that asserts an exact returned column set is enumerated before work starts, and each is either updated deliberately or shown not to be affected. | Every test asserting a returned document row by deep-equality against a literal is enumerated from the suite source, and the resulting list is empty. Such an assertion breaks on any additive field, which is what makes it the shape worth finding rather than a style preference. | Story 3 | `[unit]` | ✓ |
+| 12 | ENVR1 | Node.js 22.5.0 or later on the development machine. | The running Node satisfies `REQUIRED_NODE` in `dpm/src/server/node-floor.js`, and `engines.node` in `dpm/package.json` equals it. | Story 4 | `[unit]` | ✓ |
+| 13 | ENVR2 | The test runner is `node --test`, invoked as `npm test` from `dpm/`. | `npm test` from `dpm/` invokes `node --test` and resolves no test-runner binary from `node_modules`. | Story 4 | `[unit]` | ✓ |
+| 14 | ENVR3 | `dpm/src` and `dpm/skills` in the working tree, and `.git/hooks/pre-commit` symlinked to `dpm/hooks/pre-commit` in that same tree | `dpm/src` and `dpm/skills` are present in the working tree, and `.git/hooks/pre-commit` resolves to `dpm/hooks/pre-commit` in that same tree rather than to a path under the plugin cache. | Story 4 | `[integration]` | ✓ |
+| 15 | ENVR4 | rather than this project's `.dpm/dpm.db`, which must not be read or written by any test | Every test builds its planning data from `dpm/tests/support/planning-database.js`, and no test opens this project's `.dpm/dpm.db`. | Story 4 | `[unit]` | ✓ |
+| 16 | ENVX1 | No npm package may need installing to run the suite. | The suite runs to completion with no `node_modules` directory present. | Story 4 | `[unit]` | ✓ |
+| 17 | ENVX2 | No CI job may be required to verify any criterion. This repository has no `.github/workflows` | The whole suite runs to completion from a local `npm test`, and the repository has no `.github/workflows` directory. | Story 4 | `[unit]` | ✓ |
+| 18 | ENVX3 | The plugin cache must not need to be writable | The suite runs to completion with the plugin cache directory absent or read-only. | Story 4 | `[unit]` | ✓ |
+| 19 | ENVX4 | the reference is computed from columns that already exist | The suite runs against a database at the schema version the installed release targets, and no tool this work adds requires a column that version lacks. | Story 4 | `[unit]` | ✓ |
+| 20 | ENVX5 | a tool call answers correctly against a database whose `docs/` tree has never been written | Every tool this work adds answers correctly against a database whose `docs/` tree has never been published. | Story 4 | `[integration]` | ✓ |
+| 21 | ENVR5 | A writable scratch directory the suite can publish a fixture corpus into | The suite can create a writable scratch directory, publish a fixture corpus into it, and read the rendered files back. | Story 4 | `[integration]` | ✓ |

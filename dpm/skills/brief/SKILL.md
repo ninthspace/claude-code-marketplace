@@ -20,7 +20,10 @@ Deliverable Length**, **Cross-References** and **Artifact Publishing** from it.
 
 Resolve the problem this brief builds on, in this order.
 
-1. If `$ARGUMENTS` names a document id, `mcp__plugin_dpm_dpm__read_problem_brief` on it.
+1. If `$ARGUMENTS` names a document — a ULID, or a human reference as another skill printed it —
+   `mcp__plugin_dpm_dpm__read_problem_brief` on it. A reference goes through
+   `mcp__plugin_dpm_dpm__resolve_reference` first, which returns the row it names or refuses; a
+   ULID is already the id and needs no resolving.
 2. If `$ARGUMENTS` is a description, use it as the starting context.
 3. Otherwise `mcp__plugin_dpm_dpm__list_problem_brief` and offer the results with `AskUserQuestion`, showing
    each title. **Ask which one; never take the most recent.** Recency answers a different question,

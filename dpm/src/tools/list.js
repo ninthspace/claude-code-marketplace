@@ -226,6 +226,10 @@ function documentLists(db) {
       fixed: { kind },
       gated: 'document',
       live: 'archived_at',
+      // FR1, and set here rather than on every entry in `LISTS`: this is the one builder whose
+      // rows are documents, and it is derived per seeded kind — so a kind seeded later carries
+      // the reference by being seeded, with nothing to add to a list of tool names.
+      documentRows: true,
       ...(parented.has(kind) ? { within: 'parent_id' } : {}),
       order: numbering === 'child' ? ['sequence', 'id'] : ['number', 'id'],
     }));
@@ -325,7 +329,9 @@ function childLists(db, spine) {
 export function listTools({ db }, spine) {
   const all = [...documentLists(db), ...LISTS, ...childLists(db, spine)];
 
-  return all.map(({ type, table, fixed = {}, within, scopes = [], gated, live, order }) => {
+  return all.map(({
+    type, table, fixed = {}, within, scopes = [], gated, live, order, documentRows = false,
+  }) => {
     const name = `list_${type}`;
     const read = spine.find((tool) => tool.name === `read_${type}`);
 
@@ -347,6 +353,10 @@ export function listTools({ db }, spine) {
       mutates: false,
       body: read.body,
       paged: true,
+      // Carried from the descriptor rather than tested for here — `table === 'document'` would be
+      // this file deciding what a builder already knows, and the two would disagree the first time
+      // a tool read `document` and returned something that was not a document row.
+      ...(documentRows ? { db, documentRows: true } : {}),
       // Declared on the tool as well as used by it, so a test can hold the tiebreaker to being a
       // key the table actually guarantees unique rather than to a column that looks like one, and
       // can count what a list should reach without restating which tools hide retired rows.

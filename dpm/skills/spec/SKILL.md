@@ -18,7 +18,9 @@ Deliverable Length**, **Cross-References** and **Artifact Publishing** from it.
 
 Resolve the starting context in this order.
 
-1. If `$ARGUMENTS` names a document id, read that document.
+1. If `$ARGUMENTS` names a document — a ULID, or a human reference as another skill printed it —
+   read that document. A reference goes through `mcp__plugin_dpm_dpm__resolve_reference` first,
+   which returns the row it names or refuses; a ULID is already the id and needs no resolving.
 2. If `$ARGUMENTS` is a description, use it as the starting context.
 3. Otherwise offer what the project already holds, product briefs first because they carry vision,
    value and constraints already argued over:

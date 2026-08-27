@@ -31,7 +31,10 @@ was never anything to retire; synthesis creates the grouping the other three act
 
 For synthesis, resolve the subject:
 
-1. If `$ARGUMENTS` names a document id, `mcp__plugin_dpm_dpm__read_epic` or `mcp__plugin_dpm_dpm__read_quick` on it.
+1. If `$ARGUMENTS` names a document — a ULID, or a human reference as another skill printed it —
+   `mcp__plugin_dpm_dpm__read_epic` or `mcp__plugin_dpm_dpm__read_quick` on it. A reference goes
+   through `mcp__plugin_dpm_dpm__resolve_reference` first, which returns the row it names or
+   refuses; a ULID is already the id and needs no resolving.
 2. Otherwise `mcp__plugin_dpm_dpm__list_epic` and `mcp__plugin_dpm_dpm__list_quick`, and offer them with `AskUserQuestion`,
    showing each title and status. **Ask which one; never take the most recent.**
 3. If there are none, say so and stop.

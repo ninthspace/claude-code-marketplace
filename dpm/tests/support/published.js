@@ -22,7 +22,9 @@ import { start } from '../../src/start.js';
 import { fullCorpus } from './corpus.js';
 import { dumpHolding } from './dumps.js';
 import { initRepository, surface } from './git.js';
+import { handlers, openPlanningDatabase } from './planning-database.js';
 import { ownedDirectory } from './scratch.js';
+import { spineTools } from '../../src/tools/index.js';
 
 /**
  * Bring up a git repository with the full corpus published into it.
@@ -52,6 +54,36 @@ export function publishedRepository(t, prefix = 'dpm-published-') {
   publish(db, { root });
 
   return { root, git, db, call, documents, location };
+}
+
+/**
+ * The corpus rendered into a scratch tree, and nothing else (ENVR5).
+ *
+ * **`publishedRepository` above is the same idea with a repository around it**, and the
+ * difference is the point rather than an economy. A check over what the *renderer wrote* — that
+ * no rendered file carries a bare ULID, that a document's filename embeds its identifier — has
+ * nothing to say about git, and a fixture that initialised a repository and opened a database on
+ * disk would put two failure modes in front of it that its subject cannot cause. This gives it a
+ * directory, a corpus and the files, and takes the directory back afterwards.
+ *
+ * Reading the rendered files rather than the renderer's return value is the whole reason it
+ * exists: a scan of what a function returned is a claim about that function, and FR17's claim is
+ * about the tree a reader opens.
+ *
+ * @param {import('node:test').TestContext} t
+ * @param {string} [prefix] Names the temp directory, so an orphan says which suite made it.
+ * @returns {{root: string, db: import('node:sqlite').DatabaseSync,
+ *   call: Record<string, Function>, documents: object}}
+ */
+export function publishedTree(t, prefix = 'dpm-tree-') {
+  const root = ownedDirectory(t, prefix);
+  const db = openPlanningDatabase(t);
+  const call = handlers(spineTools(db));
+  const documents = fullCorpus(db, call);
+
+  publish(db, { root });
+
+  return { root, db, call, documents };
 }
 
 /**

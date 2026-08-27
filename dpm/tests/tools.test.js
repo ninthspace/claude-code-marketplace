@@ -160,7 +160,15 @@ test('every type round-trips from create to its own read tool', (t) => {
     const { body } = tools.find((tool) => tool.name === name);
     const read = call[name](body.length > 0 ? { id: row.id, include_body: true } : { id: row.id });
 
-    assert.deepEqual(read, row, `${type} did not read back as it was written`);
+    // **Every column the create returned, rather than the whole object.** Stated as an equality
+    // over the two rows this failed the moment `reference` arrived beside them — a derived field
+    // no create tool returns and no column of any table. That is a change detector rather than a
+    // round-trip claim: the claim is that nothing the write stored comes back different, and a
+    // read that carries something extra has not broken it. A column the read *dropped* still
+    // fails, as `undefined` against the value the create wrote.
+    const stored = Object.fromEntries(Object.keys(row).map((column) => [column, read[column]]));
+
+    assert.deepEqual(stored, { ...row }, `${type} did not read back as it was written`);
   }
 
   assert.equal(Object.keys(created).length, SPINE.length + 1, 'the chain covered every type');
