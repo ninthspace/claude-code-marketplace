@@ -2,7 +2,7 @@
 
 **Number**: 04-06  
 **Source spec**: 04  
-**Status**: pending  
+**Status**: complete  
 
 ## Story 1 — The derived sweeps judge every new column and tool
 
@@ -39,7 +39,7 @@ Covers the three criteria. Where a check reads the suite's own sources, assemble
 
 ## Story 2 — The release and the reinstall
 
-**Status**: pending  
+**Status**: complete  
 **Blocked by**: —  
 
 ### Acceptance Criteria
@@ -48,15 +48,21 @@ Covers the three criteria. Where a check reads the suite's own sources, assemble
 
 ### Task 1 — Regenerate the committed dump
 
-**Status**: pending  
+**Status**: complete — Regenerated twice, because the dump carries the schema. The first publish ran under 0.6.0 against a schema-24 database and wrote the 16 new spec-04 documents; after the reinstall migrated `.dpm/dpm.db` to 27 the second publish rewrote the dump alone — 566 insertions, 510 deletions, no document changed. The guard reports 52 projected files and the dump matching the database.  
 
 The dump the pre-commit guard compares, and the vocabulary self-hosting.test.js reads. No requirement states it; the guard is what checks it, which is why it is a task rather than a criterion.
 
 ### Task 2 — Reinstall the plugin and confirm write access returns
 
-**Status**: pending  
+**Status**: complete — Write access confirmed three ways after the reinstall: `.dpm/dpm.db` moved from schema 24 to 27 on the first write, `publish` wrote the dump, and `retire_coverage` is reachable through MCP for the first time. `check_integrity` reports skew `none` on both the neighbour and the stamp — 0.7.0 running, 0.7.0 recorded.  
 
 This project's database migrates past the installed release's target and is served read-only until the reinstall. That is version skew reported as designed, not a fault to diagnose.
+
+### Retro
+
+- The release needs two publishes and two commits, and the reason is that the dump carries the schema as well as the data. Publishing under the old server wrote every new spec-04 document but left `.dpm/dpm.sql` describing schema 24; only after the reinstall migrated the database did the second publish rewrite it at 27, changing no document. A release note saying "regenerate the dump" reads as one action and is two, on either side of an action only a person can take.
+
+The reinstall also silently re-pointed `.git/hooks/pre-commit` at the plugin cache — `…/cache/ninthspace-marketplace/dpm/0.7.0/hooks/pre-commit` — which is the exact skew CLAUDE.md says the working-tree symlink exists to prevent. The guard still passed when run by hand, so nothing about running it said anything was wrong; the failure was one test in the suite, `src and skills are in the working tree, and the hook points at this checkout`. That test is the only thing standing between a reinstall and a guard that goes stale against a schema being written three directories away, and it earned its place this run.
 
 ## Retro Applied
 
