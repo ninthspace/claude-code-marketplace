@@ -14,6 +14,8 @@ Practical consequence for the next schema story: budget the sweep registrations 
 
 **The cost of a new table is five registrations, and the migration file points at none of them.** This is the epic's clearest reusable fact: `parity.test.js`'s `NO_CREATE_TOOL`, `parity-integration.test.js`'s `UNPROJECTED` twice over, `prose-columns.js`'s classification, and `schema.test.js`'s AD9 primary-key rule. Every one fails loudly, which is the design working — the derived sweeps are exactly what stops a table being added and forgotten. What the epic adds is the estimate: budget a second pass through four suites, not a migration file. The AD9 failure also forced a design change rather than a registration, replacing `id INTEGER PRIMARY KEY CHECK (id = 1)` with a `singleton`/`UNIQUE` shape — so the sweeps are not only bookkeeping, and one of them caught a bug the plan had written down.
 
+**Retired 2026-08-28T00:00:00Z**: Promoted into "A schema or tool change costs several derived-sweep registrations, and the number is discoverable before the work"; the lesson now lives in the library and is read by every do and epics run.
+
 - Testing gap — A must-NOT control found a hole in itself, and only because the mutation was run rather than described. Criterion 3 rejects deriving the version from the containing directory's name. The test pointed the resolver at `/cache/plugins/dpm/0.3.0` with a manifest saying `9.9.9`, and controlled it with a missing manifest — a reader that throws, against a version-named root, so a directory-name derivation would be the only thing still able to answer `0.3.0`.
 
 The mutation put the fallback *after* the parse: `return version ?? basename(root)`. A reader that throws never reaches that line, so the control passed over it. The mutation was caught only by a neighbouring test about null-handling, several criteria away — which is a sound suite and an unsound criterion, and no green run would ever have distinguished the two.
@@ -64,6 +66,8 @@ Smooth delivery, and the smoothness is the finding: a guarantee held by a bounda
 
 **Two units of planned work turned out already delivered by structure**, this one a task and story 6 below a whole story — and in both cases the right output was tests plus a written reason rather than code. The estimating lesson is worth stating plainly: **this codebase's existing seams absorb more new requirements than the breakdown expects**, because refusals are properties of tables and connections rather than checks in handlers. The risk that comes with it is the opposite of over-work: a property that holds emergently is stated nowhere near the branch relying on it, so the tests are the only thing keeping it true.
 
+**Retired 2026-08-28T00:00:00Z**: Promoted into "Read the tree before budgeting, and expect the ratio to favour already-there"; the lesson now lives in the library and is read by every do and epics run.
+
 - Codebase discovery · Smooth delivery — A whole story delivered with no production code, because two earlier decisions had already made it true — and the tests are the only thing that will keep it true.
 
 FR3's read-only requirement was satisfied before this story started: both detectors are defaults on `spineTools`, which the read-only branch already calls, and `check_integrity` declares `mutates: false`, so `readOnlyTools` leaves its handler alone. A read-only launch against a database stamped at 99.0.0 reported `found` on the first probe, with the neighbour half beside it.
@@ -73,6 +77,8 @@ FR3's read-only requirement was satisfied before this story started: both detect
 **A second thing worth recording: I extracted `skewReport` in story 5's refactoring pass on the stated grounds that story 6 would be the second construction site. It is not.** The extraction is still right — the shape belongs beside the vocabulary that defines it — but the reason I gave for it was a prediction, and the prediction was wrong. Anticipating a second caller is a weaker argument for extraction than it feels like at the time, and it is worth noticing when the anticipated caller does not arrive.
 
 **The second and larger instance: a whole story satisfied before it started.** It also carries the epic's one piece of honest self-correction — I extracted `skewReport` in story 5's refactoring pass on the stated grounds that story 6 would be its second caller, and story 6 needed no caller at all. The extraction stands on its own merits; the reason given for it was a prediction and the prediction was wrong. **Anticipating a second caller is a weaker argument for extraction than it feels like**, and the value here is having noticed rather than having quietly let the stated reason stand.
+
+**Retired 2026-08-28T00:00:00Z**: Promoted into "Read the tree before budgeting, and expect the ratio to favour already-there"; the lesson now lives in the library and is read by every do and epics run.
 
 - Codebase discovery · Complexity underestimate — A shape that was right for one detector had to change when the second arrived, and both changes were forced by criteria rather than chosen.
 

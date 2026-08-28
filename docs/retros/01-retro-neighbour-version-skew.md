@@ -26,6 +26,8 @@ The lesson for the stories ahead: the epic was written from the spec rather than
 
 **The epic was written from the spec rather than from the tree, and the first story paid for it.** Three of four tasks were already built. That is not a fault in the breakdown — a spec-derived epic states what must be true, and "already true" is a fine outcome — but it sets an expectation for the next one: read the tree first, and expect the unmet criterion to be attached to whatever looks most finished. `ownedDirectory` had ten importers and no test; the four environmental assertions everyone would have rushed to write already existed in four files. The reflex to build is the thing to resist at Step 1.
 
+**Retired 2026-08-28T00:00:00Z**: Promoted into "Read the tree before budgeting, and expect the ratio to favour already-there"; the lesson now lives in the library and is read by every do and epics run.
+
 - Testing gap — Four rejections, four mutations, and one of the four was invalid on its first attempt in exactly the way the library warned about.
 
 The write rejection was first mutated by adding a `mkdirSync` call using `join`, which the module does not import. Three tests went red with a ReferenceError — a true verdict naming the wrong harm, and precisely retro 55's "a control that fails by propagating someone else's exception is half a control". Rebuilt using template interpolation instead of `join`, the mutation failed the intended test with "reading the cache changed what is in it", which is the sentence someone reading this at 2am needs.
@@ -76,11 +78,15 @@ Worth stating plainly: the sweep is not wrong to be strict. A bare specifier rea
 
 **The project's own dependency sweeps read prose, and this cost the epic three failed suite runs.** See 01M056XV for the second and third occurrences. Grouped here because the two together make the point neither makes alone: the sweeps are right to be strict — an empty dependency map is what lets a clone run with no install step — but their strictness is invisible until a file happens to contain the shape, and the failure message names a package that does not exist rather than a comment that does.
 
+**Retired 2026-08-28T00:00:00Z**: Promoted into "A sweep that reads this repository's own text will read its prose and its planted controls"; the lesson now lives in the library and is read by every do run.
+
 - Codebase discovery — A textual import sweep bit for the second time in this epic, now in src/ rather than tests/. server.test.js scans every source file for the word from followed by a quoted string and reports each hit as an external dependency; a doc comment distinguishing one phrase from another, both quoted, read as an import of a package whose name was a sentence. tests/neighbour.test.js already carried a header note warning the next author, and it was not enough, because the note lives in the file where the trap was previously sprung rather than in the file that does the scanning. The durable fix is either a parser instead of a regex, or a note at the sweep itself — a warning is only read where the reader already is.
 
 **The warning written after the first occurrence did not prevent the second, because it was written in the wrong file.** `tests/neighbour.test.js` carries a header note about the sweep; the third occurrence was in `src/tools/cross/integrity.js`, whose author had no reason to read it. **This is the epic's one unactioned finding**, and it is a candidate for either a library entry or a note at the two sweeps themselves — `plugin.test.js:99` and `server.test.js:320`. A warning is only read where the reader already is.
 
 Two occurrences now: tests/neighbour.test.js during story 2, src/tools/cross/integrity.js during story 5.
+
+**Retired 2026-08-28T00:00:00Z**: Promoted into "A sweep that reads this repository's own text will read its prose and its planted controls"; the lesson now lives in the library and is read by every do run.
 
 - Pattern worth reusing — This record is the first in docs/maintenance/README.md whose "What asserts it" section says nothing does, and saying so plainly was the right move rather than a gap to be filled. Every other entry names a test holding both ends of a coupling. Here the coupling is to a layout the harness owns and the suite deliberately never reads — a test that opened the real plugin cache would pass on the author's machine for reasons unrelated to the code. So the section states what the suite actually proves (the check reads a layout of this shape, and fails honestly when it cannot) and states that the assumption itself is checked by a person reading the entry. Recording an absence as an absence is what keeps the file's other entries meaning something; an entry that named a tangentially related test would read as covered.
 

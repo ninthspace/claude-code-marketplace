@@ -64,3 +64,15 @@ A control is the run that proves a check can fail. Six ways this project has had
 The positive form, from retro 44: **to close a must-NOT, remove the condition and watch the same inputs produce what was refused.** "X does not happen under condition C" is satisfied by a feature that never works at all, and only removing C distinguishes them.
 
 And read the failure text every time, not just the failure. Retro 55: three of seventeen mutations were about *where* a line sits rather than what it does, and two of those either survived or produced a misleading message. Neither is visible from a green suite.
+
+## A sweep that reads this repository's own text will read its prose and its planted controls
+
+Several checks in this suite work by reading source files as text — the import sweeps, the corpus sweeps, the `.dpm/` anchoring check. Each has reported a file that broke no rule, and each time two wrong repairs were available: exempt the file by name, or delete the control. Both hide the next genuine breach in the one file most likely to hold it.
+
+- **A regex reading is not a parser, and prose is in its corpus.** A quoted phrase downstream of the word `from`, a doc comment distinguishing one term from another, a pattern written to extract imports — all have failed an import sweep as dependencies on packages whose names were English sentences. Keep quoted phrases away from the words a sweep anchors on, and assemble any pattern that contains the forbidden shape from fragments.
+- **Assemble the forbidden string rather than writing it.** `['plugins', 'cache'].join('/')` keeps a control real, keeps the file inside the sweep's corpus, and costs one line. This was rediscovered in three consecutive stories before it was written down.
+- **Empty the string literals before scanning, keeping the quotes so the parentheses stay balanced.** An assertion quoted inside a string is not an assertion — that is the rule, and it is what an exemption by filename fails to say.
+- **A sweep whose first run reports offenders is usually reading the wrong thing.** The fix is a narrower reading, not an allow-list: anchor at `^\s*import` rather than matching `from`; ask *anchored at the project* rather than *named as a string*.
+- **Sometimes the reading was right and the text was wrong.** A worked example naming a real artefact by its number is a stale reference whether or not the sentence is teaching the rule. Write the shape, not an instance, and say in the section why it carries no example.
+
+A warning is only read where the reader already is. A note in the file that tripped the sweep does not reach the next author of a different file; the note belongs at the sweep.

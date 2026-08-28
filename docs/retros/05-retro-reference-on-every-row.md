@@ -48,6 +48,8 @@ The scoping rule generalises past this check. `map`, `reduce` and `Object.keys` 
 
 **And the finding that mattered was not the shape the criterion described.** The criterion's wording suggests a literal; the single assertion this epic actually broke compared a read against a create, neither side written out. A check built to the wording would have passed and found nothing. **Read the criterion for the failure it is protecting against, not for the shape its sentence happens to name** — and when the two differ, cover both and say so.
 
+**Retired 2026-08-28T00:00:00Z**: Promoted into "A sweep that reads this repository's own text will read its prose and its planted controls"; the lesson now lives in the library and is read by every do run.
+
 - Pattern worth reusing · Testing gap — A sweep that reads the suite's own sources will find its own planted controls, and this story hit it twice more — once on `plugins/cache` and once on a `join(import.meta.dirname, …, '.dpm', 'dpm.db')` literal written as the control for the very rule that forbids it. Story 2 hit it once on `identifierOf`, and Story 3 hit it hard enough to build `withoutStrings()` for. Three stories, three separate rediscoveries, and the same two wrong answers were available every time: exempt the file by name, or drop the control.
 
 The right answer is now settled enough to name. **Assemble the forbidden string rather than writing it** — `['plugins', 'cache'].join('/')` — because it keeps the control real, keeps the file inside the sweep's own corpus, and costs one line. An exemption by name would go on hiding a genuine breach planted in that file afterwards, which is exactly the file most likely to contain one.
@@ -59,3 +61,5 @@ The first two drafts of both new sweeps also failed for the *other* reason worth
 The second half is about the direction of the first failure. Both of this story's sweeps reported offenders on their first run, and in neither case were the offenders wrong — the *reading* was. `/from ['"]…['"]/` matched an import quoted inside a string, where `sweeps.js`'s `importSpecifiers` had already solved that by anchoring at `^\s*import`; `/\.dpm\/dpm\.db/` matched six files each building a scratch database a line after saying so, where the criterion's actual distinction is *anchored at the project* rather than *named as a string*. **A sweep whose first run reports offenders is usually reading the wrong thing, and the fix is a narrower reading rather than an allow-list** — an allow-list records the misreading permanently and makes it look decided.
 
 There is a reuse point in this too: `importSpecifiers` had solved half of it already. Before writing a reading over source text, look at what `tests/support/sweeps.js` and `sources.js` already read.
+
+**Retired 2026-08-28T00:00:00Z**: Promoted into "A sweep that reads this repository's own text will read its prose and its planted controls"; the lesson now lives in the library and is read by every do run.
