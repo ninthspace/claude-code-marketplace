@@ -65,7 +65,7 @@ Two entries rather than one, because they ask a reader for two different things.
 
 ### Task 2 — Attach the warrant to this story's criteria
 
-**Status**: pending  
+**Status**: complete — Held on the plugin reinstall and done the moment it landed. All five criteria now carry `warrant_adr_id` naming ADR 04-05 — five rather than the four the description names, because criterion 5 was added after it was written.  
 
 Each of the four criteria traces to the register's own decision rather than to requirement text, so each carries warrant_adr_id naming it. Without this the story reads afterwards as four criteria nobody got round to binding.
 
