@@ -23,6 +23,7 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { renderDocument } from '../src/projection/index.js';
 import { observationsOf } from '../src/projection/load.js';
+import { conformance } from './support/conformance.js';
 
 function surface(t) {
   const db = openPlanningDatabase(t);
@@ -67,15 +68,21 @@ function retro(call) {
  *
  * A vocabulary is a roster something is offered from, and its retire tool exists so that retiring is
  * one deliberate act with a reason rather than a column an ordinary update could set — or clear. The
- * two below are neither: an `observation` is a retro lesson that has been spent or has graduated to
- * the library, retired by `dpm:retro retire` setting the column; an `artifact` is a published page
- * this project no longer points anyone at, retired by `dpm:artifact` doing the same. Both are
- * records rather than rosters, and neither is offered as a choice to a run.
+ * three below are none of them: an `observation` is a retro lesson that has been spent or has
+ * graduated to the library, retired by `dpm:retro retire` setting the column; an `artifact` is a
+ * published page this project no longer points anyone at, retired by `dpm:artifact` doing the same;
+ * a `coverage` row is one binding of a fragment to a criterion, withdrawn when the binding turns out
+ * wrong or its criterion is superseded. All three are records rather than rosters, and none is
+ * offered as a choice to a run.
+ *
+ * **`coverage` is here for that reason and not because its retire tool is late.** One arrives with
+ * `retire_coverage`, and the check below is an `ok` rather than an equality, so the entry stays true
+ * either way: what it says is that nothing offers a binding from a roster, which no tool can change.
  *
  * Named here rather than skipped inline so the two checks below cannot drift apart, and so adding a
- * third is a decision with a place to write the reason down.
+ * fourth is a decision with a place to write the reason down.
  */
-const NOT_A_VOCABULARY = new Set(['observation', 'artifact']);
+const NOT_A_VOCABULARY = new Set(['observation', 'artifact', 'coverage']);
 
 /**
  * Every table a term can be retired in, found by the column that makes retirement possible.
@@ -91,6 +98,24 @@ function retirable(db) {
     .filter((table) => db.prepare(`PRAGMA table_info(${table})`).all()
       .some((column) => column.name === 'retired_at'))
     .sort();
+}
+
+/**
+ * Vocabularies the registry offers and cannot retire — a create tool, and no retire tool beside it.
+ *
+ * One reader, because four checks below ask this question of four different registries: the live
+ * one, one with a tool removed, and two built to drive a must-NOT. Written out at each site they
+ * would eventually disagree about what counts, which is the state the enumeration exists to catch.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {Set<string>} named The tool names to judge against, live or planted.
+ * @param {Set<string>} [excluded] Tables the retire *verb* does not apply to.
+ * @returns {string[]}
+ */
+function unretirable(db, named, excluded = NOT_A_VOCABULARY) {
+  return retirable(db)
+    .filter((table) => !excluded.has(table))
+    .filter((table) => named.has(`create_${table}`) && !named.has(`retire_${table}`));
 }
 
 // --- Criterion 1: a project-added category is usable without a schema migration -----------------
@@ -336,7 +361,13 @@ test('retirement is not offered as a column an update can set or clear', (t) => 
   const withVerb = tools.filter((tool) => tool.name.startsWith('update_')
     && named.has(tool.name.replace('update_', 'retire_')));
 
-  assert.equal(withVerb.length, 4, 'the four vocabularies did not all get an update tool');
+  // Named rather than counted. The set was "the four vocabularies" until spec 04 gave `coverage` a
+  // retirement verb of its own, and a count says nothing about which table joined or left — the
+  // failure this would have reported is "5, not 4", on a change that is either correct or a serious
+  // mistake depending entirely on the name.
+  assert.deepEqual(withVerb.map((tool) => tool.table).sort(),
+    ['agent', 'coverage', 'dependency_kind', 'taxonomy', 'test_approach'],
+    'a table gained or lost a retirement verb');
 
   for (const tool of withVerb) {
     assert.equal(Object.hasOwn(tool.inputSchema.properties, 'retired_at'), false,
@@ -360,7 +391,7 @@ test('every retirable table has a create tool and a retire tool, enumerated from
   // The control. Without it an enumeration that found nothing would pass, which is the shape the
   // must-NOT would take if `retired_at` were ever renamed.
   assert.deepEqual(tables,
-    ['agent', 'artifact', 'dependency_kind', 'observation', 'taxonomy', 'test_approach']);
+    ['agent', 'artifact', 'coverage', 'dependency_kind', 'observation', 'taxonomy', 'test_approach']);
 
   for (const table of tables) {
     if (NOT_A_VOCABULARY.has(table)) continue;
@@ -378,21 +409,10 @@ test('a vocabulary whose retire tool is missing is named by the enumeration', (t
     .map((tool) => tool.name)
     .filter((name) => name !== 'retire_dependency_kind'));
 
-  const unretirable = retirable(db)
-    .filter((table) => !NOT_A_VOCABULARY.has(table))
-    .filter((table) => without.has(`create_${table}`) && !without.has(`retire_${table}`));
-
-  assert.deepEqual(unretirable, ['dependency_kind']);
+  assert.deepEqual(unretirable(db, without), ['dependency_kind']);
 
   // The control: undisturbed, the same sweep finds nothing.
-  const named = new Set(tools.map((tool) => tool.name));
-
-  assert.deepEqual(
-    retirable(db)
-      .filter((table) => !NOT_A_VOCABULARY.has(table))
-      .filter((table) => named.has(`create_${table}`) && !named.has(`retire_${table}`)),
-    [],
-  );
+  assert.deepEqual(unretirable(db, new Set(tools.map((tool) => tool.name))), []);
 });
 
 // --- Criterion 5: a project-added persona is in the roster, with no file anywhere ---------------
@@ -463,4 +483,57 @@ test('a retired persona leaves the roster and its past attributions still resolv
   // And the review it already sat on renders its name, not its roster key — the FR24 guarantee
   // stated where a reader would notice it failing.
   assert.match(renderDocument(db, review.id).text, /Jordan \(Product Manager\)/);
+});
+
+// --- Supersession's retirement tool, reached by the derived sweeps ------------------------------
+
+test('the retirement tool is registered and the whole-registry sweep reaches it', (t) => {
+  const { db, tools } = surface(t);
+  const registered = tools.find((tool) => tool.name === 'retire_coverage');
+
+  assert.ok(registered, 'retire_coverage is not in the live registry');
+  assert.equal(registered.table, 'coverage');
+
+  // Registered is not the same as reached, and the two look identical from a clean report. So the
+  // sweep is driven on a registry holding one defective copy of this tool: if `retire_coverage`
+  // were passed over, the planted defect would come back clean exactly as the real one does.
+  const { problems } = conformance(db, tools);
+
+  assert.deepEqual(problems, []);
+
+  const defective = tools.map((tool) => (tool.name !== 'retire_coverage' ? tool : {
+    ...tool,
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: { ...tool.inputSchema.properties, withdrawal: { type: 'string', enum: ['x'] } },
+    },
+  }));
+
+  assert.deepEqual(conformance(db, defective).problems,
+    ["retire_coverage: 'withdrawal' declares an enum but is not a column of coverage"]);
+});
+
+test('must NOT — a column or tool this change added is exempted from a derived sweep', (t) => {
+  const { db, tools } = surface(t);
+  const named = new Set(tools.map((tool) => tool.name));
+
+  // `coverage` is the one place this change's surface is named in an exclusion, and the exclusion
+  // is about rosters rather than about a missing tool. Which means it must conceal nothing: run
+  // the check the skip bypasses, over the table the skip names, and it passes on its own merits.
+  assert.ok(NOT_A_VOCABULARY.has('coverage'));
+  assert.ok(retirable(db).includes('coverage'));
+  assert.ok(named.has('create_coverage') && named.has('retire_coverage'));
+
+  // Driven rather than argued: with the entry deleted the enumeration takes `coverage` in and
+  // still finds nothing, so nothing is resting on the skip. The other two entries are left alone —
+  // they are records this change did not add, and neither has a retire tool.
+  const included = new Set([...NOT_A_VOCABULARY].filter((table) => table !== 'coverage'));
+
+  assert.deepEqual(unretirable(db, named, included), []);
+
+  // The control. Without it the line above passes for the wrong reason — an enumeration that
+  // stopped returning `coverage` would also find nothing to complain about.
+  const withoutTool = new Set([...named].filter((name) => name !== 'retire_coverage'));
+
+  assert.deepEqual(unretirable(db, withoutTool, included), ['coverage']);
 });

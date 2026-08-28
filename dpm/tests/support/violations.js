@@ -21,6 +21,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { checkIntegrity } from '../../src/integrity/check.js';
 import { create } from '../fixtures/index.js';
 import { childDocument, rootDocument } from '../fixtures/planning.js';
 import { ulid } from '../../src/id/ulid.js';
@@ -41,7 +42,12 @@ export function corpus(db) {
  * a value the caller needs to assert against — entry 13's missing id, for instance, which is
  * generated rather than fixed.
  *
- * @type {{entry: number, summary: string, inject: (db: any, context: object) => any}[]}
+ * `advisory` marks the entries that are reported without settling soundness. A caller asserting a
+ * refusal has to skip them — a restore of a dump holding one succeeds, which is the whole of what
+ * the flag is for — so the property is carried here beside the injection rather than derived from
+ * the entry number at each call site.
+ *
+ * @type {{entry: number, advisory?: boolean, summary: string, inject: (db: any, context: object) => any}[]}
  */
 export const VIOLATIONS = [
   {
@@ -231,7 +237,60 @@ export const VIOLATIONS = [
       return missing;
     },
   },
+  {
+    entry: 14,
+    advisory: true,
+    summary: 'a binding retired while its fragment still matched and its criterion was still live',
+    inject: (db, { spec, story }) => {
+      const requirement = create(db, 'requirement', {
+        spec_id: spec.id,
+        text: 'The register names a retirement somebody made while the binding was sound.',
+      });
+      const criterion = create(db, 'story_criterion', { story_id: story.id });
+
+      // Retired directly rather than through `retire_coverage`, for the reason the module opens
+      // with: these fixtures run on the restore path too, where there is no tool surface at all.
+      const row = create(db, 'coverage', {
+        requirement_id: requirement.id,
+        story_criterion_id: criterion.id,
+        spec_fragment: 'a retirement somebody made while the binding was sound',
+      });
+
+      db.prepare('UPDATE coverage SET retired_at = ?, retired_reason = ? WHERE id = ?')
+        .run('2026-08-27T00:00:00Z', 'The criterion was folded into another story.', row.id);
+    },
+  },
 ];
+
+/**
+ * The violation the tool reported for one register entry, or `undefined` when it found none.
+ *
+ * Two suites ask this — `integrity.test.js` per entry, `integrity-live-bindings.test.js` for the
+ * ids entry 9 names — and the shape of a report is the module's business rather than either
+ * caller's.
+ *
+ * @param {{violations: {entry: number}[]}} report
+ * @param {number} entry
+ */
+export const forEntry = (report, entry) =>
+  report.violations.find((violation) => violation.entry === entry);
+
+/**
+ * The ids one register entry names in a database, sorted — the whole list, never a membership.
+ *
+ * Both coverage-entry suites assert this way, and deliberately: "the entry is quiet" is equally
+ * true of an entry that stopped looking, so a claim about an entry is a claim about the set it
+ * returns. Sorted because entry order is `coverage.id` and a caller building an expectation from
+ * two creates should not have to know that.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {number} entry
+ */
+export function namedBy(db, entry) {
+  const found = forEntry(checkIntegrity(db), entry);
+
+  return (found?.rows ?? []).map((row) => row.id).sort();
+}
 
 /** One entry's violation, by number. Throws rather than returning undefined for an unknown one. */
 export function violation(entry) {

@@ -117,11 +117,16 @@ const PAGE_ARGUMENTS = {
  * same risk on the same terms, so the walk lives here once rather than being written twice and
  * gaining a third shape in only one of them.
  *
+ * Exported for the third such wrapper, `withAccountedFor`, which lives in `src/coverage/` because
+ * what it computes is a fact about coverage rather than about tools. The shape it walks is this
+ * file's, though, and a copy of the walk over there is exactly the divergence this note warns
+ * about — a paragraph explaining the risk is not the same thing as taking it once.
+ *
  * @param {object} value
  * @param {(row: object) => object} row
  * @returns {unknown}
  */
-const overRows = (value, row) => (Array.isArray(value.items)
+export const overRows = (value, row) => (Array.isArray(value.items)
   ? { ...value, items: value.items.map(row) }
   : row(value));
 
@@ -324,6 +329,12 @@ export function validate(schema, args, where) {
  *   tool knows it.
  * @param {import('node:sqlite').DatabaseSync} [tool.db] The handle the reference is derived
  *   against. Required with `documentRows` and refused without it.
+ * @param {(value: unknown) => unknown} [tool.derived] A field this tool computes rather than
+ *   stores, applied to whatever the handler returned. It takes one row or a page of them, because
+ *   a read and a list declare the same one — which is the point: a derived field that reached only
+ *   one of them would be a field whose absence means two different things. Applied after the body
+ *   strip, for `reference`'s reason: nothing derived is a body column, and a summary read still has
+ *   to carry it.
  * @param {(args: object) => unknown} tool.handler Receives arguments already validated against
  *   `inputSchema` — see the wrapping below.
  * @returns {object} The tool, frozen.
@@ -331,7 +342,7 @@ export function validate(schema, args, where) {
 export function defineTool(tool) {
   const {
     name, table, description, reads, handler, body = [], paged = false, mutates,
-    db = null, documentRows = false,
+    db = null, documentRows = false, derived = null,
   } = tool;
   const writes = tool.writes ?? (tool.mutates ? [table] : []);
 
@@ -434,7 +445,11 @@ export function defineTool(tool) {
       // rather than per row: it is one query for the whole corpus, so the statement count for a
       // fifty-row page is the same as for a single read, and the same against a corpus of two
       // hundred documents as against one of ten.
-      return documentRows ? withReference(identifiers(db), shown) : shown;
+      // Alongside `reference` and for the same reasons — derived rather than stored, so past the
+      // body strip and once per call over whatever shape came back.
+      const answered = derived ? derived(shown) : shown;
+
+      return documentRows ? withReference(identifiers(db), answered) : answered;
     },
   });
 }

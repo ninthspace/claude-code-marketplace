@@ -78,7 +78,15 @@ test('a migrated schema and a freshly created one are identical, object for obje
   assert.deepEqual(before, after, 'and the same DDL for each — constraints included');
 
   assert.ok(before.length > 40, `only ${before.length} objects compared — the shape read nothing`);
-  assert.equal(targetVersion(), 24, 'and both are at the version the files describe');
+  // **Read from both databases and derived, not written down.** This assertion used to name the
+  // number — `targetVersion() === 25` — which checked that a literal in this file matched a literal
+  // in the schema directory and asked neither database anything. It went red on the next migration,
+  // for a reason that had nothing to do with the two paths agreeing. What it claims is that both
+  // arrived at the version the files describe, so both are asked.
+  const version = (db) => db.prepare('SELECT max(version) AS v FROM schema_version').get().v;
+
+  assert.equal(version(upgraded), targetVersion(), 'the migrated database stopped short');
+  assert.equal(version(created), targetVersion(), 'the freshly created one stopped short');
 });
 
 test('a retirement made before a migration is still in force after it', (t) => {
@@ -143,7 +151,10 @@ test('the integrity tool passes a migrated database and fails each register viol
     return entry.entry;
   });
 
-  assert.equal(ran.length, 13, 'all thirteen ran, and none threw');
+  // Counted off the register rather than written down: the claim is that every entry ran on a
+  // migrated database, and a literal here would be a copy of the register's length that goes red
+  // on the next entry for a reason unrelated to migration.
+  assert.equal(ran.length, REGISTER.length, 'every entry ran, and none threw');
 });
 
 test('a number allocated before a migration is not reissued after it', (t) => {

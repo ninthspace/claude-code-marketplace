@@ -55,17 +55,32 @@ const pendingFrom = (from) =>
   schemaFiles().map(versionOf).filter((version) => version > from).sort((a, b) => a - b);
 
 /**
- * The tables the migrations at `versions` create, read out of their own DDL.
+ * The tables the migrations at `versions` create **and leave behind**, read out of their own DDL.
  *
  * The alternative is a list in this file naming the tables a migration is allowed to add, which is
  * a second description of the DDL and the copy nothing keeps in step — and this test's whole claim
  * is that the upgrade added *nothing else*, so what counts as "else" has to come from the files.
+ *
+ * **A rebuild creates two tables it does not leave.** SQLite cannot alter a table-level constraint,
+ * so `025-coverage-retirement.sql` builds `coverage_rebuilt`, copies `coverage_story` aside into
+ * `coverage_story_rescue`, and drops both before it ends — one by name and one by the rename that
+ * puts it back as `coverage`. Counting them as added reports two tables that are not in the
+ * database, which is the reading being wrong rather than the migration. So the drops and the
+ * renames are read out of the same text, and what is left is what the file actually adds.
  */
 const tablesCreatedBy = (versions) => versions
   .map((version) => schemaFiles().find((name) => versionOf(name) === version))
-  .flatMap((name) => [...readFileSync(join(schemaDirectory(), name), 'utf8')
-    .matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)/gi)]
-    .map((found) => found[1]))
+  .flatMap((name) => {
+    const sql = readFileSync(join(schemaDirectory(), name), 'utf8');
+    const gone = new Set([
+      ...[...sql.matchAll(/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(\w+)/gi)].map((found) => found[1]),
+      ...[...sql.matchAll(/ALTER\s+TABLE\s+(\w+)\s+RENAME\s+TO/gi)].map((found) => found[1]),
+    ]);
+
+    return [...sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)/gi)]
+      .map((found) => found[1])
+      .filter((table) => !gone.has(table));
+  })
   .sort();
 
 /** The DDL SQLite holds for a table, or `undefined` if it has none. */
@@ -91,11 +106,32 @@ const stampRows = (db) => db
  * *contents* and an ordering choice would make the comparison depend on something the criterion
  * says nothing about. `authoredTables` excludes the FTS virtual tables and their shadow storage,
  * whose contents are derived from the tables beside them and are rebuilt by trigger.
+ *
+ * **`columns` is what keeps this a claim about contents rather than about shape.** A migration that
+ * adds a column to a populated table changes every row's JSON without touching a single value, and
+ * read whole that is indistinguishable from a migration that rewrote the data. Passing the column
+ * sets read *before* the upgrade projects each row onto the columns that existed then, so a new
+ * column is invisible here — where it is the business of the object-for-object comparison in
+ * `integration.test.js` — and a changed value is not.
  */
-function contents(db) {
+function contents(db, columns = columnsBefore(db)) {
   return Object.fromEntries(authoredTables(db).map((table) => [
     table,
-    db.prepare(`SELECT * FROM "${table}"`).all().map((row) => JSON.stringify(row)).sort(),
+    db
+      .prepare(`SELECT * FROM "${table}"`)
+      .all()
+      .map((row) => JSON.stringify(Object.fromEntries(
+        (columns[table] ?? Object.keys(row)).map((column) => [column, row[column]]),
+      )))
+      .sort(),
+  ]));
+}
+
+/** Each authored table's columns, as they stand — the shape a later `contents` is projected onto. */
+function columnsBefore(db) {
+  return Object.fromEntries(authoredTables(db).map((table) => [
+    table,
+    db.prepare(`PRAGMA table_info("${table}")`).all().map((column) => column.name),
   ]));
 }
 
@@ -177,7 +213,8 @@ test('a database at the previous version gains the stamp table and nothing else 
   applyVocabulary(db, { vocabularies: vocabularyAsOf(db) });
   fullCorpus(db, handlers(spineTools(db)));
 
-  const before = contents(db);
+  const shape = columnsBefore(db);
+  const before = contents(db, shape);
 
   assert.ok(Object.values(before).filter((rows) => rows.length > 0).length > 20,
     'the corpus filled too few tables for this comparison to discriminate');
@@ -199,7 +236,7 @@ test('a database at the previous version gains the stamp table and nothing else 
     'the stamp\'s own migration was not among them, so nothing here is about the stamp');
   assert.ok(ddlFor(db, STAMP), `${STAMP} is not in the schema after the upgrade`);
 
-  const after = contents(db);
+  const after = contents(db, shape);
 
   // `schema_version` gained a row per migration, and the tables those migrations create did not
   // exist before. Every other table, contents included, is compared whole — and the tables allowed

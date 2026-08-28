@@ -367,6 +367,33 @@ export function sparseCorpus(call) {
     id: retiredArtifact.id, retired_at: AT, retired_reason: 'The dashboard it pointed at is gone.',
   });
 
+  // A criterion an amendment overtook. **On a criterion of its own, and it has to be.** The one
+  // created above carries the live coverage binding and the approach join, so superseding it would
+  // put the corpus's only matrix row behind a mark and take the unverified-cell branch with it.
+  const supersededCriterion = at.create_story_criterion({
+    story_id: story.id, text: 'It is done the old way.', position: 1,
+  });
+
+  at.update_story_criterion({
+    id: supersededCriterion.id,
+    superseded_at: AT,
+    superseded_reason: 'The requirement it read stopped asking for the old way.',
+  });
+
+  // A withdrawn binding, on the same requirement as the live one. **The live row above must stay
+  // live**, because the branch this corpus is built to reach is a matrix cell with no ✓ — so the
+  // ending gets a binding of its own rather than being applied to the one already here.
+  const retiredCoverage = at.create_coverage({
+    requirement_id: requirement.id,
+    spec_fragment: 'The thing works',
+    story_criterion_id: storyCriterion.id,
+    position: 1,
+  });
+
+  at.retire_coverage({
+    id: retiredCoverage.id, reason: 'The fragment dropped the full stop and half the obligation.',
+  });
+
   // **`position` is set here and omitted on the bare observation above, and it has to be.**
   // `create_observation` is the only create tool that declares `position` optional, and omitting it
   // defaults to a fixed value rather than allocating the next one — so a second observation on the
@@ -438,6 +465,8 @@ export function sparseCorpus(call) {
       findings: { rejected: finding, judged: findingStates, open: openFinding },
       section: supersededSection,
       artifact: retiredArtifact,
+      coverage: retiredCoverage,
+      criterion: supersededCriterion,
       observation: retiredObservation,
       session: supersededSession,
     },

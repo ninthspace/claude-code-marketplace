@@ -105,6 +105,13 @@ test('one row of every indexed type is written by its tool and found by a single
   const audit = call.create_audit({ slug: 'find', title: 'Audit' });
   const quick = call.create_quick({ slug: 'find', title: 'Quick' });
 
+  // A second criterion, for `coverage` to bind. The map's own `story_criterion` entry takes
+  // position 0 and `UNIQUE (story_id, position)` will not have it twice, so the binding gets one of
+  // its own rather than depending on the order the map happens to be walked in.
+  const bound = call.create_story_criterion({
+    story_id: story.id, position: 1, text: 'a bound story criterion',
+  });
+
   // One row per indexed type, each through the type's own create tool and each carrying the same
   // term. Written as a map keyed by the enumerated name so a type nobody wrote is a failure here
   // rather than an entity quietly missing from the search below. Each entry returns the value the
@@ -156,6 +163,18 @@ test('one row of every indexed type is written by its tool and found by a single
       retro_id: retro.id, applied_to_id: epic.id, theme: 'Testing gaps', disposition: 'applied',
       note: 'a lodestone note',
     }).id,
+
+    // The one whose only indexed prose is the reason it was withdrawn. A live binding carries none
+    // — `spec_fragment` is half the row's identity rather than text about it — so the row reaches
+    // the index by being retired, and `retire_coverage` is the only path a caller has to that.
+    coverage: () => {
+      const row = call.create_coverage({
+        requirement_id: requirement.id, spec_fragment: 'lodestone requirement',
+        story_criterion_id: bound.id, position: 0,
+      });
+
+      return call.retire_coverage({ id: row.id, reason: 'a lodestone withdrawal' }).id;
+    },
 
     // The two whose only prose column is a status note, which no create tool takes — so the row
     // reaches the index through the update trigger, on the path a caller actually uses.

@@ -307,11 +307,17 @@ test('a coverage matrix renders its epic\'s rows and no other epic\'s', (t) => {
   const body = matrix.text.split('\n').filter((line) => line.startsWith('| 1 |'));
 
   assert.equal(body.length, 1, 'the matrix rendered a row it has no criterion for');
-  assert.equal(matrix.text.split('\n').filter((line) => /^\| \d+ \|/.test(line)).length, 1);
 
-  // The control: both coverage rows exist, so the absence above is the filter working rather than
-  // the second row never having been written.
-  assert.equal(db.prepare('SELECT count(*) AS n FROM coverage').get().n, 2);
+  // Two rows, both this epic's: the corpus binds the same criterion twice, once live and once
+  // withdrawn. **A retired binding renders**, as a retired observation and a retired artifact do —
+  // the matrix is the record of what was bound, and a row that vanished from it would take the
+  // reason it was withdrawn with it. So the number to hold here is this epic's rows, not the live
+  // ones; what the filter excludes is the foreign epic's row asserted above.
+  assert.equal(matrix.text.split('\n').filter((line) => /^\| \d+ \|/.test(line)).length, 2);
+
+  // The control: all three coverage rows exist, so the absence above is the filter working rather
+  // than the foreign row never having been written.
+  assert.equal(db.prepare('SELECT count(*) AS n FROM coverage').get().n, 3);
 
   const otherMatrix = project(db, { write: false }).written
     .filter((file) => file.path.includes('coverage_matrix'));

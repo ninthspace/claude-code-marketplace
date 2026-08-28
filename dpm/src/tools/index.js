@@ -20,6 +20,7 @@ import { ulid } from '../id/ulid.js';
 // helpers and the version parser, and nothing else.
 import { currentSkew } from '../server/neighbour.js';
 import { stampSkew } from '../server/stamp.js';
+import { withAccountedFor } from '../coverage/warrant.js';
 import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
 import { integrityTools } from './cross/integrity.js';
@@ -124,8 +125,83 @@ export function spineTools(
     ...criterionTools(context, {
       table: 'acceptance_criterion', parent: 'requirement_id', owner: 'requirement',
     }),
+    // `warrant_adr_id` is the story side's alone, and it is the one asymmetry between the two
+    // criterion tables. A spec-side criterion belongs to a requirement, so what warrants it is the
+    // requirement; a story-side one may instead be warranted by an accepted decision, and until
+    // this column existed such a criterion was indistinguishable in the roll-up from one nobody
+    // got round to binding. Offered at create because a breakdown knows the warrant as it writes
+    // the criterion, and there is nothing to bind it to afterwards.
     ...criterionTools(context, {
-      table: 'story_criterion', parent: 'story_id', owner: 'story',
+      table: 'story_criterion',
+      parent: 'story_id',
+      owner: 'story',
+      extra: {
+        warrant_adr_id: {
+          type: 'string',
+          minLength: 1,
+          description: 'The accepted decision that warrants this criterion, where no requirement does',
+        },
+      },
+      // FR6 — a criterion an amendment overtook is marked rather than rewritten, so the epic goes
+      // on recording what it actually delivered. Update-only, for the reason `criterion.js` gives.
+      //
+      // **`superseded_at` is the caller's, where `retire_coverage` takes the clock's.** The fact
+      // recorded here is when the amendment overtook the criterion, which is the pivot's knowledge
+      // and not the write's — the same distinction `artifact.retired_at` draws, and the choice
+      // `018-section-supersession.sql` already made for the same situation one table over.
+      //
+      // Both descriptions say the two go together because JSON Schema's `required` cannot: "both or
+      // neither" lives in a column `CHECK`, so the description is the only place a caller deciding
+      // whether to omit one will read the rule.
+      endings: {
+        superseded_at: {
+          type: 'string',
+          description: 'ISO 8601; overtaken by an amendment. Set with superseded_reason or not at all',
+        },
+        superseded_reason: {
+          type: 'string',
+          minLength: 1,
+          description: 'Which amendment overtook it. Set with superseded_at or not at all',
+        },
+      },
+      // FR7 — a warrant names an **accepted** decision, and the foreign key alone cannot say so.
+      // `warrant_adr_id REFERENCES adr(document_id)` is satisfied by a proposal nobody agreed to
+      // and by a decision the project has since rejected, either of which would let a criterion
+      // read as accounted for on the strength of a decision that was never taken.
+      //
+      // **A guard here rather than a trigger in the schema, and that is not the usual answer.** A
+      // rule a direct write can route around normally belongs in the database; this one must not,
+      // because `src/restore/index.js` replays a dump as raw SQL and `PRAGMA foreign_keys = OFF`
+      // does not disable triggers. A trigger would fire mid-restore and refuse rows for reasons
+      // that have nothing to do with any caller: a criterion replayed before its ADR sees no ADR
+      // at all, and a criterion warranted by a decision the project later superseded is a true
+      // record that would become un-restorable. `DETAIL.adr`'s guard in `spine/detail.js` takes
+      // the same position in the same words — the invariant belongs to the integrity register,
+      // because a restore writes rows without passing through any of this.
+      // FR7's other half. `warrant_adr_id` says what warrants the criterion; `accounted_for` is the
+      // judgement a roll-up acts on, and it lives in `src/coverage/warrant.js` because two skills
+      // ask the same question and prose is the one place two copies of a rule cannot be compared.
+      derived: (value) => withAccountedFor(db, value),
+      guard: (row, where) => {
+        // Most criteria carry no warrant. Checked first so an update that mentions only `text` is
+        // not refused for a column it never named.
+        if (!row.warrant_adr_id) return;
+
+        const adr = db
+          .prepare('SELECT decision_status FROM adr WHERE document_id = ?')
+          .get(row.warrant_adr_id);
+
+        if (adr?.decision_status === 'accepted') return;
+
+        // The two cases are told apart because the remedies are different — find the right id, or
+        // accept the decision — and a refusal that names a remedy the caller cannot act on from
+        // where they are standing is the failure mode `adr_option`'s guard sets out at length.
+        throw new ToolError(
+          `${where}: '${row.warrant_adr_id}' `
+          + (adr ? `names a ${adr.decision_status} decision` : 'names no ADR')
+          + ' — a warrant names an accepted one, so accept the decision or name the one that was',
+        );
+      },
     }),
     ...deliveryTools(context, {
       table: 'story',

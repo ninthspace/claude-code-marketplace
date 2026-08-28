@@ -244,8 +244,12 @@ test('the whole corpus in its ended state still projects and holds every invaria
 
   const report = call.check_integrity({});
 
-  assert.deepEqual(report.entries.filter((entry) => !entry.held), [],
+  // Advisory entries are excluded, and the corpus fires one: it retires a binding whose fragment
+  // still matched, which is a decision rather than a fault. That it fires here is the evidence
+  // the entry is about a reachable state — `integrity-advisory.test.js` asserts what it reports.
+  assert.deepEqual(report.entries.filter((entry) => !entry.held && !entry.advisory), [],
     'the ended corpus violates a cross-row invariant');
+  assert.equal(report.ok, true, 'and an advisory finding does not make the corpus broken');
   assert.deepEqual(report.orphans, [], 'the ended corpus carries an orphaned row');
 });
 

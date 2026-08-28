@@ -19,7 +19,17 @@
  * entry both fail. So a check is added here by adding a register row first, and the number is
  * not a label — it is the join key between a table in a document and a function in this file.
  *
- * Two entries deserve their reasoning stated where it is executed rather than only in the spec:
+ * **An entry may be advisory, and one is.** Every other entry names a state that should not
+ * exist, and `restore` leans on that: it refuses a dump whose replay the register reports on, so
+ * "add an entry" has always silently meant "refuse a dump holding this". Entry #14 names a
+ * decision instead — a binding somebody retired while it was still sound, carrying the reason
+ * they retired it — and a decision must not make a project's own dump un-restorable. So
+ * `advisory: true` says the entry is checked, reported and located exactly as the others are and
+ * settles nothing about whether the database is broken. It is a property of the entry rather
+ * than a condition in `restore`, because `restore` asking "is this entry 14?" would be the same
+ * decision written a second time, in the module least likely to be read when a fifteenth arrives.
+ *
+ * Three entries deserve their reasoning stated where it is executed rather than only in the spec:
  *
  * - **#6 reads `dependency_kind_endpoint` and declares nothing itself.** The pairs each edge kind
  *   admits are rows, seeded from what the skills actually write — which is what this entry used to
@@ -42,6 +52,14 @@
  *   whether the guard exists at all — an unguarded reference is the condition under which the
  *   invariant silently stops holding. So the check derives the references exactly as
  *   `retirement.js` does and reports the ones no trigger covers.
+ *
+ * - **#14 asks when the retirement happened, and answers from two columns that say now.** A
+ *   binding retired *because* its criterion was superseded is the ordinary case and is not this
+ *   entry's business, so `story_criterion.superseded_at IS NULL` excludes it — including the
+ *   retirements migration 027's trigger writes, which is the volume this entry would otherwise
+ *   drown in. What is left is a binding whose fragment still matches and whose criterion nobody
+ *   withdrew, retired by a person for a reason of their own. That is worth a reader's eye and is
+ *   not worth a refusal, which is what `advisory` is for.
  */
 
 import { vocabularyReferences, guardName } from '../schema/retirement.js';
@@ -107,7 +125,7 @@ function cycles(db, edges, parameters = []) {
  * whatever names the violation usefully; there is no fixed shape, because "which rows" differs
  * per entry and forcing them into one would lose the part a reader needs.
  *
- * @type {{entry: number, invariant: string, check: (db: any) => object[]}[]}
+ * @type {{entry: number, invariant: string, advisory?: boolean, check: (db: any) => object[]}[]}
  */
 export const REGISTER = [
   {
@@ -244,11 +262,16 @@ export const REGISTER = [
   },
   {
     entry: 9,
-    invariant: "coverage.spec_fragment is a substring of its requirement's text",
+    invariant: "coverage.spec_fragment is a substring of its requirement's text, while it is live",
+    // `retired_at IS NULL` is what makes this entry a work list rather than a census. A retirement
+    // carries a reason, so a broken binding somebody retired is one somebody already decided
+    // about; going on naming it puts a settled decision in front of the next reader every time
+    // they check, and an entry nobody can ever clear is one nobody reads.
     check: (db) => db.prepare(`
       SELECT coverage.id, coverage.requirement_id, coverage.spec_fragment
         FROM coverage JOIN requirement ON requirement.id = coverage.requirement_id
        WHERE instr(requirement.text, coverage.spec_fragment) = 0
+         AND coverage.retired_at IS NULL
        ORDER BY coverage.id
     `).all().map((row) => ({ ...row })),
   },
@@ -295,6 +318,21 @@ export const REGISTER = [
     entry: 13,
     invariant: 'Every {{ref:<id>}} marker in every prose column resolves to a live document',
     check: (db) => danglingMarkers(db),
+  },
+  {
+    entry: 14,
+    invariant: 'A binding retired while it was still sound is a judgement somebody made, not a fault',
+    advisory: true,
+    check: (db) => db.prepare(`
+      SELECT coverage.id, coverage.requirement_id, coverage.retired_reason
+        FROM coverage
+        JOIN requirement ON requirement.id = coverage.requirement_id
+        JOIN story_criterion ON story_criterion.id = coverage.story_criterion_id
+       WHERE coverage.retired_at IS NOT NULL
+         AND instr(requirement.text, coverage.spec_fragment) > 0
+         AND story_criterion.superseded_at IS NULL
+       ORDER BY coverage.id
+    `).all().map((row) => ({ ...row })),
   },
 ];
 

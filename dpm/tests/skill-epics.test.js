@@ -29,12 +29,27 @@ import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import { renderDocument } from '../src/projection/index.js';
 import {
-  skillSource, frontMatter, section, recorder, recoveries, bindings, reachable, seedStartup,
+  skillSource, frontMatter, section, recorder, recoveries, sweep, bindings, reachable, seedStartup,
   driveStartup,
 } from './support/skills.js';
 
 const SKILL = 'epics';
 const source = skillSource(SKILL);
+
+/**
+ * A requirement whose two halves are separable, written as its two halves.
+ *
+ * `CONNECTIVE` positions the requirement and requires nothing; `OBLIGATION` is what it requires.
+ * Both are verbatim slices of the text below, so Step 3d's substring rule accepts either and the
+ * choice between them is the whole of what this story is about — which is why the halves are named
+ * here rather than sliced out of a finished sentence at the assertion. A test that carved the
+ * clause back out would be re-deriving the split it is checking the skill made.
+ */
+const CONNECTIVE = 'Building on the session work above,';
+const OBLIGATION = 'the store refuses a second write of the same binding';
+
+/** The step that binds, read once — four tests below ask different things of the same prose. */
+const BINDING_STEP = section(source, 'Step 3d');
 
 /** A requirement's text, quoted so `spec_fragment` can be a verbatim slice of it. */
 const REQUIREMENTS = [
@@ -54,6 +69,13 @@ const REQUIREMENTS = [
     label: 'ENV1',
     class: 'environmental_requirement',
     text: 'A test runner is available with no install step.',
+  },
+  // Last, so the three requirements above keep the positions the fixture's criteria index by.
+  {
+    label: 'FR3',
+    class: 'functional',
+    moscow: 'must',
+    text: `${CONNECTIVE} ${OBLIGATION}.`,
   },
 ];
 
@@ -231,6 +253,15 @@ function run(call, fixture) {
   });
   call.create_story_criterion_approach({ story_criterion_id: affordance.id, tag: 'feature' });
 
+  // The criterion delivering FR3, whose requirement positions itself in one clause and obliges
+  // something in another. It is bound below to the obligation, which is the choice Step 3d steers.
+  const obligation = call.create_story_criterion({
+    story_id: plain.id,
+    text: 'A second write of the same binding is refused, and the first stays readable',
+    position: 0,
+  });
+  call.create_story_criterion_approach({ story_criterion_id: obligation.id, tag: 'integration' });
+
   // Step 3b: tasks, and the testing task the automated tags earn.
   call.create_task({
     story_id: planned.id,
@@ -270,6 +301,17 @@ function run(call, fixture) {
     position,
   }));
 
+  // FR3's binding, quoted from the clause that carries the obligation rather than from the one
+  // that positions the requirement. Both are verbatim slices of the same sentence, so the write
+  // accepts either and the difference is entirely the step's judgement.
+  const fr3 = requirements.find((row) => row.label === 'FR3');
+  const obligationBinding = call.create_coverage({
+    requirement_id: fr3.id,
+    spec_fragment: 'refuses a second write of the same binding',
+    story_criterion_id: obligation.id,
+    position: 0,
+  });
+
   // One row a second story also delivers — the rare case the join exists for.
   call.create_coverage_story({ coverage_id: coverage[2].id, story_id: plain.id });
 
@@ -293,7 +335,7 @@ function run(call, fixture) {
 
   return {
     spec, requirements, specCriteria, epics, matrices, planned, plain, storyCriteria, affordance,
-    coverage, gaps, observations, tree,
+    coverage, gaps, observations, tree, fr3, obligation, obligationBinding,
   };
 }
 
@@ -365,7 +407,7 @@ test('the coverage matrix is a projection of the rows, and the skill emits no ta
   // else. Scoped to that step rather than swept over the file, because a facilitation table the
   // skill *shows the user* is legitimate and a check that cannot tell the two apart would be
   // silenced by deleting one.
-  const step = section(source, 'Step 3d');
+  const step = BINDING_STEP;
   assert.notEqual(step, '', 'Step 3d still exists');
   assert.doesNotMatch(step, /\|\s*-{3}/, 'the step composes no table');
   assert.doesNotMatch(step, /✓/, 'and records no verification mark');
@@ -420,12 +462,93 @@ test('the facilitation survives: the grouping gates, rejections propagate, and a
     'and the spec\'s own rejections are still read back before stories are written');
 
   // The refusal, in the step that binds.
-  assert.match(section(source, 'Step 3d'), /\brefuse\b/i);
-  assert.match(section(source, 'Step 3d'), /verbatim/i,
+  assert.match(BINDING_STEP, /\brefuse\b/i);
+  assert.match(BINDING_STEP, /verbatim/i,
     'and the refusal is about a fragment that cannot be traced, not some other failure');
 
   // The other refusal the conversion had to keep: a criterion nobody can check.
   assert.match(stories, /\brefuse\b/i);
+});
+
+// --- Epic 04-05 Story 2: the fragment is quoted from the clause that obliges ---------------------
+
+/**
+ * The phrasings that would turn the steer into a relaxation of the refusal above it.
+ *
+ * The steer and the refusal sit in the same step and pull the same way — *prefer this traceable
+ * fragment to that one* is not *a fragment need not be traceable* — but they are one edit apart,
+ * and the edit reads as a clarification while it is being made. Held as patterns rather than as
+ * one `doesNotMatch`, so a failure names the sentence that did it.
+ */
+const WEAKENED = [
+  { pattern: /need not be (a )?verbatim/i, why: 'a fragment excused from being verbatim' },
+  { pattern: /paraphras\w*\s+(is|are)\s+(acceptable|allowed|fine|permitted)/i, why: 'a paraphrase admitted as a fragment' },
+  { pattern: /approximate\w*\s+quot/i, why: 'a quotation that need not match' },
+  { pattern: /close enough to the (requirement|text)/i, why: 'a fragment judged by resemblance' },
+];
+
+test('Step 3d steers the fragment to the obligation and says what connective wording costs', () => {
+  const step = BINDING_STEP;
+
+  assert.match(step, /Quote the clause that carries the obligation/,
+    'the step does not say which clause to quote');
+  assert.match(step, /Connective\s+phrasing is scaffolding around the requirement/,
+    'the step names the preference without saying what makes the two halves differ');
+  assert.match(step, /the first\s+thing a later pivot rewrites/,
+    'the reason is not that connective wording is worse writing — it is that it is what gets amended');
+  assert.match(step, /goes stale on an\s+amendment that changed nothing the story delivers/,
+    'the consequence a reader is being asked to avoid is not stated');
+});
+
+test('a run binds the clause that obliges, over a clause the substring rule would equally accept', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call } = recorder(tools);
+
+  const fixture = project(tools);
+  const result = run(call, fixture);
+
+  const bound = call.read_coverage({ id: result.obligationBinding.id, include_body: true });
+  const text = call.read_requirement({ id: result.fr3.id, include_body: true }).text;
+
+  assert.ok(OBLIGATION.includes(bound.spec_fragment),
+    'the bound fragment is not inside the clause that carries the obligation');
+  assert.ok(!CONNECTIVE.includes(bound.spec_fragment),
+    'the bound fragment came from the wording that positions the requirement');
+
+  // **The control, and the reason the two lines above are a judgement rather than an accident.**
+  // A fragment taken from the connective half is a verbatim substring of the same requirement, so
+  // Step 3d's existing rule accepts it and the integrity register never reports it. Nothing but the
+  // steer separates the two, which is what makes the steer worth writing.
+  assert.ok(text.includes(CONNECTIVE),
+    'the connective half is not verbatim text, so the fixture poses no choice');
+  assert.ok(text.includes(bound.spec_fragment),
+    'and the bound fragment is verbatim too — both halves satisfy the rule');
+
+  // The run's own binding is live and sound, which is what integrity entry 9 asks of it.
+  assert.equal(bound.retired_at, null);
+});
+
+test('must NOT — the steer does not excuse a fragment from being traceable to spec text', () => {
+  const step = BINDING_STEP;
+
+  // The refusal the steer sits beside, still stated in the step that binds.
+  assert.match(step, /\brefuse\b/i, 'the untraceable-fragment refusal has gone');
+  assert.match(step, /A fragment appearing nowhere in its requirement/,
+    'the refusal no longer says what it refuses');
+  assert.match(step, /steer between traceable fragments and not a loosening/,
+    'nothing in the step says which of the two rules gives way, so a reader has to guess');
+
+  assert.deepEqual(sweep(step, WEAKENED), [], 'the step admits a fragment that is not spec text');
+
+  // The control. Assembled rather than written, so this file does not contain the sentence it
+  // forbids — and run through the same reading, so a pattern that stopped matching is not
+  // indistinguishable from a step that stayed clean.
+  const relaxed = `${step}\n\nWhere no clause fits, a fragment `
+    + 'need not be verbatim: an approximate quotation of the obligation is enough.';
+
+  assert.equal(sweep(relaxed, WEAKENED).length, 2,
+    'the sweep passed a step excusing a fragment from being verbatim and admitting an approximation');
 });
 
 test('the run carries every rejection the spec states into a story criterion', (t) => {

@@ -275,9 +275,29 @@ the bound fragments account for the requirement whole, say so with
 which is why a human makes it: connective prose carries no obligation, and two obligations in one
 sentence can be discharged by a fragment covering either. Leave it unclaimed rather than guess.
 
+**A criterion is accounted for by `accounted_for`, which `mcp__plugin_dpm_dpm__list_story_criterion` returns
+with `include_body` and nothing here works out.** It is true where the criterion has a live binding
+**or** carries a warrant — an accepted decision constrains a story exactly as a requirement does,
+and a criterion warranted by one has nothing to quote and so no coverage row to find. Report the
+criteria where it is false, naming each by its `text`, which is why the body is asked for: a
+criterion has no title, so a report that listed ids would name nothing anyone can act on. A run
+deriving the judgement itself from the coverage rows would report every warranted criterion as a
+gap.
+
 **Say what the count is.** Every verification in it was recorded by this skill on its own work, so
 the summary reports what this run claimed, added up. "Nine of nine rows marked verified by this run"
 is what happened; "nine of nine requirements verified" reads as something someone else confirmed.
+
+**And say which nine.** The denominator is the bindings still standing — what
+`mcp__plugin_dpm_dpm__list_coverage` returns, which is the live rows and not every row ever
+written. A binding somebody withdrew is
+readable and is not counted, so "nine of nine" is a claim about the nine that remain rather than
+about every binding this spec has ever held. Write the sentence so it says so: *"nine of the nine
+bindings that remain"* rather than *"all nine bindings"*, because a requirement whose broken rows
+were retired last week is discharged on a smaller set than the one a reader remembers, and the
+short sentence quietly claims the larger one. **Do not pass `include_retired` to make the number
+larger** — that argument is for auditing a withdrawal, and a roll-up that used it would count
+bindings nobody stands behind toward a requirement being discharged.
 
 **Retro.** Gather the epic's story observations with `mcp__plugin_dpm_dpm__list_observation` and `include_body`,
 without which the rows carry their categories and not what was observed. Synthesis is

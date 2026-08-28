@@ -12,8 +12,14 @@
  * The register sweep finds what a foreign key could never have caught in the first place.
  *
  * **A clean report and a report that ran nothing must not look alike.** The result carries the
- * number of checks performed, and `ok` is false the moment any check produces a row — so a
- * register that failed to load reads as zero checks rather than as a pass (NFR6).
+ * number of checks performed, and `ok` is false the moment any check that settles soundness
+ * produces a row — so a register that failed to load reads as zero checks rather than as a pass
+ * (NFR6).
+ *
+ * **`ok` answers "is this database broken?", which is narrower than "did anything get
+ * reported".** An advisory entry names a state somebody decided on rather than a fault, so its
+ * rows appear in `violations` — located, counted and flagged — and leave `ok` alone. The
+ * distinction is declared on the register entry; nothing here knows which entry is which.
  */
 
 import { REGISTER } from './register.js';
@@ -53,13 +59,23 @@ export function orphans(db) {
  */
 export function checkIntegrity(db) {
   const violations = REGISTER
-    .map((entry) => ({ entry: entry.entry, invariant: entry.invariant, rows: entry.check(db) }))
+    .map((entry) => ({
+      entry: entry.entry,
+      invariant: entry.invariant,
+      advisory: entry.advisory === true,
+      rows: entry.check(db),
+    }))
     .filter((result) => result.rows.length > 0);
 
   const dangling = orphans(db);
 
   return {
-    ok: violations.length === 0 && dangling.length === 0,
+    // **An advisory finding is reported and does not make `ok` false**, because `ok` is read as
+    // "is this database broken?" — by `restore`, which refuses a dump on it, and by a person
+    // running the tool. A decision somebody recorded is not a fault, and answering `false` for
+    // one would refuse a legitimate dump and teach every reader to discount the field. The
+    // finding is still in `violations`, carrying `advisory`, so nothing is hidden by this.
+    ok: violations.every((violation) => violation.advisory) && dangling.length === 0,
     // The orphan sweep counts as one, which is what makes `checked` a number a test can pin:
     // a register that loaded empty reports 1, not 0, and the parity test is what notices.
     checked: REGISTER.length + 1,

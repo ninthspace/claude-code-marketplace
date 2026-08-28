@@ -142,6 +142,34 @@ Closest dependency first. For each document reached:
    amendments has not accepted a fourth.
 5. Apply what was approved through the same update tools Phase 2 used.
 
+#### Bindings the amendment broke
+
+A coverage row quotes a **verbatim fragment** of the requirement it binds. Amending that
+requirement's text is what turns the quotation into a clause the requirement no longer contains, so
+the bindings a pivot breaks are the pivot's to name.
+
+1. `mcp__plugin_dpm_dpm__list_coverage` scoped by `requirement_id` for each requirement Phase 2
+   amended, **with `include_body`** — `spec_fragment` is the withheld column and the comparison is
+   over nothing else. Without it every row arrives with the fragment absent, and a comparison against
+   an absent value finds every binding broken.
+2. **The comparison is this skill's, and it is a substring test**: is the row's stored
+   `spec_fragment` still a verbatim substring of the text Phase 2 wrote? That text is the one just
+   written rather than one read back. The server does not make this judgement and does not offer it —
+   `mcp__plugin_dpm_dpm__check_integrity` reports a broken binding afterwards, which is a fault
+   found rather than a decision made.
+3. **A binding already withdrawn is out of the answer**, because a list omits retired rows unless
+   `include_retired` is passed and this step never passes it. So a run repeated after a retirement
+   names what is left, and asks nobody to decide the same row twice.
+
+Then offer each named binding **on its own approval** — apply, modify or skip, per *The walk* above,
+one decision per binding and no approval carried forward. Show the fragment beside the clause that
+replaced it, so what is being judged is a text rather than an id. On approval,
+`mcp__plugin_dpm_dpm__retire_coverage` with the reason the withdrawal was made for. A binding
+nobody approved is left exactly as it stands.
+
+**Naming nothing is an answer.** An amendment every bound fragment survives has broken no binding —
+say so and move on. Silence there is indistinguishable from a step that never ran.
+
 #### Verification looks after itself
 
 **Never write `verified_at`, and never clear one.** When an amendment changes a `story_criterion`'s

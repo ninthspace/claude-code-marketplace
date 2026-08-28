@@ -152,3 +152,54 @@ export function unnameableDocuments(db) {
 
   return { unnumbered, orphan };
 }
+
+/**
+ * A requirement, a story criterion, and the arguments that bind them.
+ *
+ * `binding()` returns the arguments rather than a row, which is the whole reason this is shared: the
+ * key tests make the same call two and three times, and the retirement tests make it once. A
+ * fixture that created the row would leave every caller with a differently-shaped one to re-derive.
+ *
+ * **`requirement.text` contains the fragment by construction.** Integrity register #9 holds that a
+ * bound fragment is a substring of its requirement's own text, so a fixture pairing them freely
+ * would describe a database no tool produces — and a test asserting one invariant on a corpus that
+ * breaks another says nothing about either. The default text is built from the fragment for that
+ * reason, and an override should keep the property.
+ *
+ * Three suites had grown a copy of this: the schema-level retirement tests, the `retire_coverage`
+ * tool tests and the natural-key tests, each differing only in the strings. What is not here is
+ * `decay.test.js`'s `boundCoverage` or `integration.test.js`'s `planningCorpus` — both create a
+ * verified row and return no factory, so folding them in would mean a parameter deciding whether
+ * the fixture writes to the table at all.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {object} [texts]
+ * @param {string} [texts.fragment] The bound fragment, verbatim from the requirement.
+ * @param {string} [texts.requirement] Must contain `fragment`.
+ * @param {string} [texts.criterion]
+ */
+export function boundCoverage(db, {
+  fragment = 'Every binding retires in place',
+  requirement: requirementText = `${fragment} and stays readable afterwards.`,
+  criterion: criterionText = 'A row survives.',
+} = {}) {
+  const spec = rootDocument(db, 'spec', { number: 4, slug: 'supersession' });
+  const epic = childDocument(db, 'epic', spec, { sequence: 1, slug: 'schema', title: 'Schema' });
+  const story = create(db, 'story', { epic_id: epic.id, number: 1 });
+  const criterion = create(db, 'story_criterion', { story_id: story.id, text: criterionText });
+  const requirement = create(db, 'requirement', { spec_id: spec.id, text: requirementText });
+
+  return {
+    spec,
+    epic,
+    story,
+    criterion,
+    requirement,
+    binding: () => ({
+      requirement_id: requirement.id,
+      story_criterion_id: criterion.id,
+      spec_fragment: fragment,
+      position: 0,
+    }),
+  };
+}

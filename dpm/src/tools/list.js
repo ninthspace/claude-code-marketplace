@@ -48,10 +48,17 @@ const LISTS = [
     within: 'requirement_id',
     order: ['position', 'id'],
   },
+  // Declared for `live` alone — the scope and the order are what derivation already produced.
+  //
+  // A criterion is superseded when an amendment overtakes it, and it stays readable because the
+  // bindings hanging off it are the record of what was verified against the wording it had. The
+  // word is `018-section-supersession.sql`'s rather than a retirement's, so a reader asking for the
+  // story's history passes `include_superseded` — derived from the column name, not declared here.
   {
     type: 'story_criterion',
     table: 'story_criterion',
     within: 'story_id',
+    live: 'superseded_at',
     order: ['position', 'id'],
   },
   { type: 'story', table: 'story', within: 'epic_id', gated: 'story', order: ['number', 'id'] },
@@ -60,11 +67,19 @@ const LISTS = [
   // `epics` walks a spec's requirements to find gaps, and `do` walks a story's criteria to record
   // verifications. Without it the second is a sweep of every requirement in the spec, filtered by
   // the caller — which is a join done in prose.
+  //
+  // **`live`.** A retired binding is one somebody withdrew — the fragment was wrong, or the
+  // criterion it named was superseded — and it stays readable because the register's account of
+  // what was once bound is the thing retirement exists to keep. What it must stop doing is counting:
+  // a roll-up that offered it would report a requirement discharged by a binding nobody stands
+  // behind. `include_retired` is for the reader auditing the withdrawal rather than adding up the
+  // coverage, and it is derived from the column name.
   {
     type: 'coverage',
     table: 'coverage',
     within: 'requirement_id',
     scopes: ['story_criterion_id'],
+    live: 'retired_at',
     order: ['position', 'id'],
   },
 
@@ -352,6 +367,11 @@ export function listTools({ db }, spine) {
       reads: [table],
       mutates: false,
       body: read.body,
+      // **Taken from the read tool rather than declared here, exactly as `body` is.** A derived
+      // field is a claim about what a caller receives, and a list that computed its own would be a
+      // second implementation of the same rule — the failure being silent, since both answers look
+      // like answers. Declared once on the read, the two cannot disagree.
+      ...(read.derived ? { derived: read.derived } : {}),
       paged: true,
       // Carried from the descriptor rather than tested for here — `table === 'document'` would be
       // this file deciding what a builder already knows, and the two would disagree the first time

@@ -37,6 +37,9 @@ import { domainTerms } from './support/vocabulary.js';
 const SKILL = 'do';
 const source = skillSource(SKILL);
 
+/** The step that closes an epic, read once — four tests ask different things of the same prose. */
+const SUMMARY_STEP = section(source, '8. Epic summary');
+
 /**
  * The two recoveries this file in particular would reach for, on top of the shared sweep.
  *
@@ -122,6 +125,26 @@ function project(tools) {
     position,
   }));
 
+  // A fourth criterion whose only binding somebody withdrew. It is what makes the roll-up's
+  // denominator a question: the row is still in the table and still readable, and a count that
+  // reached it would report this requirement short of discharged over a binding nobody stands
+  // behind. Retired through the tool, because the reason is half of what a retirement is.
+  const withdrawnCriterion = seed.create_story_criterion({
+    story_id: second.id, text: 'The dashboard names the session it renders', position: 3,
+  });
+  seed.create_story_criterion_approach({
+    story_criterion_id: withdrawnCriterion.id, tag: 'feature',
+  });
+
+  const withdrawn = seed.create_coverage({
+    requirement_id: requirement.id,
+    spec_fragment: 'reaches the dashboard',
+    story_criterion_id: withdrawnCriterion.id,
+    position: 3,
+  });
+
+  seed.retire_coverage({ id: withdrawn.id, reason: 'the criterion was folded into another story' });
+
   const matrix = seed.create_coverage_matrix({
     parent_id: lifecycle.id, slug: 'lifecycle-coverage', title: 'Coverage Matrix: Lifecycle',
   });
@@ -141,6 +164,7 @@ function project(tools) {
 
   return {
     spec, requirement, lifecycle, durability, first, second, tasks, criteria, coverage, matrix,
+    withdrawn, withdrawnCriterion,
     ...startup,
   };
 }
@@ -356,7 +380,7 @@ test('an epic whose stories are all complete is closed, and what waited on it be
     .map((epic) => epic.id), [fixture.lifecycle.id],
     'the triage query has something to classify');
 
-  const step = section(source, '8. Epic summary');
+  const step = SUMMARY_STEP;
 
   assert.match(step, new RegExp(`${CALLABLE}update_epic`),
     'and the file names the tool that writes it, in its callable form');
@@ -391,7 +415,7 @@ test('an epic with a story not complete is left pending, whether or not anything
   assert.equal(call.read_epic({ id: fixture.lifecycle.id }).status, 'pending',
     'so the status is left alone');
 
-  const step = section(source, '8. Epic summary');
+  const step = SUMMARY_STEP;
 
   assert.match(step, /superseded|withdrawn/,
     'and the file says a retired story is a judgement rather than a count');
@@ -517,13 +541,82 @@ test('the retro gate disposes of each observation, and the verification gate wai
   assert.equal(result.worked[0].tasks.length, 2);
 });
 
+// --- Epic 04-05 Story 3: the roll-up counts the bindings that remain -----------------------------
+
+test('Step 8 says its count is over the bindings that remain', () => {
+  const step = SUMMARY_STEP;
+
+  assert.match(step, /\*\*And say which nine\.\*\*/, 'the count sentence names no set');
+  assert.match(step, /the bindings still standing/,
+    'the denominator is not said to be the live rows');
+  assert.match(step, /A binding somebody withdrew is\s+readable and is not counted/,
+    'nothing in the step says a retired binding stays readable while leaving the count');
+  assert.match(step, /discharged on a smaller set than the one a reader remembers/,
+    'the step does not say what the short sentence quietly claims');
+
+  // The must-NOT's half in the file: the argument that would inflate the number is named and
+  // forbidden. Without this the rule rests on the tool's default, which a run may override.
+  assert.match(step, /Do not pass `include_retired` to make the number\s+larger/,
+    'the step leaves a run free to widen its own denominator');
+});
+
+test('must NOT — the roll-up count reaches a binding somebody withdrew', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call, passed } = recorder(tools);
+
+  const fixture = project(tools);
+  const result = run(call, fixture);
+  const raw = handlers(tools);
+
+  const counted = result.rollUp.find((entry) => entry.requirement.id === fixture.requirement.id);
+
+  // The whole set the roll-up counted, named by id rather than by length: "three rows" is equally
+  // true of a count that reached the retired one and dropped a live one.
+  assert.deepEqual(
+    counted.rows.map((row) => row.id).sort(),
+    fixture.coverage.map((row) => row.id).sort(),
+    'the roll-up counted a set other than the bindings that remain',
+  );
+  assert.ok(!counted.rows.some((row) => row.id === fixture.withdrawn.id),
+    'a binding nobody stands behind was counted toward the requirement');
+
+  // **The control, and what makes the line above a judgement rather than a project with no
+  // retirements in it.** The row is still there, still bound to the same two ends, and reachable
+  // the moment a reader asks for it — so the roll-up went quiet about it by scope, not by loss.
+  const audited = raw.list_coverage({
+    requirement_id: fixture.requirement.id, include_retired: true, include_body: true,
+  }).items;
+
+  assert.equal(audited.length, counted.rows.length + 1, 'the retired row is not in the table');
+  assert.equal(
+    audited.find((row) => row.id === fixture.withdrawn.id).retired_reason,
+    'the criterion was folded into another story',
+    'and the record of why it was withdrawn is still readable',
+  );
+
+  // The run never asked for it. `include_retired` is the argument that would have inflated the
+  // count, and a roll-up that passed it would satisfy every assertion above about the table while
+  // discharging the requirement on a binding somebody withdrew.
+  assert.ok(!passed.get('list_coverage')?.has('include_retired'),
+    'the run widened its own denominator');
+
+  // And the consequence the count decides. The requirement is claimed because every remaining row
+  // is verified; a count including the retired one would have left it unclaimed on a row nobody
+  // could ever verify, which is how a withdrawal turns into a permanent gap.
+  assert.notEqual(
+    raw.read_requirement({ id: fixture.requirement.id }).coverage_claimed_at, null,
+    'the claim was withheld over a binding that had already been withdrawn',
+  );
+});
+
 // --- Spec 50: the report is derived from the rows, and names no label ----------------------------
 
 /** The disposition domain's labels, from the seed — the strings the file must not carry. */
 const LABELS = domainTerms('disposition').map((row) => row.name);
 
 test('Step 8 derives its report from the rows rather than narrating beside them', () => {
-  const step = section(source, '8. Epic summary');
+  const step = SUMMARY_STEP;
 
   assert.notEqual(step, '', 'the epic summary step still exists');
 

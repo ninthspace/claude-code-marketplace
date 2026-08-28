@@ -7,9 +7,14 @@
  * rather than the ones that prove a good dump restores — a restorer that skipped every check
  * would pass the happy path and every round-trip assertion in the suite.
  *
- * The thirteen violating states come from `support/violations.js`, shared with the live-database
- * suite in `integrity.test.js`. What differs is the claim: there, that the tool reports each
- * entry; here, that a *dump carrying* it is refused and rolled back.
+ * The violating states come from `support/violations.js`, shared with the live-database suite in
+ * `integrity.test.js`. What differs is the claim: there, that the tool reports each entry; here,
+ * that a *dump carrying* it is refused and rolled back.
+ *
+ * **An advisory entry is the exception, and it is asserted rather than skipped.** Its state is a
+ * decision somebody recorded, so a dump holding it restores — and the test below says so, with
+ * the entry still reported in the returned report. Skipping it would leave the flag's only
+ * consequence untested, which is the one thing a refusal loop cannot show by passing.
  */
 
 import { test } from 'node:test';
@@ -193,7 +198,7 @@ test('a refused restore leaves the target untouched', (t) => {
 
 // --- Criterion 2: each register entry in turn --------------------------------------------------
 
-for (const { entry, summary } of VIOLATIONS) {
+for (const { entry, summary } of VIOLATIONS.filter((violation) => !violation.advisory)) {
   test(`entry ${entry} — ${summary} — is refused on restore, naming the rows`, (t) => {
     const source = openPlanningDatabase(t);
     const context = corpus(source);
@@ -219,6 +224,28 @@ for (const { entry, summary } of VIOLATIONS) {
   });
 }
 
+for (const { entry, summary } of VIOLATIONS.filter((violation) => violation.advisory)) {
+  test(`entry ${entry} — ${summary} — restores, and is reported rather than refused`, (t) => {
+    const source = openPlanningDatabase(t);
+    const context = corpus(source);
+
+    assert.equal(checkIntegrity(source).ok, true, 'the source is clean before the injection');
+
+    VIOLATIONS.find((candidate) => candidate.entry === entry).inject(source, context);
+
+    // The whole of the flag's consequence: the same dump, through the same restorer, arriving
+    // rather than being rolled back. A blocking entry in this position throws, which is what the
+    // loop above asserts thirteen times over.
+    const report = restore(target(t), dump(source).sql);
+    const found = report.violations.find((violation) => violation.entry === entry);
+
+    assert.equal(report.ok, true, 'an advisory finding does not make the restored database broken');
+    assert.ok(found, `and entry ${entry} is still reported, under its own number`);
+    assert.equal(found.advisory, true, 'carrying the flag that says why it did not refuse');
+    assert.ok(found.rows.length > 0, 'and the rows are named, exactly as a refusal would name them');
+  });
+}
+
 test('every register entry has a restore-path fixture, in both directions', () => {
   assert.deepEqual(
     VIOLATIONS.map((violation) => violation.entry),
@@ -237,8 +264,8 @@ test('a restore does not report success on a database it never checked', (t) => 
 
   // `checked` is the count, and it is what separates a clean report from one that ran nothing:
   // a register that failed to load would report 1 rather than 0 and read as a pass.
-  assert.equal(report.checked, 14);
-  assert.ok(REGISTER.length > 0, 'and the register is not empty, which is what makes 14 mean 13 + 1');
+  assert.equal(report.checked, REGISTER.length + 1);
+  assert.ok(REGISTER.length > 0, 'and the register is not empty, which is what makes the count mean anything');
 });
 
 test('the derived index is rebuilt by the data, with no reindex step in the restore', (t) => {

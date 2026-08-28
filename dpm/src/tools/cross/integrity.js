@@ -62,9 +62,14 @@ export function integrityTools({ db, skew = currentSkew, stamp = stampSkew }) {
         // Every entry, not only the ones that failed. Derived from `REGISTER` so an entry added
         // to the register appears here without this file being edited — which is the same
         // property the parity test in 47-01 asserts, arriving at the tool boundary for free.
-        const entries = REGISTER.map(({ entry, invariant }) => ({
+        // `advisory` travels with the entry, because "not held" means two different things and a
+        // reader cannot tell them apart from the row: a broken invariant is a fault, and an
+        // advisory finding is a decision somebody recorded. Without the flag here, `ok: true`
+        // beside an entry that did not hold reads as a contradiction rather than as the answer.
+        const entries = REGISTER.map(({ entry, invariant, advisory }) => ({
           entry,
           invariant,
+          advisory: advisory === true,
           held: !failed.has(entry),
           rows: failed.get(entry)?.rows ?? [],
         }));

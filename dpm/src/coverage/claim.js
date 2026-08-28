@@ -16,8 +16,18 @@
  * made, because nothing prompts anyone to look at it.
  *
  * What the schema guarantees is therefore not that the judgement was right but that it is
- * **current** — which is what the four unclaim triggers in `011-decay.sql` deliver, and the
- * same guarantee FR21 provides one level down for a single row's ✓.
+ * **current** — which is what the five unclaim triggers deliver (four in `011-decay.sql`, the
+ * fifth in `026-retired-claim.sql`), and the same guarantee FR21 provides one level down for a
+ * single row's ✓.
+ *
+ * **The set this file hashes and the set those triggers watch are one set, and keeping them one is
+ * the contract.** FR3 takes retired bindings out of it, so `FRAGMENTS` below carries
+ * `retired_at IS NULL` and `requirement_unclaim_on_coverage_retire` fires on that column changing.
+ * Either half alone is worse than neither: qualify the hash and leave the trigger out, and a
+ * retirement silently changes what the standing claim was over while the claim goes on reading as
+ * current; add the trigger and leave the hash unqualified, and the withdrawn claim cannot be
+ * re-made — `claimHash` would keep returning a digest over a set that includes the row somebody
+ * just retired. A change to one is a change to both.
  */
 
 import { createHash } from 'node:crypto';
@@ -28,10 +38,15 @@ import { createHash } from 'node:crypto';
  * Ordered by fragment text rather than by `position`, because `position` is display order and
  * two databases holding the same bindings in a different display order would otherwise hash
  * differently and each read the other's claim as stale.
+ *
+ * **Live rows only (FR3).** A retired binding accounts for nothing, so a claim cannot be a claim
+ * about it. Costs no project a re-claim: `retired_at` and this clause arrive in the same release, so
+ * no database holds a retired row when the clause first runs and the digest over every existing
+ * claim is unchanged.
  */
 const FRAGMENTS = `
   SELECT spec_fragment, story_criterion_id FROM coverage
-   WHERE requirement_id = ?
+   WHERE requirement_id = ? AND retired_at IS NULL
    ORDER BY spec_fragment, story_criterion_id
 `;
 
@@ -96,6 +111,12 @@ export function claimComplete(db, requirementId, at) {
  * triggers are what make that state unreachable in normal use, and this is what would notice
  * if one were dropped by a migration recreating the table.
  *
+ * **`bound` excludes retired rows for FR3's reason and not by copying the clause above.** The two
+ * answer different questions: `bound` is the count a reader acts on, and `FRAGMENTS` is the set a
+ * digest is taken over. They agree on which rows count, which is why the clause reads the same —
+ * but a future change that gave a reader a reason to see withdrawn bindings in the total would move
+ * this one and must not move the other, since moving the other invalidates every stored claim.
+ *
  * @param {import('node:sqlite').DatabaseSync} db
  * @param {string} requirementId
  * @returns {{claimed: boolean, current: boolean, bound: number}}
@@ -110,6 +131,7 @@ export function claimState(db, requirementId) {
   return {
     claimed: requirement.coverage_claimed_at !== null,
     current: requirement.coverage_claim_hash === claimHash(db, requirementId),
-    bound: db.prepare('SELECT count(*) AS n FROM coverage WHERE requirement_id = ?').get(requirementId).n,
+    bound: db.prepare('SELECT count(*) AS n FROM coverage WHERE requirement_id = ? AND retired_at IS NULL')
+      .get(requirementId).n,
   };
 }

@@ -291,3 +291,54 @@ test('must NOT — the judgement follows the column name or its declared type', 
 
   assert.ok(split.length > 0, 'no column name is judged differently on different tables');
 });
+
+// --- Supersession's own columns, judged and reconciled in both directions ----------------------
+
+/**
+ * The TEXT columns coverage supersession added, and what each was judged.
+ *
+ * Named, because the claim is about *these two* rather than about the schema growing — which the
+ * tests above already cover. A column added by a change nobody reconciled is invisible to a count.
+ */
+const SUPERSESSION = {
+  'coverage.retired_reason': true,
+  'story_criterion.superseded_reason': false,
+};
+
+test('the columns supersession added are judged, and the sweep names them in both directions', (t) => {
+  const { columns, facts, judged } = schema(t);
+
+  for (const [key, prose] of Object.entries(SUPERSESSION)) {
+    // The schema's own enumeration holds it, so what follows judges a column that exists.
+    assert.ok(columns.some((column) => column.key === key), `${key} is not a TEXT column here`);
+    assert.equal(judged.get(key)?.prose, prose);
+    assert.ok(judged.get(key).reason.trim(), `${key} is judged with no reason`);
+
+    // Direction one, driven rather than described: without its entry the sweep names it.
+    const without = new Map(judged);
+    without.delete(key);
+
+    assert.ok(audit(columns, facts, without)
+      .includes(`${key} is a TEXT column with no recorded judgement`));
+
+    // Direction two: an entry for a column the schema does not have is named too.
+    const ghost = new Map(judged);
+    ghost.set(`${key}_withdrawn`, { prose: true, reason: 'a column nobody added', depends: null });
+
+    assert.ok(audit(columns, facts, ghost)
+      .includes(`${key}_withdrawn is judged and the schema has no such column`));
+  }
+
+  // `story_criterion.superseded_reason` is excluded rather than not-prose, so its reason is a fact
+  // the schema can be asked about — and it lapses when that fact stops holding.
+  assert.deepEqual(judged.get('story_criterion.superseded_reason').depends,
+    { on: 'indexed-column', target: 'story_criterion.text' });
+
+  const unindexed = {
+    ...facts,
+    indexed: new Set([...facts.indexed].filter((key) => key !== 'story_criterion.text')),
+  };
+
+  assert.ok(lapsedExclusions(unindexed, judged)
+    .some((each) => each.startsWith('story_criterion.superseded_reason')));
+});

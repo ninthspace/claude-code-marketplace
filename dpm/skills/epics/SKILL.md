@@ -258,6 +258,22 @@ and either find the text or change the criterion. A fragment appearing nowhere i
 also refused by the integrity check, so a guess made here surfaces later as a broken database rather
 than as a decision.
 
+**Quote the clause that carries the obligation.** A requirement often opens with wording that
+positions it — *"Building on the work above,"*, *"As with the other stores,"* — and states what it
+actually requires somewhere after that. Both halves are verbatim text and both satisfy the rule
+above, so *"a verbatim fragment"* does not choose between them and the choice is yours to make.
+
+Make it the obligation, because the two halves do not survive an amendment equally. Connective
+phrasing is scaffolding around the requirement rather than the requirement, and it is the first
+thing a later pivot rewrites — so a fragment quoting it is a binding that goes stale on an
+amendment that changed nothing the story delivers, and somebody then has to decide about a
+withdrawal that the work never earned. The obligation is also the half the criterion is measured
+against, which is what a reader comparing the two texts side by side is trying to see.
+
+**This is a steer between traceable fragments and not a loosening of the refusal above.** A
+fragment that appears nowhere in the requirement is refused exactly as before; connective wording
+is worse than the obligation and is still better than a paraphrase, which is not a fragment at all.
+
 Where one requirement is delivered by several criteria, write a row per criterion — each is
 independently verifiable. Where a criterion is also delivered by a story other than the one that
 declares it, add `mcp__plugin_dpm_dpm__create_coverage_story` naming that story.
@@ -297,6 +313,14 @@ carries `include_body`, and each covering criterion is reached with
 `mcp__plugin_dpm_dpm__read_story_criterion` and `include_body` through the `story_criterion_id` its coverage row
 names. Run over labels and counts, the gate returns a verdict computed against text it never saw —
 and it returns it in the same shape as a real one.
+
+**The criterion side of the same check is `accounted_for`, returned by
+`mcp__plugin_dpm_dpm__list_story_criterion` with `include_body` and not worked out here.** A criterion is
+accounted for when it has a live binding **or** a warrant — `warrant_adr_id`, the accepted decision
+that constrains the story where no requirement does. A criterion with neither is unbound and belongs
+in the report, named by its `text` since it has no title; one with a warrant is finished work and
+does not, and a run that counted coverage rows instead would call it a gap on every breakdown that
+recorded one.
 
 Resolve each gap before finishing: add it to an existing epic, raise a story for it, or defer it
 with a stated reason. Should-have requirements with no cover are warnings rather than blockers.

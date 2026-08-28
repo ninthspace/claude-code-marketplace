@@ -15,9 +15,18 @@
  * texts by `src/coverage/binding.js` and is not an argument at all. A hash chosen by the party
  * making the claim attests to nothing, and the `CHECK` would have accepted any string — so a
  * skill writing a ✓ says when, and the server says over what.
+ *
+ * **Retirement is its own verb, and `update_coverage` does not offer it.** `retire_coverage` takes
+ * an id and a reason; the timestamp is the server's. The alternative — `retired_at` and
+ * `retired_reason` as two more fields on the update tool, the way `artifact` carries them — would
+ * make withdrawing a binding indistinguishable at the tool boundary from moving its display order,
+ * and would let a mistyped update un-retire one. Withdrawing a binding is a decision with a reason;
+ * `position` is a detail. `coverage` is not a vocabulary, so the tool is written here rather than
+ * produced by `vocabulary.js`'s factory, but the shape is that factory's deliberately: same
+ * server-supplied clock, same refusal to retire twice.
  */
 
-import { defineTool, SUPPLIED } from '../convention.js';
+import { defineTool, SUPPLIED, ToolError } from '../convention.js';
 import { bindingHash } from '../../coverage/binding.js';
 import { insert, readById, update } from '../crud.js';
 import { entityTools } from '../entity.js';
@@ -43,10 +52,11 @@ const STATE = {
 /**
  * @param {object} context
  * @param {import('node:sqlite').DatabaseSync} context.db
+ * @param {() => string} context.now
  * @param {() => string} context.newId
  * @returns {object[]}
  */
-export function coverageTools({ db, newId }) {
+export function coverageTools({ db, now, newId }) {
   return [
     defineTool({
       name: 'create_coverage',
@@ -121,6 +131,55 @@ export function coverageTools({ db, newId }) {
           : bindingHash(db, readById(db, 'coverage', id, 'update_coverage'));
 
         return update(db, 'coverage', id, { ...changes, binding_hash: binding }, 'update_coverage');
+      },
+    }),
+
+    defineTool({
+      name: 'retire_coverage',
+      table: 'coverage',
+      description: 'Withdraw a binding, with the reason it was withdrawn. The row stays readable '
+        + 'and stops counting toward the requirement. Not reversible through the tools.',
+      reads: ['coverage'],
+      mutates: true,
+      serverSupplied: { retired_at: SUPPLIED.clock },
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          id: { type: 'string', minLength: 1 },
+          reason: {
+            type: 'string',
+            minLength: 1,
+            description: 'Why the binding was withdrawn — the fragment was wrong, or the criterion '
+              + 'it named was superseded. Required, and the only prose a coverage row carries',
+          },
+        },
+        required: ['id', 'reason'],
+      },
+      // `additionalProperties: false` over two named arguments is where criterion 3's refusal
+      // actually lives: `retired_at` is not reachable from a caller at all, here or through
+      // `update_coverage`, so the pair cannot be set half-way or un-set by a mistyped update. The
+      // `CHECK` on the table forbids the half state too; this forbids expressing it.
+      handler: (args) => {
+        const where = 'retire_coverage';
+        const row = readById(db, 'coverage', args.id, where);
+
+        // Reported rather than silently restamped, as `retire_taxonomy` does it. Retiring twice is
+        // a caller that has lost track, and moving the date would erase when the decision was made.
+        if (row.retired_at !== null) {
+          throw new ToolError(`${where}: already retired at ${row.retired_at}`);
+        }
+
+        // **`verified_at` is left exactly as it stands, and that is the decision rather than an
+        // omission.** A ✓ was true of the two texts it was made about, and retiring the binding
+        // does not make it untrue — what changes is that the row is no longer offered as live, which
+        // `list_coverage`'s derived clause already handles. A retirement that cleared the mark would
+        // destroy the record retirement exists to keep, and would do it in the one column a later
+        // reader trusts without asking around it.
+        return update(db, 'coverage', args.id, {
+          retired_at: now(),
+          retired_reason: args.reason,
+        }, where);
       },
     }),
 

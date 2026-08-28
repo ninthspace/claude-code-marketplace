@@ -1,5 +1,4 @@
 {
-  "outputStyle": "Terse",
   "permissions": {
     "allow": [
       "mcp__plugin_dpm_dpm",
@@ -23,9 +22,12 @@
       "Bash(git checkout:*)",
       "Bash(bash:*)",
       "Bash(git:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "mcp__plugin_dpm_dpm__list_story_criterion_approach",
+      "mcp__plugin_dpm_dpm__read_adr"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "Terse"
 }

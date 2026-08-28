@@ -89,6 +89,11 @@ const SCANS = [
   ['agent', 'agent', "personality || ' ' || communication_style", 'name'],
   ['artifact', 'artifact', "coalesce(description, '') || ' ' || coalesce(retired_reason, '')", 'id'],
   ['audit_finding', 'audit_finding', "summary || ' ' || coalesce(recommendation, '')", 'id'],
+  // The trigger indexes only the rows whose reason is set, where every other entity here indexes
+  // all of them. The scan needs no such condition and must not have one: a row with no reason
+  // coalesces to the empty string, which no term matches, so the two agree by the terms rather than
+  // by both being written the same way.
+  ['coverage', 'coverage', "coalesce(retired_reason, '')", 'id'],
   ['finding', 'finding', 'summary', 'id'],
   ['milestone', 'milestone', "coalesce(summary, '')", 'id'],
   ['observation', 'observation', "text || ' ' || coalesce(synthesis, '')", 'id'],
@@ -263,9 +268,29 @@ function corpus(call) {
     description: 'Index the rows written before the migration, spinel.',
   });
 
+  // A withdrawn binding, and a live one beside it. `coverage`'s insert trigger is the only
+  // conditional one in the index — a coverage row holds no prose until it is retired, so indexing
+  // every row would fill `entry_fts` with empty strings for the whole matrix. The pair is what makes
+  // the condition observable: `retired` is findable and `live` is absent, and a trigger that dropped
+  // the `WHEN` would put both in.
+  const live_coverage = call.create_coverage({
+    requirement_id: requirement.id, story_criterion_id: story_criterion.id, position: 0,
+    spec_fragment: 'Hand-written text on child rows is indexed',
+  });
+
+  const coverage = call.create_coverage({
+    requirement_id: requirement.id, story_criterion_id: story_criterion.id, position: 1,
+    spec_fragment: 'Hand-written text on child rows',
+  });
+
+  call.retire_coverage({
+    id: coverage.id,
+    reason: 'The fragment stopped short of the obligation, chalcedony.',
+  });
+
   return {
     spec, epic, story, requirement, acceptance_criterion, story_criterion, retro, observation,
-    ungathered, review, finding,
+    ungathered, review, finding, coverage, live_coverage,
     adr, adr_option, bare_option, agent, artifact, live_artifact, audit, audit_finding,
     bare_finding, milestone, quick, quick_criterion, retro_application, task, bare_task,
   };
@@ -455,6 +480,8 @@ test('deleting a row of every indexed type takes it out of the index', (t) => {
     ['artifact', 'id', rows.live_artifact.id],
     ['audit_finding', 'id', rows.audit_finding.id],
     ['audit_finding', 'id', rows.bare_finding.id],
+    ['coverage', 'id', rows.coverage.id],
+    ['coverage', 'id', rows.live_coverage.id],
     ['milestone', 'id', rows.milestone.id],
     ['quick_criterion', 'id', rows.quick_criterion.id],
     ['retro_application', 'id', rows.retro_application.id],

@@ -152,6 +152,7 @@ const HOLDS_PROSE = {
   'agent.communication_style': 'how an agent speaks, and nothing else on the row says it',
   'artifact.description': 'the sentence a person wrote to say what a published page is',
   'artifact.retired_reason': 'why a published page was withdrawn, written when it was',
+  'coverage.retired_reason': 'why a binding was withdrawn — the only prose on a coverage row',
   'audit_finding.summary': 'the finding itself — the same content as `finding.summary` beside it',
   'audit_finding.recommendation': 'what to do about the finding, argued rather than enumerated',
   'document_section.heading': 'a section title a person wrote, and the way into its body',
@@ -195,6 +196,7 @@ const HOLDS_PROSE = {
 const EXCLUDED_PROSE = {
   'observation.note': { on: 'indexed-column', target: 'observation.text' },
   'observation.retired_reason': { on: 'indexed-column', target: 'observation.text' },
+  'story_criterion.superseded_reason': { on: 'indexed-column', target: 'story_criterion.text' },
   'quick_criterion.note': { on: 'indexed-column', target: 'quick_criterion.text' },
   'document.status_note': { on: 'absent-tool', target: 'read_document' },
   'document.retro_waived_reason': { on: 'absent-tool', target: 'read_document' },
@@ -258,7 +260,8 @@ const NOT_PROSE = {
     'quick.document_id', 'quick_criterion.quick_id', 'requirement.spec_id',
     'requirement.parent_id', 'retro_application.retro_id', 'retro_application.applied_to_id',
     'review.document_id', 'review.scope_story_id', 'session.superseded_by', 'story.epic_id',
-    'story_criterion.story_id', 'story_criterion_approach.story_criterion_id',
+    'story_criterion.story_id', 'story_criterion.warrant_adr_id',
+    'story_criterion_approach.story_criterion_id',
     'story_criterion_approach.tag', 'task.story_id',
   ],
   'a value from a closed set — a `WHERE` clause, and indexing it makes every search for "open" return every open finding': [
@@ -280,7 +283,8 @@ const NOT_PROSE = {
     'taxonomy.singular',
   ],
   'an instant, in ISO 8601': [
-    'agent.retired_at', 'artifact.published_at', 'artifact.retired_at', 'coverage.verified_at',
+    'agent.retired_at', 'artifact.published_at', 'artifact.retired_at', 'coverage.retired_at',
+    'coverage.verified_at', 'story_criterion.superseded_at',
     'dependency_kind.retired_at', 'document.archived_at', 'document.created_at',
     'document.updated_at', 'document.retro_waived_at', 'document_section.superseded_at',
     'observation.retired_at', 'quick.closed_at', 'requirement.coverage_claimed_at',

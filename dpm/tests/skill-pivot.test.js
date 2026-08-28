@@ -61,6 +61,10 @@ const PARSES = [
   },
   { pattern: /partial chain/i, why: 'a chain assembled where none could be read' },
   { pattern: /\|\s*✓\s*\|/, why: 'a verification cell edited in a rendered table' },
+  {
+    pattern: /bindings?\s+(?:from|out of)\s+(?:the\s+)?(?:rendered|generated|companion|matrix)/i,
+    why: 'a binding recovered from a rendered file rather than from `list_coverage`',
+  },
 ];
 
 const NOTE = 'held open while the store lands; do not break down yet';
@@ -73,6 +77,28 @@ const AMENDED = {
   requirement: 'The system shall persist planning state in one database per project.',
   criterion: 'The schema applies cleanly to an empty database and to a populated one.',
 };
+
+/**
+ * The three bound fragments, and the two amendments that tell them apart.
+ *
+ * `AMENDED.requirement` adds a clause and keeps every word the fragments quote, so it breaks no
+ * binding — which is what makes it criterion 5's control rather than a second positive case.
+ * `DELETED.requirement` changes one verb, and the two fragments quoting it stop being substrings
+ * while the third goes on being one. Every fragment is a verbatim substring of `REQUIREMENT` as the
+ * fixture writes it, so the workspace itself never stands in violation of integrity entry 9.
+ */
+const FRAGMENTS = {
+  broken: 'shall persist planning state',
+  alsoBroken: 'persist planning state',
+  surviving: 'The system shall',
+};
+
+const DELETED = {
+  requirement: 'The system shall keep planning state in one database per project.',
+};
+
+/** The retirement step's own prose, which two tests below read for different halves of it. */
+const RETIREMENT = prose(source, 'Bindings the amendment broke');
 
 const VERIFIED = '2026-08-01T00:00:00.000Z';
 const REVIEW_BODY = 'The store is untested at the boundary.';
@@ -122,8 +148,21 @@ function workspace(tools) {
   // computed from the bound texts — which is what makes the decay observable at all.
   const coverage = seed.create_coverage({
     requirement_id: requirement.id, story_criterion_id: criterion.id, position: 0,
-    spec_fragment: 'shall persist planning state', verified_at: VERIFIED,
+    spec_fragment: FRAGMENTS.broken, verified_at: VERIFIED,
   });
+
+  // Two more bindings on the same requirement, because "names every binding the amendment broke,
+  // and names no others" is a claim about a set. One binding proves nothing either way: a step that
+  // named all of them and a step that named the right one are the same list.
+  const [alsoBroken, surviving] = [FRAGMENTS.alsoBroken, FRAGMENTS.surviving]
+    .map((fragment, index) => seed.create_coverage({
+      requirement_id: requirement.id,
+      story_criterion_id: seed.create_story_criterion({
+        story_id: stories[0].id, text: `The store answers for ${fragment}.`, position: index + 1,
+      }).id,
+      spec_fragment: fragment,
+      position: index + 1,
+    }));
 
   const matrix = seed.create_coverage_matrix({
     parent_id: epic.id, slug: 'spine', title: 'Coverage: spine',
@@ -157,8 +196,8 @@ function workspace(tools) {
   // `startup` is spread last and carries a `retro` and an `other` of its own, so this fixture's own
   // keys are named apart from them. A collision here reads as a cascade reaching the wrong document.
   return {
-    spec, specSection, requirement, adr, epic, stories, criterion, coverage, matrix, review,
-    reviewSection, epicRetro, otherSpec, otherEpic, otherAdr, ...startup,
+    spec, specSection, requirement, adr, epic, stories, criterion, coverage, alsoBroken, surviving,
+    matrix, review, reviewSection, epicRetro, otherSpec, otherEpic, otherAdr, ...startup,
   };
 }
 
@@ -171,10 +210,15 @@ function workspace(tools) {
  * amendment changes the requirement as well: a control that held only the criterion still decayed
  * the mark from the other end, and passed for the wrong reason. `approve` decides each proposal on
  * its own, which is the only way the difference between gating and batching shows up in the rows.
+ *
+ * `approveRetirement` is the same predicate over the broken bindings, and it is a **second**
+ * parameter rather than a reuse of `approve` because the two gates decide different things: a run
+ * may approve every prose change and withdraw no binding, or the reverse. Sharing one predicate
+ * would make criterion 2's "one of two" a restatement of the walk's.
  */
 function run(call, fixture, {
   attempt = 1, criterionText = AMENDED.criterion, requirementText = AMENDED.requirement,
-  approve = () => true,
+  approve = () => true, approveRetirement = () => true,
 } = {}) {
   driveStartup(call, fixture, { scope: 'pivot', skill: 'dpm:pivot', attempt, roster: false });
 
@@ -238,6 +282,24 @@ function run(call, fixture, {
   ];
   const applied = proposals.filter((_, index) => approve(index)).map((apply) => apply());
 
+  // The bindings the amendment broke. `include_body`, because `spec_fragment` is the only column
+  // the comparison is over — and the comparison is made here rather than asked for, because no tool
+  // offers it. A list omits retired rows by default, so a row somebody already withdrew is not
+  // offered for the decision a second time.
+  const broken = call.list_coverage({
+    requirement_id: requirements[0].id, include_body: true, limit: BOUND,
+  }).items
+    .filter((row) => !requirementText.includes(row.spec_fragment))
+    .sort((one, other) => one.position - other.position);
+
+  // Each one on its own approval. A batch would retire every row in `broken` and read identically
+  // from the file, which is what criteria 2 and 3 are the difference between.
+  const retired = broken
+    .filter((_, index) => approveRetirement(index))
+    .map((row) => call.retire_coverage({
+      id: row.id, reason: `the amendment deleted the clause this quoted: ${row.spec_fragment}`,
+    }));
+
   call.update_session({
     id: `session-run-${attempt}`, state: JSON.stringify({ applied: applied.length }),
   });
@@ -247,7 +309,7 @@ function run(call, fixture, {
     story_id: entry.story.id, limit: BOUND,
   }).items);
 
-  return { offered, chosen, sections, reached, bound, stories, applied, tasks };
+  return { offered, chosen, sections, reached, bound, stories, applied, broken, retired, tasks };
 }
 
 // --- Criterion 1: amendment through update tools, cascade by foreign key -------------------------
@@ -301,7 +363,12 @@ test('a pivot run amends through update tools and reaches exactly what hangs off
     || row.id === fixture.otherAdr.id), 'the cascade reached a document under a different spec');
 
   // The requirement-to-criterion join, which is the reach a cascade comparing prose never had.
-  assert.deepEqual(result.bound[0].criteria.map((row) => row.id), [fixture.criterion.id]);
+  assert.deepEqual(
+    result.bound[0].criteria.map((row) => row.id).sort(),
+    [fixture.coverage, fixture.alsoBroken, fixture.surviving]
+      .map((row) => row.story_criterion_id).sort(),
+    'the join reaches every criterion bound to the amended requirement, not the first of them',
+  );
 
   // Nothing was recovered by name: the second spec shares no slug with the first, and the run holds
   // the chosen row's own `kind` rather than inferring one.
@@ -481,11 +548,138 @@ test('the skill recovers nothing by reading a generated file', (t) => {
   const regressed = `${source}\n\nGlob docs/epics/[0-9]*-epic-*.md, read **Source spec**: and `
     + '**Status**: out of each file’s front matter, fall back to slug matching, present partial '
     + 'chains for what does not resolve, then clear the `| ✓ |` cells in the companion matrix at '
-    + 'docs/epics/15-coverage-spine.md.';
+    + 'docs/epics/15-coverage-spine.md, recovering the '
+    + 'bindings from the rendered table as you go.';
 
   assert.ok(recoveries(regressed, PARSES).length >= 8,
     'the sweep passed a file that globs, parses two fields, matches slugs, builds partial chains '
     + 'and edits a verification cell in a companion file');
+
+  // The binding half of the same control, named rather than counted: a `>=` that already held at
+  // eight would go on holding with the new pattern matching nothing at all.
+  assert.ok(
+    recoveries(regressed, PARSES).some((problem) => /recovered from a rendered file/.test(problem)),
+    'the sweep passed a file that recovers its bindings from a rendered table',
+  );
+});
+
+// --- Criteria 1 and 5: the named set, and the amendment that broke nothing ------------------------
+
+test('a pivot names the bindings its amendment broke, and names none when every fragment survives', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call, used, passed } = recorder(tools);
+
+  const fixture = workspace(tools);
+  const result = run(call, fixture, {
+    requirementText: DELETED.requirement, approveRetirement: () => false,
+  });
+
+  // **The whole set, sorted, rather than two memberships.** "It named the broken one" is equally
+  // true of a step that names every binding on the requirement, which is the failure this criterion
+  // is about — the amendment's reach being asserted rather than measured.
+  assert.deepEqual(
+    result.broken.map((row) => row.id).sort(),
+    [fixture.coverage.id, fixture.alsoBroken.id].sort(),
+    'the named set is exactly the bindings whose fragment the amended text no longer contains',
+  );
+  assert.ok(
+    !result.broken.some((row) => row.id === fixture.surviving.id),
+    'a binding whose fragment the amended text still contains was named as broken',
+  );
+
+  // Criterion 5's control, in a fresh project driven through the same function. `AMENDED.requirement`
+  // adds a clause and deletes no word any fragment quotes, so the honest answer is an empty list —
+  // and the empty list has to be distinguishable from a step that never ran, which is what the two
+  // `used` assertions are for.
+  const untouched = openPlanningDatabase(t);
+  const controlTools = spineTools(untouched);
+  const recorded = recorder(controlTools);
+  const survives = run(recorded.call, workspace(controlTools), {
+    requirementText: AMENDED.requirement,
+  });
+
+  assert.deepEqual(survives.broken, [], 'an amendment that deleted no quoted clause named a binding');
+  assert.deepEqual(survives.retired, [], 'and nothing was withdrawn on the strength of it');
+  assert.ok(recorded.used.has('list_coverage'), 'the step named nothing because it never looked');
+  assert.ok(!recorded.used.has('retire_coverage'), 'a binding was retired with none broken');
+
+  // The file carries the rule the run cannot speak for: a run compares whatever the test told it to.
+  assert.match(RETIREMENT, /verbatim substring of the text Phase 2 wrote/);
+  assert.match(RETIREMENT, /The comparison is this skill's/);
+  assert.match(RETIREMENT, /a list omits retired rows/);
+  assert.match(RETIREMENT, /\*\*Naming nothing is an answer\.\*\*/);
+  assert.match(RETIREMENT, /Silence there is indistinguishable from a step that never ran/);
+
+  assert.deepEqual(bindings(source, tools, { used, passed }), []);
+});
+
+// --- Criteria 2 and 3: one approval each, and nothing retired without one -------------------------
+
+test('one of two broken bindings is approved, and only that one is retired', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call, used } = recorder(tools);
+
+  const fixture = workspace(tools);
+  const raw = handlers(tools);
+  const result = run(call, fixture, {
+    requirementText: DELETED.requirement, approveRetirement: (index) => index === 0,
+  });
+
+  const [approved, refused] = result.broken;
+
+  assert.equal(result.retired.length, 1, 'a batch behind one approval retires both and looks the same');
+  assert.equal(result.retired[0].id, approved.id);
+
+  const withdrawn = raw.read_coverage({ id: approved.id, include_body: true });
+
+  assert.notEqual(withdrawn.retired_at, null, 'the approved binding is still live');
+  assert.match(withdrawn.retired_reason, /the amendment deleted the clause this quoted/,
+    'the withdrawal carries no reason, which is the whole of what a later reader has');
+  assert.equal(withdrawn.spec_fragment, FRAGMENTS.broken,
+    'retirement is not deletion — the record of what the binding was survives the decision');
+
+  assert.ok(refused.id !== approved.id, 'the run offered one binding, so there was nothing to gate');
+
+  assert.match(RETIREMENT, /on its own approval/);
+  assert.match(RETIREMENT, /one decision per binding and no approval carried forward/);
+  assert.match(RETIREMENT, /A binding\s+nobody approved is left exactly as it stands/);
+});
+
+// --- Criterion 3 (must NOT): nothing is retired without an approval -------------------------------
+
+test('a binding the run did not approve is left exactly as it stands', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call, used } = recorder(tools);
+
+  const fixture = workspace(tools);
+  const raw = handlers(tools);
+  const result = run(call, fixture, {
+    requirementText: DELETED.requirement, approveRetirement: (index) => index === 0,
+  });
+
+  const refused = result.broken[1];
+
+  // **The rejection stands on its own row.** Asserted before anything is said about the approved
+  // one, so this test fails on a batched retirement whatever criterion 2's count assertion does.
+  assert.equal(raw.read_coverage({ id: refused.id }).retired_at, null,
+    'a binding nobody approved was retired anyway');
+  assert.equal(raw.read_coverage({ id: refused.id }).retired_reason, null,
+    'and the reason column was written for a decision nobody made');
+  assert.equal(raw.read_coverage({ id: fixture.surviving.id }).retired_at, null,
+    'a binding the amendment never broke was retired');
+
+  // The control. "Not retired" is equally true of a step that retired nothing at all, so the
+  // silence above is only a judgement about that row while a sibling in the same run went the
+  // other way — offered by the same list, withdrawn by the same call.
+  assert.notEqual(raw.read_coverage({ id: result.broken[0].id }).retired_at, null,
+    'nothing was retired at all, so the row above says nothing about approval');
+
+  // And the run reached `retired_at` by the one verb that carries a reason. `update_coverage` cannot
+  // set it at all, so a run that had touched it would be asserting a withdrawal with no record of why.
+  assert.ok(!used.has('update_coverage'), 'the run wrote the retirement columns itself');
 });
 
 // --- Spec 50 FR6: the tasks a pivot puts in doubt are reported with their disposition ------------

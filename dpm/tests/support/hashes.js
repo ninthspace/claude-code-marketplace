@@ -22,3 +22,32 @@ import { createHash } from 'node:crypto';
 export function sha256(text) {
   return createHash('sha256').update(text).digest('hex');
 }
+
+/**
+ * The claim digest as `claimHash` computed it before coverage rows could be retired.
+ *
+ * Every bound row, with no live qualification — which is the point. Two suites need it and neither
+ * can call `claimHash`: both run against a database built one migration back, where `retired_at`
+ * does not exist yet, so the live function's own query is a syntax error there. The independence
+ * this module exists for applies doubly, the assertion in both cases being that a digest stored by
+ * an older release still matches what the current one computes.
+ *
+ * The separator is built from its code point rather than written as an escape. An escape sequence
+ * that only looked right would fail those tests for a reason with nothing to do with the migration —
+ * and a literal NUL byte in a source file makes the file un-greppable.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} requirementId
+ * @returns {string}
+ */
+export function claimDigestOverEveryBoundRow(db, requirementId) {
+  const digest = createHash('sha256');
+  const nul = String.fromCharCode(0);
+
+  const bound = db.prepare(`SELECT spec_fragment, story_criterion_id FROM coverage
+     WHERE requirement_id = ? ORDER BY spec_fragment, story_criterion_id`).all(requirementId);
+
+  for (const row of bound) digest.update(row.spec_fragment + nul + row.story_criterion_id + nul);
+
+  return digest.digest('hex');
+}

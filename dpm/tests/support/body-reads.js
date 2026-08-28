@@ -283,8 +283,12 @@ export const CLASSIFICATION = new Map(Object.entries({
     [true, 'the run judges whether the bound fragments account for the requirement **whole**, which is a reading of its text'],
   'do · list_coverage · 8. Epic summary':
     [true, 'the same judgement is made against `spec_fragment`, which is the withheld column'],
+  'do · list_coverage · 8. Epic summary #2':
+    [false, 'the denominator is *"the bindings still standing"* — a count of the rows the call returns, and the fragment is judged by the read above it'],
   'do · list_observation · 8. Epic summary':
     [true, 'the observations are synthesised, and a synthesis of withheld text is a synthesis of nothing'],
+  'do · list_story_criterion · 8. Epic summary':
+    [true, 'the roll-up reports the criteria whose `accounted_for` is false, and a criterion has no title — its `text` is how the report names it'],
 
   // --- epics ------------------------------------------------------------------------------------
   'epics · list_requirement · Step 1: Read the source':
@@ -302,6 +306,8 @@ export const CLASSIFICATION = new Map(Object.entries({
   'epics · list_task · Step 4: Confirm':
     [true, 'reads the tree back to catch *"A value that never reached a row is absent from the rows"*, and `description` is one of those values'],
   'epics · list_story_criterion · Step 4: Confirm':
+    [true, 'the gap check reports the criteria whose `accounted_for` is false, and names each by its `text`'],
+  'epics · list_story_criterion · Step 4: Confirm #2':
     [true, 'the same read-back, and the criteria the reachability gate weighs come through it'],
 
   // --- inspect ----------------------------------------------------------------------------------
@@ -357,6 +363,8 @@ export const CLASSIFICATION = new Map(Object.entries({
     [true, 'opens the criterion written against the amended requirement, to say what it breaks'],
   'pivot · list_story_criterion · Where the cascade reaches':
     [true, 'the epic branch of the same walk — the criteria are compared against what Phase 2 changed'],
+  'pivot · list_coverage · Bindings the amendment broke':
+    [true, 'the step asks whether each row\'s `spec_fragment` is *"still a verbatim substring of the text Phase 2 wrote"*, and the fragment is the withheld column'],
   'pivot · list_task · Phase 4: Tasks affected':
     [false, 'reports **which** tasks are in doubt; the *why* is the criterion change already in hand'],
 

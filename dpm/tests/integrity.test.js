@@ -19,7 +19,7 @@ import { openPlanningDatabase as planning } from './support/planning-database.js
 import { checkIntegrity, orphans } from '../src/integrity/check.js';
 import { REGISTER } from '../src/integrity/register.js';
 import { create } from './fixtures/index.js';
-import { corpus, violation } from './support/violations.js';
+import { corpus, forEntry, violation } from './support/violations.js';
 import { ulid } from '../src/id/ulid.js';
 
 /**
@@ -43,16 +43,17 @@ const REGISTER_ENTRIES = new Map([
   [11, 'session.superseded_by forms no cycle'],
   [12, 'document_milestone document and milestone share a spec'],
   [13, '{{ref:}} markers resolve to live documents'],
+  [14, 'a binding retired while sound is a judgement, not a fault'],
 ]);
+
+/** The entries that settle whether the database is broken — every one but the advisory ones. */
+const BLOCKING = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
 
 /**
  * The corpus and the thirteen injections come from `support/violations.js`, because Epic 47-02
  * Story 2 needs the same violating states on the restore path. What stays here is every
  * per-entry assertion — the shared module builds the violation and makes no claim about it.
  */
-
-/** The violations the tool found for one register entry, or `undefined` when it found none. */
-const forEntry = (report, entry) => report.violations.find((violation) => violation.entry === entry);
 
 /**
  * Assert that `inject` turns a clean database into one failing exactly `entry`, with rows.
@@ -98,14 +99,26 @@ test('the register and the checks name each other, in both directions', () => {
     [...REGISTER_ENTRIES.keys()],
     'an entry with no check, or a check with no entry, is the same failure read from either end',
   );
-  assert.equal(REGISTER.length, 13, 'and thirteen is the count the Data Model derives');
+  // Counted against the transcription rather than against a number written here. The map above
+  // is the independent copy — the whole point of the criterion — so it is what the count is owed
+  // to; a literal would be a third copy, and the one that goes stale silently.
+  assert.equal(REGISTER.length, REGISTER_ENTRIES.size, 'the register and the transcription differ in length');
 
   const uncallable = REGISTER.filter((entry) => typeof entry.check !== 'function');
   assert.deepEqual(uncallable, [], 'an entry whose check is not callable is an entry with no check');
 
   // Numbers are the join key between a table in a document and a function in a file, so a gap
   // or a repeat breaks the parity claim even when the counts agree.
-  assert.equal(new Set(REGISTER.map((entry) => entry.entry)).size, 13);
+  assert.equal(new Set(REGISTER.map((entry) => entry.entry)).size, REGISTER_ENTRIES.size);
+
+  // An entry is blocking unless it says otherwise, and which are which is a decision rather than
+  // a detail: an entry that quietly became advisory would stop refusing dumps it should refuse,
+  // and nothing else in the suite would notice.
+  assert.deepEqual(
+    REGISTER.filter((entry) => entry.advisory !== true).map((entry) => entry.entry),
+    [...BLOCKING],
+    'an entry changed class without the change being decided here',
+  );
 });
 
 test('a freshly seeded database passes, and the pass is a real sweep', (t) => {

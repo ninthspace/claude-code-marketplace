@@ -46,10 +46,23 @@ export const UNGUARDED = 'no pre-commit guard';
  * database anywhere — including a directory that is not two levels below the repository root, and
  * one that is not in a repository at all.
  *
- * **Resolved to an absolute path first, and the walk does not terminate without it.** The default
- * location is repository-relative, so what arrives here is ordinarily `.dpm` — whose `parse().root`
- * is the empty string and whose `dirname` chain is `.dpm`, `.`, `.`, `.`, for ever. The loop has no
- * other stopping condition, so this is the line that ends it rather than a tidiness about paths.
+ * **Resolved to an absolute path first, and the answer is wrong without it.** The default location
+ * is repository-relative, so what arrives here is ordinarily `.dpm` — whose `parse().root` is the
+ * empty string and whose `dirname` chain is `.dpm`, `.`, `.`, `.`. Walked unresolved, that chain
+ * never reaches a `.git` and never reaches `root`, so `resolve` is what makes the search look in
+ * the place the caller meant rather than a tidiness about paths.
+ *
+ * **Two exits, and the second one cannot be driven.** `directory === root` is the ordinary one and
+ * the only one reachable today: across every path form that could arrive here — POSIX `/`, `//foo`;
+ * Windows UNC `\\server\share\`, `\\?\C:\`, `\\.\pipe\`, a bare drive letter, a rooted path with no
+ * drive — `parse(resolve(p)).root` and the fixpoint of `dirname` are the same string, trailing
+ * separator included. The `next === directory` check is a backstop against that ceasing to hold,
+ * because a loop whose only exit is a string comparison between two path functions is bounded only
+ * for as long as those two functions agree, and nothing specifies that they must.
+ *
+ * So the second exit is deliberately uncovered rather than untested: no input reaches it, and it is
+ * neither dead code to delete nor a gap somebody forgot to close. It turns an unbounded walk into a
+ * `null`, which is the answer this function already gives for "no repository above here".
  *
  * @param {string} from
  * @returns {string|null}
@@ -58,9 +71,15 @@ function repositoryAbove(from) {
   const absolute = resolve(from);
   const { root } = parse(absolute);
 
-  for (let directory = absolute; ; directory = dirname(directory)) {
+  for (let directory = absolute; ; ) {
     if (existsSync(join(directory, '.git'))) return directory;
     if (directory === root) return null;
+
+    const next = dirname(directory);
+
+    if (next === directory) return null;
+
+    directory = next;
   }
 }
 

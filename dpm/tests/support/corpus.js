@@ -18,6 +18,8 @@
  * are meant to render and nothing depends on when the test ran.
  */
 
+import { columnNames } from './introspection.js';
+
 const AT = '2026-01-01T00:00:00Z';
 
 /** A `document` row, by statement. Only the spine has create tools; see the module note. */
@@ -86,6 +88,31 @@ export function fullCorpus(db, call) {
     requirement_id: requirement.id, spec_fragment: 'Every kind has a template',
     story_criterion_id: criterion.id, position: 0,
   });
+
+  // **A withdrawn binding, because a state no corpus reaches is a state nothing has ever
+  // rendered.** Three sweeps read this corpus to answer whether every state the schema admits is
+  // reachable — `sparse.test.js`'s declared-state walk, `entry-index.test.js`'s scan, and
+  // `parity-integration.test.js`'s round trip over every indexed type — and `coverage.retired_at`
+  // and `coverage.retired_reason` are unreachable from a corpus that only ever binds. The row is
+  // retired through the tool rather than by statement, which is the whole point: what the sweeps
+  // are checking is that the surface can produce the state, not that SQLite can hold it.
+  // **Guarded on the column, because this corpus is also filled on databases older than it.**
+  // `plugin-stamp.test.js` builds one at a pre-025 version and fills it, so that "no other table's
+  // contents changed" is a comparison over rows rather than over empty tables. Against that
+  // database `coverage` has no `retired_at`, and a corpus that reached for it unconditionally would
+  // fail there for a reason with nothing to do with what that test is checking. The guard is the
+  // schema's own answer, not a version number written here.
+  if (columnNames(db, 'coverage').includes('retired_at')) {
+    const withdrawn = call.create_coverage({
+      requirement_id: requirement.id, spec_fragment: 'Every kind has a',
+      story_criterion_id: criterion.id, position: 1,
+    });
+
+    call.retire_coverage({
+      id: withdrawn.id,
+      reason: 'The fragment stopped mid-clause and bound half an obligation.',
+    });
+  }
 
   call.create_dependency({
     kind: 'blocks', source_story_id: blocked.id, target_story_id: story.id,
