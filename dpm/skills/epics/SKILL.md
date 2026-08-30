@@ -125,6 +125,10 @@ contract changes, and coordination across systems where the interaction design n
 up front. Stories that follow an existing pattern do not take it. The user may ask for it on any
 story; these are defaults, not restrictions.
 
+**Describe such a story in words when it is put to the user** — it needs designing in full before
+any of it is built — rather than reading the argument out. `plan: 1` is what the call carries; "this
+one requires a plan" is what the story is, and it is the half the user can answer.
+
 Where a story cannot start until another finishes, record it with `mcp__plugin_dpm_dpm__create_dependency`:
 `kind: 'blocks'`, the blocker as `source_story_id`, the waiting story as `target_story_id`. Both
 ends may be stories in different epics.

@@ -74,8 +74,10 @@ found are a starting position rather than the run's scope.
 #### 1b. Clear the plan gates
 
 A story marked for formal planning opens an interactive approval gate, which stalls an unattended
-run. For each resolved epic, `mcp__plugin_dpm_dpm__list_story` scoped by `epic_id`, and for every story whose
-`plan` is 1, `mcp__plugin_dpm_dpm__update_story` with `plan` set to 0. Report one line per story cleared.
+run. For each resolved epic, `mcp__plugin_dpm_dpm__list_story` scoped by `epic_id`, and for every story that
+requires a plan, `mcp__plugin_dpm_dpm__update_story` with `plan` set to 0. Report one line per story
+cleared, naming the story and saying it no longer requires a plan: the column is how the run finds
+them and what the call carries, not how the run describes what it did.
 
 **This is a column, so there is nothing to find and nothing to leave behind.** Scan no headings and
 edit no text; a story either carries the flag or does not, and clearing it cannot damage the sentence

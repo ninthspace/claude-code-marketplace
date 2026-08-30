@@ -118,7 +118,8 @@ disagree with the readiness answer above without either side noticing.
 
 Then, for the selected story:
 
-- `mcp__plugin_dpm_dpm__read_story` — its `plan` column decides whether Step 3 opens formal plan mode.
+- `mcp__plugin_dpm_dpm__read_story` — its `plan` column says whether this is a story that has to be
+  designed in full before any of it is built, which is what Step 3 branches on.
 - `mcp__plugin_dpm_dpm__list_task` with this `story_id` — the work, in `number` order. The next one to do is
   the lowest-numbered whose `status` is still pending; tasks carry no edges of their own, so order
   is the whole of their sequencing.
@@ -179,11 +180,16 @@ preserve**: the status is the status and the note is the note, and they are two 
 
 ### 3. Plan
 
-If the story's `plan` is `1`, enter formal plan mode, present the plan, and get approval before any
-implementation. That approval covers the story's remaining tasks — record it in the session `state`
-so plan mode does not re-fire per task.
+Where the story requires a plan — its `plan` column is what says so — enter formal plan mode,
+present the plan, and get approval before any implementation. That approval covers the story's
+remaining tasks, so record it in the session `state` and plan mode does not re-fire per task.
 
-If `plan` is `0`, plan inline: a short text plan, then straight on.
+Where it does not, plan inline: a short text plan, then straight on.
+
+**Say which of the two this is in those words.** "This story needs designing in full first" and
+"planning this one inline" each tell the reader what is about to happen; the value in the column
+tells them how the decision was stored, which is a fact about the database and not about their
+work.
 
 ### 4. Do the work
 

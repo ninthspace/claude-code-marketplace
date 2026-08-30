@@ -132,6 +132,27 @@ a summary.
 The test is whether someone reading only the narration still knows where they are and what was
 decided.
 
+### Saying what a row holds
+
+**Narration names what a column means, never the value it holds.** A run that has read `plan` on a
+story says *this story needs designing in full first*, or *planning this one inline* — not "Story 1
+has plan: 1, so I'll explore". The same goes for every other column a skill reads and then talks
+about: a criterion that was met, a rejection rather than `polarity: 'must_not'`, work that is
+finished rather than `status: complete`.
+
+The two are not the same sentence with different formatting. The value says how the decision is
+stored, which is a fact about the database; the meaning says what happens next, which is the only
+half the reader can act on — and the value is not even reliable as shorthand, because a reader who
+has not seen the schema cannot tell which way round a flag runs.
+
+**Where a value is an argument to a tool call, write it as the argument it is.** `plan: 1` in a
+sentence specifying a `create_story` call is a specification, not commentary, and the two are
+distinguished by who reads them: one is read by the run about to make the call, the other by the
+person the run is talking to.
+
+**And a document is named the way Naming a Document says**, which is the same rule one table over:
+its reference and its title, never its id. That section carries the detail.
+
 ### Disposition
 
 Every item a report mentions carries one of four dispositions, and the disposition names what the
