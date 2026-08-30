@@ -18,7 +18,7 @@ Resolve the epic doc first, then select a task.
    a. **Glob** `docs/epics/*-epic-*.md` to find all epic files.
    b. If no epic files found, proceed without one (tasks still work via their descriptions).
    c. If only one epic file exists, use it — no need to ask.
-   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` (`Done` reads as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn` — terminal, user-set statuses for work no longer needed; there is nothing to do on a retired epic). Use Grep and Read tools directly (Bash loops with shell variables lose context). If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status.
+   d. If multiple epic files exist, use Grep to search for `**Status**:` across the matched files, then filter to epics that are not `Complete`/`Done` (`Done` reads as a synonym for `Complete`) and not retired (`Superseded` / `Withdrawn` — terminal, user-set statuses for work no longer needed; there is nothing to do on a retired epic). Use Grep and Read tools directly (Bash loops with shell variables lose context). If only one has remaining work, auto-select it. If multiple have remaining work, present the choices to the user with AskUserQuestion — show each epic's name and status. The choice is the start of the run, not the end of a turn: startup follows it immediately.
    e. If all epics are `Complete` or retired (`Superseded` / `Withdrawn`), tell the user there's nothing to do.
 3. If no epic docs exist, proceed without one (tasks still work via their descriptions).
 
@@ -41,7 +41,7 @@ Before the work loop begins, run the **retro consumption gate** — a hard gate 
 
 1. **Find the lessons.** Glob `docs/retros/[0-9]*-retro-*.md`. If none exist or the directory is absent, skip the gate silently and start the loop. Otherwise select relevant observations **across all retros** per the shared **Retro Awareness** procedure (step 2): judge each observation by source/domain match against the epic being worked and by category, with recency only as a tiebreaker, capped to a handful — do **not** consume only the highest-prefix file. A relevant lesson from an older retro (e.g. a testing gap in the same feature area) is not shadowed by a more recent, unrelated one. **Make the selection visible**: when you present the gate (step 3), name the source retro for each observation — its filename, `**Source**:`, and `**Date**:` — so *which* lessons are consumed (and from where) is explicit and a mis-selection stays visible.
 2. **Select relevant observations.** Filter the selected cross-retro observations (from step 1) to the categories this skill acts on (see **Retro incorporation** below); observations outside those categories are not gated.
-3. **Gate on disposition, not acknowledgement.** Present each relevant observation **verbatim, with its category** (rendered in the message body per the **Gate Presentation** convention), and require a disposition for *each one* via `AskUserQuestion`, rather than a single blanket confirmation. The three dispositions are all **per-run**: each records a breadcrumb on this epic (step 4) and **none** mutate the source retro, so a lesson set aside here is re-judged on the next run.
+3. **Gate on disposition, not acknowledgement.** Present each relevant observation **verbatim, with its category** (rendered in the message body per the **Gate Presentation** convention), and require a disposition for *each one* via `AskUserQuestion`, rather than a single blanket confirmation. The three dispositions are all **per-run**: each records a breadcrumb on this epic (step 4) and **none** mutate the source retro, so a lesson set aside here is re-judged on the next run. The dispositions answered, the run opens the work loop in the same turn rather than reporting them back.
    - **Applied** — state *how* it changes this run (which task exploration or criterion it informs).
    - **Deferred** — give a one-line *reason* it isn't being applied now.
    - **Not relevant here** — the lesson is still valid but doesn't bear on *this* work; say why. This is a **local** judgement about fit, not a verdict on the lesson's truth — it is per-run and reversible, leaving the lesson in place at its source.
@@ -140,7 +140,7 @@ When hydration is triggered:
    - Among unblocked stories, pick the lowest-numbered one with `**Status**: Pending`.
    - If no unblocked pending stories remain, the epic is done — proceed to batch summary.
 
-3. **Check for existing tasks** (idempotency): Call `TaskList` and scan task descriptions for entries that reference the same epic doc path and story number (e.g. `Epic doc: {path}` and `Story: {N}`). If matching tasks already exist — from a previous partial run or interrupted session — skip creation and use the existing tasks. Proceed directly to step 6 (task selection).
+3. **Check for existing tasks** (idempotency): Call `TaskList` and scan task descriptions for entries that reference the same epic doc path and story number (e.g. `Epic doc: {path}` and `Story: {N}`) **and carry a `Task:` or `Type: verification` line**. If matching tasks already exist — from a previous partial run or interrupted session — skip creation and use the existing tasks. Proceed directly to step 6 (task selection). A `Type: remaining` placeholder (step 5b) names a story without holding its work, so it never satisfies this check; hydrating a story whose placeholder is present is the ordinary case, not the resumed one.
 
 4. **Create Claude Code tasks** for the selected story:
    - For each `###` task heading within the story, call TaskCreate:
@@ -159,6 +159,17 @@ When hydration is triggered:
      ```
 
 5. **Set intra-story dependencies**: Call TaskUpdate on the verification gate task with `addBlockedBy` set to all the task IDs just created. This ensures the gate only fires after all implementation work is complete.
+
+5b. **Show the stories still to come**: for every pending story after this one in the epic doc — blocked or not — create one placeholder task, unless it already has one:
+   ```
+   TaskCreate:
+     subject: "Story {N}: {Story title}"
+     description: "Not yet hydrated.\n\nEpic doc: {epic doc path}\nStory: {N}\nType: remaining"
+     activeForm: "Working Story {N}: {Story title}"
+   ```
+   Then TaskUpdate each with `addBlockedBy` set to this story's verification gate. **Blocked is what they are for**, not presentation: it keeps them out of the pending-unblocked set that step 1's gating check and step 6's task selection both read, so neither can pick one up as work. Delete a story's placeholder when hydrating it, before step 4 creates the real tasks.
+
+   The task list is the only signal of remaining work a reader — or a run resuming after a compaction — sees without opening the epic doc. Without the placeholders it empties as each story finishes, which is the same picture it shows when the epic is genuinely done.
 
 6. **Proceed to task selection** — the newly created tasks are now available for the work loop to pick up.
 
@@ -282,7 +293,7 @@ Before marking the task complete:
   - **`[target]`**: Do **not** self-assess and do **not** count it as met. The check is mechanical but can only run against the real deployment target, so a verdict from this machine is worth nothing — confirming "the production host provides PHP 8.2 or later" from a sandbox that already does is the false pass the tag exists to prevent. Record it as `target-only — unverified in this environment`, name it in the summary, and let the remaining criteria decide whether the task is complete. It does not block completion: a criterion that can never be satisfied where the run happens would stall the loop rather than protect anything.
   - **An unrecognised tag**: report it and stop treating it as a verification instruction — do not fall back to self-assessment. A tag nobody routes is a tag nobody has thought about, and self-assessing it reads in the epic doc as a deliberate verification choice while being the opposite of one. Name the tag and the criterion, and assess nothing.
 - If all criteria are met (by test results or self-assessment), proceed to step 6.
-- If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as Complete anyway. Use AskUserQuestion for this gate.
+- If any criteria are **not** met, flag them to the user. List what's unmet and ask whether to continue working on them or mark the task as Complete anyway. Use AskUserQuestion for this gate. Either answer is acted on and the run carries straight on into 5b, 6 and 7, in the same turn the answer arrived in.
 
 **Coverage matrix proof recording** (verification gates only): When a verification gate passes (all criteria met), update the companion coverage matrix to record proof. Check for the companion coverage matrix alongside the epic doc — derive its path via the `-epic- → -coverage-` substitution rule described in Step 1 (which works for both legacy flat and new two-part epic shapes). If it exists:
 
@@ -290,7 +301,7 @@ Before marking the task complete:
 2. For each matching row, use the Edit tool to replace the empty Verified cell with `✓`. The edit targets the specific row's trailing `| |` (empty Verified cell) and replaces it with `| ✓ |`.
 3. Only update rows matching the current story — rows for other stories are left untouched.
 
-If the coverage matrix file doesn't exist, log a note ("No coverage matrix found — skipping proof recording") and continue. Proof recording is additive: a failure here does not stop task execution. If an Edit call fails (e.g. the row text doesn't match the expected pattern), flag the failure to the user via AskUserQuestion with options: "Continue without recording proof for this row" or "Stop and investigate" — every failed write is surfaced.
+If the coverage matrix file doesn't exist, log a note ("No coverage matrix found — skipping proof recording") and continue. Proof recording is additive: a failure here does not stop task execution. If an Edit call fails (e.g. the row text doesn't match the expected pattern), flag the failure to the user via AskUserQuestion with options: "Continue without recording proof for this row" or "Stop and investigate" — every failed write is surfaced. "Continue" resumes the gate's remaining rows and then step 5b, in the same turn; only "Stop and investigate" ends the run.
 
 ### 5b. Story Refactoring Pass (every completed story)
 
@@ -420,7 +431,7 @@ When a change to existing planning artefacts is needed — discovered mid-execut
 
 **Skill responsibility**: This procedure belongs to `cpm:do`, the skill that surfaces change moments during execution. It is entered from **Surface change moments explicitly** in Guidelines. Which of the two paths below applies is decided by the run, not by the situation: both handle the same set of change moments.
 
-**Interactive runs** present the decision as a gate: an `AskUserQuestion` with the four labelled options (Inline edit / Pivot the upstream artefact / Retro observation only / Pivot + retro), per the shared **Gate Presentation** convention rather than as a freeform "should we change this?" prompt.
+**Interactive runs** present the decision as a gate: an `AskUserQuestion` with the four labelled options (Inline edit / Pivot the upstream artefact / Retro observation only / Pivot + retro), per the shared **Gate Presentation** convention rather than as a freeform "should we change this?" prompt. Whichever is chosen is carried out and the run returns to the step it left, in the same turn — a change moment interrupts a task, and resolving one is not finishing anything.
 
 - **If the user chooses Inline edit**: apply the Edit immediately to the affected story or task in the epic doc, then record `**Inline change**: {one-line summary of what changed} ({YYYY-MM-DD})` on the story (alongside any existing `**Retro**:` field) using a second Edit. The breadcrumb is mandatory — silent inline edits violate the convention.
 - **If the user chooses Pivot**: stop the work loop, save the progress file, and tell the user to run `/cpm:pivot {path-to-affected-artefact}`. Resume the work loop after the pivot completes (a fresh `/cpm:do` invocation will pick up where this one left off via the progress file).
@@ -513,13 +524,16 @@ Follow the shared **Progress File Management** procedure.
 ### Task {ID}: {Subject}
 {...continue for each completed task...}
 
+## Loop Contract
+This run executes every story of the epic in one continuous loop. It stops only at the gates `cpm:do` names — unmet criteria, an unroutable tag, a blocker, an ambiguous criterion, a change moment, a coverage-matrix write failure, and the epic-end gate at Step 8 — and a finished task, story, verification or commit is none of them. A gate's answer resumes the step it interrupted, in the same turn. Do not ask whether to continue.
+
 ## Next Action
 {What to do next — e.g. "Pick up Task #4: Add validation endpoint" or "Work loop complete, delete state file"}
 ```
 
 The "Completed Tasks" section grows as tasks complete. Each summary should capture what was implemented and the acceptance criteria outcome — enough for seamless continuation, not a detailed log.
 
-The "Next Action" field tells the post-compaction context exactly where to pick up.
+The "Next Action" field tells the post-compaction context exactly where to pick up. The "Loop Contract" section tells it that it is still in a loop — this file is read once at invocation and an epic of any size outlives that context, so a run restored with the position and not the rule knows which story is next and no longer knows it is not supposed to ask. Both are written whenever the file is written.
 
 ## Guidelines
 
@@ -530,6 +544,7 @@ The "Next Action" field tells the post-compaction context exactly where to pick 
 - **Keep momentum, but not at the cost of correctness.** Move through tasks efficiently with minimal explanation between them. Run verification and take care with edits. Follow the shared Implementation Guidelines: use the Edit tool file-by-file (no bulk `sed`/`perl`), and prefer clarity and correctness over speed.
 - **No unauthorised checkpoints.** The work loop only stops at the gates explicitly listed in this skill — verification failures, unmet criteria, stalled cycles, TDD edge cases, blockers, ambiguous criteria, coverage matrix write failures, and the epic-end gate at Step 8. Everything else is forward motion: task-to-task transitions, story-to-story transitions, and the post-completion summary are all silent — no invented check-ins, no progress narration between tasks, no pausing for permission to proceed.
 - **Forbidden phrasings.** Do not pause the loop to ask the user whether or how to proceed between tasks or stories — regardless of how the prompt is worded, how many options it offers, or whether it uses `AskUserQuestion` or plain text. It is the *category* that is banned, not a fixed list of phrases; the wording varies endlessly. Illustrative, non-exhaustive examples: "Would you like to continue, stop, or commit?", "continue / stop / commit", "Should I commit before continuing?", "Would you like me to proceed to the next story?", "Shall I move on?", "Want me to keep going?", "Ready for the next task?". This holds at every task and story boundary, and immediately after a commit — none is a checkpoint. Commits, if needed, are part of the task itself or are handled outside this skill (see **Version control stays with the user**); the skill does not solicit permission for the next iteration of its own loop. If you find yourself about to write any such prompt, return to Step 7 instead.
+- **Answering a gate is not a stopping point.** Every gate this skill names interrupts a step, and the answer resumes that step in the turn it arrived in — a gate whose wording does not say where the run goes next inherits this rule rather than ending the run. The only answers that end it are the ones that say so ("Stop and investigate", "Stop the work loop") and Step 8. This is the seam the rule above does not reach on its own: the user's answer is the newest thing in the transcript and the loop is the oldest, so the default after acting on an answer is to stop.
 - **Version control stays with the user.** Do not commit, stage, branch, or push on your own initiative — leave the working tree as edited files for the user to commit outside the loop. See the shared **Version control stays with the user** guideline. The only exceptions are a task whose acceptance criteria explicitly require a git action, an instruction from the user, or a wrapper like `cpm:ralph` that mandates commits.
 - **Scope**: deliver what was asked, at the scope intended — no narrower, no wider. Make the routine judgment calls yourself, and check in only when different readings of the request would lead to materially different work. If a better approach than the one requested becomes apparent, raise it in a sentence and carry on with what was asked, rather than silently transforming the task. Finish the whole task, and stop short of actions that are clearly beyond what was asked.
 

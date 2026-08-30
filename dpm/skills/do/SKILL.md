@@ -21,7 +21,8 @@ This skill uses **Gate Presentation**, **Conversational Output**, **Cross-Refere
    the row it names or refuses; a ULID is already the id and needs no resolving.
 2. Otherwise `mcp__plugin_dpm_dpm__list_epic` with `ready: true`. That is the epics still `pending` with no
    blocker short of `complete` — a query over the edges, not a status anyone maintains. One result
-   is auto-selected; several go to `AskUserQuestion` showing each title.
+   is auto-selected; several go to `AskUserQuestion` showing each title. The choice is the start of
+   the run, not the end of a turn: Startup follows it immediately.
 3. An empty result means every epic is complete, retired, or waiting on something — **three
    answers, and saying the wrong one is how a project loses track of what it decided to stop**. Say
    which, from `mcp__plugin_dpm_dpm__list_epic` unfiltered and `mcp__plugin_dpm_dpm__list_dependency` on the ones still
@@ -41,6 +42,13 @@ start in `phase` and moving it on after every completed task.
 did. **It does not hold task or story status**, which are columns, or which stories are planned,
 which is a column.
 
+**It also holds the loop contract, written at Startup and carried on every update**: that this run
+executes every story of the epic in one continuous loop, that it stops only at the gates this skill
+names, and that a finished task, story, verification or commit is not one of them. This file is read
+once, at invocation, and an epic of any size outlives that context — `state` is what a resumed or
+compacted run still has. Restoring the position without the contract restores a run that knows which
+story is next and no longer knows it is not supposed to ask.
+
 ### Retro consumption gate
 
 Select as the shared **Retro Awareness** procedure says, across all retros rather than the newest —
@@ -55,7 +63,8 @@ value: a lesson nobody had to place is a lesson nobody read.
 Record each disposition as `mcp__plugin_dpm_dpm__create_retro_application` — `retro_id`, this epic as
 `applied_to_id`, the observation's `theme`, and `disposition` as one of `applied`, `deferred` or
 `not_applicable`, with the reason as `note`. The row is per-run and changes nothing at the source,
-so a lesson set aside here is re-judged next time.
+so a lesson set aside here is re-judged next time. The dispositions answered, the run opens the loop
+in the same turn rather than reporting them back.
 
 Carry every `applied` disposition into the loop as a lens on each task, not a one-off:
 
@@ -125,6 +134,13 @@ verification task blocked by them. That list is a view of the rows and never the
 is `task.status`, and the mirror is rebuilt from `mcp__plugin_dpm_dpm__list_task` rather than reconciled
 against itself.
 
+**Mirror the epic's remaining stories too — one blocked entry each, below this story's work.** The
+list is then non-empty until the epic closes, and a story boundary stops presenting the same picture
+as the end of the run. It is the only signal of remaining work that is visible without reading a row,
+so leaving it to empty every story makes the boundary look like the finish. Blocked is what these
+entries are, not a decoration: nothing may treat one as work to pick up, and the loop's next unit
+still comes from the task rows and from **Story selection**.
+
 When no ready story remains, go to Step 8 — **and no ready story is not the same as a finished
 epic**. Read the epic's stories unfiltered: complete throughout is done, and anything `superseded`
 or `withdrawn` is reported as retired beside the rest rather than counted into either column. A
@@ -178,6 +194,7 @@ the requirement generally rather than special-casing what a test happens to chec
 confirm it fails against a targeted run of that file alone; write the minimum that passes it; clean
 up within the task's scope. A test that passes before the implementation exists is a stop — say so
 and ask, because either the test is not testing what it claims or the behaviour is already there.
+The answer resolves that task and the run continues from it in the same turn.
 
 `tdd` is a `mode` and the levels are a separate axis — read that from
 `mcp__plugin_dpm_dpm__list_test_approach`'s `kind` column rather than from a list of tag names here. A project
@@ -201,7 +218,9 @@ A criterion whose `polarity` is `must_not` is met when the rejected thing is **a
 needs a control: something that would have caught it had it been present. A must-NOT with no control
 has not been verified, it has been asserted.
 
-Unmet criteria go to `AskUserQuestion` — keep working, or complete anyway.
+Unmet criteria go to `AskUserQuestion` — keep working, or complete anyway. Either answer is acted on
+and the run carries straight on into the rest of Step 5, then 5b, 6 and 7, in the same turn the
+answer arrived in.
 
 **Recording the verification.** When a story's criteria are met, for each criterion call
 `mcp__plugin_dpm_dpm__list_coverage` with its `story_criterion_id` and, for each row, `mcp__plugin_dpm_dpm__update_coverage`
@@ -262,9 +281,10 @@ epics whose `status` is `complete` and can only ever see an empty set without th
 
 Two cases are not a count and are not this run's to decide. Where any story is `superseded` or
 `withdrawn`, whether the retired work was part of what the epic promised is a judgement the rows do
-not answer — put it to `AskUserQuestion` and leave the status until it is answered. Where any story is
-still `pending`, the epic is unfinished: `mcp__plugin_dpm_dpm__list_dependency` on that story says
-what holds it, and that is the report rather than a status.
+not answer — put it to `AskUserQuestion`, leave the status until it is answered, and finish the rest
+of this step either way, because the coverage roll-up and the report do not turn on it. Where any
+story is still `pending`, the epic is unfinished: `mcp__plugin_dpm_dpm__list_dependency` on that
+story says what holds it, and that is the report rather than a status.
 
 **Roll up the coverage.** `mcp__plugin_dpm_dpm__list_requirement` on the epic's source spec, and
 `mcp__plugin_dpm_dpm__list_coverage` on each, both with `include_body` — the judgement below weighs bound
@@ -340,7 +360,9 @@ several stories — resolve it now rather than editing silently or deferring it 
 | Both | Pivot now, observation at story completion |
 
 Present it as a gate with those four options. **When in doubt, pivot**: an amendment is quiet and
-skips the cascade, and the cost of an unnecessary pivot is one skipped question.
+skips the cascade, and the cost of an unnecessary pivot is one skipped question. Whichever is chosen
+is carried out and the run returns to the step it left, in the same turn — a change moment
+interrupts a task, and resolving one is not finishing anything.
 
 **A criterion that is merely unmet is not a criterion that is wrong.** *The tests fail*, *I could not
 implement it*, *this was harder than expected* — every one of those is a report about the run rather
@@ -397,6 +419,11 @@ gap found in the spec and left for a human — goes in `mcp__plugin_dpm_dpm__cre
   Task-to-task and story-to-story transitions are silent. Any prompt asking whether to carry on is
   an unauthorised checkpoint however it is worded — "shall I continue?", "ready for the next one?",
   "commit first?" — and the answer is to return to Step 7 instead.
+- **Answering a gate is not a stopping point.** Every gate this skill names is an interruption to a
+  step, and the answer resumes that step in the turn it arrived in. A gate that does not say where
+  the run goes next inherits this rule rather than ending the run; only Step 8 ends it. The seam is
+  the one to watch, because the user's answer is the newest thing in the transcript and the loop is
+  the oldest, so the default is to act on the answer and stop.
 - **Version control stays with the user.** Do not commit, stage, branch or push unless a task's
   criteria require it or the user asks.
 - **Every value is an argument, never a formatted string.** A status, a note, a planning mark, a
