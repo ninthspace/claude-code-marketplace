@@ -33,7 +33,7 @@ import { openPlanningDatabase } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
   skillSource, conventions, frontMatter, prose, section, toolNames, reachable,
-  recoveries, sweep, SQL, CONSTRUCTIONS,
+  recoveries, sweep, unwrapped, SQL, CONSTRUCTIONS,
 } from './support/skills.js';
 import { domainTerms } from './support/vocabulary.js';
 
@@ -563,19 +563,30 @@ test('the Disposition rule reaches the corpus through Conversational Output, wit
   // AD1's claim, and the reason it is worth a test: the subsection was placed where it is *so that*
   // no skill file had to change. A skill naming it directly would mean the placement bought nothing,
   // and would be the first of twenty-three edits.
-  const naming = installed.filter((name) => /\*\*Conversational Output\*\*/.test(skillSource(name)));
-  const direct = installed.filter((name) => /\*\*Disposition\*\*/.test(skillSource(name)));
+  // **Read collapsed, because a citation is a phrase and these files are hard-wrapped.** Against the
+  // raw source `ralph` filed as the one skill outside the reach for as long as its citation had a
+  // line break between the two words — a check passing because it could not see its subject, which
+  // is the failure `unwrapped` exists to close. The reach claim is about what a file names, and a
+  // wrap does not change that.
+  const naming = installed.filter((name) => /\*\*Conversational Output\*\*/.test(unwrapped(skillSource(name))));
+  const direct = installed.filter((name) => /\*\*Disposition\*\*/.test(unwrapped(skillSource(name))));
 
   assert.deepEqual(direct, [], 'a skill names the subsection directly, so the placement saved nothing');
 
-  // The one skill outside the reach, named because a silent exception is how a second one joins it.
-  // `ralph` instructs a loop how to verify rather than how to report; the report a human reads from
-  // a ralph run is `do`'s, which is inside.
+  // Every skill in the corpus names the parent section, so the rule reaches all of them. Asserted
+  // as an empty set rather than a count: a corpus that lost a citation names the skill that lost it.
   assert.deepEqual(
     installed.filter((name) => !naming.includes(name)),
-    ['ralph'],
+    [],
     'a skill that reports has stopped naming Conversational Output, and the rule no longer reaches it',
   );
+
+  // The control on reading collapsed, and it is the assertion above that would go quiet without it:
+  // re-wrapping any citation must not remove a skill from the reach.
+  const rewrapped = skillSource('ralph').replace('**Conversational Output**', '**Conversational\nOutput**');
+
+  assert.match(unwrapped(rewrapped), /\*\*Conversational Output\*\*/,
+    'the reading is raw rather than collapsed, so a hard wrap still hides a citation');
 
   // And the reach is structural rather than nominal, which is the half that makes naming the parent
   // section sufficient: the rule sits *inside* Conversational Output's body, so a file that already

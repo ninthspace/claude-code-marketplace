@@ -190,6 +190,25 @@ export function prose(source, heading) {
 }
 
 /**
+ * A whole file with its whitespace collapsed, for matching a **phrase** that may be hard-wrapped.
+ *
+ * `prose` does this for one section; this does it for the file, which is what a check on a
+ * *citation* needs — the phrase being looked for is a section name in a sentence, and the sentence
+ * can sit anywhere. **A citation check that reads the raw source is one a line break can blind**,
+ * and it fails silently in the direction that passes: the phrase is simply not found, so the file
+ * reads as not citing what it cites. `ralph` had named `**Conversational Output**` since spec 47
+ * with the two words on either side of a wrap, and the reach check filed it as the one skill the
+ * rule did not reach for as long as that wrap survived — a check green because it could not see
+ * its subject.
+ *
+ * @param {string} source
+ * @returns {string}
+ */
+export function unwrapped(source) {
+  return source.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * The instruction lines of a section — its numbered steps and their continuations — apart from the
  * prose that justifies them.
  *
