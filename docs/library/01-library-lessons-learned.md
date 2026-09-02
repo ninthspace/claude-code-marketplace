@@ -76,3 +76,47 @@ Several checks in this suite work by reading source files as text — the import
 - **Sometimes the reading was right and the text was wrong.** A worked example naming a real artefact by its number is a stale reference whether or not the sentence is teaching the rule. Write the shape, not an instance, and say in the section why it carries no example.
 
 A warning is only read where the reader already is. A note in the file that tripped the sweep does not reach the next author of a different file; the note belongs at the sweep.
+
+## Derive it from the source, and check the derivation is the production rule
+
+Six independent instances, one of which counted itself as "the fifth and sixth of that class this run". A literal written into a test is a copy of something the tree already states, and it goes stale exactly as a written number does — `targetVersion() === 25`, `REGISTER.length, 13`, `report.checked, 14`, `{"complete", "pending"}`, and three tests that derived "the previous migration" from its distance to the newest one and silently became tests about a database that already had the table.
+
+- **An additive change should cost no test edits.** Where it costs some, those are the assertions that wrote down what the files say instead of reading it. That is the cheapest signal available, and it arrives as a red run.
+- **Name the thing, not its position or its distance.** The migration a test is about; a requirement looked up by label (`requirements.find((row) => row.label === 'FR1')`) rather than `requirements[2]`. A fixture that indexes a shared array by position is extensible only at the tail, and nothing enforces that — inserting a requirement into the middle re-aimed a criterion onto a different requirement and the whole suite stayed green, because nothing asserts which requirement a criterion hangs off.
+- **Deriving is not enough on its own.** `test_containment.py` derived its expected figure from the fixture and still broke, because the derivation counted every story the fixture creates while the production rule drops a retired one. Derive from the source data *and* check the derivation is the rule it stands in for — a disagreement looks exactly like the defect it hides.
+
+## Ask the runtime the question rather than modelling its answer
+
+Four instances. A model of someone else's behaviour written into a test agrees with the real thing until the day it does not, and then reports the disagreement as a pass.
+
+- **Read the structure the library produced, not the syntax you fed it.** Criteria read from `rich.markdown.Markdown(source).parsed` rather than from a leading `#`: a two-space indent with no marker is a lazy paragraph continuation that merges into the parent's inline token, and only the token's `level` knows that. Asserting the `#` would have been a second markdown parser living in a test file.
+- **Read the artefact the framework built, not the table it was built from.** A footer printed neither arrow because `OptionList` shadows the app's `left`/`right` with `show=False` bindings that sit nearer the focused widget. Both keys worked, so every existing test passed — they compared the binding table against itself — and the bug had been shipping since the board's first story. When a criterion is about what a user *sees*, read what the framework built.
+- **Let the runtime do its own downgrade.** Quantisation goes through Rich's `downgrade` rather than a nearest-colour rule written in the test, because a second colour model agrees with the terminal until the day it does not. And pick the metric a reader actually perceives: Rec. 709 weights red at a fifth, so a blocked row's bar sits 2 from the surface by luminance and 77 in the channel someone sees.
+- **Where the framework offers the event, take the framework's event.** A re-render driven from the app's `on_resize` rasterises at the width the panel had a moment ago; moving it onto the widget's own `Resize`, which is delivered with the new size, is the difference between a fix and the same stale layout one step later.
+
+## A must-NOT stated as an equality is a change detector, and a set comparison needs a floor
+
+Three instances. A rejection written as an exact list passes while it is that list and fails on the next legitimate change, which is the behaviour of a change detector rather than of a check.
+
+- **State it over the category it is actually about.** An ENVX4 test deep-equalled a module's imports against three builtins and broke when a sibling module was imported — the reuse the spec's own AD3 called for. The criterion is about what the module can reach *outside this process*: assert over the builtins, and require everything else to be a relative path inside the project.
+- **Resolve what a declaration provisions, transitively.** Comparing an import surface against `{"textual"}` is green on the day it is written and wrong as soon as something arrives through a declared distribution's own dependencies. Resolve the closure through `importlib.metadata.requires`.
+- **A comparison between two sets needs a floor that names members.** "No extra sits on a shared key" is exactly what an empty extras set says, and there are several ways for that set to empty itself by accident — an AST reader failing to find the other class, a same-meaning entry swallowing a capability the other side does not have. Name `force_refresh`, `search` and `coverage_gaps` and assert each is being read as an extra; asserting the set is non-empty is not enough, because it does not distinguish a rejection that holds from one that has stopped looking.
+- **A translation table comes before the comparison, not after the first false report.** Two boards naming the same capability differently produce disagreements that are only spellings, and a check that reports them goes on reporting them after the real ones are fixed, until nobody reads the output. Compare over the intersection of the two maps rather than asserting an equality between them.
+
+## A withheld body arrives as undefined, and the comparison passes on the defect
+
+Twice, and the second time the observation noted it was the second. A read tool withholds `text`, `spec_fragment` and the other body columns unless the caller passes `include_body`, while the matching update tool returns them. So a test that writes through `update_*` and reads back through `read_*` without asking compares a string against `undefined` — and that comparison passes on a call that blanked the column, which is the exact defect it was written to catch.
+
+- **Pass `include_body` on every read whose value an assertion consumes** — not only where the column is the subject. A "nothing else changed" comparison is consuming it too.
+- **The failure mode is a pass, so no red run will find it.** It reads as the assertion agreeing with itself.
+- **It generalises past this surface.** Any read that answers an absent field rather than an error will satisfy an equality against another absent field. Ask what a wrong answer would look like, and whether the assertion could tell.
+
+This is the quiet-refusal entry above, narrowed to the one form it takes most often in this project's own suites; both instances cost a red run in an epic where the assertion had already been written.
+
+## A helper whose docblock explains a hazard names every check that has the hazard
+
+Three occurrences of the shape, across retros 08 and 09. When a suite grows a helper because some hazard bit once, the docblock usually explains that hazard at length — and it is written for the one call site that prompted it. Every other check subject to the same hazard is then a latent instance, and the ones written *before* the helper existed are where to look.
+
+`prose` exists because SKILL.md files are hard-wrapped, and it says so: an assertion written against the current wrapping either breaks on an untouched edit or silently stops constraining anything. It was applied to matching a phrase inside a section and never to matching a citation across a file. A check counting which skills name `Conversational Output` read the raw source and filed one skill as the exception on the strength of a line break — green because it could not see its subject, and reporting the absence of a citation that was there.
+
+**When a helper's docblock states a hazard, grep the suite for what else has it.** That is a bounded, mechanical sweep, and it is the only thing that finds a check whose failure mode is a pass. Fix it at the helper rather than at the call site, so the next check written cannot reach the hazard.

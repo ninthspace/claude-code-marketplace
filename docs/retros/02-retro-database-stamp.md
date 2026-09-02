@@ -50,6 +50,8 @@ That is now three instances of one pattern: a criterion whose warrant is a decis
 
 **One of four criteria in this spec that trace to a decision rather than to requirement text**, and therefore carry no coverage rows at all. Paired with the story-5 observation below, which found the fourth and states the general case.
 
+**Retired 2026-09-02T09:52:00.000Z**: Promoted into library 03, "A criterion warranted by an ADR carries no coverage rows, and the roll-up cannot say why" — the ambiguity between a decision-warranted criterion and an unbound one is the entry's central claim.
+
 - Criteria gap — Fourth criterion in this spec whose must-NOT traces to an ADR rather than to requirement text, and so carries no coverage rows.
 
 "The stamp skew adds a second top-level field distinct from the neighbour's" cites AD1 in its own wording and has zero `coverage` rows, because there is no verbatim fragment of any requirement to bind it to — AD1 is a decision document, and the coverage graph binds only to requirements. It is tested (a whole-key-set comparison, plus a control that the stamp is present in the one field), and the verification is simply invisible to the roll-up.
@@ -57,6 +59,8 @@ That is now three instances of one pattern: a criterion whose warrant is a decis
 The earlier three: epic 1 story 5 had two, epic 2 story 1 had one. That is now a consistent shape rather than three coincidences — a decision constrains the build exactly as a requirement does, and the traceability graph has one kind of anchor. Worth deciding at spec time whether an accepted ADR should be bindable, or whether a decision that constrains a story should also produce a requirement. Recorded rather than acted on: it is a change to the coverage model, which is nothing this run should decide.
 
 **Four instances across two epics is a shape, not a coincidence, and it is the one finding here that is about DPM itself rather than about this feature.** A criterion warranted by an accepted ADR is as binding as one warranted by a requirement, and the coverage graph has one kind of anchor — so such a criterion is tested, verified, and invisible to the roll-up, indistinguishable from one nobody got round to binding. Two candidate fixes, both out of this run's scope: let coverage bind to an ADR, or have `dpm:spec` emit a requirement whenever a decision constrains a story. **Worth raising before the next spec rather than after it**, since the cost lands at breakdown time and is paid at every epic summary afterwards.
+
+**Retired 2026-09-02T09:52:00.000Z**: Promoted into library 03, "A criterion warranted by an ADR carries no coverage rows, and the roll-up cannot say why" — the fourth instance, the AD1 example, and the two ways out it recorded rather than acted on are all stated there.
 
 - Smooth delivery — Task 3 — keep the write off the read-only path — required no code, and the reason is worth recording rather than the fact. `open()`'s read-only branch returns before `start()` is reached, and it opens the connection with `readOnly: true`; the stamp write is refused twice over, by a branch that never calls it and by a connection that would refuse it. That is Epic 48-01's design paying off in a story written two epics later without anyone having to know about it.
 
@@ -89,6 +93,8 @@ Epic 1 put the neighbour verdict flat in `check_integrity`'s `skew` field, and t
 **What is worth carrying is the cost of the second caller, which is not the second caller's code.** Story 5 added one module, one field key and one stderr line; the work was in the eight existing assertions that had encoded "there is one detector" without ever saying so. None of them was wrong when written. A shape asserted flat is a shape claimed to be final, and nothing marks which assertions are load-bearing and which are incidental to a shape that happened to have one member.
 
 **The epic's largest unplanned cost, and it was in epic 1's tests rather than in epic 2's code.** Story 5 added a module, a field key and a stderr line; the work was in eight assertions that had encoded "there is exactly one detector" without ever saying so. **Nothing marks which assertions are load-bearing and which are incidental to a shape that happened to have one member**, and a shape asserted flat is a shape claimed to be final. Where a spec sequences two features that will share a report — as this one did deliberately, and rightly — the second one's estimate should include reshaping the first one's tests. The compensating finding: the roll-up that resolved it also had to be mutation-tested, because nesting reintroduced the very cost the must-NOT was written against, one level down.
+
+**Retired 2026-09-02T09:52:00.000Z**: Promoted into "Read what iterates a set before adding a member to it" on library 02 — the second detector costing eight existing assertions, and "a shape asserted flat is a shape claimed to be final", are stated there.
 
 - Codebase discovery · Testing gap — A repeated `start()` rewrites the database file every time while leaving the dump identical, and NFR3's wording says "byte-identical" about the wrong artefact.
 

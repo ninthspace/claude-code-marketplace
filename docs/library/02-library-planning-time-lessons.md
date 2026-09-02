@@ -31,3 +31,14 @@ Three sweeps read a corpus built by driving the registered tools, and each asks 
 
 - **A breakdown that splits schema from surface has to check the derived sweeps before it splits.** The sweeps are what make the split unbuildable rather than merely awkward; this one was corrected by a pivot that moved two write-arm stories into the schema epic.
 - **A shared corpus is version-agnostic and has to stay that way.** Guard a new call with the schema's own answer — `columnNames(db, 'coverage')` — not a version number written into the fixture.
+
+## Read what iterates a set before adding a member to it
+
+Three instances. A property every current member of an enumerated set happens to share is a contract nobody wrote down, and the next member is where it breaks.
+
+`restore` throws on any violation `checkIntegrity` reports, and `restore.test.js` requires a refusal fixture per register entry in both directions — so "the register grows an entry" silently meant "a dump holding this state is refused". Thirteen entries all named corruption, so the coupling had never had to be stated, and the ADR that decided to add a fourteenth could not see it because the property lives one module over from anything the decision names. The entry then cost five things that iterate the register, none of them the entry's own code. Separately, an epic that put one detector's verdict flat in a field paid for the second detector in eight existing assertions that had encoded "there is one detector" without ever saying so.
+
+- **Read the consumers of the set before writing the member**, not the set's own definition. A register, a tool list, a taxonomy, a vocabulary — the constraint is in what iterates it.
+- **A shape asserted flat is a shape claimed to be final**, and nothing marks which assertions are load-bearing and which are incidental to a shape that happened to have one member.
+- **Put the remedy on the member, not a condition in the consumer.** `restore` asking "is this entry 14?" would be the decision written a second time, in the module least likely to be read when a fifteenth arrives.
+- **A new member that fires on the existing corpus is the strongest available answer to "is this check about anything?"** — and it arrives as a red test rather than as a claim.
