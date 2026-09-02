@@ -596,6 +596,141 @@ test('the Disposition rule reaches the corpus through Conversational Output, wit
   }
 });
 
+// --- Quick 10: the rule shipped in 0.7.2 gets the checks it shipped without -----------------------
+
+/**
+ * Whether `Saying what a row holds` actually forbids the value reaching a reader, as complaints.
+ *
+ * A reading returning complaints rather than a run of assertions, so each control below can drive it
+ * on a rule mutated on purpose and read what comes back — the shape `admitsRunSideReason` uses one
+ * subsection down, and for the same reason.
+ *
+ * @param {string} text The rule with its whitespace already collapsed.
+ * @returns {string[]}
+ */
+function forbidsTheStoredValue(text) {
+  const problems = [];
+
+  if (!/names what a column means, never the value it holds/.test(text)) {
+    problems.push('the rule never states that narration carries the meaning rather than the value');
+  }
+
+  // The worked example, because the principle on its own is the sentence every run already believes
+  // it is following. `plan: 1` is the one the corpus was actually caught printing.
+  if (!/has plan: 1/.test(text)) {
+    problems.push('the rule shows no worked example of the narration it forbids');
+  }
+
+  // Beyond `plan`, or it reads as a rule about one column and the next one repeats the incident.
+  if (!/every other column a skill reads/.test(text)) {
+    problems.push('the rule is scoped to one column rather than to any column a skill narrates');
+  }
+
+  return problems;
+}
+
+/**
+ * Whether the rule leaves a defaulted column unmentioned, and bounds that silence.
+ *
+ * Both halves. The silence without its boundary also silences the step whose entire subject is which
+ * stories need planning; the boundary without the silence permits a line against every row.
+ *
+ * @param {string} text The rule with its whitespace already collapsed.
+ * @returns {string[]}
+ */
+function requiresSilenceAtTheDefault(text) {
+  const problems = [];
+
+  if (!/column sitting at its default is not narrated at all/.test(text)) {
+    problems.push('nothing says a column at its default goes unmentioned');
+  }
+
+  if (!/where the value is news, or where the distinction is the step's own subject/.test(text)) {
+    problems.push('the exception is unbounded — nothing says when a default may still be named');
+  }
+
+  return problems;
+}
+
+test('the row-narration rule sits inside the section that reaches the corpus', () => {
+  const rule = prose(conventions(), 'Saying what a row holds');
+
+  assert.ok(rule.length > 0, 'there is no row-narration subsection to read');
+
+  // The reach, and the whole reason the rule is here rather than in each skill: a `###` inside
+  // Conversational Output is named by every file that already names that section.
+  const parent = section(conventions(), 'Conversational Output');
+
+  assert.match(parent, /^### Saying what a row holds$/m,
+    'the rule is not a subsection of Conversational Output, so naming that section misses it');
+
+  // The control. Promoted to a `##` the rule would reach nobody and every wording assertion below
+  // would still pass, so the placement is what has to fail.
+  const promoted = conventions().replace('### Saying what a row holds', '## Saying what a row holds');
+
+  assert.doesNotMatch(
+    section(promoted, 'Conversational Output'),
+    /never the value it holds/,
+    'the placement check passes a rule promoted out of the section, so it is reading nothing',
+  );
+});
+
+test('the row-narration rule forbids reporting a row as the value it holds', () => {
+  const rule = prose(conventions(), 'Saying what a row holds');
+
+  assert.deepEqual(forbidsTheStoredValue(rule), [],
+    'the rule lets a row be described to a reader by the value stored in it');
+
+  // Three controls, one per clause, so no clause can rest on another being present. A must-NOT
+  // sharing a test with the positive it complements is only verified when the mutation happens to
+  // fail it first, which is retro 08's finding and the reason these are separate readings.
+  const withoutPrinciple = rule.replace(/\*\*Narration names what a column means[^*]*/, '');
+  const withoutExample = rule.replace(/not "Story 1 has plan: 1[^.]*\./, '');
+  const withoutBreadth = rule.replace(/The same goes for every other column[^.]*\./, '');
+
+  assert.ok(forbidsTheStoredValue(withoutPrinciple).length > 0,
+    'the principle check passes a rule with the principle removed, so it is reading nothing');
+  assert.ok(forbidsTheStoredValue(withoutExample).length > 0,
+    'the example check passes a rule with the worked example removed, so it is reading nothing');
+  assert.ok(forbidsTheStoredValue(withoutBreadth).length > 0,
+    'the breadth check passes a rule scoped back to one column, so it is reading nothing');
+});
+
+test('the row-narration rule keeps an argument an argument, so the pinned steps stay legal', () => {
+  const rule = prose(conventions(), 'Saying what a row holds');
+
+  // Without this clause the rule contradicts two suites that pin the argument sites: `epics` Step 3
+  // must carry the literal `plan: 1`, and `do`'s planning step must name a backticked `plan`. A rule
+  // that forbade the value everywhere would make both of those a violation of the conventions.
+  assert.match(rule, /write it as the argument it is/,
+    'the rule does not exempt a value written as an argument to a tool call');
+  assert.match(rule, /distinguished by who reads them/,
+    'the rule states the exemption without the test that decides which side a sentence is on');
+
+  // The control: the two sites the exemption exists for still carry the value, so the exemption is
+  // load-bearing rather than decorative.
+  assert.match(section(skillSource('epics'), 'Step 3'), /`plan: 1`/,
+    'the epics step no longer carries the argument the exemption is written for');
+  assert.match(prose(skillSource('do'), 'Plan'), /`plan`/,
+    'the do planning step no longer names the column it routes on');
+});
+
+test('the row-narration rule leaves a defaulted column unmentioned, and bounds the exception', () => {
+  const rule = prose(conventions(), 'Saying what a row holds');
+
+  assert.deepEqual(requiresSilenceAtTheDefault(rule), [],
+    'the rule does not keep a column at its default out of a report');
+
+  // A control per half, each verified to fail on its own.
+  const withoutSilence = rule.replace(/\*\*A column sitting at its default is not narrated at all\.\*\*/, '');
+  const withoutBound = rule.replace(/Say it where the value is news[^.]*\./, '');
+
+  assert.ok(requiresSilenceAtTheDefault(withoutSilence).length > 0,
+    'the silence check passes a rule with the silence clause removed, so it is reading nothing');
+  assert.ok(requiresSilenceAtTheDefault(withoutBound).length > 0,
+    'the boundary check passes a rule with the boundary removed, so it is reading nothing');
+});
+
 // --- Spec 50 Story 4: the three cross-site sweeps -------------------------------------------------
 
 /**

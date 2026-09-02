@@ -150,6 +150,13 @@ sentence specifying a `create_story` call is a specification, not commentary, an
 distinguished by who reads them: one is read by the run about to make the call, the other by the
 person the run is talking to.
 
+**A column sitting at its default is not narrated at all.** Having words for what a column means is
+not a reason to spend them on every row. `plan` is unset on eight stories of nine, so *planning this
+one inline* against each of them is a line the reader pays for in order to learn nothing — and the
+one story that does need designing in full stops standing out, which is the whole reason the mark is
+there. Say it where the value is news, or where the distinction is the step's own subject: a step
+that routes on it and a report of what a run cleared both qualify, and a list of stories does not.
+
 **And a document is named the way Naming a Document says**, which is the same rule one table over:
 its reference and its title, never its id. That section carries the detail.
 
