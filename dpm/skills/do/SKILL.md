@@ -19,6 +19,19 @@ This skill uses **Gate Presentation**, **Conversational Output**, **Cross-Refere
 1. If `$ARGUMENTS` names an epic — a ULID, or a human reference as another skill printed it — work
    that epic. A reference goes through `mcp__plugin_dpm_dpm__resolve_reference` first, which returns
    the row it names or refuses; a ULID is already the id and needs no resolving.
+
+   **Then read what holds it, because naming an epic says which one to work and not that its
+   blockers may be ignored.** `mcp__plugin_dpm_dpm__list_dependency` with the epic as
+   `target_document_id`, `mcp__plugin_dpm_dpm__list_dependency_kind` for which of those kinds carry
+   `gates_work`, and each blocker's own row for whether it is `complete`. Where a gating blocker is
+   short of `complete`, **refuse**: name each one with its status and stop. Readiness is the same
+   question step 2 asks, reached from the other direction — a named epic has no list to be absent
+   from, so the edges are read directly.
+
+   **A refusal and not a gate**, because Autonomous mode does not block on gates: a gate here would
+   hold when someone is watching and pass when nobody is, which is the opposite of where the check
+   earns its place. Completing the blocker, withdrawing it, or authoring the relationship over a
+   kind that does not gate are the ways to say something else was meant.
 2. Otherwise `mcp__plugin_dpm_dpm__list_epic` with `ready: true`. That is the epics still `pending` with no
    blocker short of `complete` — a query over the edges, not a status anyone maintains. One result
    is auto-selected; several go to `AskUserQuestion` showing each title. The choice is the start of

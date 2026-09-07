@@ -47,15 +47,32 @@ export function renderCoverageMatrix(db, tree, identifiers, where) {
       heading(2, 'Coverage'),
       table(
         ['#', 'Requirement', 'Spec Text', 'Story Criterion', 'Covered by', 'Test Approach', 'Verified'],
-        rows.map((row, index) => [
-          index + 1,
-          row.requirement.label,
-          ref(row.spec_fragment),
-          `${polarity(row.criterion)}${ref(row.criterion.text)}`,
-          row.stories.map((story) => `Story ${story.number}`).join(', '),
-          row.criterion.approaches.map((tag) => `\`[${tag}]\``).join(' '),
-          row.verified_at === null ? '' : '✓',
-        ]),
+        rows.map((row, index) => {
+          // **A withdrawn binding renders and says so.** AD 04-01 has a binding leave the live set
+          // by retirement and never by deletion, so that the record it once existed survives — and
+          // a projection that dropped the row would be the deletion that decision refused, in the
+          // one copy a reader actually opens. `artifacts.js` and `retro.js` make the same choice
+          // for the same column, which is why `coverage` sets no `live` in `COLLECTIONS`.
+          //
+          // **The ✓ is replaced rather than read off `verified_at`.** Retiring a binding does not
+          // clear that column — none of the `requirement_unclaim_*` triggers fires on `retired_at`,
+          // as `025-coverage-retirement.sql` says outright — so a withdrawn row can still carry a
+          // verification, and this is the cell a reader consults to decide whether the row counts.
+          const withdrawn = row.retired_at !== null;
+          const strike = (text) => (withdrawn ? `~~${text}~~` : text);
+
+          return [
+            index + 1,
+            row.requirement.label,
+            strike(ref(row.spec_fragment)),
+            strike(`${polarity(row.criterion)}${ref(row.criterion.text)}`),
+            row.stories.map((story) => `Story ${story.number}`).join(', '),
+            row.criterion.approaches.map((tag) => `\`[${tag}]\``).join(' '),
+            withdrawn
+              ? `**Withdrawn ${row.retired_at}** — ${ref(row.retired_reason)}`
+              : (row.verified_at === null ? '' : '✓'),
+          ];
+        }),
       ),
     ] : []),
   ]);

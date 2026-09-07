@@ -42,6 +42,15 @@ export const COLLECTIONS = {
   // it beside the body it was folded into is the duplication the column exists to end. The
   // exclusion belongs here rather than in a template: it is a fact about which rows *are* the
   // document, and a per-template filter is a rule seven renderers each have to remember.
+  //
+  // **The other three collections with such a column leave it unset deliberately, and this is the
+  // answer to the reading that they were left unwired.** `coverage`, `storyCriteria` and the two
+  // `observation` descriptors all carry a retirement or supersession column, and all four render
+  // the withdrawn row with a marker instead of dropping it — `coverage-matrix.js`, `epic.js`,
+  // `retro.js` and `artifacts.js` each do it, and AD 04-01 is why: a binding leaves the live set by
+  // retirement and never by deletion, so the record that it once existed has to survive in the file
+  // a reader opens. `sections` is the exception because a superseded section's text was folded into
+  // the body it would otherwise render beside; nothing is folded anywhere by the other three.
   sections: {
     table: 'document_section', parent: 'document_id', live: 'superseded_at',
     order: ['position', 'id'],

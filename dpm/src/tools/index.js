@@ -215,7 +215,11 @@ export function spineTools(
           type: 'integer',
           enum: [0, 1],
           default: 0,
-          description: 'whether this story is planned in full before any of its tasks are executed',
+          // The description names both values because it is the only place the meaning travels with
+          // the number. `plan` returns on every read and every listed row, the projection renders it
+          // nowhere, and a bare 0 or 1 tells a reader nothing about which way round the flag runs.
+          description: 'whether this story is designed in full before any of its tasks are executed:'
+            + ' 1 means it is, 0 means its tasks are planned inline as each is picked up',
         },
       },
     }),

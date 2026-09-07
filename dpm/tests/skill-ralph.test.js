@@ -167,16 +167,41 @@ function workspace(tools) {
  * than fixtures because both are decisions the run branches on, and a branch nothing exercises is a
  * branch that reads correctly and never fires.
  */
+/**
+ * Step 1a: what the run will work, and which of it can start now.
+ *
+ * Archived epics never come back, and a retired or completed one is excluded by its status rather
+ * than by a filename. **`epics` is deliberately not narrowed to the ready ones** — a blocker
+ * completing mid-run releases what waited on it and the loop re-reads the rows every iteration, so
+ * an epic dropped here could not return without a relaunch. The partition decides the order the run
+ * starts in and what the launch report says, never the set.
+ *
+ * Separate from `preflight` so a test can re-read it without driving startup a second time, which
+ * is what a run does on every iteration and what a second `preflight` call cannot represent.
+ */
+function workingSet(call, fixture, mode = 'epic') {
+  const epics = (mode === 'spec'
+    ? call.list_epic({ parent_id: fixture.spec.id, limit: BOUND })
+    : call.list_epic({ limit: BOUND })).items.filter((epic) => epic.status === 'pending');
+
+  const readyIds = new Set(call.list_epic({ ready: true, limit: BOUND }).items.map((epic) => epic.id));
+
+  return {
+    epics,
+    ready: epics.filter((epic) => readyIds.has(epic.id)),
+    held: epics.filter((epic) => !readyIds.has(epic.id)).map((epic) => ({
+      epic,
+      blockers: call.list_dependency({ target_document_id: epic.id, limit: BOUND }).items,
+    })),
+  };
+}
+
 function preflight(call, fixture, { probe = 0, resume = true, mode = 'epic', id = SELF } = {}) {
   driveStartup(call, fixture, {
     scope: 'ralph', skill: 'dpm:ralph', roster: false, retro: false, session: false,
   });
 
-  // 1a: what the run will work, from the rows. Archived epics never come back, and a retired or
-  // completed one is excluded by its status rather than by a filename.
-  const epics = (mode === 'spec'
-    ? call.list_epic({ parent_id: fixture.spec.id, limit: BOUND })
-    : call.list_epic({ limit: BOUND })).items.filter((epic) => epic.status === 'pending');
+  const { epics, ready, held } = workingSet(call, fixture, mode);
 
   const specs = epics.length === 0 ? call.list_spec({ limit: BOUND }).items : [];
 
@@ -206,7 +231,7 @@ function preflight(call, fixture, { probe = 0, resume = true, mode = 'epic', id 
     ? call.adopt_session({ id, predecessor_id: previous.id, include_body: true })
     : call.create_session({ id, skill: 'dpm:ralph', phase: 'pre-flight' });
 
-  return { epics, specs, cleared, hook, tooling, previous, carried, session };
+  return { epics, ready, held, specs, cleared, hook, tooling, previous, carried, session };
 }
 
 /**
@@ -390,6 +415,57 @@ test('pre-flight probes the hook and branches, and a previous run is offered rat
     /A loop cannot stop by saying it is stopping/);
 
   assert.deepEqual(bindings(source, tools, { used, passed }), []);
+});
+
+// An unattended run is the case where nothing is watching the order, so a blocked epic reached
+// first spends an iteration being refused by `/dpm:do` and the operator finds out from the log.
+// The partition is what puts the ready ones first.
+//
+// **The control that matters is the second assertion, not the first.** A pre-flight that narrowed
+// the working set to `ready` would satisfy every claim about what runs first and would quietly drop
+// the held epic for the life of the run — so the set is asserted to still hold all three.
+test('pre-flight partitions the epic set by readiness without narrowing it', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call } = recorder(tools);
+
+  const fixture = workspace(tools);
+  const raw = handlers(tools);
+
+  // A third pending epic, waiting on the one that has work left in it.
+  const deferred = raw.create_epic({ parent_id: fixture.spec.id, slug: 'deferred', title: 'Deferred' });
+  raw.create_dependency({
+    kind: 'blocks', source_document_id: fixture.working.id, target_document_id: deferred.id,
+  });
+
+  const before = preflight(call, fixture);
+
+  assert.deepEqual(before.epics.map((epic) => epic.slug).sort(), ['deferred', 'loop'],
+    'the working set is every pending epic, the held one included');
+  assert.deepEqual(before.ready.map((epic) => epic.slug), ['loop'],
+    'and only the one nothing holds is offered to run first');
+  assert.deepEqual(before.held.map((entry) => entry.epic.slug), ['deferred']);
+  assert.deepEqual(before.held[0].blockers.map((edge) => edge.source_document_id), [fixture.working.id],
+    'the report can name what holds it, because the edges were read rather than a status');
+
+  // A blocker finishing mid-run is the reason the set is not narrowed: the next pass finds the epic
+  // ready with nothing relaunched.
+  call.update_epic({ id: fixture.working.id, status: 'complete' });
+
+  const after = workingSet(call, fixture);
+
+  assert.deepEqual(after.ready.map((epic) => epic.slug), ['deferred'],
+    'the released epic became workable on a later pass');
+  assert.deepEqual(after.held, []);
+
+  const step = prose(source, '1a. What the run will work');
+
+  assert.match(step, /ready: true/,
+    'step 1a asks which epics are ready rather than only which are pending');
+  assert.match(step, /target_document_id/,
+    'and reads the edges, so the report can say what holds each held epic');
+  assert.match(step, /stay in the run's scope rather than being filtered out of it/,
+    'and says the set is not narrowed, which is the claim a later edit would break first');
 });
 
 // --- Criterion 3 (must NOT): no recovery by reading a generated file --------------------------------

@@ -325,6 +325,74 @@ test('a coverage matrix renders its epic\'s rows and no other epic\'s', (t) => {
   assert.equal(otherMatrix.length, 1, 'the second epic has no matrix, so its row renders nowhere');
 });
 
+// The test above holds that a withdrawn binding *renders*. It never held that a reader could tell,
+// and for four releases one could not: the row came out formatted identically to a live one, so an
+// epic's matrix said a requirement was covered by a binding somebody had withdrawn.
+//
+// **The `✓` is the cell that matters most and the one a marker on the text alone would leave.**
+// Retiring a binding does not clear `verified_at` — none of the `requirement_unclaim_*` triggers
+// fires on `retired_at` — so the withdrawn row can carry a verification that outlived the thing it
+// verified.
+test('a withdrawn coverage row is marked in the matrix, and stays in it', (t) => {
+  const { db, call } = surface(t);
+
+  fullCorpus(db, call);
+
+  const matrix = project(db, { write: false }).written
+    .find((file) => file.path.includes('coverage_matrix'));
+
+  const rows = matrix.text.split('\n').filter((line) => /^\| \d+ \|/.test(line));
+  const [live, withdrawn] = rows;
+
+  // Still present, and still numbered where it was. This is the control: a fix that filtered the
+  // row would satisfy every claim about a reader not being misled and would delete the record AD
+  // 04-01 keeps, so the assertion has to be that the row is there rather than that it is gone.
+  assert.equal(rows.length, 2, 'the withdrawn row left the matrix instead of being marked in it');
+  assert.match(live, /^\| 1 \|/);
+  assert.match(withdrawn, /^\| 2 \|/, 'marking renumbered the rows, which filtering would have');
+
+  assert.match(withdrawn, /~~Every kind has a~~/,
+    "the withdrawn row's spec fragment is struck through");
+  assert.match(withdrawn, /bound half an obligation/,
+    'and carries the reason it was withdrawn, which is the half no marker alone gives');
+  assert.doesNotMatch(withdrawn, /✓/,
+    'a withdrawn binding read as verified — `verified_at` is not cleared by retirement');
+
+  // And the live row is untouched, so the marking is conditional rather than applied to the table.
+  assert.doesNotMatch(live, /~~/);
+  assert.doesNotMatch(live, /Withdrawn/);
+});
+
+test('a superseded story criterion is marked on its epic, and stays on it', (t) => {
+  const { db, call } = surface(t);
+  const built = fullCorpus(db, call);
+
+  const criterion = db.prepare(
+    'SELECT id, text FROM story_criterion WHERE superseded_at IS NULL ORDER BY id LIMIT 1',
+  ).get();
+
+  // `superseded_at` is the caller's clock rather than the write's, because what is recorded is when
+  // the amendment overtook the criterion.
+  call.update_story_criterion({
+    id: criterion.id,
+    superseded_at: '2026-09-02T10:00:00.000Z',
+    superseded_reason: 'The amendment split it across two obligations.',
+  });
+
+  const epic = project(db, { write: false }).written
+    .find((file) => file.path.includes(`${built.epic.slug}`) && !file.path.includes('coverage_matrix'));
+
+  assert.match(epic.text, /~~.*Each kind renders.*~~ \*\*Superseded 2026-09-02/,
+    'the overtaken criterion is struck through and dated');
+  assert.match(epic.text, /split it across two obligations/,
+    'and carries the amendment that overtook it');
+
+  // AD 04-04's "marked rather than rewritten" is a claim about the file as much as the row: an epic
+  // that dropped the criterion would read as having always asked for the amended thing.
+  assert.match(epic.text, /Each kind renders/,
+    'the criterion left the epic instead of being marked on it');
+});
+
 test('a table cell containing a pipe or a newline stays one cell', () => {
   // Asserted on `text.js` rather than through a template, because the rule is about bytes and every
   // template reaching it goes through this one function. The values most likely to carry a pipe are

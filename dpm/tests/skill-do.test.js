@@ -29,7 +29,7 @@ import assert from 'node:assert/strict';
 import { openPlanningDatabase, handlers } from './support/planning-database.js';
 import { spineTools } from '../src/tools/index.js';
 import {
-  skillSource, toolNames, reachable, section, recorder, recoveries, bindings,
+  skillSource, toolNames, reachable, section, prose, recorder, recoveries, bindings,
   seedStartup, driveStartup, CALLABLE,
 } from './support/skills.js';
 import { domainTerms } from './support/vocabulary.js';
@@ -465,6 +465,59 @@ test('story readiness comes from the edges, and releases when the blocker comple
     call.list_epic({ ready: true }).items.map((epic) => epic.slug),
     ['durability'],
   );
+});
+
+// The named path has no ready list to be absent from, so the readiness question that Input step 2
+// asks as a filter has to be asked of the edges directly. `durability` waits on `lifecycle` in the
+// fixture, which makes it the epic a run would be handed by name and should decline to start.
+//
+// **Asserted as a refusal rather than as a gate on purpose.** Autonomous mode's opening rule is that
+// the gates do not block when no human is present, so a gate on this would hold in the attended case
+// and pass in the unattended one — the reverse of where it is needed. The prose assertion below is
+// what a later edit softening the refusal into a gate would fail.
+test('a named epic held by a blocker is refused, and the refusal is read off the edges', (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+  const { call } = recorder(tools);
+  const fixture = project(tools);
+
+  // The reading Input step 1 describes: the edges into the named epic, which of those kinds gate,
+  // and the blocker's own row for whether it is done.
+  const gating = new Set(call.list_dependency_kind({}).items
+    .filter((entry) => entry.gates_work)
+    .map((entry) => entry.kind));
+
+  const holding = (epic) => call.list_dependency({ target_document_id: epic.id }).items
+    .filter((edge) => gating.has(edge.kind))
+    .map((edge) => call.read_epic({ id: edge.source_document_id }))
+    .filter((blocker) => blocker.status !== 'complete');
+
+  assert.deepEqual(holding(fixture.durability).map((blocker) => blocker.slug), ['lifecycle'],
+    'the epic a run would be handed by name reads as held, and names what holds it');
+  assert.deepEqual(holding(fixture.lifecycle), [],
+    'and the unheld epic reads as unheld, so the check is not refusing everything');
+
+  // The same reading once the blocker is done, because a refusal that outlived its blocker would be
+  // a status in disguise.
+  call.update_epic({ id: fixture.lifecycle.id, status: 'complete' });
+  assert.deepEqual(holding(fixture.durability), [],
+    'completing the blocker released it, so the answer came from the edges rather than a column');
+
+  const input = prose(source, 'Input');
+
+  // **Matched on the operative clause, not on the word.** `/refuse/` alone passes on the paragraph
+  // *explaining* why this is a refusal, so softening the instruction to a gate left the assertion
+  // green — the same shape the `GATES` pattern in `support/skills.js` documents one scope over. The
+  // discriminating word is `stop`: a gate names `AskUserQuestion` and carries on, and step 2 uses
+  // one legitimately, so absence of a gate cannot be asserted over the section as a whole.
+  assert.match(input, /\*\*refuse\*\*: name each one with its status and stop/,
+    'Input step 1 refuses a held epic and stops, rather than putting it to a gate');
+  assert.match(input, /target_document_id/,
+    'and reads the edges into it, rather than asking for a status');
+  assert.match(input, /gates_work/,
+    'and reads which kinds gate from the flag rather than from a kind name');
+  assert.match(input, /Autonomous mode does not block on gates/,
+    'and says why it is a refusal, which is what stops it being softened into a gate');
 });
 
 // --- Criterion 3: plan mode is a column ----------------------------------------------------------

@@ -91,9 +91,19 @@ function story(db, row, ref, identifiers, epicId, gating) {
 
     ...(row.criteria.length > 0 ? [
       heading(3, 'Acceptance Criteria'),
-      row.criteria.map((criterion) => bullet(
-        `${polarity(criterion)}${ref(criterion.text)}${approaches(criterion)}`,
-      )).join('\n'),
+      // **An overtaken criterion renders and says so**, which is AD 04-04's "marked rather than
+      // rewritten" holding in the file as well as in the row: the epic goes on recording what it
+      // actually delivered, and a criterion dropped here would leave the epic claiming it had
+      // always asked for the amended thing. `superseded_reason` is paired with the timestamp by a
+      // `CHECK`, so it is never null when the mark is set. Same choice `retro.js` makes, and why
+      // `storyCriteria` sets no `live` in `COLLECTIONS`.
+      row.criteria.map((criterion) => {
+        const body = `${polarity(criterion)}${ref(criterion.text)}${approaches(criterion)}`;
+
+        return bullet(criterion.superseded_at === null
+          ? body
+          : `~~${body}~~ **Superseded ${criterion.superseded_at}**: ${ref(criterion.superseded_reason)}`);
+      }).join('\n'),
     ] : []),
 
     ...row.tasks.flatMap((task) => [

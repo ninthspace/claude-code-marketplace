@@ -57,6 +57,18 @@ the working set — archived epics are already excluded — so keep the ones who
 A `complete` epic has nothing to run, and a `superseded` or `withdrawn` one is work that will not be
 done; neither is a failure to report, and both are simply not in the list.
 
+**Then partition that set by readiness**, with a second `mcp__plugin_dpm_dpm__list_epic` passing `ready: true`:
+the ones it returns can be worked now, and the rest are held by a blocker short of `complete`. The
+ready ones are the order the run starts in. Report one line per held epic naming what holds it, from
+`mcp__plugin_dpm_dpm__list_dependency` with it as `target_document_id` — an unattended run that walks into a
+blocked epic spends an iteration being refused, and the operator reading the launch output is the
+one who can tell whether the sequencing is what they intended.
+
+**Held epics stay in the run's scope rather than being filtered out of it.** A blocker completing
+mid-run releases what waited on it, and the loop re-reads the rows every iteration, so an epic
+dropped here could not come back without a relaunch. What the partition changes is the order and
+what the report says, never the set.
+
 **Spec mode.** `mcp__plugin_dpm_dpm__list_epic` scoped by `parent_id` to the spec. There is no source field to
 read out of a file and nothing to compare it against: an epic's spec is its parent.
 

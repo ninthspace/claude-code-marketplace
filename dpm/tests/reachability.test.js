@@ -360,6 +360,30 @@ test('a story carries its planning mark as a column, and its title is untouched'
   );
 });
 
+// Its own test rather than two more assertions in the one above. Retro 08's finding is that a check
+// sharing a test with the positive it complements is only verified when a mutation happens to fail
+// that positive first — and here the positive is the `enum`, which a description edit cannot break.
+//
+// What it is protecting: `plan` is the only 0/1 integer in the tool surface, it comes back on every
+// `read_story` and every `list_story` row, and the projection renders it nowhere. So this
+// description is the one channel that carries the meaning alongside the number, and it reaches every
+// skill and every project without depending on a run having read the shared conventions. A
+// description that names the column's subject and neither of its values leaves the run holding a
+// bare integer, which is what `Saying what a row holds` was written after a run spoke aloud.
+test("the plan column's description names what both of its values mean", (t) => {
+  const db = openPlanningDatabase(t);
+  const tools = spineTools(db);
+
+  for (const name of ['create_story', 'update_story']) {
+    const { description } = tools.find((tool) => tool.name === name).inputSchema.properties.plan;
+
+    assert.match(description, /1 means/,
+      `${name} says what 1 means, so a marked story reads as one that needs designing`);
+    assert.match(description, /0 means/,
+      `${name} says what 0 means, so the default is a decision rather than an absence`);
+  }
+});
+
 function run(command, args, input = '', env = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...env } });
