@@ -14,6 +14,15 @@ ln -sf "$(git rev-parse --show-toplevel)/dpm/hooks/pre-commit" .git/hooks/pre-co
 
 **The MCP server has no equivalent fix, and a schema bump costs one reinstall.** The server is always the *installed* plugin, so once this project's `.dpm/dpm.db` migrates past the installed release's target it is served read-only — DPM reads work and every write is refused — until the plugin is reinstalled at the new version. That is not a fault to diagnose: it is version skew reported exactly as designed. Do not resolve it by holding the schema back, either. `self-hosting.test.js` compares the vocabulary a release ships against the committed `.dpm/dpm.sql`, so a release whose dump predates its own schema fails its own suite; the database migrates with the release, and the reinstall follows.
 
+**That same split decides which binary publishes, and it is the one that bites while developing DPM in DPM.** `/dpm:publish` calls the MCP server, which is the *installed* release; the pre-commit guard runs `dpm/bin/dpm-guard.js` from *this working tree*. While `dpm/src/projection/` is the thing being edited those are two different programs, so the server writes files the guard then refuses — and the refusal names your own output as divergent, which reads as a bug in the guard. On 2026-09-21 it cost most of a session: the installed 0.7.7 carried a projection fix this repository did not, a `/dpm:publish` rewrote fifteen epic files accordingly, and the working tree's guard rejected every one. Recorded as quick 16. So publish and check with the working tree's own binaries, and keep `/dpm:publish` for projects that merely *use* DPM:
+
+```sh
+node dpm/bin/dpm-publish.js
+node dpm/bin/dpm-guard.js
+```
+
+**A guard refusal is not something to get around.** There is no bypass to reach for: a renderer change wants the republish above, and a schema change wants the reinstall in the paragraph before it. `git commit --no-verify` commits a tree that disagrees with its own database, which is the state the guard exists to prevent — and it fails next for someone who did not cause it.
+
 **The CPM-era corpus lives under `docs/cpm/` and never moves back.** 140 planning documents across nine folders. It stays readable, greppable and in git exactly as it was, and DPM cannot see it: DPM only looks one folder deep, so `docs/cpm/` is permanently out of reach. Cite it by that path.
 
 Three directories under `docs/` are neither generated nor parked, and stay where they are: `docs/maintenance/` (see below), `docs/stories/` and `docs/artifacts/`. `docs/archive/` also stays — it is work archived *during* the CPM era, which is a different thing from the CPM era itself.

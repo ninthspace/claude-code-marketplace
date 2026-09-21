@@ -83,3 +83,53 @@ export function bindingState(db, coverageId) {
     current: row.binding_hash === bindingHash(db, row),
   };
 }
+
+/**
+ * Whether a fragment occurs in the requirement it claims to quote, and where it does occur instead.
+ *
+ * **The same test the integrity register's entry 9 runs, moved to the moment the row is written.**
+ * The register keeps its copy and needs it: a restore replays rows without passing through any
+ * tool, so a dump can still bring in a binding that quotes nothing. What the write path adds is
+ * that a fragment nobody can find stops being a thing you discover later — a mistyped or
+ * paraphrased quote is a binding that looks sound in every roll-up until somebody runs the check.
+ *
+ * **`instr` in SQL and `includes` here are the same predicate**, and the register's is the one this
+ * was read from. Written in JavaScript because the refusal wants the sibling as well as the verdict,
+ * and one query answering both beats two that could disagree about which requirements exist.
+ *
+ * **A missing requirement is not this check's business.** It returns `found` for a requirement that
+ * is not there, so the foreign key produces its own refusal rather than this one reporting that a
+ * fragment was not found in text that does not exist — which would name the wrong fault and send
+ * the caller looking for a typo in their quote.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {object} binding
+ * @param {string} binding.requirement_id The requirement the row claims to quote.
+ * @param {string} binding.spec_fragment The verbatim slice.
+ * @returns {{found: boolean, label: string|null, sibling: {id: string, label: string}|null}}
+ *   `found` is the verdict; `label` names the requirement asked about, for a refusal that can say
+ *   which one it looked in; `sibling` is the requirement in the same spec whose text does contain
+ *   the fragment, or `null` where none does.
+ */
+export function fragmentPlacement(db, { requirement_id: requirementId, spec_fragment: fragment }) {
+  const requirement = db
+    .prepare('SELECT id, label, spec_id, text FROM requirement WHERE id = ?')
+    .get(requirementId);
+
+  if (!requirement) return { found: true, label: null, sibling: null };
+  if (requirement.text.includes(fragment)) {
+    return { found: true, label: requirement.label, sibling: null };
+  }
+
+  // **Searched within the spec and not across the database.** A fragment turning up under some
+  // other project's requirement is a coincidence of wording, and naming it would send the caller
+  // to a document that has nothing to do with theirs. `instr` rather than a JavaScript scan so the
+  // search stays one statement whatever the spec holds.
+  const sibling = db
+    .prepare(`SELECT id, label FROM requirement
+               WHERE spec_id = ? AND id <> ? AND instr(text, ?) > 0
+               ORDER BY position LIMIT 1`)
+    .get(requirement.spec_id, requirement.id, fragment);
+
+  return { found: false, label: requirement.label, sibling: sibling ?? null };
+}

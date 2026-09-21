@@ -24,6 +24,7 @@ import { withAccountedFor } from '../coverage/warrant.js';
 import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
 import { coverageCheckTools } from './cross/coverage-check.js';
+import { refuseCrossEpicDelivery, refuseDuplicateCriterion, storyClosing } from './spine/closing.js';
 import { integrityTools } from './cross/integrity.js';
 import { numberingTools } from './cross/numbering.js';
 import { publishTools } from './cross/publish.js';
@@ -184,6 +185,12 @@ export function spineTools(
       // ask the same question and prose is the one place two copies of a rule cannot be compared.
       derived: (value) => withAccountedFor(db, value),
       guard: (row, where) => {
+        // FR13 — two live criteria saying the same thing under one story are one obligation
+        // counted twice, in the one place a roll-up adds them up. Composed with the warrant rule
+        // below rather than given a seam of its own: `criterionTools` offers one guard, and two
+        // rules on one table is what a guard is for.
+        refuseDuplicateCriterion(db)(row, where);
+
         // Most criteria carry no warrant. Checked first so an update that mentions only `text` is
         // not refused for a column it never named.
         if (!row.warrant_adr_id) return;
@@ -223,6 +230,10 @@ export function spineTools(
             + ' 1 means it is, 0 means its tasks are planned inline as each is picked up',
         },
       },
+      // FR3. A story closed over a task nobody resolved leaves that task `pending` under a
+      // `complete` parent, where no report counts it as outstanding — the story above it says the
+      // work is done. `task` passes none of these and is unchanged.
+      closing: storyClosing(context.db),
     }),
     ...deliveryTools(context, {
       table: 'task',

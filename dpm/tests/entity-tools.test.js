@@ -352,7 +352,7 @@ test('every remaining type creates and reads back through its own tools', (t) =>
 
   const option = call.create_adr_option({ adr_id: adr.id, name: 'Do nothing', position: 0 });
   const tradeoff = call.create_adr_option_tradeoff({
-    option_id: option.id, axis: 'reversibility', assessment: 'Total.',
+    adr_id: adr.id, option_id: option.id, axis: 'reversibility', assessment: 'Total.',
   });
   const agent = call.create_document_agent({
     document_id: review.id, document_kind: 'review', agent: 'architect',

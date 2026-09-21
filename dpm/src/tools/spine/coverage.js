@@ -27,8 +27,9 @@
  */
 
 import { defineTool, SUPPLIED, ToolError } from '../convention.js';
-import { bindingHash } from '../../coverage/binding.js';
+import { bindingHash, fragmentPlacement } from '../../coverage/binding.js';
 import { withRequirementLabel } from '../../coverage/label.js';
+import { refuseCrossEpicDelivery } from './closing.js';
 import { insert, readById, update } from '../crud.js';
 import { entityTools } from '../entity.js';
 
@@ -49,6 +50,36 @@ const STATE = {
     description: 'ISO 8601. Records the ✓; the server computes the binding hash that accompanies it',
   },
 };
+
+/**
+ * Refuse a binding whose fragment is nowhere in the requirement it names (FR2).
+ *
+ * **The refusal names where the fragment does belong, because that is the whole difference between
+ * a diagnosis and a complaint.** A caller told only that their quote was not found has to go and
+ * read every requirement in the spec to find out whether they mistyped it or aimed it at the wrong
+ * row. Told that it is FR9's text, they have the answer and the fix in one line — which is NFR4's
+ * rule, that every refusal names what to do instead rather than only what was wrong.
+ *
+ * Where nothing in the spec holds it, the refusal says so plainly. That is the mistyped-quote case,
+ * and inventing a nearest match for it would be a guess presented as a finding.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {object} args The create call's arguments.
+ * @param {string} where The tool name, for the message's prefix.
+ * @throws {ToolError} When the fragment occurs nowhere in the named requirement's text.
+ */
+function refuseUnfoundFragment(db, args, where) {
+  const placement = fragmentPlacement(db, args);
+
+  if (placement.found) return;
+
+  throw new ToolError(
+    `${where}: the fragment is nowhere in ${placement.label}'s text`
+    + (placement.sibling
+      ? ` — it belongs to ${placement.sibling.label}, so bind it to that requirement`
+      : ' — a binding quotes its requirement verbatim, so check the quote against the text'),
+  );
+}
 
 /**
  * @param {object} context
@@ -72,20 +103,29 @@ export function coverageTools({ db, now, newId }) {
         properties: { ...BINDING, ...STATE },
         required: ['requirement_id', 'spec_fragment', 'story_criterion_id', 'position'],
       },
-      handler: (args) => insert(db, 'coverage', {
-        id: newId(),
-        requirement_id: args.requirement_id,
-        spec_fragment: args.spec_fragment,
-        story_criterion_id: args.story_criterion_id,
-        position: args.position,
-        verified_at: args.verified_at ?? null,
-        // Computed from the arguments rather than read back, because the row is not there yet —
-        // and the criterion is, which is the half that has to be looked up either way. Nullish,
-        // so a row created explicitly unverified gets no hash: a `binding_hash` beside a NULL
-        // `verified_at` is a binding recorded for a verification that was never made, which is
-        // the state FR21's decay triggers exist to prevent arising the other way round.
-        binding_hash: args.verified_at == null ? null : bindingHash(db, args),
-      }, 'create_coverage'),
+      handler: (args) => {
+        // FR2 — the fragment has to be *in* the requirement it names. Refused here rather than
+        // reported by the integrity register later: a paraphrased or mistyped quote reads as a
+        // sound binding in every roll-up until somebody runs the check, and by then it has been
+        // counted toward a requirement being discharged. The register keeps its own copy for what
+        // a restore brings in, which passes through no tool.
+        refuseUnfoundFragment(db, args, 'create_coverage');
+
+        return insert(db, 'coverage', {
+          id: newId(),
+          requirement_id: args.requirement_id,
+          spec_fragment: args.spec_fragment,
+          story_criterion_id: args.story_criterion_id,
+          position: args.position,
+          verified_at: args.verified_at ?? null,
+          // Computed from the arguments rather than read back, because the row is not there yet —
+          // and the criterion is, which is the half that has to be looked up either way. Nullish,
+          // so a row created explicitly unverified gets no hash: a `binding_hash` beside a NULL
+          // `verified_at` is a binding recorded for a verification that was never made, which is
+          // the state FR21's decay triggers exist to prevent arising the other way round.
+          binding_hash: args.verified_at == null ? null : bindingHash(db, args),
+        }, 'create_coverage');
+      },
     }),
 
     defineTool({
@@ -200,6 +240,9 @@ export function coverageTools({ db, now, newId }) {
         coverage_id: { type: 'string', minLength: 1 },
         story_id: { type: 'string', minLength: 1 },
       },
+      // FR14 — the two stories are meant to be doing one epic's work, so a story from another epic
+      // delivering this binding is an id from the wrong place.
+      guard: (row, where) => refuseCrossEpicDelivery(db)(row, where),
     }),
   ];
 }

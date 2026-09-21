@@ -60,6 +60,34 @@ const CLAIM = {
  * @param {() => string} context.newId
  * @returns {object[]}
  */
+/**
+ * Refuse a requirement ruled out of the iteration with nothing recorded to rule it out (FR6).
+ *
+ * **The obligation falls on `wont` alone.** A requirement at any other priority is in the iteration
+ * or waiting to be, and has nothing to explain; one at `wont` is being set aside, and the exclusion
+ * is the whole of what distinguishes a decision from an omission. A row saying only *not this time*
+ * reads afterwards as a requirement somebody forgot.
+ *
+ * **Judged on the row the write would leave, which is why both callers resolve first.** An update
+ * naming only the priority is judged against the exclusion already stored, so a row that records
+ * its reason is not refused for failing to repeat it; an update clearing the exclusion off a `wont`
+ * row is refused, because an explicit `null` is a value and it leaves exactly the state this
+ * forbids. Neither reading is available from the arguments alone.
+ *
+ * @param {object} row The requirement as the write would leave it.
+ * @param {string} where The tool name, for the message's prefix.
+ * @throws {ToolError} When the row would be ruled out with no exclusion.
+ */
+function refuseUnexplainedExclusion(row, where) {
+  if (row.moscow !== 'wont' || row.exclusion) return;
+
+  throw new ToolError(
+    `${where}: ${row.label ?? 'a requirement'} is ruled out of the iteration and records nothing `
+    + `that rules it out — set exclusion to one of ${EXCLUSION.join(' or ')}, or leave the `
+    + 'priority at must, should or could',
+  );
+}
+
 export function requirementTools({ db, newId }) {
   return [
     defineTool({
@@ -77,17 +105,26 @@ export function requirementTools({ db, newId }) {
         // supplying one without the other is refused rather than helped.
         required: ['spec_id', 'label', 'class', 'text', 'position'],
       },
-      handler: (args) => insert(db, 'requirement', {
-        id: newId(),
-        spec_id: args.spec_id,
-        label: args.label,
-        class: args.class,
-        moscow: args.moscow ?? null,
-        exclusion: args.exclusion ?? null,
-        parent_id: args.parent_id ?? null,
-        text: args.text,
-        position: args.position,
-      }, 'create_requirement'),
+      handler: (args) => {
+        const row = {
+          id: newId(),
+          spec_id: args.spec_id,
+          label: args.label,
+          class: args.class,
+          moscow: args.moscow ?? null,
+          exclusion: args.exclusion ?? null,
+          parent_id: args.parent_id ?? null,
+          text: args.text,
+          position: args.position,
+        };
+
+        // FR6, on the first of the two paths that can reach the state. The row is assembled before
+        // it is judged rather than the arguments being read, so this and the update below ask the
+        // same question of the same shape.
+        refuseUnexplainedExclusion(row, 'create_requirement');
+
+        return insert(db, 'requirement', row, 'create_requirement');
+      },
     }),
 
     defineTool({
@@ -122,6 +159,17 @@ export function requirementTools({ db, newId }) {
         required: ['id'],
       },
       handler: ({ id, coverage_claimed_at: claimedAt, ...changes }) => {
+        // FR6's second path. Resolved against the stored row, so an update naming only the priority
+        // is judged on the exclusion the row already carries — and one clearing that exclusion off
+        // a `wont` row is refused, since an explicit null leaves the forbidden state just as an
+        // omission at create would.
+        if ('moscow' in changes || 'exclusion' in changes) {
+          refuseUnexplainedExclusion(
+            { ...readById(db, 'requirement', id, 'update_requirement'), ...changes },
+            'update_requirement',
+          );
+        }
+
         if (Object.keys(changes).length > 0) update(db, 'requirement', id, changes, 'update_requirement');
         else if (claimedAt === undefined) throw new ToolError('update_requirement: nothing to update');
         // A claim against a requirement that is not there is a boundary rejection like any other,

@@ -74,7 +74,7 @@ function chain(call) {
   });
   const coverage = call.create_coverage({
     requirement_id: requirement.id,
-    spec_fragment: 'unless a body is explicitly requested',
+    spec_fragment: 'unless a body is requested',
     story_criterion_id: story_criterion.id,
     position: 0,
   });
@@ -107,7 +107,7 @@ function chain(call) {
     rationale: 'Simplest, and unbounded on exactly the column that grows without limit.',
   });
   const adr_option_tradeoff = call.create_adr_option_tradeoff({
-    option_id: adr_option.id, axis: 'cost',
+    adr_id: adr.id, option_id: adr_option.id, axis: 'cost',
     assessment: 'Cheap to write and expensive on every call that did not want the prose.',
   });
 
@@ -231,8 +231,12 @@ function crowd(call, tools) {
     state: JSON.stringify({ index }),
   }));
 
+  // **One requirement each, because a fragment has to be a verbatim slice of the requirement it
+  // binds.** Fifty-one distinct fragments of one requirement would need a requirement whose text
+  // carried all fifty-one; binding each row to its own requirement gives every fragment a text it
+  // genuinely occurs in, and the count these tests page over is unchanged.
   const coverages = spread(MANY).map((index) => call.create_coverage({
-    requirement_id: requirements[0].id, spec_fragment: `fragment ${index}`,
+    requirement_id: requirements[index].id, spec_fragment: `requirement ${index}`,
     story_criterion_id: criteria[0].id, position: index,
   }));
 
@@ -312,7 +316,7 @@ function crowd(call, tools) {
   }));
 
   spread(MANY).forEach((index) => call.create_adr_option_tradeoff({
-    option_id: options[0].id, axis: `axis-${index}`, assessment: `assessment ${index}`,
+    adr_id: first.adr.id, option_id: options[0].id, axis: `axis-${index}`, assessment: `assessment ${index}`,
   }));
 
   spread(MANY).forEach((index) => call.create_document_agent({

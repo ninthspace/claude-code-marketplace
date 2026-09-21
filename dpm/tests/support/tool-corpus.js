@@ -191,7 +191,7 @@ export function toolCorpus(call) {
   });
 
   call.create_adr_option_tradeoff({
-    option_id: option.id, axis: 'cost', assessment: 'low, and komatiite',
+    adr_id: adr.id, option_id: option.id, axis: 'cost', assessment: 'low, and komatiite',
   });
 
   // Accepted last, because an accepted ADR has exactly one chosen option and the guard on

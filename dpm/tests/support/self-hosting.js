@@ -173,6 +173,7 @@ export function selfHostingCorpus(call) {
   for (const option of options) {
     for (const axis of ['queryability', 'write cost']) {
       call.create_adr_option_tradeoff({
+        adr_id: adr.id,
         option_id: option.id,
         axis,
         assessment: option.chosen ? 'A column answers it' : 'A reader has to open the file',

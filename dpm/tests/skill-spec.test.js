@@ -163,6 +163,7 @@ function run(call, fixture) {
   });
   call.create_adr_option({ adr_id: adr.id, name: 'Markdown', position: 1 });
   call.create_adr_option_tradeoff({
+    adr_id: adr.id,
     option_id: chosen.id,
     axis: 'Install cost',
     assessment: 'None — no package to add.',

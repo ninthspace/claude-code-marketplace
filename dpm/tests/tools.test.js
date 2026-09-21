@@ -441,7 +441,7 @@ test('every create tool enforces every argument it declares required', (t) => {
     create_story: { epic_id: epic.id, number: 50, title: 'V', position: 50 },
     create_task: { story_id: story.id, number: 50, title: 'V', position: 50 },
     create_coverage: {
-      requirement_id: requirement.id, spec_fragment: 'a distinct fragment',
+      requirement_id: requirement.id, spec_fragment: 'typed columns',
       story_criterion_id: story_criterion.id, position: 50 },
   };
 

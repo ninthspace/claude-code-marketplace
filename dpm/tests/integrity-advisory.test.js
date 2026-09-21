@@ -85,9 +85,9 @@ test('a binding retired while sound is named by an advisory entry [integration]'
 
 test('a broken live binding is entry 9\'s and not entry 14\'s [integration]', (t) => {
   const { db, call } = surface(t);
-  const { binding } = fixture(db);
+  const { binding, write } = fixture(db);
 
-  const live = call.create_coverage(binding());
+  const live = write();
   const retired = call.create_coverage({ ...binding(), spec_fragment: SOUND, position: 1 });
 
   call.retire_coverage({ id: retired.id, reason: 'the criterion was folded into another story' });
@@ -104,8 +104,8 @@ test('a broken live binding is entry 9\'s and not entry 14\'s [integration]', (t
 
 test('entry 14 does not name a binding retired while its fragment no longer matched [integration]', (t) => {
   const { db, call } = surface(t);
-  const { binding } = fixture(db);
-  const row = call.create_coverage(binding());
+  const { binding, write } = fixture(db);
+  const row = write();
 
   call.retire_coverage({ id: row.id, reason: 'the pivot deleted the clause this quoted' });
 

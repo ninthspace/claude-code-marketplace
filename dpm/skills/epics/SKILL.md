@@ -85,8 +85,9 @@ on than the bound does. `text` on a requirement and `body` on a section are with
 for, so without it every requirement arrives as a label with a class and a band and no statement of
 what it requires. Step 3d then has to bind each coverage row to a **verbatim fragment of that
 requirement's own text**, which there is no way to produce from a label. A fragment that is not a
-substring of its requirement is not refused at the write — it is stored, and the integrity register
-reports it afterwards as a broken invariant, at a distance from the step that caused it.
+substring of its requirement is refused at the write, and the refusal names the requirement whose
+text does contain it where one in the same spec does — so a binding aimed at the wrong row says so
+immediately, and a paraphrase has to be corrected rather than discovered later by the register.
 
 ### Step 2: Identify epics
 

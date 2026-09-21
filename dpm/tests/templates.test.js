@@ -287,7 +287,7 @@ test('a coverage matrix renders its epic\'s rows and no other epic\'s', (t) => {
   const requirement = db.prepare('SELECT id FROM requirement LIMIT 1').get();
 
   call.create_coverage({
-    requirement_id: requirement.id, spec_fragment: 'renames its projection file',
+    requirement_id: requirement.id, spec_fragment: 'has a template',
     story_criterion_id: otherCriterion.id, position: 1,
   });
 

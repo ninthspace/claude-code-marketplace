@@ -399,6 +399,16 @@ test('an epic with a story not complete is left pending, whether or not anything
     call.update_task({ id: task.id, status: 'complete' });
   }
 
+  // **The verification comes before the close, which is the order the loop actually works in.**
+  // Step 5 records a ✓ on each of the story's bindings and Step 6 then sets the status; FR4 refuses
+  // a story closing over an unverified binding *silently*, so a fixture that skipped straight to
+  // the close was modelling a run that skipped Step 5.
+  for (const criterion of call.list_story_criterion({ story_id: fixture.first.id }).items) {
+    for (const row of call.list_coverage({ story_criterion_id: criterion.id }).items) {
+      call.update_coverage({ id: row.id, verified_at: '2026-09-21T00:00:00Z' });
+    }
+  }
+
   call.update_story({ id: fixture.first.id, status: 'complete' });
 
   assert.equal(finished(fixture.lifecycle.id), false,

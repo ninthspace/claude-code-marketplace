@@ -66,6 +66,12 @@ test('document, story and task each take all four statuses and refuse a fifth', 
   const { db, call } = surface(t);
   const { spec, story, task } = ladder(call);
 
+  // **The task is finished before the walk, because this test is about the status vocabulary and
+  // not about what a story owes its tasks.** FR3 refuses a story set `complete` over an outstanding
+  // task, which is asserted in `story-close-refusal.test.js` on rows of its own; leaving it to bite
+  // here would make a test of the enum fail for a reason that has nothing to do with the enum.
+  call.update_task({ id: task.id, status: 'complete' });
+
   const rows = [
     { table: 'document', id: spec.id, update: (status) => call.update_spec({ id: spec.id, status }) },
     { table: 'story', id: story.id, update: (status) => call.update_story({ id: story.id, status }) },

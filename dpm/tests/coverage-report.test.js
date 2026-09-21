@@ -339,7 +339,7 @@ test('on a fixture of thirteen bindings the roll-up says thirteen [unit]', (t) =
 /** The clean spec on which all three warnings fire. */
 function warned(t) {
   const db = openPlanningDatabase(t);
-  const fixture = specWithWarnings(handlers(spineTools(db)));
+  const fixture = specWithWarnings(handlers(spineTools(db)), { db });
 
   return { db, fixture, report: coverageReport(db, { specId: fixture.spec.id, epicId: fixture.epic.id }) };
 }

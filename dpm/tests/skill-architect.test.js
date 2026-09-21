@@ -133,7 +133,7 @@ function run(call, fixture, { approved = true, attempt = 1, parent = fixture.bri
 
     for (const axis of AXES) {
       call.create_adr_option_tradeoff({
-        option_id: option.id, axis, assessment: `${name} against ${axis}`,
+        adr_id: adr.id, option_id: option.id, axis, assessment: `${name} against ${axis}`,
       });
     }
 

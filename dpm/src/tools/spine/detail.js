@@ -134,6 +134,43 @@ export const DETAIL = {
  * @param {object} context
  * @returns {object[]}
  */
+/**
+ * Refuse a tradeoff whose option the named decision does not hold (FR12).
+ *
+ * **The invented option id is the failure this catches**, and it is the same class as a supplied
+ * timestamp: a plausible value written where a read one belongs. The foreign key already refuses an
+ * id matching no row at all, but it refuses with the database's own message and — worse — it says
+ * nothing about an id that *does* match under a different decision. That row is accepted today and
+ * quietly assesses somebody else's option.
+ *
+ * **The refusal hands over the real set rather than reporting that one value was wrong**, which is
+ * NFR4 and the reason the call names its decision. A caller told only that their option is unknown
+ * has to go and list the options to recover; told which ones the decision holds, they can pick the
+ * one they meant.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {object} row The tradeoff about to be written.
+ * @param {string} where The tool name.
+ * @param {object} args The call's arguments, which carry the decision. Checked, never stored.
+ */
+function refuseForeignOption(db, row, where, args) {
+  const held = db
+    .prepare('SELECT id, name FROM adr_option WHERE adr_id = ? ORDER BY position')
+    .all(args.adr_id);
+
+  if (held.some((option) => option.id === row.option_id)) return;
+
+  // Two silences worth telling apart: a decision holding no options at all is one nobody has
+  // written yet, and sending its author to choose from an empty list would be useless advice.
+  const listed = held.length > 0
+    ? `the options it holds are ${held.map((option) => option.name).join(', ')}`
+    : 'that decision holds no options yet, so write them before assessing them';
+
+  throw new ToolError(
+    `${where}: decision '${args.adr_id}' does not hold the option this assesses — ${listed}`,
+  );
+}
+
 export function detailChildTools(context) {
   const { db } = context;
 
@@ -208,8 +245,20 @@ export function detailChildTools(context) {
         axis: { type: 'string', minLength: 1, description: "'cost', 'complexity', 'reversibility'" },
         assessment: { type: 'string', minLength: 1 },
       },
-      required: ['assessment'],
+      required: ['assessment', 'adr_id'],
       body: ['assessment'],
+      // FR12 — the decision the option is supposed to belong to. Not a column: the option already
+      // names its ADR, so storing it here would be one fact in two places. It is an argument
+      // because a refusal has to be able to say *which* options were available, and an invented
+      // option id identifies no decision to ask — which is exactly the call this catches.
+      extra: {
+        adr_id: {
+          type: 'string',
+          minLength: 1,
+          description: 'The decision whose option this assesses. Checked, not stored',
+        },
+      },
+      guard: (row, where, args) => refuseForeignOption(context.db, row, where, args),
     }),
 
     // Not a detail table of `review`, because a discussion records the same fact: `party` and

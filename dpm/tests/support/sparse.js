@@ -151,7 +151,7 @@ export function sparseCorpus(call) {
   // branch went unexercised until a mutation found it in Epic 47-09.
   const option = at.create_adr_option({ adr_id: adr.id, name: 'The simple option', position: 0 });
   at.create_adr_option_tradeoff({
-    option_id: option.id, axis: 'Cost', assessment: 'Low.',
+    adr_id: adr.id, option_id: option.id, axis: 'Cost', assessment: 'Low.',
   });
 
   const review = at.create_review({ slug: 'sparse-review', title: 'Review: the sparse spine' });

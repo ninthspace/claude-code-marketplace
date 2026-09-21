@@ -200,10 +200,12 @@ const RECIPES = {
 
     for (const option of [chosen, rejected]) {
       call.create_adr_option_tradeoff({
-        option_id: option.id, axis: 'cost', assessment: 'How this option scores on cost.',
+        adr_id: adr.id, option_id: option.id,
+        axis: 'cost', assessment: 'How this option scores on cost.',
       });
       call.create_adr_option_tradeoff({
-        option_id: option.id, axis: 'risk', assessment: 'How this option scores on risk.',
+        adr_id: adr.id, option_id: option.id,
+        axis: 'risk', assessment: 'How this option scores on risk.',
       });
     }
 

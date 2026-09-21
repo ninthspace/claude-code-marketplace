@@ -31,9 +31,14 @@ const STATUS = ['pending', 'complete', 'superseded', 'withdrawn'];
  * @param {string} options.table `story` or `task`.
  * @param {string} options.parent The column naming its owner — `epic_id` or `story_id`.
  * @param {object} [options.extra] Columns this table has and the other does not.
+ * @param {(row: object, where: string) => void} [options.closing] A condition this table puts on
+ *   being finished, called before the write when a call sets `status: 'complete'` and refusing by
+ *   throwing. **A table that passes none behaves exactly as it does today**, which is the contract
+ *   `task` is held to — the option is a seam rather than a condition written into the factory,
+ *   because both tables are built here and only one of them has anything to say about closing.
  * @returns {object[]}
  */
-export function deliveryTools({ db, newId }, { table, parent, extra = {} }) {
+export function deliveryTools({ db, newId }, { table, parent, extra = {}, closing = null }) {
   const fields = {
     number: { type: 'integer', minimum: 1, description: `ordinal within its ${parent}` },
     title: { type: 'string', minLength: 1 },
@@ -100,7 +105,21 @@ export function deliveryTools({ db, newId }, { table, parent, extra = {} }) {
         properties: { id: { type: 'string', minLength: 1 }, ...fields },
         required: ['id'],
       },
-      handler: ({ id, ...changes }) => update(db, table, id, changes, `update_${table}`),
+      handler: ({ id, ...changes }) => {
+        // **Only a call that sets `complete` is asked, and only where the table offered a
+        // condition.** The other two terminal values say the work was superseded or withdrawn —
+        // decisions to stop rather than claims to have finished — so refusing them would block the
+        // legitimate way to retire a row with work still under it.
+        if (closing && changes.status === 'complete') {
+          // **The resolved row, not the arguments.** A caller setting only `status` is judged on
+          // the state the edit would leave, which is what lets a condition be satisfied by a column
+          // already stored rather than one restated in the closing call. Judging the arguments
+          // would refuse a row for failing to repeat what it already says.
+          closing({ ...readById(db, table, id, `update_${table}`), ...changes }, `update_${table}`);
+        }
+
+        return update(db, table, id, changes, `update_${table}`);
+      },
     }),
   ];
 }

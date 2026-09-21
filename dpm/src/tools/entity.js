@@ -18,6 +18,10 @@
  *   asking them to assert the thing the pairing exists to check.
  * - **`guard`** — a rule the schema cannot express, run before the write on create *and* on update.
  *   `document_milestone`'s register entry #12 and `adr_option`'s register entry #8.
+ * - **`extra`** — arguments a create accepts, checks and does not store. For a rule whose subject
+ *   is not a column of this table: `adr_option_tradeoff` takes the decision its option should
+ *   belong to, so the refusal can list that decision's options. Storing it would be one fact in
+ *   two places, and the option already names its ADR. They reach the guard as its third argument.
  *
  * **A guard sees the resolved row, not the arguments.** On create that is what is about to be
  * written; on update it is the stored row with the changes merged over it. Written that way a guard
@@ -73,6 +77,7 @@ export function entityTools({ db, newId }, {
   supplied = {},
   derive = null,
   guard = null,
+  extra = {},
 }) {
   const keys = key ?? ['id'];
   const surrogate = key === null;
@@ -109,7 +114,13 @@ export function entityTools({ db, newId }, {
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        properties: fields,
+        // **`extra` is checked and never stored**, so it appears here and nowhere in `values()`,
+        // which filters to columns. It is for a rule whose subject is not a column of this table —
+        // a tradeoff naming the decision its option is supposed to belong to, where storing the
+        // decision would be one fact in two places and the option already carries it. On create
+        // only: an argument that decides whether a write is legal has nothing to say about an edit
+        // that cannot change it.
+        properties: { ...fields, ...extra },
         required: [...new Set([...(surrogate ? [] : keys), ...required])],
       },
       handler: (args) => {
@@ -121,7 +132,9 @@ export function entityTools({ db, newId }, {
         // either way.
         const row = { ...(surrogate ? { id: newId() } : {}), ...values(args) };
 
-        if (guard) guard(row, `create_${table}`);
+        // The arguments travel beside the row rather than inside it, so `extra` cannot be mistaken
+        // for a column and the documented contract — a guard sees the resolved row — still holds.
+        if (guard) guard(row, `create_${table}`, args);
 
         return insert(db, table, row, `create_${table}`, keys);
       },

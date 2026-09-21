@@ -301,22 +301,33 @@ test('`epics` can quote a requirement verbatim and reach its criteria through co
   assert.equal('spec_fragment' in blind, false);
   assert.equal('text' in call.read_story_criterion({ id: bound.story_criterion_id }), false);
 
-  // **And the cost of guessing the fragment rather than reading it.** A non-substring is not
-  // refused at the write — it is stored, and the integrity register reports it afterwards, which is
-  // why Step 1 asks for the text rather than leaving Step 3d to invent one.
-  const guessed = call.create_coverage({
-    requirement_id: requirement.id,
-    spec_fragment: 'bounded reads are raisable',
-    story_criterion_id: bound.story_criterion_id,
-    position: 1,
-  });
+  // **And the cost of guessing the fragment rather than reading it**, which is why Step 1 asks for
+  // the text rather than leaving Step 3d to invent one. The guess used to be stored and reported by
+  // the integrity register afterwards, at a distance from the step that caused it; FR2 moved the
+  // check onto the write, so the cost is now a refusal the run meets immediately.
+  let refusal;
 
-  assert.ok(guessed.id, 'the write was refused, so the register has nothing to report');
+  try {
+    call.create_coverage({
+      requirement_id: requirement.id,
+      spec_fragment: 'bounded reads are raisable',
+      story_criterion_id: bound.story_criterion_id,
+      position: 1,
+    });
+  } catch (error) {
+    refusal = error;
+  }
 
+  assert.ok(refusal, 'a guessed fragment was stored rather than refused');
+  assert.match(refusal.message, /nowhere in FR13's text/,
+    'the refusal does not say which requirement it looked in');
+
+  // **The register is left with nothing to report, and that is the assertion rather than a
+  // remark.** A run that could still write the row would leave entry 9 naming it — so the empty
+  // list is what says the state is now unreachable through the tools, not merely discouraged.
   const broken = call.check_integrity({}).entries
     .filter((entry) => !entry.held)
     .flatMap((entry) => entry.rows.map((failed) => ({ entry: entry.entry, id: failed.id })));
 
-  assert.deepEqual(broken, [{ entry: 9, id: guessed.id }],
-    'a fragment that is not a substring of its requirement went unreported');
+  assert.deepEqual(broken, [], 'a binding the write path refuses reached the register anyway');
 });

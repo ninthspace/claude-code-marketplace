@@ -1,3 +1,4 @@
+import { create } from '../fixtures/tool-surface.js';
 /**
  * A spec whose coverage is deliberately uneven — the fixture the report has something to say about.
  *
@@ -137,7 +138,7 @@ export function unevenSpec(call, { slug = 'uneven', filler = 0 } = {}) {
   // whose job is to isolate one column at a time: an assertion that the unaccounted list holds one
   // row would then be resting on two facts at once, and a report that confused the two lists would
   // still satisfy it.
-  bind(shouldRequirement, untagged, 'a criterion can quote FR4 too');
+  bind(shouldRequirement, untagged, 'says something a criterion can quote');
 
   for (const row of [verifiedCriterion, partialFirst, partialSecond, unaccounted, warranted,
     shouldOnly]) {
@@ -188,7 +189,7 @@ export function unevenSpec(call, { slug = 'uneven', filler = 0 } = {}) {
  * Each warning gets a non-member differing in one column: a claim already made, a requirement ruled
  * out of scope, a text repeated under one story rather than two.
  */
-export function specWithWarnings(call, { slug = 'warned' } = {}) {
+export function specWithWarnings(call, { slug = 'warned', db = null } = {}) {
   const spec = call.create_spec({ slug, title: 'A spec with three warnings and no gaps' });
   const epic = call.create_epic({ parent_id: spec.id, slug: `${slug}-work`, title: 'Clean work' });
 
@@ -281,11 +282,28 @@ export function specWithWarnings(call, { slug = 'warned' } = {}) {
 
   // Non-member: the same text twice under **one** story. That is a different problem with a
   // different owner, and reporting it here would put it under this warning's name.
+  //
+  // **Written past the tool, because FR13 now refuses it.** Epic 05-02 made a second live criterion
+  // with the same text under one story a rejection at the write, so this state arrives only the way
+  // a restore brings it — and the warning must still decline to report it, which is what this
+  // non-member is here to show. A caller that passes no `db` gets the twin built through the tool
+  // and will meet that refusal, which is the honest failure rather than a silent skip.
   const twiceHere = criterion(second, 'Repeated under one story');
-  const twiceHereAgain = criterion(second, 'Repeated under one story');
+  const twiceHereAgain = db
+    ? create(db, 'story_criterion', {
+      story_id: second.id, text: 'Repeated under one story', polarity: 'must',
+      position: positions.criterion++,
+    })
+    : criterion(second, 'Repeated under one story');
+
+  if (db) {
+    call.create_story_criterion_approach({
+      story_criterion_id: twiceHereAgain.id, tag: 'integration',
+    });
+  }
 
   bind(unfinished, twiceHere, 'FR3 says something a criterion can quote', { verify: false });
-  bind(unfinished, twiceHereAgain, 'FR3 says something twice over', { verify: false });
+  bind(unfinished, twiceHereAgain, 'says something a criterion can quote', { verify: false });
 
   return {
     spec,

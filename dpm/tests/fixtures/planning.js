@@ -189,17 +189,28 @@ export function boundCoverage(db, {
   const criterion = create(db, 'story_criterion', { story_id: story.id, text: criterionText });
   const requirement = create(db, 'requirement', { spec_id: spec.id, text: requirementText });
 
+  const binding = () => ({
+    requirement_id: requirement.id,
+    story_criterion_id: criterion.id,
+    spec_fragment: fragment,
+    position: 0,
+  });
+
   return {
     spec,
     epic,
     story,
     criterion,
     requirement,
-    binding: () => ({
-      requirement_id: requirement.id,
-      story_criterion_id: criterion.id,
-      spec_fragment: fragment,
-      position: 0,
-    }),
+    binding,
+
+    // **The same row written past the tool, which is the only way a broken one arrives now.**
+    // FR2 refuses a fragment its requirement does not contain, so `create_coverage` can no longer
+    // produce entry 9's violation — and a corpus for the register has to reach the state the way a
+    // real one does. That way is a restore: `src/restore/` replays a dump as raw SQL with foreign
+    // keys off and no tool in the path, which is precisely why the register keeps a check the write
+    // path now duplicates. Through the seam rather than a statement here, so the fixture layer's
+    // own discipline still holds.
+    write: (overrides = {}) => create(db, 'coverage', { ...binding(), ...overrides }),
   };
 }

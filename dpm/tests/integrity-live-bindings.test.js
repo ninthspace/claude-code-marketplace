@@ -71,8 +71,8 @@ function everyBrokenBinding(db) {
 
 test('entry 9 names a live binding whose fragment its requirement no longer contains [integration]', (t) => {
   const { db, call } = surface(t);
-  const { binding } = broken(db, 'a clause the amendment deleted');
-  const row = call.create_coverage(binding());
+  const { write } = broken(db, 'a clause the amendment deleted');
+  const row = write();
 
   assert.deepEqual(namedByEntryNine(db), [row.id], 'named, and named by its id rather than counted');
   assert.equal(checkIntegrity(db).ok, false, 'and the report as a whole does not pass');
@@ -82,8 +82,8 @@ test('entry 9 names a live binding whose fragment its requirement no longer cont
 
 test('retiring that binding removes it from entry 9, which then holds [integration]', (t) => {
   const { db, call } = surface(t);
-  const { binding, criterion, requirement } = broken(db, 'a clause the amendment deleted');
-  const row = call.create_coverage(binding());
+  const { write, criterion, requirement } = broken(db, 'a clause the amendment deleted');
+  const row = write();
 
   assert.deepEqual(namedByEntryNine(db), [row.id], 'the entry fires before the retirement');
 
@@ -133,7 +133,7 @@ test('retiring that binding removes it from entry 9, which then holds [integrati
 
 test('entry 9 does not name a retired binding whose fragment still matches [integration]', (t) => {
   const { db, call } = surface(t);
-  const { binding } = broken(db, 'a clause the amendment deleted');
+  const { binding, write } = broken(db, 'a clause the amendment deleted');
 
   // One fixture, two bindings on the same requirement: this fragment is a verbatim substring of
   // its text, so the binding is sound, and retiring it is a decision about a criterion rather
@@ -150,7 +150,7 @@ test('entry 9 does not name a retired binding whose fragment still matches [inte
   // The control for the rejection: the entry is still looking. A second binding, broken and live,
   // is named in the same breath — so "not named" above is a judgement about that row rather than
   // an entry that has stopped reading.
-  const live = call.create_coverage({ ...binding(), position: 1 });
+  const live = write({ position: 1 });
 
   assert.deepEqual(namedByEntryNine(db), [live.id], 'and the entry names the one that is broken');
   assert.deepEqual(
@@ -164,10 +164,9 @@ test('entry 9 does not name a retired binding whose fragment still matches [inte
 
 test('a second broken binding is named after the first is retired [integration]', (t) => {
   const { db, call } = surface(t);
-  const { binding } = broken(db, 'a clause the amendment deleted');
-  const first = call.create_coverage(binding());
-  const second = call.create_coverage({
-    ...binding(),
+  const { write } = broken(db, 'a clause the amendment deleted');
+  const first = write();
+  const second = write({
     spec_fragment: 'a second clause the amendment deleted',
     position: 1,
   });
