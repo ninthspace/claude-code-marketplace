@@ -17,7 +17,7 @@ Two orderings are real. The story that adds the closing hook to the delivery fac
 ## Story 1 — Refuse a fragment that is nowhere in its requirement
 
 **Status**: pending  
-**Blocked by**: Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -46,7 +46,7 @@ Covers the rejection, its control and the sibling-naming criterion, with the rej
 ## Story 2 — Refuse a story close over outstanding tasks
 
 **Status**: pending  
-**Blocked by**: Story 3, Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -76,7 +76,7 @@ Covers the rejection and both controls, the second being the task path proved un
 ## Story 3 — Require a note when a story closes over an unverified binding
 
 **Status**: pending  
-**Blocked by**: Story 6  
+**Blocked by**: Story 2  
 
 ### Acceptance Criteria
 
@@ -99,7 +99,7 @@ Covers the rejection, its control and the stored-note case, including a note of 
 ## Story 4 — Refuse a ruled-out requirement with no exclusion
 
 **Status**: pending  
-**Blocked by**: Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -134,7 +134,7 @@ Covers the rejection, its control including the other three priorities, and the 
 ## Story 5 — Three guards on unrelated writes
 
 **Status**: pending  
-**Blocked by**: Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -171,7 +171,7 @@ Covers the three rejections and the control that each admits its legitimate neig
 ## Story 6 — Verify cross-story integration for Write-path refusals
 
 **Status**: pending  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2, Story 3, Story 4, Story 5  
 
 ### Acceptance Criteria
 

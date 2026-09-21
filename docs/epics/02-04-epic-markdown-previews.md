@@ -75,7 +75,7 @@ The surface this epic moved, so the comparison is against what stories 1 to 4 le
 ## Story 1 — Builders that emit markdown source
 
 **Status**: complete  
-**Blocked by**: Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -110,7 +110,7 @@ The must-NOT is stated as a property rather than as a search for the label that 
 ## Story 2 — Markdown rendered in the preview panel
 
 **Status**: complete  
-**Blocked by**: Story 3, Story 4, Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -156,7 +156,7 @@ One deliberate divergence from CPM, in the other direction: the raster names no 
 ## Story 3 — The cursor stays ahead of the raster
 
 **Status**: complete  
-**Blocked by**: Story 5  
+**Blocked by**: Story 2  
 
 ### Acceptance Criteria
 
@@ -192,7 +192,7 @@ The cancellation route was considered and left alone: making the preview worker 
 ## Story 4 — A preview it cannot render does not take the board down
 
 **Status**: complete  
-**Blocked by**: Story 5  
+**Blocked by**: Story 2  
 
 ### Acceptance Criteria
 
@@ -222,7 +222,7 @@ The guard was kept rather than dropped as unnecessary, for a reason the probe do
 ## Story 5 — Sweep the presentation surfaces
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2, Story 3, Story 4  
 
 ### Acceptance Criteria
 

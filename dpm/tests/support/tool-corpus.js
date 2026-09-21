@@ -57,10 +57,14 @@ export const WITNESS = {
   taxonomy: 'Latite',
   agent: 'Charnockite',
   test_approach: 'tonalite',
-  // Not a word but a rendered line: Story 2 is held back by an edge of a **project-added** kind,
+  // Not a word but a rendered line: Story 1 is held back by an edge of a **project-added** kind,
   // so this string appears only if the template read `gates_work` off the vocabulary instead of
-  // matching the name `blocks`. Story 1's own field renders `—`, so the line is unambiguous.
-  dependency_kind: '**Blocked by**: Story 1',
+  // matching the name `blocks`. Story 2's own field renders `—`, so the line is unambiguous.
+  //
+  // It read `Story 1` until quick 16, which was this probe agreeing with an inverted render rather
+  // than with the corpus: the edge has always held story 1 back, and the template named the wrong
+  // end of it. The fixture's own titles say so — story 2 is called "the one it waits on".
+  dependency_kind: '**Blocked by**: Story 2',
   dependency: 'norite',
 };
 
@@ -152,9 +156,10 @@ export function toolCorpus(call) {
 
   // Two edges of the **added** kind, and they are witnessed differently on purpose. The
   // document-level edge renders its kind by name, which shows the row reached the page. The
-  // story-level one renders only its target, under `**Blocked by**` — and it renders there at all
-  // only if the template asked `dependency_kind.gates_work` rather than matching the name
-  // `blocks`, which is what FR24's extensibility means for a template and what this pair asserts.
+  // story-level one renders only its source, under `**Blocked by**` on the story it holds back —
+  // and it renders there at all only if the template asked `dependency_kind.gates_work` rather
+  // than matching the name `blocks`, which is what FR24's extensibility means for a template and
+  // what this pair asserts.
   call.create_dependency({
     kind: 'norite', source_story_id: second.id, target_story_id: story.id,
   });

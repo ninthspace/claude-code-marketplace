@@ -17,7 +17,7 @@ FR5 is claimed. Its clauses — the right edge at any column width, and each mar
 ## Story 1 — The cursor in the row's own colour
 
 **Status**: complete  
-**Blocked by**: Story 3  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -51,7 +51,7 @@ Covers the four criteria: the three tagged unit, including the control — which
 ## Story 2 — The pill against the right edge
 
 **Status**: complete  
-**Blocked by**: Story 3  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -92,7 +92,7 @@ Two smaller things fell out of the same task. The string form of a row and the p
 ## Story 3 — Legible without truecolor
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2  
 
 ### Acceptance Criteria
 

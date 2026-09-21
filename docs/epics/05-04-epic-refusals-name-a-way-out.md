@@ -17,7 +17,7 @@ The unaccepted-argument story has evidence from this project's own planning run:
 ## Story 1 — Name the column and table in a foreign-key failure
 
 **Status**: pending  
-**Blocked by**: Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -39,7 +39,7 @@ Covers the message on a call carrying several ids, and the control that a health
 ## Story 2 — Refuse a scope id that names no row
 
 **Status**: pending  
-**Blocked by**: Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -81,7 +81,7 @@ Covers the rejection, its control, the refusal's contents and the registry-again
 ## Story 3 — Offer a unique-prefix match
 
 **Status**: pending  
-**Blocked by**: Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -104,7 +104,7 @@ Covers the suggestion, the rejection of an ambiguous prefix and the control that
 ## Story 4 — Name the arguments a tool accepts
 
 **Status**: pending  
-**Blocked by**: Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -133,7 +133,7 @@ Covers both messages and the control that a valid call is unchanged.
 ## Story 5 — Verify cross-story integration for Refusals that name a way out
 
 **Status**: pending  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2, Story 3, Story 4  
 
 ### Acceptance Criteria
 

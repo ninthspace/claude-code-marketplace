@@ -8,8 +8,9 @@
  * promotion to a retro, so a story's lesson renders on the epic whether or not a retro has
  * collected it.
  *
- * A story's blocking edges come from `dependency` with `source_story_id` set, which is the other
- * half of the pair `common.js` renders for documents. Both ends of that table are exclusive, so a
+ * A story's blocking edges are the `dependency` rows whose `target_story_id` is that story: the
+ * target is what is held back and the source is what holds it, which is how `readiness.js` reads
+ * the pair. So "Blocked by" names each edge's *source*. Both ends of that table are exclusive, so a
  * story edge and a document edge are the same table read two ways rather than two kinds of row.
  *
  * **Which of those edges block is read from `dependency_kind.gates_work`, never from the name of
@@ -36,27 +37,27 @@ import { document, sections } from './common.js';
 const storyLabel = (story) => `Story ${story.number}`;
 
 /**
- * The far end of a dependency edge, named so a reader can find it.
+ * The blocking end of a dependency edge (its source), named so a reader can find it.
  *
  * A story in another epic is qualified with that epic's identifier — `47-03 Story 2` — because
  * `Story 2` alone is ambiguous the moment the edge leaves the epic, and cross-epic story blocking
  * is one of the two directions `010-dependency.sql` says occurs in real epics.
  */
-function edgeTarget(db, edge, identifiers, epicId) {
-  if (edge.target_document_id !== null) {
-    return identifiers.get(edge.target_document_id) ?? edge.target_document_id;
+function edgeSource(db, edge, identifiers, epicId) {
+  if (edge.source_document_id !== null) {
+    return identifiers.get(edge.source_document_id) ?? edge.source_document_id;
   }
 
-  const target = db.prepare('SELECT number, epic_id FROM story WHERE id = ?')
-    .get(edge.target_story_id);
+  const source = db.prepare('SELECT number, epic_id FROM story WHERE id = ?')
+    .get(edge.source_story_id);
 
-  if (!target) return edge.target_story_id;
+  if (!source) return edge.source_story_id;
 
-  const label = `Story ${target.number}`;
+  const label = `Story ${source.number}`;
 
-  if (target.epic_id === epicId) return label;
+  if (source.epic_id === epicId) return label;
 
-  return `${identifiers.get(target.epic_id) ?? target.epic_id} ${label}`;
+  return `${identifiers.get(source.epic_id) ?? source.epic_id} ${label}`;
 }
 
 /**
@@ -79,7 +80,7 @@ const gatingKinds = (db) => new Set(
 function story(db, row, ref, identifiers, epicId, gating) {
   const blockedBy = row.dependencies
     .filter((edge) => gating.has(edge.kind))
-    .map((edge) => edgeTarget(db, edge, identifiers, epicId));
+    .map((edge) => edgeSource(db, edge, identifiers, epicId));
 
   return [
     heading(2, `${storyLabel(row)} — ${ref(row.title)}`),

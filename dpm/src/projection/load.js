@@ -108,7 +108,10 @@ export const COLLECTIONS = {
   artifactLinks: { table: 'artifact_document', parent: 'document_id', order: ['artifact_id'] },
   delivers: { table: 'document_milestone', parent: 'document_id', order: ['milestone_id'] },
   dependencies: { table: 'dependency', parent: 'source_document_id', order: ['kind', 'id'] },
-  storyDependencies: { table: 'dependency', parent: 'source_story_id', order: ['kind', 'id'] },
+  // A story's edges are read from the blocked end: `target_story_id` is the story held back and
+  // `source_*` is what holds it, the same reading `readiness.js` gives the pair. Reading them by
+  // `source_story_id` rendered each story's *outgoing* edges under "Blocked by", inverting every one.
+  storyDependencies: { table: 'dependency', parent: 'target_story_id', order: ['kind', 'id'] },
 };
 
 /**

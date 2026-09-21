@@ -460,10 +460,17 @@ test('a story blocked by a story in another epic names that epic', (t) => {
   const otherStory = call.create_story({
     epic_id: other.id, number: 4, title: 'Renumber the loser', position: 0,
   });
-  const mine = db.prepare("SELECT id FROM story WHERE number = 1 AND epic_id = ?").get(built.epic.id);
+  // Story 2 rather than story 1, because the shared corpus already has story 2 blocking story 1 —
+  // a second blocker on story 1 would render as a list and the assertion below wants the cross-epic
+  // name on its own, where an ordering change cannot quietly satisfy it.
+  const mine = db.prepare("SELECT id FROM story WHERE number = 2 AND epic_id = ?").get(built.epic.id);
 
+  // **The other epic's story is the source, because the source is what holds work back.** This
+  // fixture named `mine` as the source until quick 16 and still asserted that `mine` rendered the
+  // other story under "Blocked by" — so the test agreed with an inverted template and passed on
+  // the defect it looks like it was written to catch.
   call.create_dependency({
-    kind: 'blocks', source_story_id: mine.id, target_story_id: otherStory.id,
+    kind: 'blocks', source_story_id: otherStory.id, target_story_id: mine.id,
   });
 
   const epic = project(db, { write: false }).written
@@ -622,4 +629,43 @@ test('a coverage matrix is numbered through its epic to the spec above it', (t) 
   // reported as a schema gap, which it was not.
   assert.throws(() => identifierOf(matrix, epic), ProjectionError);
   assert.equal(identifierOf(matrix, epic, spec), '01-01');
+});
+
+test('"Blocked by" names the story that holds one back, not the one it holds up', (t) => {
+  const { db, call } = surface(t);
+
+  fullCorpus(db, call);
+
+  // The shared corpus has held one story blocking another since it was written: story 2 blocks
+  // story 1. Nothing ever asked which way round the template read it, which is how the render
+  // stayed inverted through every epic document this project has produced — the assertions over
+  // this field were about its formatting, and the one test exercising a real edge was written from
+  // the same inverted reading as the code, so it agreed with the defect.
+  const epic = project(db, { write: false }).written
+    .find((file) => file.path === 'docs/epics/01-01-epic-projection.md');
+
+  const blockedByFor = (title) => {
+    const section = epic.text.split('## Story ').find((part) => part.includes(title));
+
+    return /\*\*Blocked by\*\*: (.+?) {2}$/m.exec(section)?.[1];
+  };
+
+  // **Both ends, because one alone cannot tell the directions apart.** A template reading the wrong
+  // end produces exactly these two lines with the stories swapped, so asserting only that some
+  // story is blocked passes either way.
+  assert.equal(blockedByFor('Guard the generated tree'), '—',
+    'the blocking story is reported as blocked by the story it blocks');
+  assert.equal(blockedByFor('Write a template for every kind'), 'Story 2',
+    'the blocked story does not name its blocker');
+
+  // The control: the edge really is the one described, read from the table rather than from the
+  // fixture's variable names — which were themselves written from the inverted reading.
+  const edge = db.prepare(`SELECT s.number AS source, t.number AS target
+                             FROM dependency d
+                             JOIN story s ON s.id = d.source_story_id
+                             JOIN story t ON t.id = d.target_story_id
+                            WHERE d.source_story_id IS NOT NULL`).get();
+
+  assert.deepEqual({ source: edge.source, target: edge.target }, { source: 2, target: 1 },
+    'the corpus edge is not the one these assertions describe');
 });

@@ -19,7 +19,7 @@ Recorded as an amendment rather than a pivot because it changes one criterion's 
 ## Story 1 — Test scaffolding for a plugin cache layout
 
 **Status**: complete  
-**Blocked by**: Story 2, Story 7  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -73,7 +73,7 @@ The lesson for the stories ahead: the epic was written from the spec rather than
 ## Story 2 — Resolve the running plugin's version and its neighbours
 
 **Status**: complete  
-**Blocked by**: Story 3, Story 7  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 
@@ -127,7 +127,7 @@ Worth stating plainly: the sweep is not wrong to be strict. A bare specifier rea
 ## Story 3 — Compare versions and produce a three-state verdict
 
 **Status**: complete  
-**Blocked by**: Story 4, Story 5, Story 7  
+**Blocked by**: Story 2  
 
 ### Acceptance Criteria
 
@@ -172,7 +172,7 @@ The amended test is in tests/neighbour.test.js; the criterion itself was not tou
 ## Story 4 — Re-evaluate on every report
 
 **Status**: complete  
-**Blocked by**: Story 7  
+**Blocked by**: Story 3  
 
 ### Acceptance Criteria
 
@@ -200,7 +200,7 @@ The doc comment on currentSkew was corrected rather than a test being contrived 
 ## Story 5 — Report the verdict on check_integrity
 
 **Status**: complete  
-**Blocked by**: Story 7  
+**Blocked by**: Story 3  
 
 ### Acceptance Criteria
 
@@ -250,7 +250,7 @@ Two occurrences now: tests/neighbour.test.js during story 2, src/tools/cross/int
 ## Story 6 — Record the plugin-cache coupling
 
 **Status**: complete  
-**Blocked by**: Story 7  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -278,7 +278,7 @@ The file's format was followed otherwise — The record / Why it needs a record 
 ## Story 7 — Verify cross-story integration for Neighbour version skew
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2, Story 3, Story 4, Story 5, Story 6  
 
 ### Acceptance Criteria
 

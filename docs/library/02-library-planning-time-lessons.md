@@ -42,3 +42,17 @@ Three instances. A property every current member of an enumerated set happens to
 - **A shape asserted flat is a shape claimed to be final**, and nothing marks which assertions are load-bearing and which are incidental to a shape that happened to have one member.
 - **Put the remedy on the member, not a condition in the consumer.** `restore` asking "is this entry 14?" would be the decision written a second time, in the module least likely to be read when a fifteenth arrives.
 - **A new member that fires on the existing corpus is the strongest available answer to "is this check about anything?"** — and it arrives as a red test rather than as a claim.
+
+## Reproduce the baseline before trusting a sweep census (2026-09-21)
+
+**Source**: retro 10, Patterns worth reusing. A refinement to the registration-cost section above, paid for on its first careful use.
+
+That section says to run each sweep's own reader against the intended change before writing a line of it, and the advice holds — a new cross-cutting tool was costed that way and the prediction came out exact: one sweep live, eight silent, and zero existing assertions broken across 981 tests. What it leaves out is the step that makes the reading trustworthy.
+
+**Import the sweep's reader; do not model it.** The first census read `sqlite_schema` for the live tables, where `naming.test.js` reads `authoredTables` — which excludes an FTS index and its shadow storage. Two of the three tools already taking that sweep's exemption were invisible to the model, so the census reported a cost that was about the model rather than about the sweep.
+
+**And prove the reader on the untouched tree first.** The way it was caught was cheap and mechanical: run the reader over the current registry and require it to reproduce what the sweep already asserts — in that case a pinned three-name list. A census that cannot reproduce today's answer is not yet answering about today's sweep, whatever it says about the intended change.
+
+Without that step the number is confident, plausible, and wrong in the direction nobody checks — which is the same failure mode the sweeps themselves exist to remove, arriving in the tool built to predict them.
+
+**A pinned list is a decision, not a detail.** Where a census shows a change would add a member to an enumeration a sweep pins by name, read what the sweep says about it: the one here carries a comment stating that a fourth entry is a decision. That turned the census from a budget into a design constraint, and the tool was named so the exemption was not needed at all.

@@ -64,7 +64,7 @@ The first two drafts of both new sweeps also failed for the *other* reason worth
 ## Story 1 — A fixture that can tell the derivations apart
 
 **Status**: complete  
-**Blocked by**: Story 2  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -98,7 +98,7 @@ The control was run by removing the implementation rather than reasoning about i
 ## Story 2 — The reference on every document row
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 

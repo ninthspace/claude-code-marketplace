@@ -15,7 +15,7 @@
 ## Story 1 — Rebuild coverage and extend story_criterion
 
 **Status**: complete  
-**Blocked by**: Story 4, Story 5  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -126,7 +126,7 @@ Names what would close each: a project host reaching the new version on first st
 ## Story 4 — The retire_coverage tool
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 
@@ -165,7 +165,7 @@ Retiring a binding does not invalidate the requirement's completeness claim, and
 ## Story 5 — Superseding a criterion
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 

@@ -15,7 +15,7 @@ The claim story follows the stamp story rather than running beside it, so the se
 ## Story 1 — The coverage verification stamp takes a boolean
 
 **Status**: pending  
-**Blocked by**: Story 2  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -44,7 +44,7 @@ Covers the stamp, the rejection of a supplied time and its control. The stamp is
 ## Story 2 — The requirement coverage claim takes a boolean
 
 **Status**: pending  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 

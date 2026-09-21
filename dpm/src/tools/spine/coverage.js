@@ -28,6 +28,7 @@
 
 import { defineTool, SUPPLIED, ToolError } from '../convention.js';
 import { bindingHash } from '../../coverage/binding.js';
+import { withRequirementLabel } from '../../coverage/label.js';
 import { insert, readById, update } from '../crud.js';
 import { entityTools } from '../entity.js';
 
@@ -94,6 +95,11 @@ export function coverageTools({ db, now, newId }) {
       reads: ['coverage'],
       mutates: false,
       body: ['spec_fragment'],
+      // FR10. The row names its requirement by an id, which is not something a caller can check an
+      // answer against — so a read-back is compared with an id held from an earlier call, and that
+      // checks two calls agree rather than that either is right. Declared on the read alone: the
+      // list takes it from here, so the two cannot answer differently.
+      derived: (value) => withRequirementLabel(db, value),
       inputSchema: {
         type: 'object',
         additionalProperties: false,

@@ -250,6 +250,12 @@ the matrix is a projection of these rows, the hash that records *what* was verif
 and editing either bound text clears the mark by trigger. A skill re-implementing any of the three
 would be a second answer to a question the database already answers.
 
+**Say which requirement a row binds by its `requirement_label`, never by its `requirement_id`.**
+Every coverage row a read or a list returns carries the label, derived rather than stored, so a run
+reporting what it verified names something the reader can check against the spec in front of them.
+An id is checkable only against an id the run held from an earlier call, which confirms two calls
+agree rather than that either is right.
+
 ### 5b. Story refactoring pass
 
 Once per completed story, at its verification gate, and not gated on the verification result — a

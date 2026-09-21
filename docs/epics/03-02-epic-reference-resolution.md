@@ -21,7 +21,7 @@ The decision was put to the user as a gate with all three options and the reason
 ## Story 1 — `resolve_reference` returns the one document
 
 **Status**: complete  
-**Blocked by**: Story 2  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -67,7 +67,7 @@ Two controls, both run by removing the implementation. Emptying the vocabulary w
 ## Story 2 — Refusing rather than guessing
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 

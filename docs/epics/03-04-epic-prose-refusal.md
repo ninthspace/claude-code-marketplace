@@ -7,7 +7,7 @@
 ## Story 1 — Refuse a bare ULID at the write
 
 **Status**: complete  
-**Blocked by**: Story 2  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -58,7 +58,7 @@ Two smaller things the run turned up. First, that structural assertion failed on
 ## Story 2 — Nothing published carries a bare ULID
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 

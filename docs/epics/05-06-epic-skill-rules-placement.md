@@ -17,7 +17,7 @@ The host restriction is here rather than with the environment assertions because
 ## Story 1 — Establish where each rule lands
 
 **Status**: pending  
-**Blocked by**: Story 2, Story 3, Story 4  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -46,7 +46,7 @@ Addresses the rejection. Asserts that every shared section carrying one of these
 ## Story 2 — The gate rule and the two criterion-writing rules
 
 **Status**: pending  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 
@@ -69,7 +69,7 @@ Covers all three criteria.
 ## Story 3 — The resume and read-back rules
 
 **Status**: pending  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 
@@ -91,7 +91,7 @@ Covers both criteria.
 ## Story 4 — The four execution rules
 
 **Status**: pending  
-**Blocked by**: —  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 

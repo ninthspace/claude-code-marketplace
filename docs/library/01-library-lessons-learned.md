@@ -120,3 +120,19 @@ Three occurrences of the shape, across retros 08 and 09. When a suite grows a he
 `prose` exists because SKILL.md files are hard-wrapped, and it says so: an assertion written against the current wrapping either breaks on an untouched edit or silently stops constraining anything. It was applied to matching a phrase inside a section and never to matching a citation across a file. A check counting which skills name `Conversational Output` read the raw source and filed one skill as the exception on the strength of a line break — green because it could not see its subject, and reporting the absence of a citation that was there.
 
 **When a helper's docblock states a hazard, grep the suite for what else has it.** That is a bounded, mechanical sweep, and it is the only thing that finds a check whose failure mode is a pass. Fix it at the helper rather than at the call site, so the next check written cannot reach the hazard.
+
+## Two more ways a control fails, and they are opposites (2026-09-21)
+
+**Source**: retro 10, Testing gaps — two observations from one epic, both found by running mutations rather than by reading the tests.
+
+The entries above catalogue controls that were too weak. These two were not weak; they could not discriminate, and they arrived from opposite directions.
+
+- **A control pinning an exact figure is a change detector wearing a control's clothes.** A rejection closed by asserting its warning counts were exactly one of each. Every mutation that changed *which* rows a warning held then made the rejection go red — so it failed on everything, and never once on its own evidence. What a rejection needs from its control is usually only that the thing it is about was computed at all. Loosening it from an exact count to *non-empty* was what let five mutations separate cleanly, each failing the one test that owned it.
+
+- **An assertion that an argument leaves something alone is vacuous while the fixture holds one of what that argument selects.** "Naming an epic narrows nothing else" passed, and went on passing under a mutation that filtered by the named epic — because every fixture held exactly one epic, and scoping to the only epic there is narrows nothing. The claim was true of the fixture and untested as a claim.
+
+The one-of-a-kind fixture is the normal case early in an epic, which is what makes the second hard to notice: the corpus grows a second member only when some later story needs one.
+
+**The question is not "did I assert it" but "could this corpus have told me if it were false".** A mutation answers that and a reading does not, and the two failures are indistinguishable from a passing run.
+
+**And following the rule is not satisfying it.** Both of these came out of a run that had adopted the relevant lesson at its own retro gate and written the tests with it in hand. Adoption is not compliance, and nothing in a green suite tells them apart.

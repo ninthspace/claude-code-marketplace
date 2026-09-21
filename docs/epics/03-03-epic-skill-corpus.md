@@ -7,7 +7,7 @@
 ## Story 1 — The convention that governs what a skill says
 
 **Status**: complete  
-**Blocked by**: Story 2, Story 4  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -39,7 +39,7 @@ The control was run by deleting the section from a scratchpad-backed copy: all t
 ## Story 2 — No skill names a document by its id
 
 **Status**: complete  
-**Blocked by**: Story 4  
+**Blocked by**: Story 1  
 
 ### Acceptance Criteria
 
@@ -90,7 +90,7 @@ One registration cost that reading-the-sweeps-first did not catch: `fixtures.tes
 ## Story 3 — Seven skills accept a reference
 
 **Status**: complete  
-**Blocked by**: Story 4  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -128,7 +128,7 @@ The refactoring pass found the seven Input sentences are near-verbatim, which is
 ## Story 4 — Verify cross-story integration for skill-corpus
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2, Story 3  
 
 ### Acceptance Criteria
 

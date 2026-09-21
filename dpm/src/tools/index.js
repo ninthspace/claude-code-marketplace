@@ -23,6 +23,7 @@ import { stampSkew } from '../server/stamp.js';
 import { withAccountedFor } from '../coverage/warrant.js';
 import { ToolError } from './convention.js';
 import { dependencyTools } from './cross/dependency.js';
+import { coverageCheckTools } from './cross/coverage-check.js';
 import { integrityTools } from './cross/integrity.js';
 import { numberingTools } from './cross/numbering.js';
 import { publishTools } from './cross/publish.js';
@@ -270,10 +271,15 @@ export function spineTools(
     // conversion. The epic's Notes carry the reasoning.
     ...sessionTools(context),
 
-    // The three that belong to no single entity: a number, the sweep over everything, and the one
-    // that writes the tree rather than a row (AD11).
+    // The four that belong to no single entity: a number, the sweep over everything, the one that
+    // writes the tree rather than a row (AD11), and the report over one spec's coverage.
+    //
+    // **Coverage is beside integrity rather than inside it** (decision 05-02). The two ask
+    // different questions at different scopes — whether the rows hold, against what they say — so
+    // each caller pays only for the one it asked.
     ...numberingTools(context),
     ...integrityTools(context),
     ...publishTools(context),
+    ...coverageCheckTools(context),
   ];
 }

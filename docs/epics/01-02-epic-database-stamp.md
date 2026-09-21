@@ -7,7 +7,7 @@
 ## Story 1 — The stamp table and its migration
 
 **Status**: complete  
-**Blocked by**: Story 3, Story 4, Story 7  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -51,7 +51,7 @@ That is now three instances of one pattern: a criterion whose warrant is a decis
 ## Story 2 — Resolve this server's own plugin version
 
 **Status**: complete  
-**Blocked by**: Story 3, Story 7  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -91,7 +91,7 @@ The obvious fix is now cheap and should be proposed rather than taken: `pluginVe
 ## Story 3 — Write the stamp on increase
 
 **Status**: complete  
-**Blocked by**: Story 4, Story 7  
+**Blocked by**: Story 1, Story 2  
 
 ### Acceptance Criteria
 
@@ -147,7 +147,7 @@ Smooth delivery, and the smoothness is the finding: a guarantee held by a bounda
 ## Story 4 — Compare the stamp and produce a verdict
 
 **Status**: complete  
-**Blocked by**: Story 5, Story 7  
+**Blocked by**: Story 1, Story 3  
 
 ### Acceptance Criteria
 
@@ -188,7 +188,7 @@ The same run found that `readStamp`'s *second* guard had never been entered eith
 ## Story 5 — Report the stamp skew on check_integrity and stderr
 
 **Status**: complete  
-**Blocked by**: Story 6, Story 7  
+**Blocked by**: Story 4  
 
 ### Acceptance Criteria
 
@@ -241,7 +241,7 @@ Epic 1 put the neighbour verdict flat in `check_integrity`'s `skew` field, and t
 ## Story 6 — Report both skews under a read-only launch
 
 **Status**: complete — Delivered without production code: both detectors already reached the read-only branch through spineTools' defaults, and check_integrity's `mutates: false` keeps its handler out of the read-only replacement set. The four tests hold that open, since neither property is stated anywhere near the branch that depends on it.  
-**Blocked by**: Story 7  
+**Blocked by**: Story 5  
 
 ### Acceptance Criteria
 
@@ -274,7 +274,7 @@ FR3's read-only requirement was satisfied before this story started: both detect
 ## Story 7 — Verify cross-story integration for The database stamp
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 2, Story 3, Story 4, Story 5, Story 6  
 
 ### Acceptance Criteria
 

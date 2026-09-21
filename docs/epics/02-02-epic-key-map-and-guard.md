@@ -33,7 +33,7 @@ The other seven requirements this epic delivers — FR1, FR2, FR3, FR7, FR8, ENV
 ## Story 1 — CPM's key meanings restored
 
 **Status**: complete  
-**Blocked by**: Story 5, Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -62,7 +62,7 @@ Three of this board's keys had to give way, and one piece of reasoning had to be
 ## Story 2 — Hide retired work
 
 **Status**: complete  
-**Blocked by**: Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -96,7 +96,7 @@ Covers all four criteria, including the control that widens the filter to hide a
 ## Story 3 — DPM's extras moved clear
 
 **Status**: complete  
-**Blocked by**: Story 5, Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -122,7 +122,7 @@ Covers the three extra keys driven through a running board, and the rejection re
 ## Story 4 — Footer and palette wording
 
 **Status**: complete  
-**Blocked by**: Story 6  
+**Blocked by**: —  
 
 ### Acceptance Criteria
 
@@ -154,7 +154,7 @@ Covers both directions of the must-NOT — no label for an unbound key, and no b
 ## Story 5 — The cross-board parity check
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 1, Story 3  
 
 ### Acceptance Criteria
 
@@ -196,7 +196,7 @@ The production restriction, checked here because the environment is reproducible
 ## Story 6 — Sweep the interaction surfaces
 
 **Status**: complete  
-**Blocked by**: —  
+**Blocked by**: Story 2, Story 4, Story 1, Story 3  
 
 ### Acceptance Criteria
 
