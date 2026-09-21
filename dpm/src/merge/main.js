@@ -160,7 +160,7 @@ export function run({ root = '.', location = DATABASE, streams } = {}) {
   // differ on this line and agree on everything `report` holds.
   const lines = [
     describe(result),
-    ...report({ removed }, { root, stage: `git add ${DUMP_PATH} docs` }),
+    ...report({ removed }, { stage: `git add ${DUMP_PATH} docs` }),
   ];
 
   out(`${lines.join('\n')}\n`);

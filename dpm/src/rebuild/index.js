@@ -25,8 +25,8 @@
  * something that happened without a review.
  */
 
-import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { mkdirSync, renameSync, rmSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { openConnection } from '../db/connection.js';
 import { dump } from '../dump/index.js';
 import { describe as describeGuard, guard } from '../guard/index.js';
@@ -180,17 +180,16 @@ export function rebuild(sql, { root, location }) {
  * **Here rather than in each caller for the reason the sequence itself is** (AD16). The merge and
  * the import both have to report the removals and both have to warn about a server holding the old
  * database open, and the two sentences that matter are the two most easily dropped from a second
- * copy: a removal is the only irreversible thing a rebuild does, and the WAL warning is the
+ * copy: a removal is the only irreversible thing a rebuild does, and the restart warning is the
  * difference between a confusing afternoon and a restart. What differs between the callers is the
  * headline above and the `git add` below, so those stay theirs.
  *
  * @param {{removed: string[]}} result What {@link rebuild} returned.
  * @param {object} options
- * @param {string} options.root The repository root.
  * @param {string} options.stage The staging command this caller wants the reader to run.
  * @returns {string[]} Lines, to be joined by the caller with whatever it puts around them.
  */
-export function report({ removed }, { root, stage }) {
+export function report({ removed }, { stage }) {
   const lines = [];
 
   if (removed.length > 0) {
@@ -200,9 +199,19 @@ export function report({ removed }, { root, stage }) {
 
   lines.push('', `Review the changes and stage them: ${stage}`);
 
-  if (existsSync(join(root, '.dpm', 'dpm.db-wal'))) {
-    lines.push('A dpm server may be holding the old database open — restart it before using it.');
-  }
+  // **Unconditional, because the condition it replaces could never be true.** The warning used to
+  // fire only when `.dpm/dpm.db-wal` existed, which reads as a live-server probe and is not one:
+  // nothing in dpm sets WAL journal mode, SQLite defaults to `delete`, and that file is therefore
+  // never created by anything. The line had never once printed — including on a rebuild run while a
+  // server *was* holding the old database open, which is the incident that found it.
+  //
+  // **And a live server is not something this can detect, which is why there is no second probe.**
+  // A rebuild renames a new file into place, so any server already open keeps the unlinked inode:
+  // its reads go on succeeding against rows that are no longer the database, and its writes fail as
+  // an error naming nothing. Neither side of that is visible from here. A sentence on every rebuild
+  // costs a reader one line of a report they asked for; the proxy cost them the warning entirely.
+  lines.push('A dpm server holding the old database open will not see this — restart it before '
+    + 'reading or writing through it.');
 
   return lines;
 }

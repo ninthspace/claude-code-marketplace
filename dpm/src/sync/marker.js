@@ -34,6 +34,24 @@ import { dirname, join } from 'node:path';
 export const MARKER_PATH = '.dpm/dpm.db.synced';
 
 /**
+ * The marker belonging to a database at `location`.
+ *
+ * `MARKER_PATH` is repo-relative and correct for the layout AD4 lays down; this is the same file
+ * found the other way round, from the database itself. The server needs it that way because
+ * `DPM_DATABASE` can point the database anywhere, and a marker found by joining the repository root
+ * would be right for the default and silently wrong for every override — reading the marker of a
+ * database nobody opened, which is a comparison that answers rather than fails.
+ *
+ * It is a suffix rather than a lookup because that is what the name *is*: `.synced` on the database
+ * path is what puts the file under AD4's `dpm.db*` ignore pattern, which is the reason the name was
+ * chosen and the reason it cannot drift from the database it describes.
+ *
+ * @param {string} location The database's path.
+ * @returns {string} The marker's path.
+ */
+export const markerBeside = (location) => `${location}.synced`;
+
+/**
  * The hash of a dump text.
  *
  * Over the bytes exactly as they are — no trimming, no newline normalisation. The guard's whole
@@ -56,14 +74,17 @@ export function hashDump(sql) {
  *
  * @param {object} [options]
  * @param {string} [options.root] The repository root the marker sits under.
+ * @param {string} [options.path] The marker's own path, for a caller that knows where the database
+ *   is rather than where the repository root is — {@link markerBeside} is what produces it. Takes
+ *   precedence over `root`, which it makes irrelevant rather than contradicting.
  * @returns {string|null}
  */
-export function readMarker({ root = '.' } = {}) {
+export function readMarker({ root = '.', path } = {}) {
   try {
     // Trimmed on the way out, not on the way in: the file is written with a trailing newline so it
     // is a normal text file at a terminal, and a reader that returned `"<hash>\n"` would compare
     // unequal to every hash this module produces.
-    return readFileSync(join(root, MARKER_PATH), 'utf8').trim();
+    return readFileSync(path ?? join(root, MARKER_PATH), 'utf8').trim();
   } catch (error) {
     if (error.code === 'ENOENT') return null;
 

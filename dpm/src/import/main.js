@@ -83,7 +83,7 @@ export function run({ root = '.', location = DATABASE, streams } = {}) {
   // nothing to stage — or, on the day the two disagree, hide that they do.
   const lines = [
     `dpm: ${location} rebuilt from ${DUMP_PATH}`,
-    ...report({ removed }, { root, stage: 'git add docs' }),
+    ...report({ removed }, { stage: 'git add docs' }),
   ];
 
   out(`${lines.join('\n')}\n`);

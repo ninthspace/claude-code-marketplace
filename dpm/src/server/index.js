@@ -19,6 +19,7 @@ import { SERVER_INFO, dispatch, methods } from './mcp.js';
 import { LAUNCHED_READ_ONLY, readOnlyRequested } from './read-only.js';
 import { SKEW, skewMessage } from './skew.js';
 import { stampSkew } from './stamp.js';
+import { syncState } from './sync-check.js';
 import { log, readMessages, writeMessage } from './transport.js';
 import { openConnection } from '../db/connection.js';
 import { currentVersion, targetVersion } from '../schema/migrate.js';
@@ -276,6 +277,26 @@ export function open(location, {
   const stamp = stampSkew(db);
 
   if (stamp.state === SKEW.found) log(skewMessage(stamp));
+
+  // **The other thing that is a fact about the file just opened, and until now nobody asked it.**
+  // `verdict()` has been able to say whether this database is behind the dump beside it since AD13,
+  // and the pre-commit guard was its only caller — a surface reached deliberately, at the end of a
+  // piece of work. So a session could open a database weeks behind the repository and answer every
+  // read from it, consistently and wrongly, with nothing between the two.
+  //
+  // Reported here rather than refused, and on the same terms as the stamp above: only a verdict
+  // meaning *the database may be behind* speaks, so a settled repository stays silent at open and a
+  // line that does appear is worth reading.
+  //
+  // **A session that just restored is not asked, because it already knows the answer.** The restore
+  // above builds the database *from* the dump beside it, and a database built that way has no sync
+  // marker — so the check would reach `unknown` and tell the reader their brand-new database might
+  // be behind the file it was made from. That is the false alarm that teaches people to skip the
+  // line, arriving on the first open of every fresh clone, and it is a state this function can
+  // recognise rather than having to infer.
+  const notice = restored === false ? syncState(db, location) : null;
+
+  if (notice !== null) log(notice);
 
   const tools = spineTools(db);
 
