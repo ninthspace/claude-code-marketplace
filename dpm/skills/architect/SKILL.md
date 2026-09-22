@@ -153,8 +153,11 @@ One ADR per decision. Render it in the message body from what the phases settled
 3. Each option as `mcp__plugin_dpm_dpm__create_adr_option` with `name`, `position`, and the reasoning as
    `rationale` — the rejected options carry theirs too, which is what makes the record worth having.
    `chosen` goes on the one taken.
-4. Each assessment as `mcp__plugin_dpm_dpm__create_adr_option_tradeoff` with the option, the `axis` and the
-   `assessment`.
+4. Each assessment as `mcp__plugin_dpm_dpm__create_adr_option_tradeoff` with the option, the `axis`, the
+   `assessment` and the `adr_id` of the decision that holds the option. **The decision is checked
+   and not stored** — the option already names its ADR, so a copy on the tradeoff would be a second
+   place to disagree. It is asked for because a tradeoff assessing an option some *other* decision
+   holds is otherwise a legal row, and the refusal lists the options this decision actually has.
 5. `mcp__plugin_dpm_dpm__update_adr` setting `decision_status` to `accepted`.
 
 **The order matters and the tool enforces it.** An accepted ADR has exactly one chosen option, so
@@ -184,7 +187,12 @@ old one's `decision_status` to `superseded`.
 **The edge comes before the status, because the old decision is only findable through it.** A
 superseded ADR with nothing pointing at it is a decision a reader can see was abandoned and cannot
 see what replaced it — which is the state the integrity register reports, and writing the edge is
-what stops it being created. Do not edit the old ADR's prose to say it was superseded: the status
+what stops it being created.
+
+**An edge whose ends went in the wrong way round is removed with
+`mcp__plugin_dpm_dpm__delete_dependency` and written again**, never corrected by adding a second one. On a
+`supersedes` edge the source is the superseded end, so reversing it says the old decision replaced
+the new — two edges then record both readings and nothing says which is meant. Do not edit the old ADR's prose to say it was superseded: the status
 is a column and the replacement is an edge, and a sentence saying so is a third copy that will
 disagree with them.
 

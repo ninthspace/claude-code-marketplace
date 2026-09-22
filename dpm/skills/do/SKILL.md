@@ -307,6 +307,18 @@ after, and revert whatever broke.
 **Status.** `mcp__plugin_dpm_dpm__update_task` with `status: 'complete'`. At a verification gate,
 `mcp__plugin_dpm_dpm__update_story` the same way.
 
+**Two conditions are enforced on that story close, and meeting them is the work rather than a
+formality.** Both are refusals, so a run that has not met them finds out here:
+
+- **A task still outstanding beneath the story.** The refusal lists them by number and title, so it
+  performs the reconciliation rather than asking for one. Finish them, or retire the ones that were
+  dropped — `superseded` and `withdrawn` are not refused, because being stopped is a decision and
+  this condition is about the claim that the work is done.
+- **A bound coverage row nobody has verified, with nothing said about it.** What is refused is the
+  silence, never the unverified binding: a story can legitimately finish over work somebody else
+  verifies. Say so in `status_note` on the same call, and a note already on the row counts. A note
+  of whitespace does not.
+
 **Observation.** Every completed story produces one, and it is the only input `/dpm:retro` has to
 work with. `mcp__plugin_dpm_dpm__create_observation` with this `story_id` and the text, then
 `mcp__plugin_dpm_dpm__create_observation_category` with the category's `taxonomy_id` from

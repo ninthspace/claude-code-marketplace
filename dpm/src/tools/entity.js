@@ -123,6 +123,12 @@ export function entityTools({ db, newId }, {
         properties: { ...fields, ...extra },
         required: [...new Set([...(surrogate ? [] : keys), ...required])],
       },
+      // **Declared on the tool as well as folded into the schema**, so a test can tell a required
+      // argument that is forced by the call from one that is not. A child row's parent is implied
+      // by the call being made at all; an `extra` is a second reference the caller has to choose,
+      // and a skill that never names it is a skill whose instruction cannot be followed. That is
+      // how `architect` went on telling runs to write a tradeoff without its `adr_id`.
+      extra: Object.keys(extra),
       handler: (args) => {
         // **A column the caller omitted is left out of the `INSERT` rather than written NULL.**
         // The spine factories write every column explicitly, which is right where the omitted ones

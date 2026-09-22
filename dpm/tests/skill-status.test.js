@@ -180,17 +180,18 @@ function run(call, fixture, { spec = null } = {}) {
   // Phase 3b: three states from the rows, and the ruled-out set from `exclusion`.
   const requirements = call.list_requirement({ spec_id: spec, include_body: true, limit: 200 }).items;
 
+  // **One call for the standings, where this used to read coverage once per requirement.** The
+  // three states are `check_coverage`'s `standing` already computed, and a walk that listed rows
+  // per requirement asked the same question once per row and added the answers up itself.
+  const STATE = { unbound: 'untraced', partial: 'in progress', verified: 'delivered' };
+  const standings = new Map(call.check_coverage({ spec_id: spec }).requirements
+    .map((row) => [row.id, row]));
+
   const coverage = requirements.filter((requirement) => requirement.exclusion === null)
     .map((requirement) => {
-      const rows = call.list_coverage({ requirement_id: requirement.id, limit: 200 }).items;
-      const verified = rows.filter((row) => row.verified_at !== null);
+      const standing = standings.get(requirement.id);
 
-      return {
-        requirement,
-        rows,
-        state: rows.length === 0 ? 'untraced'
-          : (verified.length === rows.length ? 'delivered' : 'in progress'),
-      };
+      return { requirement, standing, state: STATE[standing.standing] };
     });
 
   return {
@@ -419,7 +420,7 @@ test('must NOT — the skill recovers an entity by reading a generated markdown 
 
   for (const required of ['list_library', 'list_library_scope', 'list_document_section',
     'read_document_section', 'list_spec', 'list_epic', 'list_story', 'list_task', 'list_retro',
-    'list_session', 'list_requirement', 'list_coverage', 'list_adr', 'list_quick', 'list_audit',
+    'list_session', 'list_requirement', 'check_coverage', 'list_adr', 'list_quick', 'list_audit',
     'list_review', 'list_discussion', 'list_runbook', 'list_problem_brief', 'list_product_brief',
     'list_criterion_approach', 'list_story_criterion_approach']) {
     assert.ok(named.includes(required), `the skill never names ${required}`);

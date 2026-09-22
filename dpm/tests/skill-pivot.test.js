@@ -446,7 +446,11 @@ test('an amended criterion loses its verification, and a byte-identical amendmen
 
   // The file states the rule, and states it as a prohibition on both directions.
   const verification = prose(source, 'Verification looks after itself');
-  assert.match(verification, /Never write `verified_at`, and never clear one/);
+  // **Matched on the prohibition rather than on its wording.** This pinned the sentence verbatim
+  // and fired when epic 05-03 renamed the argument — the rule was unchanged and the test was about
+  // the string. What it is actually for is that the file forbids both directions.
+  assert.match(verification, /[Nn]ever write a verification here, and never clear one/);
+  assert.match(verification, /Both directions/);
   assert.match(verification, /as a consequence of that write/);
   assert.match(verification, /an edit that changes no bytes leaves the mark standing/);
   assert.match(verification, /nothing to derive, nothing to locate, and no cell to edit/);

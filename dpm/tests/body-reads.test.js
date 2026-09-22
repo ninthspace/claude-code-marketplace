@@ -148,7 +148,6 @@ test('must NOT — a site is classified from what its step does, never from a ne
     'pivot · list_coverage · Where the cascade reaches',
     'pivot · list_document_section · Phase 2: Amend',
     'review · list_coverage · Step 1: Read what is under review',
-    'status · list_coverage · Phase 3b: Spec coverage roll-up (only for a spec)',
   ]);
 
   // **And the construction itself, driven against sources written to break it.** `asks` reads the

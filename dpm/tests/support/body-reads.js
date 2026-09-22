@@ -441,8 +441,8 @@ export const CLASSIFICATION = new Map(Object.entries({
     [false, 'reports which skills have runs in flight, with `phase` saying where each reached'],
   'status · list_requirement · Phase 3b: Spec coverage roll-up (only for a spec)':
     [true, 'the file says it — *"quoting each requirement\'s `text` **verbatim**"*'],
-  'status · list_coverage · Phase 3b: Spec coverage roll-up (only for a spec)':
-    [false, 'the three states are read off `verified_at` and the row count'],
+  // `list_coverage` used to sit here, read once per requirement to work the three states out. The
+  // roll-up now asks `check_coverage` for them in one call, so the site is gone rather than moved.
 
   // --- the shared conventions -------------------------------------------------------------------
   [`${SHARED} · list_session · Session Startup`]:

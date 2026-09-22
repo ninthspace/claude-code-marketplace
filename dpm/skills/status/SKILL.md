@@ -170,13 +170,18 @@ Only when the focus resolves to a spec. It answers what the project-wide view ca
 delivered?**
 
 `mcp__plugin_dpm_dpm__list_requirement` on the spec with `include_body` and a `limit` above its requirement
-count, then `mcp__plugin_dpm_dpm__list_coverage` scoped by `requirement_id` for each. Three states, from the
-rows:
+count — for the `text`, which this section quotes verbatim — and `mcp__plugin_dpm_dpm__check_coverage` on the
+same spec for the standings.
 
-- **Untraced** — no coverage rows at all. The breakdown missed it. This is a gap in the plan rather
-  than slow progress, and it is the load-bearing measurement.
-- **In progress** — coverage rows exist, not all carry `verified_at`.
-- **Delivered** — every coverage row carries `verified_at`.
+**One call for the standings, not one per requirement.** `mcp__plugin_dpm_dpm__check_coverage` answers for the whole
+spec, and its `standing` is the three states below already computed. A walk that listed coverage
+rows per requirement asked the same question thirty times and then added the answers up by hand,
+which is a page read short of the truth the first time a requirement has more rows than fit on one.
+
+- **Untraced** — `standing: 'unbound'`, no coverage rows at all. The breakdown missed it. This is a
+  gap in the plan rather than slow progress, and it is the load-bearing measurement.
+- **In progress** — `standing: 'partial'`: coverage rows exist, not all carry `verified_at`.
+- **Delivered** — `standing: 'verified'`: every coverage row carries `verified_at`.
 
 **Never a proportion.** Four rows verified of five is *in progress*, not 80% delivered.
 

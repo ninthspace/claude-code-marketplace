@@ -110,6 +110,12 @@ Where one epic cannot start until another finishes, record it with `mcp__plugin_
 `kind: 'blocks'`, the epic that must finish first as `source_document_id`, the one that waits as
 `target_document_id`. An edge that would close a cycle is refused when it is written, not later.
 
+**An edge written the wrong way round is removed with `mcp__plugin_dpm_dpm__delete_dependency`, not
+corrected with a second one.** The mistake is self-sealing otherwise: the correct edge closes a
+cycle over the wrong one and is refused, so the wrong edge is what stands between the project and
+the right one. Deleting is the recovery — and it deletes rather than retires because a withdrawn
+edge that still constrained the graph would leave the recovery impossible.
+
 ### Step 3: Break into stories
 
 For each epic, break the work into **stories** — coherent units of value. A story answers "what are
@@ -296,7 +302,13 @@ find a home for.
 
 Where one requirement is delivered by several criteria, write a row per criterion — each is
 independently verifiable. Where a criterion is also delivered by a story other than the one that
-declares it, add `mcp__plugin_dpm_dpm__create_coverage_story` naming that story.
+declares it, add `mcp__plugin_dpm_dpm__create_coverage_story` naming that story. It must be a story of
+**this** epic: one from another epic is refused, and the refusal names both.
+
+**A delivery attached to the wrong story is removed with
+`mcp__plugin_dpm_dpm__delete_coverage_story`**, taking the pair that identifies it. That removes the extra
+delivery and nothing else — the coverage row keeps its fragment and its mark, because saying a story
+does not deliver this says nothing about whether the binding holds.
 
 Present the bindings for the user to judge: the requirement text and the criterion text side by
 side, both verbatim, with the tags. The judgement of fidelity is theirs; extraction and presentation

@@ -197,8 +197,9 @@ structural patterns.
 Each decision is `mcp__plugin_dpm_dpm__create_adr` with `parent_id` set to this spec — a decision is a child
 document of the artefact that raised it. Its `decision` is the choice in one sentence. Each option
 is `mcp__plugin_dpm_dpm__create_adr_option` carrying its reasoning as `rationale`, with `chosen` on the one
-taken, and each axis they were weighed on is `mcp__plugin_dpm_dpm__create_adr_option_tradeoff`. The rejected
-options carry their reasoning too — a decision that records only the choice records no decision.
+taken, and each axis they were weighed on is `mcp__plugin_dpm_dpm__create_adr_option_tradeoff`, which takes
+the `adr_id` of the decision alongside the option it assesses. The rejected options carry their
+reasoning too — a decision that records only the choice records no decision.
 
 **A settled decision is accepted last**, by `mcp__plugin_dpm_dpm__update_adr` setting `decision_status` to
 `accepted`. An ADR is created `proposed`, because at the moment it is created it has no options and

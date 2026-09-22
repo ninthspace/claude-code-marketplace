@@ -172,10 +172,15 @@ say so and move on. Silence there is indistinguishable from a step that never ra
 
 #### Verification looks after itself
 
-**Never write `verified_at`, and never clear one.** When an amendment changes a `story_criterion`'s
-or a `requirement`'s `text`, the coverage row bound to it loses its verification and its binding
-hash as a consequence of that write, and an edit that changes no bytes leaves the mark standing.
-There is nothing to derive, nothing to locate, and no cell to edit.
+**Never write a verification here, and never clear one.** When an amendment changes a
+`story_criterion`'s or a `requirement`'s `text`, the coverage row bound to it loses its verification
+and its binding hash as a consequence of that write, and an edit that changes no bytes leaves the
+mark standing. There is nothing to derive, nothing to locate, and no cell to edit.
+
+Both directions are a claim this skill has no standing to make: setting `verified` re-marks a row
+nobody re-checked, and clearing it withdraws a mark the amendment did not touch. The moment itself
+is the server's in either case — a run cannot choose *when* a verification happened, only whether to
+assert one, and this skill asserts none.
 
 Worth stating because the wrong instinct is available and looks conscientious. A run that tidies up
 by clearing a mark itself is writing its own answer over the database's; a run that re-sets one is

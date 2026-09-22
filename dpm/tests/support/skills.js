@@ -734,9 +734,17 @@ export function valuedArguments(tool) {
   const schema = tool.inputSchema ?? {};
   const required = new Set(schema.required ?? []);
 
+  // **A required argument that is not a column is not "forced by the call".** The exemption above
+  // rests on a child row's parent being implied by the call being made at all — but an `extra` is a
+  // *second* reference the caller has to choose, checked and never stored, and nothing about the
+  // call implies it. `architect` told runs to write a tradeoff with the option, the axis and the
+  // assessment for two releases after `adr_id` became required, and this direction could not see it
+  // because the argument was required. The narrower reading is what missed it, not the corpus.
+  const chosen = new Set(tool.extra ?? []);
+
   return Object.entries(schema.properties ?? {})
     .filter(([name, property]) => !MECHANICAL.has(name)
-      && (!required.has(name) || Array.isArray(property.enum)))
+      && (!required.has(name) || chosen.has(name) || Array.isArray(property.enum)))
     .map(([name]) => name);
 }
 
