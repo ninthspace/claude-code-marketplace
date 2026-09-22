@@ -49,6 +49,36 @@ conversation is one that has to be re-facilitated after a compaction. **It does 
 that is a column** — a status, a number, a flag — because a copy in the blob is a second answer that
 goes stale the moment the row moves.
 
+### Resuming a step
+
+**On a resume, and after a compaction, the rows say what was written and `state` does not.** `state`
+records where a run believed it had reached; the rows record what it actually did, and the two part
+company exactly when a run is interrupted between a write and the update that would have noted it.
+
+So before a resumed step writes anything, it **lists the rows that step writes, under the parent it
+writes them to**, and proposes only what is missing. Never a row a list has just returned. Each
+skill names the ordered read for its own step — which lists, scoped to what — because only the
+skill knows which rows its step produces.
+
+**A step whose rows exist for some parents and not others resumes at the first parent without
+them.** A production loop running once per epic is the common case, and "some are written" is not a
+position `state` can express while a list can.
+
+### Reading back what was written
+
+**A run of writes is read back before the next unit begins**, and the read-backs go in **one**
+message rather than one message per row. A row written and never read is a row nobody has seen
+succeed; a read-back per row is the same information at many times the cost.
+
+**Each row is checked by its label, never by an id held from an earlier call.** A label — `FR7`,
+`Story 3`, a slug — is checkable against the artefact in front of the reader. Comparing an id with
+an id the run is holding confirms that two calls agree, which is a weaker claim and usually a
+vacuous one.
+
+**Every count in a closing summary comes from the last report, not from a tally of the calls sent.**
+A run that adds up its own writes is counting what it believes it did; the report counts what is
+there, and the difference between the two is precisely what a closing summary exists to surface.
+
 ## Library Check
 
 1. `mcp__plugin_dpm_dpm__list_library`, then `mcp__plugin_dpm_dpm__list_library_scope` on each, to find those scoped to
@@ -99,6 +129,17 @@ sentence or two, it belongs in the message body.
 Option `preview` fields are for small presentational comparisons — a wording choice, a short
 layout variant. They are transient and easy to miss, so nothing the user needs to keep goes there.
 
+**A gate is two steps, and it is performed as two steps.** The draft goes in the message body as
+its own items — the requirements listed, the stories named, the sections written out — and the
+`AskUserQuestion` call goes in that same message. Not worked out in reasoning nobody can see, and
+not left in an earlier message that is no longer the one being answered: a user approving a gate is
+reading the message it arrived in, and anything not in it is not what they approved.
+
+**Nothing a gate decides is written before it is answered.** A row created while the question is
+still open is a decision taken on the user's behalf and then presented as a choice. Where a draft
+has to be assembled first, assemble it in the message; where a write cannot wait, the gate was in
+the wrong place.
+
 ## Perspectives
 
 Some sections invite agent personas to weigh in before the user decides.
@@ -131,6 +172,9 @@ a summary.
 
 The test is whether someone reading only the narration still knows where they are and what was
 decided.
+
+Keep the tone plain and direct, warm enough to be good company across a long facilitation. State
+confidence where the evidence supports it and uncertainty where it does not; neither needs padding.
 
 ### Saying what a row holds
 
@@ -209,6 +253,23 @@ or decisions. When it would not, make the correction and carry on without remark
 running commentary on your own earlier wording spends attention the user was giving to the decision
 in front of them.
 
+## Writing a Criterion
+
+A criterion records an outcome, and the document supplies the negation around it. A `must_not` row
+is already rendered under a heading that says what is forbidden, so the text **names the outcome as
+though it had happened**: *"A story with a task still outstanding beneath it is set finished."*
+
+Written as a denial — *"a story is not set finished while a task is outstanding"* — it reads as a
+double negative the moment the document wraps it, and the reader has to work out which way round
+the claim runs before they can judge it.
+
+**A clause that only restates the denial is dropped, never inverted.** *"…and must not be allowed"*
+adds nothing to a row already marked as forbidden; inverting it instead produces a sentence that
+says the opposite of what the spec does. Drop the clause and leave the outcome standing.
+
+The same holds for a `control`: it names what succeeds, in the words the rejection uses, so the two
+read as one pair rather than as a claim and its rebuttal.
+
 ## Written Deliverable Length
 
 Let a document's length match what the task needs. A spec covering three requirements is shorter
@@ -279,10 +340,3 @@ confirmed and never the default.
    be written, the artifact has not earned its place.
 4. **The artifact is a view, never a source.** Nothing reads it back; the rows remain the record.
 
-## A Closing Note on Length and Tone
-
-Say what the step found and what happens next, then stop. Where two phrasings carry the same
-meaning, use the shorter one.
-
-Keep the tone plain and direct, warm enough to be good company across a long facilitation. State
-confidence where the evidence supports it and uncertainty where it does not; neither needs padding.

@@ -12,8 +12,8 @@ Everything this skill records is a typed tool call. It composes no markdown, all
 names no files, and never reads back what it or another skill wrote.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Gate Presentation**, **Conversational Output**, **Written Deliverable Length** and
-**Cross-References** from it.
+This skill uses **Gate Presentation**, **Writing a Criterion**, **Conversational Output**,
+**Written Deliverable Length** and **Cross-References** from it.
 
 ## Input
 
@@ -279,6 +279,21 @@ against, which is what a reader comparing the two texts side by side is trying t
 fragment that appears nowhere in the requirement is refused exactly as before; connective wording
 is worse than the obligation and is still better than a paraphrase, which is not a fragment at all.
 
+**The clause is the one *this criterion* tests, not the nearest one that would pass.** Where a
+requirement carries two obligations, a criterion measuring the second quotes the second — even
+where the first sits closer to the words the criterion happens to share. The binding is read later
+by somebody holding the two texts side by side and asking whether one measures the other, and a
+fragment chosen for proximity fails that reading while satisfying every check.
+
+**A criterion rejecting an outcome quotes the clause whose outcome it rejects**, which is the same
+clause its positive sibling quotes. A `must_not` bound to the requirement's own prohibition instead
+binds the criterion to a sentence about forbidding rather than to the thing forbidden.
+
+**A requirement is covered as far as its criteria go and no further.** Binding every criterion a
+story has does not discharge an obligation none of them measures; where a requirement asks for
+something the stories do not, that is a gap to report at the confirm step rather than a fragment to
+find a home for.
+
 Where one requirement is delivered by several criteria, write a row per criterion — each is
 independently verifiable. Where a criterion is also delivered by a story other than the one that
 declares it, add `mcp__plugin_dpm_dpm__create_coverage_story` naming that story.
@@ -326,6 +341,17 @@ that constrains the story where no requirement does. A criterion with neither is
 in the report, named by its `text` since it has no title; one with a warrant is finished work and
 does not, and a run that counted coverage rows instead would call it a gap on every breakdown that
 recorded one.
+
+**Then run `mcp__plugin_dpm_dpm__check_integrity`, and treat every violation it reports as a gap unless the
+entry says it is advisory.** The gap check above reads what the rows *say*; integrity reads whether
+they *hold* — a binding quoting text its requirement does not contain, an edge whose ends are kinds
+its kind does not admit, a criterion counted under two stories. A breakdown can be complete by the
+first reading and broken by the second, and this step is the last place either is cheap to fix.
+
+Report each violation with **the rows it names**, not the count. The check returns them, and a
+report saying "three violations" sends the reader back to a call they cannot make. An entry the
+register marks advisory is a note beside the tree rather than something to resolve — the register
+says which, and a run deciding for itself would be a second answer to a question the register holds.
 
 Resolve each gap before finishing: add it to an existing epic, raise a story for it, or defer it
 with a stated reason. Should-have requirements with no cover are warnings rather than blockers.

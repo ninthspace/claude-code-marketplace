@@ -15,6 +15,8 @@
  */
 
 import { ToolError } from './convention.js';
+import { missingParent } from './foreign-keys.js';
+import { didYouMean } from './prefix.js';
 import { refuseBareUlids } from './prose-refusal.js';
 
 /**
@@ -57,10 +59,16 @@ function itemNamed(message, table, values) {
  *
  * @param {string} where The tool name, for the message.
  * @param {() => object} run
- * @param {{table: string, values: Record<string, unknown>}} [wrote] What was being written, so a
- *   retirement abort can name the item as well as the column. Omitted where nothing was.
+ * @param {{db: import('node:sqlite').DatabaseSync, table: string, values: Record<string, unknown>}}
+ *   [wrote] What was being written, so a retirement abort can name the item as well as the column
+ *   and a foreign-key failure can name the id that missed. The connection travels with it because
+ *   both answers are reads against the same database the statement just failed on. Omitted where
+ *   nothing was written — a delete's foreign-key failure is something *else* referencing the row,
+ *   which is a different fault and not this one.
  */
 function attempt(where, run, wrote) {
+  const { db } = wrote ?? {};
+
   try {
     return run();
   } catch (error) {
@@ -72,6 +80,29 @@ function attempt(where, run, wrote) {
     // broken. Found by Epic 47-05 Story 6 — Story 2 built the guards, Epic 47-03 built this
     // translation, and until here nothing had run the two together.
     if (RETIRED.test(error.message) || /constraint|FOREIGN KEY|UNIQUE|CHECK/i.test(error.message)) {
+      // FR7 — SQLite's foreign-key message names no column, no table and no value, which is
+      // bearable on a write carrying one id and useless on one carrying four. The answer is
+      // worked out here, after the failure, so the common path pays nothing for it.
+      const missed = /FOREIGN KEY constraint failed/i.test(error.message) && wrote
+        ? missingParent(db, wrote.table, wrote.values)
+        : null;
+
+      if (missed) {
+        const named = missed.columns
+          .map(({ column, value }) => `${column} '${value}'`)
+          .join(' and ');
+        const plural = missed.columns.length > 1;
+
+        // The column, its value and the table it points at — which is the whole of what SQLite
+        // withholds. A composite reference names both halves, since which of them is the caller's
+        // mistake is not knowable from the failure.
+        throw new ToolError(
+          `${where}: ${named} ${plural ? 'name' : 'names'} no row in ${missed.parent} — `
+          + `${plural ? 'those columns point' : 'that column points'} at ${missed.parent}, `
+          + `so the ${plural ? 'values' : 'value'} must match a row that is already there`,
+        );
+      }
+
       const item = wrote ? itemNamed(error.message, wrote.table, wrote.values) : '';
 
       throw new ToolError(`${where}: ${error.message}${item}`);
@@ -119,7 +150,7 @@ export function insert(db, table, values, where, key = 'id') {
     + `VALUES (${columns.map(() => '?').join(', ')})`;
 
   attempt(where, () => db.prepare(sql).run(...columns.map((column) => values[column])),
-    { table, values });
+    { db, table, values });
 
   const keys = Array.isArray(key) ? key : [key];
 
@@ -142,8 +173,15 @@ export function readByKey(db, table, key, where) {
   const row = db.prepare(sql).get(...columns.map((column) => key[column]));
 
   if (!row) {
+    // FR22 — a truncated id reads as a missing row, and the row is usually one character away.
+    // Offered on the *first* key column alone: on a composite key the second column is a pin the
+    // caller did not choose, and a prefix search over it would suggest a row by way of a value
+    // nobody typed. Nothing is offered where the prefix is ambiguous.
+    const [first] = columns;
+
     throw new ToolError(
-      `${where}: no ${table} with ${columns.map((column) => `${column} '${key[column]}'`).join(', ')}`,
+      `${where}: no ${table} with ${columns.map((column) => `${column} '${key[column]}'`).join(', ')}`
+      + didYouMean(db, table, first, key[first]),
     );
   }
 
@@ -165,7 +203,10 @@ export function readByKey(db, table, key, where) {
 export function readById(db, table, id, where, key = 'id') {
   const row = db.prepare(`SELECT * FROM ${table} WHERE ${key} = ?`).get(id);
 
-  if (!row) throw new ToolError(`${where}: no ${table} with ${key} '${id}'`);
+  if (!row) {
+    throw new ToolError(`${where}: no ${table} with ${key} '${id}'`
+      + didYouMean(db, table, key, id));
+  }
 
   return row;
 }
@@ -214,11 +255,17 @@ export function updateByKey(db, table, key, values, where) {
   const changed = attempt(where, () => db.prepare(sql).run(
     ...columns.map((column) => values[column]),
     ...keyColumns.map((column) => key[column]),
-  ), { table, values });
+  ), { db, table, values });
 
   if (changed.changes === 0) {
+    // FR22 reaches here too, and this is the branch it would have been easiest to miss: an update
+    // naming a truncated id changes nothing and reports it, which reads exactly like a row that is
+    // not there. The read path's refusal is the same sentence and got the same offer.
+    const [first] = keyColumns;
+
     throw new ToolError(
-      `${where}: no ${table} with ${keyColumns.map((column) => `${column} '${key[column]}'`).join(', ')}`,
+      `${where}: no ${table} with ${keyColumns.map((column) => `${column} '${key[column]}'`).join(', ')}`
+      + didYouMean(db, table, first, key[first]),
     );
   }
 
@@ -250,9 +297,36 @@ export function updateByKey(db, table, key, values, where) {
  * @throws {ToolError} If there is no such row, or if something still references it.
  */
 export function deleteById(db, table, id, where, key = 'id') {
-  const row = readById(db, table, id, where, key);
+  return deleteByKey(db, table, { [key]: id }, where);
+}
 
-  attempt(where, () => db.prepare(`DELETE FROM ${table} WHERE ${key} = ?`).run(id));
+/**
+ * The same, for a row identified by more than one column.
+ *
+ * The pairing `update`/`updateByKey` and `readById`/`readByKey` already have, arriving here for
+ * `coverage_story` — a join whose identity is `(coverage_id, story_id)` and which carries no id of
+ * its own to be named by. Written as the general form with `deleteById` delegating to it, rather
+ * than as a second statement beside it, because two `DELETE`s in this file is two places for the
+ * read-before rule to be remembered and one of them to forget it.
+ *
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} table
+ * @param {Record<string, unknown>} key Column-to-value, ANDed.
+ * @param {string} where
+ * @returns {object} The row as it was immediately before deletion.
+ * @throws {ToolError} If there is no such row, or if something still references it.
+ */
+export function deleteByKey(db, table, key, where) {
+  const columns = Object.keys(key);
+
+  if (columns.length === 0) {
+    throw new Error(`${where}: a delete with no key is a delete of the whole table`);
+  }
+
+  const row = readByKey(db, table, key, where);
+  const sql = `DELETE FROM ${table} WHERE ${columns.map((column) => `${column} = ?`).join(' AND ')}`;
+
+  attempt(where, () => db.prepare(sql).run(...columns.map((column) => key[column])));
 
   return row;
 }

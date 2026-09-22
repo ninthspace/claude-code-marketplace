@@ -146,8 +146,10 @@ The three gap queries worth running, each a comparison between two reads rather 
   breakdown missed it.
 - **A coverage row carrying `verified_at` with no automated approach behind it** —
   `mcp__plugin_dpm_dpm__list_story_criterion_approach` says what the criterion was actually tagged, and
-  `mcp__plugin_dpm_dpm__list_criterion_approach` says what the spec asked for. A mark resting on `manual` or
-  `target` is not a mark a test produced.
+  what the spec asked for is one step further out — `mcp__plugin_dpm_dpm__list_acceptance_criterion` on the
+  requirement, then `mcp__plugin_dpm_dpm__list_criterion_approach` on each. The two take different ids, and
+  a requirement's own id in the second is a call that returns nothing whatever the project holds.
+  A mark resting on `manual` or `target` is not a mark a test produced.
 - **A completed epic with no retro** — the scoped `mcp__plugin_dpm_dpm__list_retro` answers it directly. A
   retired epic is not one of these: asking what was learned from work that was dropped is asking
   about a decision to stop, and the gap query would report one for every such epic forever.

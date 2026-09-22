@@ -85,7 +85,7 @@ test('every requirement comes back with a standing computed from its bindings [i
   // by moving a row: verifying the partial one's outstanding binding moves it to `verified`
   // without the requirement itself being touched.
   handlers(spineTools(db)).update_coverage({
-    id: fixture.bindings.partialUnverified.id, verified_at: '2026-09-21T12:00:00Z',
+    id: fixture.bindings.partialUnverified.id, verified: true,
   });
 
   assert.equal(byLabel(reportFor(db, fixture), 'FR2').standing, 'verified',

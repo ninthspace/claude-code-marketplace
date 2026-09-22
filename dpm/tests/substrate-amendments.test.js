@@ -274,7 +274,7 @@ test('document_agent takes a participant on a review and a discussion, and on no
     () => call.create_document_agent({
       document_id: spec.id, document_kind: 'review', agent: 'architect',
     }),
-    /FOREIGN KEY/,
+    /document_id .* and document_kind 'review'/,
     'a spec was recorded as a review with a panel',
   );
 
@@ -283,7 +283,7 @@ test('document_agent takes a participant on a review and a discussion, and on no
     () => call.create_document_agent({
       document_id: discussion.id, document_kind: 'discussion', agent: 'nobody',
     }),
-    /FOREIGN KEY/,
+    /agent 'nobody'/,
     'a persona the roster does not carry was stored as text',
   );
 });
@@ -383,7 +383,7 @@ test('clearing a verification clears the binding recorded with it', (t) => {
 
   const row = call.create_coverage({
     requirement_id: requirement.id, spec_fragment: 'shall hold',
-    story_criterion_id: criterion.id, position: 0, verified_at: '2026-08-10T00:00:00.000Z',
+    story_criterion_id: criterion.id, position: 0, verified: true,
   });
 
   assert.ok(row.binding_hash, 'a verified row was written without its binding');
@@ -391,16 +391,17 @@ test('clearing a verification clears the binding recorded with it', (t) => {
   // **A hash beside a cleared mark is the residue the decay triggers exist to prevent.** Nothing
   // reads it, and that is precisely the trouble: it is a record of a verification nobody made,
   // sitting where the check for a stale one looks.
-  const unverified = call.update_coverage({ id: row.id, verified_at: null });
+  const unverified = call.update_coverage({ id: row.id, verified: false });
 
   assert.equal(unverified.verified_at, null);
   assert.equal(unverified.binding_hash, null, 'the binding outlived the verification it recorded');
 
   // Omitting it still leaves both alone, which is what makes the clear a decision rather than a
   // side effect of updating the row at all.
-  call.update_coverage({ id: row.id, verified_at: '2026-08-10T00:00:00.000Z' });
+  const restamped = call.update_coverage({ id: row.id, verified: true });
   const moved = call.update_coverage({ id: row.id, position: 1 });
 
-  assert.equal(moved.verified_at, '2026-08-10T00:00:00.000Z');
+  assert.equal(moved.verified_at, restamped.verified_at);
+  assert.ok(moved.verified_at, 'the row was never re-verified, so the control proves nothing');
   assert.ok(moved.binding_hash);
 });

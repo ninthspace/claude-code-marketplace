@@ -37,6 +37,9 @@ import { domainTerms } from './support/vocabulary.js';
 const SKILL = 'do';
 const source = skillSource(SKILL);
 
+/** The instant the pinned server clock reads. Supplied as an argument nowhere in this file. */
+const STAMPED = '2026-08-09T11:47:03.512Z';
+
 /** The step that closes an epic, read once — four tests ask different things of the same prose. */
 const SUMMARY_STEP = section(source, '8. Epic summary');
 
@@ -254,7 +257,7 @@ function run(call, fixture) {
 
     const verified = criteria.flatMap(({ criterion }) =>
       call.list_coverage({ story_criterion_id: criterion.id }).items
-        .map((row) => call.update_coverage({ id: row.id, verified_at: '2026-08-09T00:00:00.000Z' })));
+        .map((row) => call.update_coverage({ id: row.id, verified: true })));
 
     call.update_story({
       id: story.id,
@@ -283,7 +286,7 @@ function run(call, fixture) {
 
   for (const { requirement, rows } of rollUp) {
     if (rows.every((row) => row.verified_at !== null)) {
-      call.update_requirement({ id: requirement.id, coverage_claimed_at: '2026-08-09T00:00:00.000Z' });
+      call.update_requirement({ id: requirement.id, coverage_claimed: true });
     }
   }
 
@@ -296,7 +299,10 @@ function run(call, fixture) {
 
 test('a do run writes status through update tools and records verification as a coverage row', (t) => {
   const db = openPlanningDatabase(t);
-  const tools = spineTools(db);
+  // **The clock is pinned to an instant nothing in this file supplies as an argument**, which is
+  // what makes the assertion below about the *server* stamping the mark rather than about the run
+  // and the server happening to agree on a string.
+  const tools = spineTools(db, { now: () => STAMPED });
   const { call, used, passed } = recorder(tools);
 
   const fixture = project(tools);
@@ -327,7 +333,7 @@ test('a do run writes status through update tools and records verification as a 
 
   assert.equal(rows.length, 3);
   for (const row of rows) {
-    assert.equal(row.verified_at, '2026-08-09T00:00:00.000Z');
+    assert.equal(row.verified_at, STAMPED, 'the mark is not the clock the server read');
     assert.ok(row.binding_hash, 'a ✓ with no record of what it verified');
   }
 
@@ -405,7 +411,7 @@ test('an epic with a story not complete is left pending, whether or not anything
   // the close was modelling a run that skipped Step 5.
   for (const criterion of call.list_story_criterion({ story_id: fixture.first.id }).items) {
     for (const row of call.list_coverage({ story_criterion_id: criterion.id }).items) {
-      call.update_coverage({ id: row.id, verified_at: '2026-09-21T00:00:00Z' });
+      call.update_coverage({ id: row.id, verified: true });
     }
   }
 

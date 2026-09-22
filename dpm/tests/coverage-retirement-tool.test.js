@@ -100,7 +100,7 @@ test('retiring twice is refused with the date the decision was made [integration
 test('a retired binding keeps its verification, because the ✓ was true of the text [integration]', (t) => {
   const { db, call } = surface(t);
   const { binding } = bound(db);
-  const row = call.create_coverage({ ...binding(), verified_at: AT });
+  const row = call.create_coverage({ ...binding(), verified: true });
 
   assert.ok(row.binding_hash, 'the server computed a hash over the bound texts');
 
@@ -179,7 +179,7 @@ test('update_coverage declares neither retirement column and refuses both [unit]
 
 // --- Criterion 5, the control: update_coverage still updates what it is for -----------------------
 
-test('update_coverage still sets position and verified_at on the same row [unit]', (t) => {
+test('update_coverage still sets position and the verification on the same row [unit]', (t) => {
   const { db, call } = surface(t);
   const { binding } = bound(db);
   const row = call.create_coverage(binding());
@@ -190,7 +190,7 @@ test('update_coverage still sets position and verified_at on the same row [unit]
 
   assert.equal(moved.position, 3);
 
-  const verified = call.update_coverage({ id: row.id, verified_at: AT });
+  const verified = call.update_coverage({ id: row.id, verified: true });
 
   assert.equal(verified.verified_at, AT);
   assert.ok(verified.binding_hash, 'and the server computed the hash that accompanies the mark');
@@ -223,17 +223,26 @@ const deletedTables = (sources) => sources
 test('no tool in the registered surface deletes a coverage row [unit]', (t) => {
   const { tools } = surface(t);
 
-  // One delete tool exists, and it is not on `coverage`: a session is a working note with no history
-  // to keep, which is exactly what a coverage row is not.
-  assert.deepEqual(deleters(tools).map((tool) => tool.name), ['delete_session']);
-  assert.deepEqual(deleters(tools).filter((tool) => tool.table.startsWith('coverage')), []);
+  // **Stated over the table this criterion is about, not over the list of deleters there happen
+  // to be.** The first cut enumerated the registry — `['delete_session']` — and epic 05-05 was the
+  // first legitimate change to break it: three recovery verbs arrived, one of them on
+  // `coverage_story`, and a `startsWith('coverage')` reading called that a coverage deleter. It is
+  // not one. `coverage` is the binding, and the row a ✓ is made about; `coverage_story` is the
+  // join saying a second story also delivers it, and removing one takes no verification with it.
+  assert.deepEqual(deleters(tools).filter((tool) => tool.table === 'coverage'), []);
 
   // The other half, over the call sites rather than the names.
   const sources = sweepSourcesUnder(SOURCES);
 
-  assert.deepEqual(deletedTables(sources), ['session'],
-    'something in src/ deletes a row through crud.js that is not a session');
+  assert.equal(deletedTables(sources).includes('coverage'), false,
+    'something in src/ deletes a coverage row through crud.js');
   assert.ok(sources.length > 30, `only ${sources.length} sources were swept`);
+
+  // **Both halves have to be able to find something**, or each is a search that never matched
+  // reporting a clean result. The registry does hold deleters and `src/` does delete rows; what
+  // neither touches is `coverage`.
+  assert.ok(deleters(tools).length > 0, 'the registry sweep found no delete tools at all');
+  assert.ok(deletedTables(sources).length > 0, 'the source sweep found no deleteById call sites');
 });
 
 test('both sweeps flag a planted deleter [unit]', (t) => {
@@ -244,7 +253,7 @@ test('both sweeps flag a planted deleter [unit]', (t) => {
   // above on a surface that deleted coverage rows freely.
   const planted = [...tools, { name: 'delete_coverage', table: 'coverage' }];
 
-  assert.deepEqual(deleters(planted).filter((tool) => tool.table.startsWith('coverage'))
+  assert.deepEqual(deleters(planted).filter((tool) => tool.table === 'coverage')
     .map((tool) => tool.name), ['delete_coverage']);
 
   assert.deepEqual(

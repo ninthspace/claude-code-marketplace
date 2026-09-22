@@ -53,7 +53,7 @@ function story(call) {
 
   // Verified through the tool, so the hash beside each mark is the server's — which is what makes
   // a cleared mark below observable as a cleared *pair* rather than one column going null.
-  const verified = bindings.map((binding) => call.update_coverage({ id: binding.id, verified_at: AT }));
+  const verified = bindings.map((binding) => call.update_coverage({ id: binding.id, verified: true }));
 
   verified.forEach((row) => assert.ok(row.binding_hash, 'the fixture did not record a verification'));
 

@@ -82,7 +82,7 @@ export function unevenSpec(call, { slug = 'uneven', filler = 0 } = {}) {
   // distinguishable from one where some are, and a report collapsing the two would pass against a
   // fixture whose middle requirement had nothing verified at all.
   for (const row of [verifiedBinding, partialVerified]) {
-    call.update_coverage({ id: row.id, verified_at: '2026-09-21T00:00:00Z' });
+    call.update_coverage({ id: row.id, verified: true });
   }
 
   // --- unaccounted: one member, and the non-member most easily mistaken for it ------------------
@@ -224,7 +224,7 @@ export function specWithWarnings(call, { slug = 'warned', db = null } = {}) {
       position: positions.coverage++,
     });
 
-    if (verify) call.update_coverage({ id: row.id, verified_at: '2026-09-21T00:00:00Z' });
+    if (verify) call.update_coverage({ id: row.id, verified: true });
 
     return row;
   };
@@ -245,7 +245,7 @@ export function specWithWarnings(call, { slug = 'warned', db = null } = {}) {
   call.create_acceptance_criterion({
     requirement_id: claimed.id, text: 'FR2 holds', polarity: 'must', position: 0,
   });
-  call.update_requirement({ id: claimed.id, coverage_claimed_at: '2026-09-21T01:00:00Z' });
+  call.update_requirement({ id: claimed.id, coverage_claimed: true });
 
   // Non-member two: unclaimed, but a binding is still unverified. "Every binding verified" is the
   // half a report could drop while still looking like it read the claim.

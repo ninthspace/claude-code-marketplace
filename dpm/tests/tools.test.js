@@ -368,7 +368,13 @@ test('a constraint only the database can check is still a refusal, not a crash',
   const missing = refused(() => call.create_story_criterion({
     story_id: 'no-such-story', text: 't', position: 0 }));
   assert.equal(missing.rpc.code, -32602);
-  assert.match(missing.message, /FOREIGN KEY/);
+
+  // **Read for the column and the table it points at, not for SQLite's own words** (FR7). The
+  // database says `FOREIGN KEY constraint failed` and names neither, which is bearable on a write
+  // carrying one id and useless on one carrying four — so the refusal is asked to name what
+  // missed, and this assertion moved off the bare message when it started doing so.
+  assert.match(missing.message, /story_id 'no-such-story'/);
+  assert.match(missing.message, /\bstory\b/);
 
   const duplicate = refused(() => call.create_coverage({
     requirement_id: requirement.id, spec_fragment: coverage.spec_fragment,
@@ -390,9 +396,9 @@ test('verification is set as a pair, and the hash is the servers rather than the
   const { coverage, story_criterion } = chain(call);
 
   // The half-set state the `CHECK` used to be the only guard against is now unreachable from the
-  // tool at all: `verified_at` alone completes itself. What was a refusal is the ordinary call.
-  const whole = call.update_coverage({ id: coverage.id, verified_at: '2026-08-08T00:00:00Z' });
-  assert.equal(whole.verified_at, '2026-08-08T00:00:00Z');
+  // tool at all: `verified` alone completes the pair. What was a refusal is the ordinary call.
+  const whole = call.update_coverage({ id: coverage.id, verified: true });
+  assert.equal(whole.verified_at, STAMP, 'the mark is not the clock this server read');
 
   // Recomputed here from the two bound texts rather than read from `binding.js`, so a change to
   // what is hashed or to the separator between the halves fails this rather than agreeing with
@@ -404,19 +410,23 @@ test('verification is set as a pair, and the hash is the servers rather than the
   assert.equal(whole.binding_hash, expected,
     'the hash is not over the fragment and the criterion text it binds');
 
-  // And the argument is gone from both coverage tools, which is what makes the hash evidence: a
-  // caller who can supply it can supply anything, and the `CHECK` accepts any string at all.
+  // And both halves of the pair are gone from both coverage tools, which is what makes them
+  // evidence: a caller who can supply the digest can supply anything, and the `CHECK` accepts any
+  // string at all — while a caller who can supply the time supplies one nobody read off a clock,
+  // which is the same failure wearing a plausible value (FR1).
   for (const name of ['create_coverage', 'update_coverage']) {
     const tool = tools.find((entry) => entry.name === name);
 
     assert.ok(!('binding_hash' in tool.inputSchema.properties),
       `${name} lets the caller choose the digest that vouches for its own claim`);
+    assert.ok(!('verified_at' in tool.inputSchema.properties),
+      `${name} lets the caller choose the moment its own claim was checked`);
   }
 
   // The other direction, and the reason the hash is read off the stored row: editing the criterion
   // clears the pair (FR21's trigger), and re-verifying yields a hash over the *new* text.
   call.update_story_criterion({ id: story_criterion.id, text: 'creating each type writes a row' });
-  const again = call.update_coverage({ id: coverage.id, verified_at: '2026-08-09T00:00:00Z' });
+  const again = call.update_coverage({ id: coverage.id, verified: true });
 
   assert.notEqual(again.binding_hash, expected, 'the ✓ came back over text that had moved');
 });

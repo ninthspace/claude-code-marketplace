@@ -109,12 +109,26 @@ function workspace(tools) {
       position: index + 2,
       spec_fragment: requirement.text,
     });
-    seed.update_coverage({ id: coverage.id, verified_at: '2026-08-09T00:00:00.000Z' });
+    seed.update_coverage({ id: coverage.id, verified: true });
     seed.create_story_criterion_approach({
       story_criterion_id: criteria[name].id,
       tag: name === 'manual' ? 'manual' : 'unit',
     });
-    return { requirement, coverage, criterion: criteria[name] };
+
+    // **What the spec asked for, beside what the story delivered.** The run's `asked` read the
+    // approaches on the requirement's own acceptance criteria, and the fixture had none — so the
+    // list was empty whatever it was given, which is how it went unnoticed that it was being
+    // handed a requirement id where a criterion id belongs.
+    const asked = seed.create_acceptance_criterion({
+      requirement_id: requirement.id,
+      text: `${requirement.label} is checked`,
+      polarity: 'must',
+      position: 0,
+    });
+
+    seed.create_criterion_approach({ criterion_id: asked.id, tag: 'unit' });
+
+    return { requirement, coverage, criterion: criteria[name], asked };
   });
 
   const startup = seedStartup(seed, { scope: 'inspect', skill: 'dpm:inspect', phase: 'Section 1' });
@@ -155,7 +169,13 @@ function run(call, fixture, { bound = REQUIREMENTS + 10, attempt = 1 } = {}) {
         approaches: call.list_story_criterion_approach({
           story_criterion_id: row.story_criterion_id, ...page,
         }).items,
-        asked: call.list_criterion_approach({ criterion_id: requirement.id, ...page }).items,
+        // **The approaches asked for hang off the requirement's *acceptance criteria*, not off
+        // the requirement.** This read passed `requirement.id` as `criterion_id` and returned an
+        // empty page every time, so `asked` was a list that could never hold anything — the exact
+        // shape FR8 is about, and found by the refusal on its first run against this suite.
+        asked: call.list_acceptance_criterion({ requirement_id: requirement.id, ...page }).items
+          .flatMap((criterion) =>
+            call.list_criterion_approach({ criterion_id: criterion.id, ...page }).items),
       })))
     .filter((entry) => entry.approaches.every((approach) =>
       ['manual', 'target'].includes(approach.tag)));

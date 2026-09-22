@@ -11,10 +11,17 @@
  *
  * **`verified_at` and `binding_hash` are set together or not at all**, which the table's `CHECK`
  * enforces and this tool does not duplicate. What these tools do add is that the pair can only be
- * set *correctly*: `verified_at` is the caller's, `binding_hash` is computed from the row's own two
- * texts by `src/coverage/binding.js` and is not an argument at all. A hash chosen by the party
- * making the claim attests to nothing, and the `CHECK` would have accepted any string — so a
- * skill writing a ✓ says when, and the server says over what.
+ * set *correctly*, and neither half is a caller's to choose: `verified` is a boolean saying the
+ * check happened, `verified_at` is this server's clock at the moment of the call, and
+ * `binding_hash` is computed from the row's own two texts by `src/coverage/binding.js`. A time
+ * supplied by the party making the claim is a time nobody read off a clock, and nothing downstream
+ * can tell that row from a real one — while verification time is exactly what the coverage matrix
+ * publishes as proof. So a skill writing a ✓ says *that* it checked; the server says when, and
+ * over what.
+ *
+ * **The boolean carries all three states**, which is what keeps it a swap rather than a narrowing:
+ * omitted leaves the mark and its hash alone, `true` stamps both, `false` clears both. Unverifying
+ * is a decision a caller can still make — what it can no longer do is date one.
  *
  * **Retirement is its own verb, and `update_coverage` does not offer it.** `retire_coverage` takes
  * an id and a reason; the timestamp is the server's. The alternative — `retired_at` and
@@ -30,7 +37,7 @@ import { defineTool, SUPPLIED, ToolError } from '../convention.js';
 import { bindingHash, fragmentPlacement } from '../../coverage/binding.js';
 import { withRequirementLabel } from '../../coverage/label.js';
 import { refuseCrossEpicDelivery } from './closing.js';
-import { insert, readById, update } from '../crud.js';
+import { deleteByKey, insert, readById, update } from '../crud.js';
 import { entityTools } from '../entity.js';
 
 const BINDING = {
@@ -45,9 +52,10 @@ const BINDING = {
 
 const STATE = {
   position: { type: 'integer', minimum: 0, description: 'Display order only; not identity' },
-  verified_at: {
-    type: 'string',
-    description: 'ISO 8601. Records the ✓; the server computes the binding hash that accompanies it',
+  verified: {
+    type: 'boolean',
+    description: 'True records the ✓ at the server\'s clock, false clears it; the server computes '
+      + 'the binding hash that accompanies it. Omit to leave the mark alone',
   },
 };
 
@@ -96,7 +104,11 @@ export function coverageTools({ db, now, newId }) {
       description: 'Bind a requirement fragment to a story criterion. One matrix row.',
       reads: ['coverage'],
       mutates: true,
-      serverSupplied: { id: SUPPLIED.ulid, binding_hash: SUPPLIED.derived('the bound texts') },
+      serverSupplied: {
+        id: SUPPLIED.ulid,
+        verified_at: SUPPLIED.clock,
+        binding_hash: SUPPLIED.derived('the bound texts'),
+      },
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -117,13 +129,16 @@ export function coverageTools({ db, now, newId }) {
           spec_fragment: args.spec_fragment,
           story_criterion_id: args.story_criterion_id,
           position: args.position,
-          verified_at: args.verified_at ?? null,
+          // FR1 — the stamp is this server's clock, never a value the caller carried in. A row
+          // born unverified is the ordinary case, so the absent argument and an explicit `false`
+          // mean the same thing here: no mark, and no hash beside one.
+          verified_at: args.verified ? now() : null,
           // Computed from the arguments rather than read back, because the row is not there yet —
-          // and the criterion is, which is the half that has to be looked up either way. Nullish,
-          // so a row created explicitly unverified gets no hash: a `binding_hash` beside a NULL
-          // `verified_at` is a binding recorded for a verification that was never made, which is
-          // the state FR21's decay triggers exist to prevent arising the other way round.
-          binding_hash: args.verified_at == null ? null : bindingHash(db, args),
+          // and the criterion is, which is the half that has to be looked up either way. Skipped
+          // for an unverified row: a `binding_hash` beside a NULL `verified_at` is a binding
+          // recorded for a verification that was never made, which is the state FR21's decay
+          // triggers exist to prevent arising the other way round.
+          binding_hash: args.verified ? bindingHash(db, args) : null,
         }, 'create_coverage');
       },
     }),
@@ -155,28 +170,39 @@ export function coverageTools({ db, now, newId }) {
       description: "Update a coverage row's position, or record its verification.",
       reads: ['coverage'],
       mutates: true,
+      serverSupplied: {
+        verified_at: SUPPLIED.clock,
+        binding_hash: SUPPLIED.derived('the bound texts'),
+      },
       inputSchema: {
         type: 'object',
         additionalProperties: false,
         properties: { id: { type: 'string', minLength: 1 }, ...STATE },
         required: ['id'],
       },
-      // The mark and its binding move together, in all three of the states a caller can now
-      // express. Omitting `verified_at` leaves both alone. Supplying one hashes off the **stored**
-      // row rather than off anything the caller holds: a verification is a statement about the
-      // texts as they are now, and a caller working from a copy read earlier would otherwise stamp
-      // a hash over text that has since moved. Clearing it clears the hash with it — a binding
-      // left behind by an unverification is the stale mark of a verification nobody made.
-      handler: ({ id, ...changes }) => {
-        if (changes.verified_at === undefined) {
+      // The mark and its binding move together, in all three of the states a caller can express.
+      // Omitting `verified` leaves both alone. `true` hashes off the **stored** row rather than
+      // off anything the caller holds: a verification is a statement about the texts as they are
+      // now, and a caller working from a copy read earlier would otherwise stamp a hash over text
+      // that has since moved. `false` clears the hash with the mark — a binding left behind by an
+      // unverification is the stale mark of a verification nobody made.
+      //
+      // **`verified` is read here and never written**, because it is not a column: the columns are
+      // `verified_at` and `binding_hash`, and the boolean is the caller's way of asking for both
+      // or for neither.
+      handler: ({ id, verified, ...changes }) => {
+        if (verified === undefined) {
           return update(db, 'coverage', id, changes, 'update_coverage');
         }
 
-        const binding = changes.verified_at === null
-          ? null
-          : bindingHash(db, readById(db, 'coverage', id, 'update_coverage'));
+        const stamp = verified
+          ? {
+            verified_at: now(),
+            binding_hash: bindingHash(db, readById(db, 'coverage', id, 'update_coverage')),
+          }
+          : { verified_at: null, binding_hash: null };
 
-        return update(db, 'coverage', id, { ...changes, binding_hash: binding }, 'update_coverage');
+        return update(db, 'coverage', id, { ...changes, ...stamp }, 'update_coverage');
       },
     }),
 
@@ -243,6 +269,39 @@ export function coverageTools({ db, now, newId }) {
       // FR14 — the two stories are meant to be doing one epic's work, so a story from another epic
       // delivering this binding is an id from the wrong place.
       guard: (row, where) => refuseCrossEpicDelivery(db)(row, where),
+    }),
+
+    defineTool({
+      name: 'delete_coverage_story',
+      table: 'coverage_story',
+      description:
+        'Remove the record that a story also delivers a coverage row, returning it as it was. '
+        + 'The recovery for a binding attached to the wrong story. The coverage row itself is '
+        + 'untouched — this removes the extra delivery, never the binding.',
+      reads: ['coverage_story'],
+      mutates: true,
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          coverage_id: { type: 'string', minLength: 1 },
+          story_id: { type: 'string', minLength: 1 },
+        },
+        required: ['coverage_id', 'story_id'],
+      },
+      // **Written here rather than produced by `entityTools`, and deletion stays opt-in.** A
+      // `deletable` flag on the factory would hand every join a delete tool, and which rows may be
+      // removed rather than withdrawn is a decision per table — `coverage` itself must never have
+      // one, and a criterion asserts so. Naming the two tools that do is cheaper than auditing the
+      // ones that would.
+      //
+      // **Named by its key, because it has no id to be named by.** That is the whole of what this
+      // story needed from the shared helper: `deleteByKey` in `crud.js`, which `deleteById` now
+      // delegates to so the read-before rule lives in one statement rather than two.
+      handler: (args) => deleteByKey(db, 'coverage_story', {
+        coverage_id: args.coverage_id,
+        story_id: args.story_id,
+      }, 'delete_coverage_story'),
     }),
   ];
 }

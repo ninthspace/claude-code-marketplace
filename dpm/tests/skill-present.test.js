@@ -222,7 +222,7 @@ test('a present run resolves its sources through the artifact join', (t) => {
   // the artifact claims a source the project does not have.
   assert.throws(
     () => raw.create_artifact_document({ artifact_id: result.artifact.id, document_id: 'no-such-id' }),
-    /FOREIGN KEY|foreign key/i,
+    /document_id 'no-such-id'/,
   );
 
   // And the file says the join is always written, because a run that skipped it still succeeds.

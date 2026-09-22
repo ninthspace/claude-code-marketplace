@@ -223,7 +223,7 @@ test('an artifact run writes one `artifact_document` row per link, and both rend
   // A source that does not exist is refused at write time rather than rendering as a dead citation.
   assert.throws(
     () => raw.create_artifact_document({ artifact_id: result.artifact.id, document_id: 'no-such-id' }),
-    /FOREIGN KEY|foreign key/i,
+    /document_id 'no-such-id'/,
   );
 
   // **The file has to say no backlink is written**, because a run that also edited one in still

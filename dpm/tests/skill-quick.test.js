@@ -198,7 +198,7 @@ test('a quick run writes the record, its criteria and one categorised observatio
     () => raw.create_observation_category({
       observation_id: observations[0].id, taxonomy_id: 'severity:warning',
     }),
-    /FOREIGN KEY/,
+    /taxonomy_id 'severity:warning' and taxonomy_domain 'observation'/,
     'a severity was accepted as an observation category',
   );
 

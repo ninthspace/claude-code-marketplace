@@ -280,7 +280,7 @@ export function selfHostingCorpus(call) {
         spec_fragment: requirement.text.split(' ').slice(1, 6).join(' '),
         story_criterion_id: criterion.id,
         position: coveragePosition,
-        verified_at: AT,
+        verified: true,
       });
 
       call.create_coverage_story({ coverage_id: coverage.id, story_id: story.id });
@@ -293,7 +293,7 @@ export function selfHostingCorpus(call) {
   // **Register entry 1 — partial coverage next to full.** Both requirements carry bound fragments;
   // only one carries the claim. Without the pair, "covered" and "claimed complete" are the same
   // observation and FR26 has nothing to distinguish.
-  call.update_requirement({ id: requirements[0].id, coverage_claimed_at: AT });
+  call.update_requirement({ id: requirements[0].id, coverage_claimed: true });
 
   // --- A review with findings and participants, an audit, a quick, a retro ---------------------
 

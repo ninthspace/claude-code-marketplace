@@ -42,21 +42,26 @@ const FIELDS = {
  * A requirement is never born claimed — there is nothing bound to it yet — so putting this in
  * `FIELDS` would give `create_requirement` an argument whose only honest value is absent.
  *
- * `coverage_claim_hash` is not here for the reason `binding_hash` is not on the coverage tools:
- * it is computed by `claimHash` over the bound fragment set, and a digest supplied by the party
- * making the claim records nothing.
+ * **Neither half of the claim is a caller's to choose (FR1).** `coverage_claim_hash` is computed
+ * by `claimHash` over the bound fragment set, and a digest supplied by the party making the claim
+ * records nothing; `coverage_claimed_at` is this server's clock, for the same reason one step on —
+ * a time nobody read off a clock is indistinguishable from a real one, and it is the date a spec's
+ * completeness is read off. So the argument is a boolean: `true` claims at `now()`, `false`
+ * withdraws and takes the hash with it, and omitting it leaves the claim exactly as it stands.
  */
 const CLAIM = {
-  coverage_claimed_at: {
-    type: 'string',
-    description: 'ISO 8601. Claims the bound coverage rows account for this requirement whole; '
-      + 'the server computes the hash over the bound set that accompanies it',
+  coverage_claimed: {
+    type: 'boolean',
+    description: 'True claims the bound coverage rows account for this requirement whole, at the '
+      + "server's clock; false withdraws the claim. The server computes the hash over the bound "
+      + 'set that accompanies it. Omit to leave the claim alone',
   },
 };
 
 /**
  * @param {object} context
  * @param {import('node:sqlite').DatabaseSync} context.db
+ * @param {() => string} context.now
  * @param {() => string} context.newId
  * @returns {object[]}
  */
@@ -88,7 +93,7 @@ function refuseUnexplainedExclusion(row, where) {
   );
 }
 
-export function requirementTools({ db, newId }) {
+export function requirementTools({ db, now, newId }) {
   return [
     defineTool({
       name: 'create_requirement',
@@ -152,13 +157,17 @@ export function requirementTools({ db, newId }) {
         + 'or claim that the coverage rows bound to it account for it whole.',
       reads: ['requirement'],
       mutates: true,
+      serverSupplied: {
+        coverage_claimed_at: SUPPLIED.clock,
+        coverage_claim_hash: SUPPLIED.derived('the bound fragment set'),
+      },
       inputSchema: {
         type: 'object',
         additionalProperties: false,
         properties: { id: { type: 'string', minLength: 1 }, ...FIELDS, ...CLAIM },
         required: ['id'],
       },
-      handler: ({ id, coverage_claimed_at: claimedAt, ...changes }) => {
+      handler: ({ id, coverage_claimed: claimed, ...changes }) => {
         // FR6's second path. Resolved against the stored row, so an update naming only the priority
         // is judged on the exclusion the row already carries — and one clearing that exclusion off
         // a `wont` row is refused, since an explicit null leaves the forbidden state just as an
@@ -171,7 +180,7 @@ export function requirementTools({ db, newId }) {
         }
 
         if (Object.keys(changes).length > 0) update(db, 'requirement', id, changes, 'update_requirement');
-        else if (claimedAt === undefined) throw new ToolError('update_requirement: nothing to update');
+        else if (claimed === undefined) throw new ToolError('update_requirement: nothing to update');
         // A claim against a requirement that is not there is a boundary rejection like any other,
         // and `claimComplete` raises an internal error rather than one — so the row is reached
         // for here, where the failure has the shape FR3 asks for.
@@ -179,7 +188,9 @@ export function requirementTools({ db, newId }) {
 
         // After the edits and never before: `requirement_unclaim_on_text_edit` would clear a claim
         // written first, and the claim is about the set as it stands when this call is finished.
-        if (claimedAt !== undefined) claimComplete(db, id, claimedAt);
+        // The clock is read here rather than at the top of the handler for the same reason — a
+        // claim is dated to the moment the call settled, not to the moment it arrived.
+        if (claimed !== undefined) claimComplete(db, id, claimed ? now() : null);
 
         return readById(db, 'requirement', id, 'update_requirement');
       },

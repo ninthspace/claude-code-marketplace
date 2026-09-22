@@ -25,7 +25,7 @@
 import { REGISTER } from '../../integrity/register.js';
 import { ulid } from '../../id/ulid.js';
 import { defineTool, SUPPLIED, ToolError } from '../convention.js';
-import { insert, readById } from '../crud.js';
+import { deleteById, insert, readById } from '../crud.js';
 
 /**
  * Register entry 1, found by its number.
@@ -224,6 +224,34 @@ export function dependencyTools({ db, newId = ulid }) {
 
         return row;
       },
+    }),
+
+    defineTool({
+      name: 'delete_dependency',
+      table: 'dependency',
+      description:
+        'Remove one edge by id, returning the row as it was. The recovery for an edge written '
+        + 'the wrong way round: delete it, then write the edge that was meant.',
+      reads: ['dependency'],
+      mutates: true,
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { id: { type: 'string', minLength: 1 } },
+        required: ['id'],
+      },
+      // **This one deletes where the other recoveries retire, and the asymmetry is the whole
+      // point.** A withdrawn observation stays readable because "what did this retro hear?" is a
+      // question somebody asks. A withdrawn *edge* would have to keep constraining the graph or
+      // stop being an edge — and if it kept constraining it, the recovery would be impossible:
+      // the correct edge, written back the other way, closes a cycle over the wrong one that is
+      // still there. So the row goes.
+      //
+      // **Nothing here re-checks the graph, and that is not an omission.** Removing an edge can
+      // only shrink what is reachable, so no cycle and no endpoint violation can be introduced by
+      // one leaving. `create_dependency` needs its own transaction because a write can break the
+      // invariant; a delete cannot.
+      handler: (args) => deleteById(db, 'dependency', args.id, 'delete_dependency'),
     }),
   ];
 }

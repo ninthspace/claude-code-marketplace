@@ -22,6 +22,7 @@
 
 import { defineTool } from './convention.js';
 import { selectPage, includeFlag } from './query.js';
+import { listsByParent, refuseUnknownScope, scopeParents } from './scope.js';
 
 /**
  * One row per list tool, for the types that are not document kinds. The kinds are derived instead,
@@ -344,6 +345,24 @@ function childLists(db, spine) {
 export function listTools({ db }, spine) {
   const all = [...documentLists(db), ...LISTS, ...childLists(db, spine)];
 
+  // FR8 — where each list's scopes point, read once here rather than on every call. **Derived
+  // from the foreign keys rather than declared on each entry above**: thirty-nine of the
+  // forty-two scope arguments are plain references, so a declaration would restate the schema and
+  // the test pinning it would compare a copy with the original. `src/tools/scope.js` carries the
+  // reasoning and the three scopes that are not references.
+  const parents = all.map((entry) => ({
+    name: `list_${entry.type}`,
+    scopes: scopeParents(db, entry.table, [
+      ...(entry.within ? [entry.within] : []),
+      ...(entry.scopes ?? []),
+    ]),
+  }));
+
+  // The other direction, which the schema genuinely cannot answer: a table does not name a list,
+  // and `document` is the parent of twenty-one of the scopes. Built from the registry, once.
+  const byParent = listsByParent(parents);
+  const scopesOf = new Map(parents.map((entry) => [entry.name, entry.scopes]));
+
   return all.map(({
     type, table, fixed = {}, within, scopes = [], gated, live, order, documentRows = false,
   }) => {
@@ -427,18 +446,26 @@ export function listTools({ db }, spine) {
         // it safe rather than the scope being compulsory.
         required: [],
       },
-      handler: (args) => selectPage(db, {
-        table,
-        order,
-        gated,
-        live,
-        where: name,
-        filters: {
-          ...fixed,
-          ...(within ? { [within]: args[within] } : {}),
-          ...Object.fromEntries(scopes.map((column) => [column, args[column]])),
-        },
-      }, args),
+      handler: (args) => {
+        // **Before the query and never after.** A refusal derived from an empty result would fire
+        // on the scope that is genuinely empty, which is the one state a list must go on returning
+        // a page for — and the distinction FR8 exists to draw would be destroyed by the check
+        // meant to draw it.
+        refuseUnknownScope(db, args, scopesOf.get(name), byParent, name);
+
+        return selectPage(db, {
+          table,
+          order,
+          gated,
+          live,
+          where: name,
+          filters: {
+            ...fixed,
+            ...(within ? { [within]: args[within] } : {}),
+            ...Object.fromEntries(scopes.map((column) => [column, args[column]])),
+          },
+        }, args);
+      },
     });
   });
 }

@@ -41,6 +41,9 @@ import {
 /** The epic's corpus. Named here because the epic's scope is these three, not the twenty-two. */
 const CORPUS = ['spec', 'epics', 'do'];
 
+/** The instant the pinned server clock reads. Supplied as an argument nowhere in this file. */
+const VERIFIED_AT = '2026-08-09T14:22:57.104Z';
+
 const sources = new Map(CORPUS.map((name) => [name, skillSource(name)]));
 
 // --- Criterion 1: no filename pattern, glob, allocation procedure or progress file ---------------
@@ -265,7 +268,7 @@ function doStage(call, epicId) {
       call.list_story_criterion_approach({ story_criterion_id: criterion.id });
 
       for (const row of call.list_coverage({ story_criterion_id: criterion.id }).items) {
-        call.update_coverage({ id: row.id, verified_at: '2026-08-09T00:00:00.000Z' });
+        call.update_coverage({ id: row.id, verified: true });
       }
     }
 
@@ -278,7 +281,9 @@ function doStage(call, epicId) {
 
 test('spec, epics and do run in sequence and leave one connected graph', (t) => {
   const db = openPlanningDatabase(t);
-  const tools = spineTools(db);
+  // Pinned to an instant no stage supplies as an argument, so the mark read back below is the
+  // server's clock rather than a string the run and the assertion happen to share.
+  const tools = spineTools(db, { now: () => VERIFIED_AT });
   const { call, used } = recorder(tools);
 
   const specId = specStage(call);
@@ -316,7 +321,7 @@ test('spec, epics and do run in sequence and leave one connected graph', (t) => 
       `${requirement.label} has ${rows.length} coverage rows for ${accepted.length} criteria`);
 
     for (const row of rows) {
-      assert.equal(row.verified_at, '2026-08-09T00:00:00.000Z', 'a row the run never verified');
+      assert.equal(row.verified_at, VERIFIED_AT, 'a row the run never verified');
       assert.ok(row.binding_hash, 'a ✓ with no record of what it verified');
       assert.ok(requirement.text.includes(row.spec_fragment),
         'the fragment is not a verbatim slice of its requirement');

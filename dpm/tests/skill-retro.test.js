@@ -352,7 +352,7 @@ test('the four modes stay apart, a preview writes nothing, and promotion retires
   // Provenance is kind-pinned, so it cannot point at the epic it came out of.
   assert.throws(
     () => raw.update_observation({ id: candidates[1].id, library_doc_id: fixture.epic.id }),
-    /FOREIGN KEY/,
+    /library_doc_id .* and library_doc_kind 'library'/,
     'an observation was promoted into something that is not a library document',
   );
 

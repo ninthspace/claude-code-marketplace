@@ -246,7 +246,7 @@ test('a review run writes its scope, its panel by reference and its findings by 
     () => raw.create_document_agent({
       document_id: stored.id, document_kind: 'review', agent: 'nobody',
     }),
-    /FOREIGN KEY/,
+    /agent 'nobody'/,
     'a review credited a persona that does not exist',
   );
 
@@ -269,7 +269,9 @@ test('a review run writes its scope, its panel by reference and its findings by 
       review_id: stored.id, position: 99, summary: 'Wrong vocabulary',
       severity_id: [...category][0], category_id: [...severity][0],
     }),
-    /FOREIGN KEY/,
+    // The refusal names the slot and the term in it, which is what makes the mix-up legible:
+    // a finding-domain term sitting where a severity belongs.
+    /severity_id 'finding:/,
     'a severity was accepted in a category slot',
   );
 

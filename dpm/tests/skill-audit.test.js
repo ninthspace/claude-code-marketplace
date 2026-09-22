@@ -218,7 +218,7 @@ test('an audit run writes findings whose dimension and severity are typed by voc
       audit_id: stored.id, position: 99, file: 'src/x.js', summary: 'Wrong vocabulary',
       dimension_id: [...severity][0], severity_id: [...dimension][0],
     }),
-    /FOREIGN KEY/,
+    /severity_id 'audit_dimension:/,
     'a severity was accepted in a dimension slot',
   );
   assert.throws(
@@ -226,7 +226,7 @@ test('an audit run writes findings whose dimension and severity are typed by voc
       audit_id: stored.id, position: 98, file: 'src/x.js', summary: 'Right domain, no such term',
       dimension_id: 'audit_dimension:invented', severity_id: [...severity][0],
     }),
-    /FOREIGN KEY/,
+    /dimension_id 'audit_dimension:invented'/,
     'a dimension nobody seeded was accepted',
   );
 

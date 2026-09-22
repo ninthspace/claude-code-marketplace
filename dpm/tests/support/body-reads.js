@@ -311,7 +311,9 @@ export const CLASSIFICATION = new Map(Object.entries({
     [true, 'the same read-back, and the criteria the reachability gate weighs come through it'],
 
   // --- inspect ----------------------------------------------------------------------------------
-  // Seven sites, none of which needs a body — and the sweep flagged every one.
+  // Eight sites, none of which needs a body — and the sweep flagged every one.
+  'inspect · list_acceptance_criterion · 3. Join the change set to what records intent':
+    [false, 'a step on the way to the approaches the spec asked for; only the criterion ids are used'],
   'inspect · list_requirement · 3. Join the change set to what records intent':
     [false, 'traces a change set to the row that records its intent; a requirement is named by `label`'],
   'inspect · list_task · 3. Join the change set to what records intent':

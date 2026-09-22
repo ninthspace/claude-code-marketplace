@@ -11,8 +11,32 @@ Everything this skill records is a typed tool call. It composes no markdown, nam
 never reads back what it or another skill wrote.
 
 Follow the shared conventions in `dpm/shared/skill-conventions.md` — read that file at startup.
-This skill uses **Gate Presentation**, **Conversational Output**, **Cross-References** and
-**Implementation Guidelines** from it.
+This skill uses **Gate Presentation**, **Conversational Output** and **Cross-References** from it.
+
+## How this skill changes a codebase
+
+Three rules, held here rather than shared because this is the only skill that writes code.
+
+**Edit an existing file with the Edit tool, one file at a time.** `sed`, `perl` and `awk` have no
+part in changing a file: a stream edit bypasses the diff the tool produces, corrupts a file on a
+partial match, and leaves nothing to review afterwards. Reading with `grep` or `find`, and running
+a build or a test, are unaffected — the rule is about modifying content.
+
+**Correctness before speed.** Where the two pull apart, the correct implementation delivered
+methodically is faster end to end than a quick one that has to be debugged. Nothing in this file's
+talk of momentum means otherwise: it means no ceremony, never no verification.
+
+**Version control stays with the user.** No commit, no staging, no branch, no push, no merge or
+reset on this skill's own initiative. `git status`, `git log` and `git diff` are reads and are
+fine. The exception is an instruction — a criterion that names a git action, a user asking for one,
+or a wrapper like `/dpm:ralph` that commits after each story.
+
+**A scratch file goes where the repository's ignore rules already account for it, and is removed
+once it has been read.** A working copy, a captured output, a file written to compare two runs —
+each belongs somewhere `git status` stays quiet about, so the next status check shows the work and
+not the run's own leavings. Left behind, it is either committed by somebody who could not tell it
+from the change or reported as an untracked file nobody can place. The session's scratchpad
+directory is what this means where the harness provides one.
 
 ## Input
 
@@ -241,14 +265,21 @@ Unmet criteria go to `AskUserQuestion` — keep working, or complete anyway. Eit
 and the run carries straight on into the rest of Step 5, then 5b, 6 and 7, in the same turn the
 answer arrived in.
 
+**Render each unmet criterion in full before that gate, with what the assessment actually found.**
+Its `text`, and the failure — the assertion that went red, the output, the thing the control could
+not show. A gate asking whether to accept a shortfall nobody has seen is asking the user to approve
+a summary of it, and "two criteria are unmet" is a summary of exactly the part they need.
+
 **Recording the verification.** When a story's criteria are met, for each criterion call
 `mcp__plugin_dpm_dpm__list_coverage` with its `story_criterion_id` and, for each row, `mcp__plugin_dpm_dpm__update_coverage`
-with `verified_at`.
+with `verified` set to true.
 
-That call is the whole of it. **Nothing here writes a table, clears a mark, or computes a hash**:
-the matrix is a projection of these rows, the hash that records *what* was verified is the server's,
-and editing either bound text clears the mark by trigger. A skill re-implementing any of the three
-would be a second answer to a question the database already answers.
+That call is the whole of it. **Nothing here writes a table, clears a mark, computes a hash or
+supplies a time**: the matrix is a projection of these rows, the hash that records *what* was
+verified is the server's, the moment it happened is the server's clock, and editing either bound
+text clears the mark by trigger. A skill re-implementing any of them would be a second answer to a
+question the database already answers — and a time a run chose rather than read is one nothing
+downstream can tell from a real one.
 
 **Say which requirement a row binds by its `requirement_label`, never by its `requirement_id`.**
 Every coverage row a read or a list returns carries the label, derived rather than stored, so a run
@@ -283,6 +314,11 @@ work with. `mcp__plugin_dpm_dpm__create_observation` with this `story_id` and th
 a smooth delivery is worth recording as much as a surprise. On an implementation task an observation
 is optional — the story's gate will cover it.
 
+**One observation per story, and a second category goes on the existing row.** A finding that is
+both a testing gap and a pattern worth reusing is one observation carrying two
+`mcp__plugin_dpm_dpm__create_observation_category` rows, not two observations saying the same thing under
+different headings. `/dpm:retro` groups by category and would count the story twice.
+
 **Session.** `mcp__plugin_dpm_dpm__update_session` immediately after, carrying `phase` and the accumulated
 `state`.
 
@@ -316,9 +352,10 @@ story says what holds it, and that is the report rather than a status.
 `spec_fragment`s against the requirement's own `text`, and both are withheld by default. A
 requirement whose rows are all verified is discharged as far as the rows go; where the run judges
 the bound fragments account for the requirement whole, say so with
-`mcp__plugin_dpm_dpm__update_requirement` and `coverage_claimed_at`. **That is a claim and not a computation**,
-which is why a human makes it: connective prose carries no obligation, and two obligations in one
-sentence can be discharged by a fragment covering either. Leave it unclaimed rather than guess.
+`mcp__plugin_dpm_dpm__update_requirement` and `coverage_claimed` set to true. **That is a claim and not a
+computation**, which is why a human makes it: connective prose carries no obligation, and two
+obligations in one sentence can be discharged by a fragment covering either. Leave it unclaimed
+rather than guess. When it is made, the moment is the server's, not a time this run supplies.
 
 **A criterion is accounted for by `accounted_for`, which `mcp__plugin_dpm_dpm__list_story_criterion` returns
 with `include_body` and nothing here works out.** It is true where the criterion has a live binding
@@ -328,6 +365,11 @@ criteria where it is false, naming each by its `text`, which is why the body is 
 criterion has no title, so a report that listed ids would name nothing anyone can act on. A run
 deriving the judgement itself from the coverage rows would report every warranted criterion as a
 gap.
+
+**Never add coverage pages up by hand.** `mcp__plugin_dpm_dpm__check_coverage` answers the roll-up in one
+call, and a run totalling its own pages is counting the rows it happened to read: a second page it
+did not ask for is missing from the total with nothing saying so, and a page read twice is counted
+twice. Quote the report's own figures.
 
 **Say what the count is.** Every verification in it was recorded by this skill on its own work, so
 the summary reports what this run claimed, added up. "Nine of nine rows marked verified by this run"

@@ -339,7 +339,9 @@ test('a review and an audit of one epic write two tables with two vocabularies',
       dimension_id: 'audit_dimension:performance', severity_id: 'audit_dimension:performance',
     })],
   ]) {
-    assert.throws(apply, /FOREIGN KEY|constraint/i, `${label} was accepted`);
+    // Read for the slot and the term in it rather than for SQLite's words (FR7): each of these
+    // is a term from the wrong domain, and the refusal now says which slot it landed in.
+    assert.throws(apply, /(_id '\w+:|constraint)/i, `${label} was accepted`);
   }
 
   // **Severity is shared on purpose and the pins do not make it two vocabularies.** A term a

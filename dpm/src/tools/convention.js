@@ -211,6 +211,37 @@ const TYPES = {
  * @returns {object} The arguments, with defaults applied.
  * @throws {ToolError}
  */
+/**
+ * What a tool takes, as a sentence a caller can correct towards (FR23).
+ *
+ * **Required and optional are separated, because they are different instructions.** A caller who
+ * mistyped one of four required arguments needs to see which four; a caller reaching for a
+ * capability the tool does not have needs the optional set to know it is not there. A single
+ * alphabetical list answers neither question well.
+ *
+ * Declaration order, not alphabetical: `inputSchema` lists the identifying arguments first and the
+ * schema is what a caller was shown, so the message reads in the order they read it in.
+ *
+ * @param {object} schema
+ * @returns {string}
+ */
+function accepts(schema) {
+  const properties = Object.keys(schema.properties ?? {});
+  const required = new Set(schema.required ?? []);
+
+  const must = properties.filter((name) => required.has(name));
+  const may = properties.filter((name) => !required.has(name));
+
+  const parts = [
+    ...(must.length > 0 ? [`${must.join(', ')} (required)`] : []),
+    ...(may.length > 0 ? [`${may.join(', ')} (optional)`] : []),
+  ];
+
+  // A tool that takes nothing at all is a real shape — `check_integrity` is one — and "it takes"
+  // followed by silence reads as a truncated message.
+  return parts.length > 0 ? `it takes ${parts.join(' and ')}` : 'it takes no arguments';
+}
+
 export function validate(schema, args, where) {
   if (!TYPES.object(args)) throw new ToolError(`${where}: arguments must be an object`);
 
@@ -220,7 +251,10 @@ export function validate(schema, args, where) {
 
   for (const name of Object.keys(args)) {
     if (!Object.hasOwn(properties, name)) {
-      throw new ToolError(`${where}: unknown argument '${name}'`);
+      // FR23 — a caller told only that a property is not allowed has nothing to correct towards.
+      // This spec's own first eight writes were refused for a missing field and reported as
+      // invalid parameters, which is the evidence the requirement carries.
+      throw new ToolError(`${where}: unknown argument '${name}' — ${accepts(schema)}`);
     }
   }
 

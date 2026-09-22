@@ -323,6 +323,11 @@ function run(call, fixture) {
       || requirement.class.startsWith('environmental_'))
     .filter((requirement) => call.list_coverage({ requirement_id: requirement.id }).items.length === 0);
 
+  // **And the integrity check, which is the other half of Step 4.** The gap check reads what the
+  // rows say; this reads whether they hold. A breakdown can be complete by the first and broken by
+  // the second, and the run drives it so the instruction is exercised rather than merely written.
+  const integrity = call.check_integrity({});
+
   // And the tree read back off the rows rather than repeated from what was sent.
   const tree = epics.map((epic) => ({
     epic,
@@ -335,7 +340,7 @@ function run(call, fixture) {
 
   return {
     spec, requirements, specCriteria, epics, matrices, planned, plain, storyCriteria, affordance,
-    coverage, gaps, observations, tree, fr3, obligation, obligationBinding,
+    coverage, gaps, integrity, observations, tree, fr3, obligation, obligationBinding,
   };
 }
 

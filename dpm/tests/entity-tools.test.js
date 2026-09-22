@@ -167,7 +167,11 @@ test('a review and a retro are root-numbered and still record what they were abo
     parent_id: retro.id, slug: 'nope', title: 'A review of a retro',
   }));
 
-  assert.match(wrong.message, /FOREIGN KEY/);
+  // Both halves of the composite reference, because which of them is the mistake is not knowable
+  // from the failure — a review under a retro is a legal kind and a legal parent, and only the
+  // pair is wrong.
+  assert.match(wrong.message, /kind 'review' and parent_kind 'retro'/);
+  assert.match(wrong.message, /document_kind_parent/);
 });
 
 test('the mutation: a review built as though root numbering meant no parent', (t) => {
@@ -269,7 +273,7 @@ test('the mutation: a detail row that fails leaves no document row behind', (t) 
     scope: 'story', scope_story_id: 'no-such-story',
   }));
 
-  assert.match(dangling.message, /FOREIGN KEY/);
+  assert.match(dangling.message, /scope_story_id 'no-such-story'/);
   assert.equal(reviews(), before, 'the document row outlived the detail row that failed');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM review').get().n, 0);
 
