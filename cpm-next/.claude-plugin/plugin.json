@@ -1,7 +1,7 @@
 {
   "name": "cpm-next",
-  "description": "Experimental four-skill CPM for Opus 5.5: party (divergent discussion), plan (brief, spec and epics from whatever already exists), do (autonomous execution to a stated finish line), library (reference documents every skill reads). Reads and writes the CPM v3 artefact formats, so the board and v3 skills keep working.",
-  "version": "0.2.0",
+  "description": "Experimental six-skill CPM for Opus 5.5: party (divergent discussion), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (autonomous execution to a stated finish line), library (reference documents and promoted retro lessons), status (where things stand and what to run next). Reads and writes the CPM v3 artefact formats, so the board and v3 skills keep working.",
+  "version": "0.3.0",
   "author": { "name": "Chris Aves" },
   "license": "MIT",
   "keywords": ["planning", "party-mode", "personas", "specification", "epics", "execution", "opus-5.5"]

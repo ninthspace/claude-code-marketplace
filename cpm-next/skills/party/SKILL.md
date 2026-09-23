@@ -55,4 +55,4 @@ If a session resumes and finds a record with `**Status**: In progress`, carry on
 
 ## Finishing
 
-On "wrap up", "done" or similar: finalise the record, set its status to `Concluded`, and give the path. Then name the natural next move in one line, usually `/cpm-next:plan {record path}`, or say nothing further if the discussion was exploratory. Don't present a menu.
+On "wrap up", "done" or similar: finalise the record, set its status to `Concluded`, and give the path. Then name the natural next move in one line, usually `/cpm-next:plan {record path}`, or say nothing further if the discussion was exploratory.

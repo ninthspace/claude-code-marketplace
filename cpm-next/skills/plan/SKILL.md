@@ -26,7 +26,7 @@ Read what exists before asking anything:
 
 - `docs/` in full: discussions, plans, briefs, architecture, specs, epics (including status), retros, library, quick.
 - Planning material outside CPM's shape: `PRD.md`, `README.md`, `docs/*.md`, `CLAUDE.md`, issue text the user pastes.
-- In a brownfield project, the code: stack, conventions, the modules the work touches, the test setup and test command. For a large codebase, give each area to its own subagent, running in parallel, and check what each one reports against the files it cites. Time matters here: an accurate picture sooner is better than an exhaustive one later.
+- In a brownfield project, the code: stack, conventions, the modules the work touches, the test setup and test command. For a large codebase, give each area to its own subagent, running in parallel, and check what each one reports against the files it cites.
 - `$ARGUMENTS`, which may be a description, a path, a target, or nothing. With nothing, the most recent unconcluded discussion or the most recent spec without epics is the likely starting point. Say which one you picked.
 
 From this, name the starting point in one or two sentences: what exists, what's missing, and what this run will produce. Then carry on without waiting for approval.
@@ -64,4 +64,4 @@ End with three short headings:
 
 - **Needs you**: open decisions and the assumptions most worth checking, first.
 - **Written**: each path, one line on what it holds.
-- **Next**: normally `/cpm-next:do {first epic}`, or `/cpm-next:do all` when the epics are ready to run unattended.
+- **Next**: normally `/cpm-next:do {first epic}`, or `/cpm-next:do all` when the epics are ready to run unattended. Suggest `/cpm-next:review {epic}` first when an epic is large, touches unfamiliar code, or is about to run unattended.

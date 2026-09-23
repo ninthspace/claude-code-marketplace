@@ -11,7 +11,8 @@ The skills in this plugin keep their procedures short and their data strict. Thi
 | ADR (only for decisions that outlive one spec) | `docs/architecture/{nn}-adr-{slug}.md` | plan |
 | Spec | `docs/specifications/{nn}-spec-{slug}.md` | plan |
 | Epic | `docs/epics/{parent}-{seq}-epic-{slug}.md` | plan (structure), do (status) |
-| Retro | `docs/retros/{nn}-retro-{slug}.md` | do |
+| Retro | `docs/retros/{nn}-retro-{slug}.md` | do; library marks observations retired |
+| Review | `docs/reviews/{nn}-review-{slug}.md` | review |
 | Quick change record | `docs/quick/{nn}-quick-{slug}.md` | do |
 | Reference library | `docs/library/*.md` | library, or the user; every skill reads it |
 | Persona roster override | `docs/agents/roster.yaml` | the user; replaces the plugin default entirely |
@@ -144,6 +145,52 @@ The criterion line itself is never edited to record verification, so its text st
 
 - `**Retro waived**: {reason} ({YYYY-MM-DD})` marks a completed epic whose run produced nothing worth a retro.
 
+## Retro
+
+```markdown
+# Retro: {Epic or change title}
+
+**Date**: {YYYY-MM-DD}
+**Source**: {epic or quick record path}
+**Stories**: {completed}/{total} complete
+
+## Summary
+
+## Observations
+### {Category}
+- {observation}: {what it means for the next piece of work}
+
+## Recommendations
+```
+
+Categories are v3's seven, used only when they have entries: Smooth Deliveries, Scope Surprises, Criteria Gaps, Complexity Underestimates, Codebase Discoveries, Testing Gaps, Patterns Worth Reusing.
+
+An observation that has been promoted to the library, or has stopped being true, is retired in place rather than deleted. Append a marker to its bullet: `**Retired {YYYY-MM-DD}**: {reason, or "promoted to {library path}"}`. Every skill skips a retired observation when reading retros for context. Removing the marker restores it.
+
+## Review
+
+```markdown
+# Review: {Epic title, or Epic title — Story N}
+
+**Date**: {YYYY-MM-DD}
+**Source**: {epic path}
+**Reviewers**: {persona display names}
+**Findings**: {n} ({critical} critical, {warning} warnings, {suggestion} suggestions)
+
+## Summary
+
+## Findings
+- **[{Critical|Warning|Suggestion}]** {icon} **{persona}**: {finding}
+  → Story {N}{, criterion or task}: {what is wrong and why it matters}
+
+## Remediation
+- Fixed: {finding} → {what changed in the epic}
+- Needs you: {finding} → {the decision it waits on}
+- Not acted on: {finding} → {why}
+```
+
+Critical means the story can't be built correctly as written. Warning means it can be built but will probably go wrong. Suggestion means it would be better but won't go wrong.
+
 ## Library document
 
 ```markdown
@@ -174,7 +221,7 @@ All six fields are required. Filenames are kebab-case with no number prefix.
 
 Combine rows freely; an API contract is usually `spec`, `epics`, `do`.
 
-v3's `/cpm:retro learn` appends amendments below the body in this form, and `library consolidate` folds them back in:
+A lesson learned from a retro reaches the library in one of two ways. If it changes what an existing document says, it is appended to that document as an amendment block, which `library consolidate` later folds into the body:
 
 ```markdown
 ## Amendment — {YYYY-MM-DD} (via retro)
@@ -184,6 +231,19 @@ v3's `/cpm:retro learn` appends amendments below the body in this form, and `lib
 
 {what was learned and what should change}
 ```
+
+If no document covers it, it becomes an entry in `docs/library/lessons-learned.md`. That file has one front-matter block, titled `Promoted Retro Lessons`, whose `scope` is the union of its entries' scopes. Entries are appended and never rewritten:
+
+```markdown
+## {Lesson title}
+**Promoted**: {YYYY-MM-DD}
+**Source**: {retro path} → {Category} → "{observation text, verbatim}"
+**Scope**: {scope values for this lesson}
+
+{The lesson, written to stand on its own.}
+```
+
+Either way, `last-reviewed` in the document's front-matter moves to today. The `**Source**` line identifies the lesson, so a lesson whose source already appears there is never promoted a second time.
 
 ## Amending an existing artefact
 

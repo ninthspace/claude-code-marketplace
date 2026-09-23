@@ -28,7 +28,7 @@ For a small change with no epic: do it, test it, and write a short `docs/quick/`
 ## Before the first story
 
 - Read `CLAUDE.md`, `docs/library/`, the epic, its source spec, and any ADRs it cites.
-- Skim `docs/retros/` for observations that bear on this epic's area and treat them as context. No gate, no dispositions.
+- Skim `docs/retros/` for observations that bear on this epic's area and treat them as context, skipping any marked `**Retired`.
 - Find the test command from the library, `composer.json`, `package.json`, `Makefile`, `pyproject.toml` or `Cargo.toml`. Run the suite to get the baseline.
 - Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything.
 
@@ -39,10 +39,10 @@ For each unblocked story, lowest number first:
 1. Set the story (and the epic, if it was Pending) to `In Progress`.
 2. Build it. Follow the project's existing conventions over your own preferences.
 3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write an `Evidence` line directly under that criterion, as the contract shows, so each proof sits beside the claim it proves. A criterion without its own evidence isn't met.
-4. Review the story's diff as a reviewer would: list only problems you'd block a merge for, and fix them. In a Laravel project, use the `laravel-simplifier` agent if it's available.
+4. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available.
 5. Mark tasks and the story `Complete`. Add a `**Retro**` line only for something future work genuinely needs to know.
 
-Time matters in this run: avoid spending time that can be avoided, because a correct result sooner is better. Stories that are unblocked together can go to subagents in parallel, but only when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports.
+Stories that are unblocked together can go to subagents in parallel, but only when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports.
 
 The lead agent owns everything shared, and subagents don't touch it:
 
@@ -89,7 +89,7 @@ A criterion is wrong only when you can cite something that contradicts it: a `fi
 
 ## Finishing
 
-When an epic's last story completes, set the epic `Complete`. If the run produced observations worth carrying forward, write a short retro to `docs/retros/`; otherwise add `**Retro waived**: clean run` to the epic header, so it doesn't sit waiting for a retro that has nothing to say.
+When an epic's last story completes, set the epic `Complete`. If the run produced observations worth carrying forward, write a short retro to `docs/retros/` in the contract's format; otherwise add `**Retro waived**: clean run` to the epic header, so it doesn't sit waiting for a retro that has nothing to say.
 
 End every run with three headings, in this order:
 

@@ -1,6 +1,6 @@
 ---
 name: library
-description: Curate the project reference library in docs/library/ — import a local file or URL with front-matter that tells every skill what the document constrains and when to read it, back-fill front-matter on documents that have none, or fold accumulated amendment blocks into a clean current version. Use whenever the user wants to add standards, architecture notes, API contracts, domain glossaries or other reference material for planning and building to draw on. Triggers on "/cpm-next:library".
+description: Curate the project reference library in docs/library/ — import a local file or URL with front-matter that tells every skill what the document constrains and when to read it, promote durable lessons from retros into it, back-fill front-matter on documents that have none, or fold accumulated amendment blocks into a clean current version. Use whenever the user wants to add standards, architecture notes, API contracts, domain glossaries or other reference material for planning and building to draw on. Triggers on "/cpm-next:library".
 ---
 
 # Library
@@ -16,6 +16,7 @@ Read `$ARGUMENTS`:
 | Argument | Action | Done when |
 |---|---|---|
 | a file path or URL | import it | the document is saved in `docs/library/` with complete front-matter |
+| `learn`, optionally with a retro path or keyword | promote lessons | every lesson the user chose is in the library and retired in its retro |
 | `consolidate` alone | back-fill | every library document starts with complete front-matter |
 | `consolidate {path}` | consolidate | that document's amendments are folded into its body and removed |
 | nothing | ask which document to import, in one line | as for an import |
@@ -26,6 +27,15 @@ Read `$ARGUMENTS`:
 2. Write the front-matter. `summary` is written for the skills that will read it, not for a person browsing: the constraints, decisions and rules the document imposes, in two to five sentences. "PSR-12 enforced by Pint. Repository pattern for data access. No inline SQL outside migrations." rather than "This document describes the team's PHP standards." Choose `scope` from what the document constrains, using the mapping in the contract.
 3. Show the front-matter and the filename in one message, then save unless the user redirects. Ask only when the scope is genuinely ambiguous, and then in one AskUserQuestion call with a recommended option.
 4. Save to `docs/library/{kebab-case-title}.md`, front-matter first, the source content after it unchanged. Library documents have no number prefix. If the filename is taken, say so and ask whether this replaces it.
+
+## Learn
+
+Retros are where a lesson first appears; the library is where one that keeps holding true belongs. A lesson in a retro is only read if it happens to look relevant, while a lesson in the library is read by every skill whose scope it names.
+
+1. Collect every observation bullet in `docs/retros/` that has no `**Retired` marker, narrowed to one retro or a keyword if one was given. If none are left, say so and stop.
+2. Pick out the durable ones for the user: lessons that name a constraint, convention or trap that will outlast the epic they came from, especially where several retros say the same thing. Leave out one-off reports about a single run. Also mark any that have obviously stopped being true, such as a lesson about code that has since been removed.
+3. Show them in one message, grouped by source retro, each with its proposed outcome: an amendment to a named library document when it changes what that document says, an entry in `lessons-learned.md` when nothing covers it, or retirement as spent, with the reason. The user picks which to act on in one AskUserQuestion call, multi-select, with your recommended set first.
+4. For each chosen lesson, write the library side first, then the `**Retired` marker in the retro. If the library write fails, leave the retro untouched, so a lesson is never retired without being promoted. Skip any lesson whose `**Source**` already appears in the library, and report it as already promoted.
 
 ## Back-fill
 
@@ -41,4 +51,4 @@ Show what changed (sections rewritten, amendments absorbed, contradictions and h
 
 ## Finishing
 
-End with the path of each file written or skipped, and for an import, the scope it was given.
+End with the path of each file written or skipped, and for an import, the scope it was given. After a `learn`, also name each retro that was marked.
