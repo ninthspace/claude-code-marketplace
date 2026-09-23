@@ -13,7 +13,7 @@ The skills in this plugin keep their procedures short and their data strict. Thi
 | Epic | `docs/epics/{parent}-{seq}-epic-{slug}.md` | plan (structure), do (status) |
 | Retro | `docs/retros/{nn}-retro-{slug}.md` | do |
 | Quick change record | `docs/quick/{nn}-quick-{slug}.md` | do |
-| Reference library | `docs/library/*.md` | the user; every skill reads it |
+| Reference library | `docs/library/*.md` | library, or the user; every skill reads it |
 | Persona roster override | `docs/agents/roster.yaml` | the user; replaces the plugin default entirely |
 
 Read all of these as context whenever they bear on the work. Existing v3 files, including legacy flat epics (`{nn}-epic-{slug}.md`) and coverage matrices (`*-coverage-*.md`), are valid input. This plugin does not create coverage matrices; the `**Satisfies**` field on each story carries the traceability instead.
@@ -119,9 +119,22 @@ Requirement labels (`FR3`, `NFR2`, `AD1`) are stable identifiers. When amending,
 
 Stories are numbered from 1 within each epic. Tasks use `{story}.{seq}`. Intra-epic dependencies name stories (`Story 2`); cross-epic dependencies name the epic by filename prefix (`Epic 28-01-epic-setup`).
 
+### Evidence against each criterion
+
+`do` records evidence as an indented line directly under the criterion it proves, never in a separate block:
+
+```markdown
+**Acceptance Criteria**:
+- {criterion} `[tag]`
+  - Evidence: {test name and command, file:line, or the manual step taken and what was observed}
+- {criterion} `[tag]`
+  - Not met: {what was tried and why it fell short}
+```
+
+The criterion line itself is never edited to record verification, so its text stays comparable with coverage matrices and earlier readings. A story is `Complete` only when every criterion has an `Evidence` line; a `Not met` line leaves it blocked. Read a legacy story-level `**Evidence**:` field as valid input, but don't write one.
+
 ### Fields `do` may add to a story
 
-- `**Evidence**: {how each criterion was shown to hold — test names, commands, file:line}`
 - `**Retro**: {an observation worth carrying into future work}`
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.
 - `**Amended**: {what changed} ({YYYY-MM-DD}) — cited: {file:line | FRn | conflicting criterion}`
@@ -130,6 +143,47 @@ Stories are numbered from 1 within each epic. Tasks use `{story}.{seq}`. Intra-e
 ### Fields on the epic header
 
 - `**Retro waived**: {reason} ({YYYY-MM-DD})` marks a completed epic whose run produced nothing worth a retro.
+
+## Library document
+
+```markdown
+---
+title: {Title}
+source: {original path or URL}
+added: {YYYY-MM-DD}
+last-reviewed: {YYYY-MM-DD}
+scope:
+  - {scope value}
+summary: >
+  {two to five sentences of constraints, decisions and rules, written for skills}
+---
+
+{source content, unchanged}
+```
+
+All six fields are required. Filenames are kebab-case with no number prefix.
+
+`scope` holds v3 skill names, because v3 skills filter the library on them; cpm-next skills read every library document regardless. Choose by what the document constrains:
+
+| The document constrains | Scope values |
+|---|---|
+| what gets planned: requirements, domain rules, architecture | `discover`, `brief`, `architect`, `spec`, `epics` |
+| how code gets written: standards, conventions, API contracts | `do`, `quick`, `review` |
+| discussion: team norms, positions to argue from | `party`, `consult` |
+| everything: glossaries, domain language, team conventions | `all`, alone |
+
+Combine rows freely; an API contract is usually `spec`, `epics`, `do`.
+
+v3's `/cpm:retro learn` appends amendments below the body in this form, and `library consolidate` folds them back in:
+
+```markdown
+## Amendment — {YYYY-MM-DD} (via retro)
+
+**Source**: {retro path}
+**Category**: {observation category}
+
+{what was learned and what should change}
+```
 
 ## Amending an existing artefact
 

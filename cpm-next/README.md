@@ -1,12 +1,13 @@
 # cpm-next (experimental)
 
-Three skills for Opus 5.5, in place of CPM's twenty-one. They read and write the CPM v3 artefact formats, so the board, `/cpm:status` and the v3 skills all keep working on the same `docs/` tree.
+Four skills for Opus 5.5, in place of CPM's twenty-one. They read and write the CPM v3 artefact formats, so the board, `/cpm:status` and the v3 skills all keep working on the same `docs/` tree.
 
 | Skill | Absorbs from v3 | Finish line |
 |---|---|---|
 | `/cpm-next:party` | party, consult | Record concluded, next step named |
 | `/cpm-next:plan` | discover, brief, architect, spec, epics, pivot | Artefacts down to the target exist and trace upward |
 | `/cpm-next:do` | do, ralph, quick | Stories in scope Complete, suite no worse than baseline |
+| `/cpm-next:library` | library | Library documents carry complete front-matter; amendments folded in on request |
 
 ## What changed, and why
 
@@ -24,3 +25,8 @@ Three skills for Opus 5.5, in place of CPM's twenty-one. They read and write the
 3. Run every session, v3 and cpm-next alike, at `medium` effort (`/effort medium` in Claude Code), so effort isn't a variable in the comparison. If an `all` run is driven headless (`claude -p` in a loop, as ralph did), treat a turn that ends with text as a progress report, not completion. Continue it by naming the open stories, and give up after two or three continuations on the same story.
 4. Compare wall-clock time, how often the user had to intervene, spec and epic quality (blind if possible), and whether `do` finished with the suite green.
 5. When cpm-next fails in a way v3 guarded against, add back the smallest rule that prevents it. Log each addition here, so the growth stays deliberate.
+
+## Additions
+
+- **library** (0.2.0): brought over from v3 so reference documents can be imported and consolidated without switching plugins. Same front-matter and amendment formats, now in `shared/artifacts.md`; progress files, the stale-progress check and per-step gates dropped.
+- **Per-criterion evidence** (0.2.0): `do` now writes an `Evidence` (or `Not met`) line under each acceptance criterion instead of one story-level `**Evidence**` field. In practice the two blocks drifted apart, and a reader couldn't tell which proof backed which criterion, or whether any criterion had none.

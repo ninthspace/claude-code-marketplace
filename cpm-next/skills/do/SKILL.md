@@ -38,7 +38,7 @@ For each unblocked story, lowest number first:
 
 1. Set the story (and the epic, if it was Pending) to `In Progress`.
 2. Build it. Follow the project's existing conventions over your own preferences.
-3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write the evidence to the story's `**Evidence**` field. A criterion without evidence isn't met.
+3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write an `Evidence` line directly under that criterion, as the contract shows, so each proof sits beside the claim it proves. A criterion without its own evidence isn't met.
 4. Review the story's diff as a reviewer would: list only problems you'd block a merge for, and fix them. In a Laravel project, use the `laravel-simplifier` agent if it's available.
 5. Mark tasks and the story `Complete`. Add a `**Retro**` line only for something future work genuinely needs to know.
 
@@ -79,7 +79,7 @@ A story isn't finished while a subagent or background command it started is stil
 
 ## When a criterion looks wrong
 
-A criterion that is hard to meet is not a criterion that is wrong. "The tests fail", "this approach didn't work" and "it's slower than the target" are reports about this implementation, and never justify changing the criterion. Leave it standing, mark the story blocked, and record what was tried.
+A criterion that is hard to meet is not a criterion that is wrong. "The tests fail", "this approach didn't work" and "it's slower than the target" are reports about this implementation, and never justify changing the criterion. Leave it standing, mark the story blocked, and record what was tried in a `Not met` line under that criterion.
 
 A criterion is wrong only when you can cite something that contradicts it: a `file:line`, a named requirement in the spec (`FR3`, `AD1`), or another criterion in the same epic that can't be satisfied at the same time.
 
