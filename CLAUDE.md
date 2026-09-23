@@ -29,7 +29,7 @@ Three directories under `docs/` are neither generated nor parked, and stay where
 
 ## Critical: Source vs. Cache Paths
 
-This repository contains the source code for multiple plugins: `cpm`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`.
+This repository contains the source code for multiple plugins: `cpm`, `cpm-next`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`.
 
 **NEVER read or write files in the plugin cache directory** (`~/.claude/plugins/cache/ninthspace-marketplace/`). That directory contains installed copies of plugins and is overwritten on updates. Changes made there are lost and not tracked by git.
 
@@ -38,6 +38,7 @@ This repository contains the source code for multiple plugins: `cpm`, `noteplan`
 | Plugin | Source directory |
 |--------|----------------|
 | CPM | `cpm/` |
+| CPM Next | `cpm-next/` |
 | NotePlan | `noteplan/` |
 | PHP LSP | `php-lsp/` |
 | JS Simplifier | `js-simplifier/` |
