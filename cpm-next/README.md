@@ -1,6 +1,6 @@
 # cpm-next (experimental)
 
-Six skills for Opus 5.5, in place of CPM's twenty-one. They read and write the CPM v3 artefact formats, so the board, `/cpm:status` and the v3 skills all keep working on the same `docs/` tree.
+Seven skills for Opus 5.5, in place of CPM's twenty-one. They read and write the CPM v3 artefact formats, so the board, `/cpm:status` and the v3 skills all keep working on the same `docs/` tree.
 
 | Skill | Absorbs from v3 | Finish line |
 |---|---|---|
@@ -10,6 +10,7 @@ Six skills for Opus 5.5, in place of CPM's twenty-one. They read and write the C
 | `/cpm-next:library` | library, retro learn and retire | Library documents carry complete front-matter; chosen retro lessons promoted and retired at source |
 | `/cpm-next:review` | review | Critical and Warning findings fixed in Pending stories or waiting on the user; review record written |
 | `/cpm-next:status` | status | One-screen report and the next command; nothing written |
+| `/cpm-next:calibrate` | — | A model and effort recommendation for an artefact, skill or task, or a table of them for a set; nothing written |
 
 ## What changed, and why
 
@@ -33,3 +34,5 @@ Six skills for Opus 5.5, in place of CPM's twenty-one. They read and write the C
 - **library** (0.2.0): brought over from v3 so reference documents can be imported and consolidated without switching plugins. Same front-matter and amendment formats, now in `shared/artifacts.md`; progress files, the stale-progress check and per-step gates dropped.
 - **Per-criterion evidence** (0.2.0): `do` now writes an `Evidence` (or `Not met`) line under each acceptance criterion instead of one story-level `**Evidence**` field. In practice the two blocks drifted apart, and a reader couldn't tell which proof backed which criterion, or whether any criterion had none.
 - **library learn, review, status** (0.3.0): `learn` moves durable retro lessons into the library, since otherwise only v3 does it and `consolidate` has nothing to fold in. `review` gives the epics the independent challenge that `plan` gives the spec. `status` is a read-only reading of the artefacts, which are the only state. Retro and review formats and the `**Retired**` marker join the contract, matching v3 so its skills read them unchanged.
+- **calibrate** (0.4.0): recommends a model and effort level for an artefact, a skill or a described task. It advises rather than setting either, since a skill's `model` and `effort` frontmatter only lasts for the invoking turn and would pin a variable this experiment holds fixed.
+- **review personas on Sonnet** (0.4.0): `review` starts its persona subagents on `sonnet`. A per-call model outranks `CLAUDE_CODE_SUBAGENT_MODEL`, so this is the one subagent choice the plugin makes for you; `plan` and `do` subagents follow that variable, or the session model when it's unset. When comparing runs, note that review cost now differs from a v3 review on the same model.
