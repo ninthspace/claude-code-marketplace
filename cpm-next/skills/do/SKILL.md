@@ -30,17 +30,18 @@ For a small change with no epic: do it, test it, and write a short `docs/quick/`
 - Read `CLAUDE.md`, `docs/library/`, the epic, its source spec, and any ADRs it cites.
 - Skim `docs/retros/` for observations that bear on this epic's area and treat them as context, skipping any marked `**Retired`.
 - Find the test command from the library, `composer.json`, `package.json`, `Makefile`, `pyproject.toml` or `Cargo.toml`. Run the suite to get the baseline.
-- Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything.
+- Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything. If every one of its criteria already has an `Evidence` line, confirm the evidence still holds, then close it as step 4 of the loop says, before picking any other work.
 
 ## The loop
 
 For each unblocked story, lowest number first:
 
 1. Set the story (and the epic, if it was Pending) to `In Progress`.
-2. Build it. Follow the project's existing conventions over your own preferences.
+2. Build it, task by task. Set each task `In Progress` when you start it and `Complete` when it's done. Follow the project's existing conventions over your own preferences. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available, before verifying, so the evidence is gathered against the final code.
 3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write an `Evidence` line directly under that criterion, as the contract shows, so each proof sits beside the claim it proves. A criterion without its own evidence isn't met.
-4. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available.
-5. Mark tasks and the story `Complete`. Add a `**Retro**` line only for something future work genuinely needs to know.
+4. Close the story in the same edit that writes its last `Evidence` line: set any remaining tasks and the story's `**Status**` to `Complete`. If it was the epic's last open story, set the epic's `**Status**` to `Complete` too. Add a `**Retro**` line only for something future work genuinely needs to know.
+
+Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete`, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
 
 Stories that are unblocked together can go to subagents in parallel, but only when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports.
 
@@ -89,7 +90,7 @@ A criterion is wrong only when you can cite something that contradicts it: a `fi
 
 ## Finishing
 
-When an epic's last story completes, set the epic `Complete`. If the run produced observations worth carrying forward, write a short retro to `docs/retros/` in the contract's format; otherwise add `**Retro waived**: clean run` to the epic header, so it doesn't sit waiting for a retro that has nothing to say.
+When the epic reaches `Complete` in the loop: if the run produced observations worth carrying forward, write a short retro to `docs/retros/` in the contract's format; otherwise add `**Retro waived**: clean run` to the epic header, so it doesn't sit waiting for a retro that has nothing to say.
 
 End every run with three headings, in this order:
 
