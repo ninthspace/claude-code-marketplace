@@ -19,3 +19,6 @@ docs/plans/.cpm-cleancheck-*
 # each story and stages everything, so without this line the loop's iteration counter lands in
 # the work's commits. The run's memory is a dpm session row, not this file.
 .claude/ralph-loop.local.md
+
+# Type declarations Claude Code writes beside a function-hook plugin on every load.
+whats-next/.claude-plugin/types/

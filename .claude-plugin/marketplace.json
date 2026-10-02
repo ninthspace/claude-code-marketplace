@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.23.0",
+  "version": "3.24.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -133,6 +133,21 @@
         "html",
         "stakeholder",
         "fidelity"
+      ]
+    },
+    {
+      "name": "whats-next",
+      "source": "./whats-next",
+      "description": "Live pane and band showing the work left in the current repo's cpm-next epics (docs/epics), in recommended order of execution, with an on-demand next-steps note from Claude.",
+      "version": "0.1.0",
+      "keywords": [
+        "cpm-next",
+        "planning",
+        "epics",
+        "stories",
+        "next-steps",
+        "pane",
+        "mod"
       ]
     }
   ]

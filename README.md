@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, and Filament v5 admin mockups. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, Filament v5 admin mockups, and a live view of the cpm-next work left in a repository. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -21,6 +21,7 @@ This marketplace contains plugins for facilitated planning (CPM), database-backe
 /plugin install dpm@ninthspace-marketplace
 /plugin install js-simplifier@ninthspace-marketplace
 /plugin install filament-mockup@ninthspace-marketplace
+/plugin install whats-next@ninthspace-marketplace
 ```
 
 **The suffix is the marketplace's name, not the repository's.** `marketplace.json` declares
@@ -404,6 +405,32 @@ mock up the admin panel for this PRD
 
 [View full documentation](./filament-mockup/SKILL.md)
 
+### What's Next (v0.1.0)
+
+**A live pane and band showing the cpm-next work left in the current repository**
+
+A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` folder of the repository the session runs in — or the nearest folder above it that has one — and shows every story not yet `Complete`, in the order to build them. It reads the files directly, with no model calls, so it stays current as `/cpm-next:do` or you edit the epics.
+
+**What it shows:**
+- **Pane** — the story in progress and its next task, every remaining story in order (`doing`, `ready`, or `after Story 1` / `after Epic …`), and each open epic's story count. Opens by itself in a repository with work left when the terminal is at least 144 columns wide; `/next` opens it at any width.
+- **Band** — one line above the prompt with the next story, its next task, and how many stories are left.
+- **Next steps** — an `Ask Claude` button (hotkey `a`) that asks Sonnet for a short note on what to do next, from the ordered list and the first two stories in full. The note is kept per repository across sessions and dimmed once the epics change after it was written.
+
+**Order of execution:** stories already `In Progress` first; then, repeatedly, the ready story with the lowest epic number and story number, treating each as done before choosing the next. A story is ready when everything its own `**Blocked by**` and its epic's `**Blocked by**` name is `Complete`; epics in `docs/archive/epics/` count when resolving those dependencies. Stories whose dependencies can never be met (an unknown epic, a cycle) are listed last.
+
+**Quick Start:**
+```bash
+/plugin install whats-next@ninthspace-marketplace
+/reload-plugins
+
+# Open the pane and print the ordered list into the conversation
+/next
+```
+
+**Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`) — `**Status**`, `**Blocked by**`, `**Story**` and `**Task**` fields, read case-insensitively, with `Done` read as `Complete`. `Superseded` and `Withdrawn` epics are skipped.
+
+**Develop:** `claude plugin validate whats-next` and `claude plugin test whats-next`. To run the working tree instead of the installed release, start Claude Code with `--plugin-dir whats-next` (and uninstall the release, or both draw).
+
 ## Removing Plugins (when in Claude Code)
 
 ```bash
@@ -414,6 +441,7 @@ mock up the admin panel for this PRD
 /plugin uninstall dpm@ninthspace-marketplace
 /plugin uninstall js-simplifier@ninthspace-marketplace
 /plugin uninstall filament-mockup@ninthspace-marketplace
+/plugin uninstall whats-next@ninthspace-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace
