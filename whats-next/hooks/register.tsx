@@ -178,8 +178,13 @@ export const register: Register = on => {
     if (current.order.length === 0) return <Text dimColor>{current.repo}: nothing left in docs/epics.</Text>
 
     const label = (s: NextStory) => `${s.epicId.split('-epic-')[0]} S${s.number}`
-    // "Epic 34-01-epic-coupons-overview" reads as "Epic 34-01"; the full title is in the Epics list.
-    const after = (tokens: string[]) => `after ${tokens.map(t => t.replace(/-epic-.*$/, '')).join(', ')}`
+    // "Epic 34-01-epic-coupons-overview" reads as "34-01" and "Story 2" as "S2", matching the row labels;
+    // an epic named by both the epic and the story appears once.
+    const after = (tokens: string[]) => {
+      const short = tokens.map(t => t.replace(/^story\s+(\d+)$/i, 'S$1').replace(/^epic\s+/i, '').replace(/-epic-.*$/, ''))
+
+      return `after ${[...new Set(short)].join(', ')}`
+    }
     const stateOf = (s: NextStory) => (s.status === 'In Progress' ? 'doing' : s.isReady ? 'ready' : after(s.waitsOn))
     const colourOf = (s: NextStory) => (s.status === 'In Progress' ? 'yellow' : s.isReady ? 'green' : 'red')
     const first = current.order[0] as NextStory

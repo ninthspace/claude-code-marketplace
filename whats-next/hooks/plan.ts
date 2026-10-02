@@ -167,9 +167,9 @@ export function buildPlan(root: string, files: EpicFile[], signature: string): N
       .map(story => ({ epic, story, status: effectiveStatus(story) })),
   )
 
+  // A story often repeats its epic's dependency; list each one once.
   const waitsOnNow = (c: Candidate, finished: Set<string>) => [
-    ...outstanding(c.epic, c.epic.blockedBy, finished),
-    ...outstanding(c.epic, c.story.blockedBy, finished),
+    ...new Set([...outstanding(c.epic, c.epic.blockedBy, finished), ...outstanding(c.epic, c.story.blockedBy, finished)]),
   ]
 
   const toStory = (c: Candidate): NextStory => {

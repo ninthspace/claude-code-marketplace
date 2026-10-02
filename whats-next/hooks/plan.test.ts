@@ -114,6 +114,12 @@ describe('ordering', () => {
     expect(archived.order[0]?.isReady).toBe(true)
   })
 
+  test('a dependency named by both the epic and the story is listed once', () => {
+    const repeated = EMAILS.replace('**Blocked by**: —\n', '**Blocked by**: Epic 01-01-epic-member-rules\n')
+    const both = buildPlan('/r', [{ name: '01-02-epic-staff-emails.md', text: repeated, isArchived: false }], 's')
+    expect(both.order[0]?.waitsOn).toEqual(['Epic 01-01-epic-member-rules'])
+  })
+
   test('the text summary lists the order', () => {
     expect(describePlan(plan)).toContain('1. 01-01-epic-member-rules Story 1')
   })
