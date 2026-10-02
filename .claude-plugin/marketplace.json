@@ -169,7 +169,7 @@
       "name": "weather",
       "source": "./weather",
       "description": "Current weather (condition and temperature) for a place you set, in the prompt footer, refreshed every 15 minutes.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "keywords": [
         "weather",
         "footer",

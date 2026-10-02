@@ -458,13 +458,15 @@ A Claude Code mod (a plugin of function hooks). Skills such as `code-to-uml`, `f
 
 **Develop:** `claude plugin validate generated-files` and `claude plugin test generated-files`.
 
-### Weather (v0.1.0)
+### Weather (v0.1.1)
 
 **The current weather for a place you set, in the prompt footer**
 
 A Claude Code mod (a plugin of function hooks). Shows the condition and temperature, e.g. `☁️ Overcast 18°C · Inverness`, dimmed at the right-hand end of the footer beside the mode labels. Data comes from Open-Meteo (no API key), refreshed every 15 minutes; if a refresh fails, the last reading stays.
 
 **Location:** the plugin's **Location** row in `/config`, default `Inverness, GB`. A trailing two-letter country code narrows the search: a bare `Inverness` finds a US Inverness first. Each location is geocoded once and remembered across sessions.
+
+**When it fails:** with no reading yet, the footer shows `weather: <reason>` (for example `forecast HTTP 503`). `/weather` refreshes at once and prints the reading, or why the refresh failed.
 
 **Quick Start:**
 ```bash
