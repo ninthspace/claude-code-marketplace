@@ -143,6 +143,9 @@ export function unplannedSpecs(specs: SpecFile[], epics: EpicFile[]): NextSpec[]
       const number = Number.parseInt(spec.name, 10)
       const status = normaliseStatus(/^\*\*Status\*\*:\s*(.*)$/im.exec(spec.text)?.[1])
       if (status === 'Complete' || status === 'Superseded' || status === 'Withdrawn') return false
+      // A withdrawal notice: `**Withdrawn**:` or `**Superseded by**:` fields, or the word in the title.
+      if (/^\*\*(Withdrawn|Superseded by)\*\*:/im.test(spec.text)) return false
+      if (/^#\s+.*\b(WITHDRAWN|SUPERSEDED)\b/m.test(spec.text)) return false
       const isNumberedAfter = epics.some(e => {
         const parent = /^(\d+)-\d+-epic-/.exec(e.name)?.[1]
         return parent !== undefined && Number(parent) === number
@@ -153,7 +156,8 @@ export function unplannedSpecs(specs: SpecFile[], epics: EpicFile[]): NextSpec[]
     .sort((a, b) => Number.parseInt(a.name, 10) - Number.parseInt(b.name, 10))
     .map(spec => ({
       id: spec.name.replace(/\.md$/, ''),
-      title: /^#\s+(?:Spec(?:ification)?:\s*)?(.+)$/im.exec(spec.text)?.[1]?.trim() ?? spec.name,
+      // "# Spec: X" and "# Spec 16: X" both read as "X"; the number is already in the row label.
+      title: /^#\s+(?:Spec(?:ification)?(?:\s+\d+)?:\s*)?(.+)$/im.exec(spec.text)?.[1]?.trim() ?? spec.name,
       path: `docs/specifications/${spec.name}`,
     }))
 }

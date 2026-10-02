@@ -20,6 +20,8 @@ const WRITING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Ba
 
 type Listing = { name: string; mtimeMs: number; size: number }
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 async function findRoot($: EngineInterface): Promise<string | null> {
   let dir = await $.session.cwd()
   for (;;) {
@@ -219,7 +221,7 @@ export const register: Register = on => {
     const isStale = saved !== null && saved.signature !== current.signature
     const specCount = `${current.specs.length} ${current.specs.length === 1 ? 'spec' : 'specs'} without epics`
     const summary = [
-      current.order.length > 0 ? `${current.order.length} stories · ${current.epics.length} epics left` : '',
+      current.order.length > 0 ? `${plural(current.order.length, 'story', 'stories')} · ${plural(current.epics.length, 'epic', 'epics')} left` : '',
       current.specs.length > 0 ? specCount : '',
     ].filter(Boolean).join(' · ')
 

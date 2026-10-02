@@ -158,3 +158,18 @@ describe('specs without epics', () => {
     expect(describePlan(only)).toContain('- docs/specifications/02-spec-a.md: Title of 02-spec-a.md')
   })
 })
+
+describe('withdrawal notices and titles', () => {
+  test('a spec with a Withdrawn or Superseded by field, or WITHDRAWN in its title, is left out', () => {
+    const notices = [
+      { name: '16-spec-a.md', text: '# Spec 16: A — WITHDRAWN\n\n**Withdrawn**: 2026-08-23\n' },
+      { name: '17-spec-b.md', text: '# Spec: B\n\n**Superseded by**: 18-spec-c.md\n' },
+      { name: '19-spec-d.md', text: '# Spec: D — SUPERSEDED\n' },
+    ]
+    expect(unplannedSpecs(notices, [])).toEqual([])
+  })
+
+  test('the "Spec 16:" prefix is dropped from the title', () => {
+    expect(unplannedSpecs([{ name: '16-spec-a.md', text: '# Spec 16: Voucher Sales in Analytics\n' }], [])[0]?.title).toBe('Voucher Sales in Analytics')
+  })
+})
