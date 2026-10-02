@@ -1,4 +1,4 @@
-import type { NextEpic, NextPlan, NextStory, NextTask, WorkStatus } from '../types'
+import type { NextEpic, NextPlan, NextSpec, NextStory, NextTask, WorkStatus } from '../types'
 
 // Reads cpm-next epic docs (shared/artifacts.md in the plugin) tolerantly:
 // field case, trailing hard-break spaces and "Done" for "Complete" all pass.
@@ -128,7 +128,37 @@ function effectiveStatus(story: ParsedStory): WorkStatus {
 
 const storyKey = (epicId: string, n: number) => `${epicId}#${n}`
 
-export function buildPlan(root: string, files: EpicFile[], signature: string): NextPlan {
+export type SpecFile = { name: string; text: string }
+
+/**
+ * Specs no epic has been planned from: no cpm-next epic numbered after the spec
+ * (`03-spec-x` → `03-01-epic-y`), and no epic naming the spec's file in its
+ * `**Source spec**`. A spec whose own Status is Complete, Superseded or Withdrawn is left out.
+ */
+export function unplannedSpecs(specs: SpecFile[], epics: EpicFile[]): NextSpec[] {
+  const sources = epics.map(e => /^\*\*Source spec\*\*:\s*(.*)$/im.exec(e.text)?.[1] ?? '')
+
+  return specs
+    .filter(spec => {
+      const number = Number.parseInt(spec.name, 10)
+      const status = normaliseStatus(/^\*\*Status\*\*:\s*(.*)$/im.exec(spec.text)?.[1])
+      if (status === 'Complete' || status === 'Superseded' || status === 'Withdrawn') return false
+      const isNumberedAfter = epics.some(e => {
+        const parent = /^(\d+)-\d+-epic-/.exec(e.name)?.[1]
+        return parent !== undefined && Number(parent) === number
+      })
+
+      return !isNumberedAfter && !sources.some(source => source.includes(spec.name))
+    })
+    .sort((a, b) => Number.parseInt(a.name, 10) - Number.parseInt(b.name, 10))
+    .map(spec => ({
+      id: spec.name.replace(/\.md$/, ''),
+      title: /^#\s+(?:Spec(?:ification)?:\s*)?(.+)$/im.exec(spec.text)?.[1]?.trim() ?? spec.name,
+      path: `docs/specifications/${spec.name}`,
+    }))
+}
+
+export function buildPlan(root: string, files: EpicFile[], signature: string, specs: SpecFile[] = []): NextPlan {
   const epics = files.map(parseEpic).sort((a, b) => compareKeys(a.sortKey, b.sortKey))
   const isTerminal = (e: ParsedEpic) => e.status === 'Superseded' || e.status === 'Withdrawn'
 
@@ -224,23 +254,35 @@ export function buildPlan(root: string, files: EpicFile[], signature: string): N
     repo: root.split('/').filter(Boolean).at(-1) ?? root,
     epics: nextEpics,
     order,
+    specs: unplannedSpecs(specs, files),
     signature,
   }
 }
 
 /** The plan as plain text: what /next prints and what the AI note is asked about. */
 export function describePlan(plan: NextPlan, limit = 12): string {
-  if (plan.order.length === 0) return `${plan.repo}: no cpm-next work left in docs/epics.`
-  const lines = [`${plan.repo}: ${plan.order.length} stories left across ${plan.epics.length} epics, in recommended order:`]
-  plan.order.slice(0, limit).forEach((s, i) => {
-    const state = s.status === 'In Progress' ? 'in progress' : s.isReady ? 'ready' : `waits on ${s.waitsOn.join(', ')}`
-    const next = s.nextTask === null ? '' : ` — next task ${s.nextTask.id} ${s.nextTask.title}`
-    lines.push(`${i + 1}. ${s.epicId} Story ${s.number}: ${s.title} (${state}; ${s.tasksDone}/${s.tasksTotal} tasks)${next}`)
-  })
-  if (plan.order.length > limit) lines.push(`… and ${plan.order.length - limit} more.`)
+  const lines: string[] = []
+  if (plan.order.length === 0) {
+    lines.push(`${plan.repo}: no cpm-next stories left in docs/epics.`)
+  } else {
+    lines.push(`${plan.repo}: ${plan.order.length} stories left across ${plan.epics.length} epics, in recommended order:`)
+    plan.order.slice(0, limit).forEach((s, i) => {
+      const state = s.status === 'In Progress' ? 'in progress' : s.isReady ? 'ready' : `waits on ${s.waitsOn.join(', ')}`
+      const next = s.nextTask === null ? '' : ` — next task ${s.nextTask.id} ${s.nextTask.title}`
+      lines.push(`${i + 1}. ${s.epicId} Story ${s.number}: ${s.title} (${state}; ${s.tasksDone}/${s.tasksTotal} tasks)${next}`)
+    })
+    if (plan.order.length > limit) lines.push(`… and ${plan.order.length - limit} more.`)
+  }
+  if (plan.specs.length > 0) {
+    lines.push('', `Specs with no epics yet (plan them with /cpm-next:plan <path>):`)
+    for (const spec of plan.specs) lines.push(`- ${spec.path}: ${spec.title}`)
+  }
 
   return lines.join('\n')
 }
+
+/** True when there is anything to show: stories left or specs not yet planned. */
+export const hasWork = (plan: NextPlan) => plan.order.length > 0 || plan.specs.length > 0
 
 /** The markdown of one story, for the AI note's context. */
 export function storyText(file: EpicFile, number: number): string {

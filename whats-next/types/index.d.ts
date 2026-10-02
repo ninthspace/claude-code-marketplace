@@ -26,6 +26,9 @@ export type NextEpic = {
   waitsOn: string[]
 }
 
+/** A spec in docs/specifications that no epic has been planned from yet. */
+export type NextSpec = { id: string; title: string; path: string }
+
 export type NextPlan = {
   root: string
   repo: string
@@ -33,6 +36,8 @@ export type NextPlan = {
   epics: NextEpic[]
   /** Every story left, in recommended order of execution. */
   order: NextStory[]
+  /** Specs with no epics yet, in number order. */
+  specs: NextSpec[]
   signature: string
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { buildPlan, describePlan, normaliseStatus, parseBlockers } from './plan'
+import { buildPlan, describePlan, hasWork, normaliseStatus, parseBlockers, unplannedSpecs } from './plan'
 
 const MEMBER_RULES = `# Member Rules and Organisation Logo
 
@@ -122,5 +122,39 @@ describe('ordering', () => {
 
   test('the text summary lists the order', () => {
     expect(describePlan(plan)).toContain('1. 01-01-epic-member-rules Story 1')
+  })
+})
+
+describe('specs without epics', () => {
+  const spec = (name: string, extra = '') => ({ name, text: `# Spec: Title of ${name}\n\n**Date**: 2026-10-01\n${extra}` })
+  const epic = (name: string, source = '') => ({ name, text: `# Epic\n\n**Source spec**: ${source}\n**Status**: Pending\n`, isArchived: false })
+
+  test('a spec is planned when an epic is numbered after it', () => {
+    expect(unplannedSpecs([spec('03-spec-a.md')], [epic('03-01-epic-x.md')])).toEqual([])
+  })
+
+  test('a spec is planned when a legacy epic names it as its source', () => {
+    expect(unplannedSpecs([spec('01-spec-a.md')], [epic('02-epic-x.md', 'docs/specifications/01-spec-a.md')])).toEqual([])
+  })
+
+  test('a legacy flat epic number is not a spec number', () => {
+    expect(unplannedSpecs([spec('01-spec-a.md')], [epic('01-epic-x.md', 'docs/specifications/09-spec-z.md')]).map(s => s.id)).toEqual(['01-spec-a'])
+  })
+
+  test('unplanned specs are listed in number order with their titles', () => {
+    expect(unplannedSpecs([spec('10-spec-b.md'), spec('04-spec-a.md'), spec('05-spec-c.md')], [epic('05-01-epic-x.md')])).toEqual([
+      { id: '04-spec-a', title: 'Title of 04-spec-a.md', path: 'docs/specifications/04-spec-a.md' },
+      { id: '10-spec-b', title: 'Title of 10-spec-b.md', path: 'docs/specifications/10-spec-b.md' },
+    ])
+  })
+
+  test('a spec whose own status is complete is left out', () => {
+    expect(unplannedSpecs([spec('01-spec-a.md', '**Status**: complete — Stage 0\n')], [])).toEqual([])
+  })
+
+  test('specs alone count as work and appear in the summary', () => {
+    const only = buildPlan('/r', [], 's', [spec('02-spec-a.md')])
+    expect(hasWork(only)).toBe(true)
+    expect(describePlan(only)).toContain('- docs/specifications/02-spec-a.md: Title of 02-spec-a.md')
   })
 })
