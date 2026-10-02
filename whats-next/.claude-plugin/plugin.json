@@ -1,6 +1,6 @@
 {
   "name": "whats-next",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Live pane and band showing the work left in the current repo's cpm-next epics (docs/epics), in recommended order of execution, with an on-demand next-steps note from Claude.",
   "author": { "name": "Chris Aves" },
   "license": "MIT",

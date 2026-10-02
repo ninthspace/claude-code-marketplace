@@ -55,9 +55,25 @@ async function openFile($: EngineInterface, path: string, isReveal: boolean) {
   if (exitCode !== 0) $.ui.toast(`Could not open ${path}: ${stderr.trim() || `exit ${exitCode}`}`)
 }
 
+let isStarted = false
+
+// Registers /files, once per load.
+async function start($: EngineInterface) {
+  if (isStarted) return
+  isStarted = true
+  await $.command.register({ name: 'files', description: 'Show the files Claude generated this session, with Open buttons' })
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'files', description: 'Show the files Claude generated this session, with Open buttons' })
+    await start($)
+
+    return next(e)
+  })
+
+  // A plugin loaded by /reload-plugins (an install or update mid-session) sees no session.start; start on the first prompt.
+  on('prompt.submit', async ($, e, next) => {
+    await start($)
 
     return next(e)
   })

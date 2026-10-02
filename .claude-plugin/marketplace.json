@@ -139,7 +139,7 @@
       "name": "whats-next",
       "source": "./whats-next",
       "description": "Live pane and band showing the work left in the current repo's cpm-next epics (docs/epics), in recommended order of execution, with an on-demand next-steps note from Claude.",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "keywords": [
         "cpm-next",
         "planning",
@@ -154,7 +154,7 @@
       "name": "generated-files",
       "source": "./generated-files",
       "description": "Pane listing the HTML, SVG, image, Office and PDF files Claude wrote this session, each with Open and Reveal buttons.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "keywords": [
         "files",
         "html",
@@ -169,7 +169,7 @@
       "name": "weather",
       "source": "./weather",
       "description": "Current weather (condition and temperature) for a place you set, in the prompt footer, refreshed every 15 minutes.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "keywords": [
         "weather",
         "footer",

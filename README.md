@@ -407,7 +407,7 @@ mock up the admin panel for this PRD
 
 [View full documentation](./filament-mockup/SKILL.md)
 
-### What's Next (v0.2.1)
+### What's Next (v0.2.2)
 
 **A live pane and band showing the cpm-next work left in the current repository**
 
@@ -415,11 +415,11 @@ A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `
 
 **What it shows:**
 - **Pane** — the story in progress and its next task, every remaining story in order (`doing`, `ready`, or `after Story 1` / `after Epic …`), and each open epic's story count. Opens by itself in a repository with work left when the terminal is at least 144 columns wide; `/next` opens it at any width.
-- **Specs without epics** — each spec in `docs/specifications/` that no epic was planned from, in number order, with the `/cpm-next:plan` command to plan it. A spec counts as planned when an epic is numbered after it (`03-spec-…` → `03-01-epic-…`) or an epic names its file in `**Source spec**`; a spec whose own `**Status**` is `Complete`, `Superseded` or `Withdrawn` is left out, as is a withdrawal notice (a `**Withdrawn**` or `**Superseded by**` field, or `WITHDRAWN` / `SUPERSEDED` in its title).
+- **Specs without epics** — each spec in `docs/specifications/` that no epic was planned from, in number order. A spec counts as planned when an epic is numbered after it (`03-spec-…` → `03-01-epic-…`) or an epic names its file in `**Source spec**`; a spec whose own `**Status**` is `Complete`, `Superseded` or `Withdrawn` is left out, as is a withdrawal notice (a `**Withdrawn**` or `**Superseded by**` field, or `WITHDRAWN` / `SUPERSEDED` in its title).
 - **Band** — one line above the prompt with the next story, its next task, and how many stories are left; with no stories left, the first spec to plan.
 - **Next steps** — an `Ask Claude` button (hotkey `a`) that asks Sonnet for a short note on what to do next, from the ordered list and the first two stories in full. The note is kept per repository across sessions and dimmed once the epics change after it was written.
 
-**Order of execution:** stories already `In Progress` first; then, repeatedly, the ready story with the lowest epic number and story number, treating each as done before choosing the next. A story is ready when everything its own `**Blocked by**` and its epic's `**Blocked by**` name is `Complete`; epics in `docs/archive/epics/` count when resolving those dependencies. Stories whose dependencies can never be met (an unknown epic, a cycle) are listed last.
+**Order of execution:** stories already `In Progress` first; then the other stories of epics under way (the epic's own `**Status**` is `In Progress`, or one of its stories is); then everything else. Within each group, repeatedly, the ready story with the lowest epic number and story number, treating each as done before choosing the next. So working on a higher-numbered epic out of order moves it to the top once its Status says `In Progress`. A story is ready when everything its own `**Blocked by**` and its epic's `**Blocked by**` name is `Complete`; epics in `docs/archive/epics/` count when resolving those dependencies. Stories whose dependencies can never be met (an unknown epic, a cycle) are listed last.
 
 **Quick Start:**
 ```bash
@@ -434,7 +434,7 @@ A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `
 
 **Develop:** `claude plugin validate whats-next` and `claude plugin test whats-next`. To run the working tree instead of the installed release, start Claude Code with `--plugin-dir whats-next` (and uninstall the release, or both draw).
 
-### Generated Files (v0.1.0)
+### Generated Files (v0.1.1)
 
 **A pane listing the files Claude generated this session, each with an Open button**
 
@@ -458,7 +458,7 @@ A Claude Code mod (a plugin of function hooks). Skills such as `code-to-uml`, `f
 
 **Develop:** `claude plugin validate generated-files` and `claude plugin test generated-files`.
 
-### Weather (v0.1.1)
+### Weather (v0.1.2)
 
 **The current weather for a place you set, in the prompt footer**
 

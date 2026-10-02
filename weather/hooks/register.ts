@@ -51,16 +51,32 @@ async function refresh($: EngineInterface, location: string) {
   }
 }
 
+let isStarted = false
+
+// Registers /weather and starts the refresh timers, once per load.
+async function start($: EngineInterface, location: string) {
+  if (isStarted) return
+  isStarted = true
+  // A status entry pinned by an earlier load outlives a reload; this mod draws in the footer instead.
+  $.ui.status(undefined)
+  await $.command.register({ name: 'weather', description: 'Refresh the weather now and show the reading or why it failed' })
+  // The first fetch runs on a timer of its own, so the session's first prompt never waits on the network.
+  $.clock.after(1, () => void refresh($, location))
+  $.clock.every(REFRESH_MS, () => void refresh($, location))
+}
+
 export const register: Register = (on, options) => {
   const location = String(options.location ?? 'Inverness, GB')
 
   on('session.start', async ($, e, next) => {
-    // A status entry pinned by an earlier load outlives a reload; this mod draws in the footer instead.
-    $.ui.status(undefined)
-    await $.command.register({ name: 'weather', description: 'Refresh the weather now and show the reading or why it failed' })
-    // The first fetch runs on a timer of its own, so the session's first prompt never waits on the network.
-    $.clock.after(1, () => void refresh($, location))
-    $.clock.every(REFRESH_MS, () => void refresh($, location))
+    await start($, location)
+
+    return next(e)
+  })
+
+  // A plugin installed mid-session and loaded by /reload-plugins sees no session.start; start on the first prompt.
+  on('prompt.submit', async ($, e, next) => {
+    await start($, location)
 
     return next(e)
   })

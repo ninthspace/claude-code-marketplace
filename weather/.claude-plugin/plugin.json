@@ -1,6 +1,6 @@
 {
   "name": "weather",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Current weather (condition and temperature) for a place you set, in the prompt footer, refreshed every 15 minutes.",
   "author": {
     "name": "Chris Aves"

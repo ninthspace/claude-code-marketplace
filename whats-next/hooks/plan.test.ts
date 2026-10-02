@@ -173,3 +173,25 @@ describe('withdrawal notices and titles', () => {
     expect(unplannedSpecs([{ name: '16-spec-a.md', text: '# Spec 16: Voucher Sales in Analytics\n' }], [])[0]?.title).toBe('Voucher Sales in Analytics')
   })
 })
+
+describe('started epics', () => {
+  test('stories of an epic marked In Progress come before a lower-numbered untouched epic', () => {
+    const untouched = '# Deferred\n\n**Status**: Pending\n**Blocked by**: —\n\n## A\n**Story**: 1\n**Status**: Pending\n**Blocked by**: —\n'
+    const started = '# Current\n\n**Status**: In Progress\n**Blocked by**: —\n\n## B\n**Story**: 4\n**Status**: Pending\n**Blocked by**: —\n'
+    const plan = buildPlan('/r', [
+      { name: '13-04-epic-deferred.md', text: untouched, isArchived: false },
+      { name: '35-01-epic-current.md', text: started, isArchived: false },
+    ], 's')
+    expect(plan.order.map(s => `${s.epicId.slice(0, 5)} ${s.number}`)).toEqual(['35-01 4', '13-04 1'])
+  })
+})
+
+test('an epic with only completed stories done is not treated as under way', () => {
+  const paused = '# Paused\n\n**Status**: Pending\n**Blocked by**: —\n\n## Done\n**Story**: 1\n**Status**: Complete\n**Blocked by**: —\n\n## Next\n**Story**: 2\n**Status**: Pending\n**Blocked by**: —\n'
+  const current = '# Current\n\n**Status**: In Progress\n**Blocked by**: —\n\n## B\n**Story**: 4\n**Status**: Pending\n**Blocked by**: —\n'
+  const plan = buildPlan('/r', [
+    { name: '13-04-epic-paused.md', text: paused, isArchived: false },
+    { name: '35-01-epic-current.md', text: current, isArchived: false },
+  ], 's')
+  expect(plan.order.map(s => `${s.epicId.slice(0, 5)} ${s.number}`)).toEqual(['35-01 4', '13-04 2'])
+})

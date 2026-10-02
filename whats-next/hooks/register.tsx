@@ -138,11 +138,27 @@ async function askForNote($: EngineInterface) {
   }
 }
 
+let isStarted = false
+
+// Registers /next, reads the docs and starts the poll, once per load.
+async function start($: EngineInterface) {
+  if (isStarted) return
+  isStarted = true
+  await $.command.register({ name: 'next', description: "Show what's left to do in this repo's cpm-next epics, in order, and specs with no epics yet" })
+  await refresh($)
+  $.clock.every(POLL_MS, () => void refresh($))
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'next', description: "Show what's left to do in this repo's cpm-next epics, in order, and specs with no epics yet" })
-    await refresh($)
-    $.clock.every(POLL_MS, () => void refresh($))
+    await start($)
+
+    return next(e)
+  })
+
+  // A plugin loaded by /reload-plugins (an install or update mid-session) sees no session.start; start on the first prompt.
+  on('prompt.submit', async ($, e, next) => {
+    await start($)
 
     return next(e)
   })
@@ -264,7 +280,6 @@ export const register: Register = on => {
                 {spec.id.split('-spec-')[0]} {spec.title}  <Text color="magenta">plan</Text>
               </Text>
             ))}
-            <Text dimColor wrap="truncate-end">  {'/cpm-next:plan docs/specifications/<file>'}</Text>
             <Text> </Text>
           </Box>
         )}

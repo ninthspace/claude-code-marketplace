@@ -224,10 +224,17 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
     }
   }
 
+  // An epic is under way when its own Status says In Progress or one of its stories is in progress.
+  // Completed stories alone don't count: an epic paused after them is not the current one.
+  const isEpicStarted = (epic: ParsedEpic) =>
+    epic.status === 'In Progress' ||
+    epic.stories.some(s => !done.has(storyKey(epic.id, s.number)) && effectiveStatus(s) === 'In Progress')
+  const tier = (c: Candidate) => (c.status === 'In Progress' ? 0 : isEpicStarted(c.epic) ? 1 : 2)
+
   // Walk the work forward: take the best ready story, treat it as done, repeat.
-  // In Progress first, then epic number, then story number.
+  // Stories in progress first, then the rest of started epics, then epic number, then story number.
   const rank = (a: Candidate, b: Candidate) =>
-    (a.status === 'In Progress' ? 0 : 1) - (b.status === 'In Progress' ? 0 : 1) ||
+    tier(a) - tier(b) ||
     compareKeys(a.epic.sortKey, b.epic.sortKey) ||
     a.story.number - b.story.number
 
