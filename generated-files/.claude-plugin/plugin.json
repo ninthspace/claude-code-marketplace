@@ -1,0 +1,9 @@
+{
+  "name": "generated-files",
+  "version": "0.1.0",
+  "description": "Pane listing the HTML, SVG, image, Office and PDF files Claude wrote this session, each with Open and Reveal buttons.",
+  "author": { "name": "Chris Aves" },
+  "license": "MIT",
+  "keywords": ["files", "html", "docx", "pdf", "open", "pane", "mod"],
+  "types": "./types/index.d.ts"
+}

@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, Filament v5 admin mockups, and a live view of the cpm-next work left in a repository. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, Filament v5 admin mockups, a live view of the cpm-next work left in a repository, and quick access to the files Claude generates. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -22,6 +22,7 @@ This marketplace contains plugins for facilitated planning (CPM), database-backe
 /plugin install js-simplifier@ninthspace-marketplace
 /plugin install filament-mockup@ninthspace-marketplace
 /plugin install whats-next@ninthspace-marketplace
+/plugin install generated-files@ninthspace-marketplace
 ```
 
 **The suffix is the marketplace's name, not the repository's.** `marketplace.json` declares
@@ -431,6 +432,30 @@ A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` folde
 
 **Develop:** `claude plugin validate whats-next` and `claude plugin test whats-next`. To run the working tree instead of the installed release, start Claude Code with `--plugin-dir whats-next` (and uninstall the release, or both draw).
 
+### Generated Files (v0.1.0)
+
+**A pane listing the files Claude generated this session, each with an Open button**
+
+A Claude Code mod (a plugin of function hooks). Skills such as `code-to-uml`, `filament-mockup` and the md2docx wrapper write HTML, Office and image files, often into the session scratchpad; this pane collects them so they can be opened without finding the path.
+
+**What it records:** files with the extensions `.html` `.htm` `.svg` `.png` `.jpg` `.jpeg` `.gif` `.webp` `.docx` `.xlsx` `.pptx` `.pdf` that are
+- written or edited with the Write or Edit tools, or
+- named in a Bash command and changed while it ran (a leading `cd <dir> &&` sets the folder relative paths resolve against). For `md2docx` and `pandoc` runs, the `.docx` beside each `.md` named is checked too, since md2docx writes there by default.
+
+**What it shows:** a "Files" pane, newest first, up to 30 files: each file's name and folder with **Open** (hotkeys `1`–`9`, macOS `open`, the default app) and **Reveal** (shows it in Finder), and a **Clear** button. The pane opens by itself when the first file is recorded, where the terminal is at least 144 columns wide; `/files` opens it at any width and prints the list into the conversation. The list covers the current session only.
+
+**Quick Start:**
+```bash
+/plugin install generated-files@ninthspace-marketplace
+/reload-plugins
+
+/files
+```
+
+**Requires:** macOS (`open`).
+
+**Develop:** `claude plugin validate generated-files` and `claude plugin test generated-files`.
+
 ## Removing Plugins (when in Claude Code)
 
 ```bash
@@ -442,6 +467,7 @@ A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` folde
 /plugin uninstall js-simplifier@ninthspace-marketplace
 /plugin uninstall filament-mockup@ninthspace-marketplace
 /plugin uninstall whats-next@ninthspace-marketplace
+/plugin uninstall generated-files@ninthspace-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace

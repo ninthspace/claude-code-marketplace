@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.24.0",
+  "version": "3.25.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -146,6 +146,21 @@
         "epics",
         "stories",
         "next-steps",
+        "pane",
+        "mod"
+      ]
+    },
+    {
+      "name": "generated-files",
+      "source": "./generated-files",
+      "description": "Pane listing the HTML, SVG, image, Office and PDF files Claude wrote this session, each with Open and Reveal buttons.",
+      "version": "0.1.0",
+      "keywords": [
+        "files",
+        "html",
+        "docx",
+        "pdf",
+        "open",
         "pane",
         "mod"
       ]
