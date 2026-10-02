@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.25.0",
+  "version": "3.26.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -162,6 +162,18 @@
         "pdf",
         "open",
         "pane",
+        "mod"
+      ]
+    },
+    {
+      "name": "weather",
+      "source": "./weather",
+      "description": "Current weather (condition and temperature) for a place you set, in the prompt footer, refreshed every 15 minutes.",
+      "version": "0.1.0",
+      "keywords": [
+        "weather",
+        "footer",
+        "open-meteo",
         "mod"
       ]
     }

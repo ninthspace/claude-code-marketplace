@@ -23,3 +23,4 @@ docs/plans/.cpm-cleancheck-*
 # Type declarations Claude Code writes beside a function-hook plugin on every load.
 whats-next/.claude-plugin/types/
 generated-files/.claude-plugin/types/
+weather/.claude-plugin/types/

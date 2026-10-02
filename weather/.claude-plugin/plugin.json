@@ -1,0 +1,24 @@
+{
+  "name": "weather",
+  "version": "0.1.0",
+  "description": "Current weather (condition and temperature) for a place you set, in the prompt footer, refreshed every 15 minutes.",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "weather",
+    "footer",
+    "open-meteo",
+    "mod"
+  ],
+  "userConfig": {
+    "location": {
+      "type": "string",
+      "title": "Location",
+      "description": "Place name to show the weather for, optionally with a two-letter country code, e.g. Inverness, GB (a bare Inverness finds the US one first)",
+      "default": "Inverness, GB"
+    }
+  },
+  "types": "./types/index.d.ts"
+}

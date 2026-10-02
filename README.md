@@ -4,7 +4,7 @@ A Claude Code plugin marketplace providing development tools and productivity ut
 
 ## Overview
 
-This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, Filament v5 admin mockups, a live view of the cpm-next work left in a repository, and quick access to the files Claude generates. All tools are designed to work seamlessly with Claude Code.
+This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, Filament v5 admin mockups, a live view of the cpm-next work left in a repository, quick access to the files Claude generates, and the current weather in the prompt footer. All tools are designed to work seamlessly with Claude Code.
 
 ## Installation
 
@@ -23,6 +23,7 @@ This marketplace contains plugins for facilitated planning (CPM), database-backe
 /plugin install filament-mockup@ninthspace-marketplace
 /plugin install whats-next@ninthspace-marketplace
 /plugin install generated-files@ninthspace-marketplace
+/plugin install weather@ninthspace-marketplace
 ```
 
 **The suffix is the marketplace's name, not the repository's.** `marketplace.json` declares
@@ -456,6 +457,22 @@ A Claude Code mod (a plugin of function hooks). Skills such as `code-to-uml`, `f
 
 **Develop:** `claude plugin validate generated-files` and `claude plugin test generated-files`.
 
+### Weather (v0.1.0)
+
+**The current weather for a place you set, in the prompt footer**
+
+A Claude Code mod (a plugin of function hooks). Shows the condition and temperature, e.g. `☁️ Overcast 18°C · Inverness`, dimmed at the right-hand end of the footer beside the mode labels. Data comes from Open-Meteo (no API key), refreshed every 15 minutes; if a refresh fails, the last reading stays.
+
+**Location:** the plugin's **Location** row in `/config`, default `Inverness, GB`. A trailing two-letter country code narrows the search: a bare `Inverness` finds a US Inverness first. Each location is geocoded once and remembered across sessions.
+
+**Quick Start:**
+```bash
+/plugin install weather@ninthspace-marketplace
+/reload-plugins
+```
+
+**Develop:** `claude plugin validate weather` and `claude plugin test weather`.
+
 ## Removing Plugins (when in Claude Code)
 
 ```bash
@@ -468,6 +485,7 @@ A Claude Code mod (a plugin of function hooks). Skills such as `code-to-uml`, `f
 /plugin uninstall filament-mockup@ninthspace-marketplace
 /plugin uninstall whats-next@ninthspace-marketplace
 /plugin uninstall generated-files@ninthspace-marketplace
+/plugin uninstall weather@ninthspace-marketplace
 
 # Remove the entire marketplace
 /plugin marketplace remove ninthspace-marketplace
