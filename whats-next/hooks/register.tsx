@@ -178,8 +178,10 @@ export const register: Register = on => {
     if (current.order.length === 0) return <Text dimColor>{current.repo}: nothing left in docs/epics.</Text>
 
     const label = (s: NextStory) => `${s.epicId.split('-epic-')[0]} S${s.number}`
-    const stateOf = (s: NextStory) =>
-      s.status === 'In Progress' ? 'doing' : s.isReady ? 'ready' : `after ${s.waitsOn.join(', ')}`
+    // "Epic 34-01-epic-coupons-overview" reads as "Epic 34-01"; the full title is in the Epics list.
+    const after = (tokens: string[]) => `after ${tokens.map(t => t.replace(/-epic-.*$/, '')).join(', ')}`
+    const stateOf = (s: NextStory) => (s.status === 'In Progress' ? 'doing' : s.isReady ? 'ready' : after(s.waitsOn))
+    const colourOf = (s: NextStory) => (s.status === 'In Progress' ? 'yellow' : s.isReady ? 'green' : 'red')
     const first = current.order[0] as NextStory
     const isStale = saved !== null && saved.signature !== current.signature
 
@@ -195,8 +197,9 @@ export const register: Register = on => {
         <Text> </Text>
         <Text color="cyan" bold>Order</Text>
         {current.order.slice(0, 30).map((s, i) => (
-          <Text wrap="truncate-end" dimColor={!s.isReady && s.status !== 'In Progress'}>
-            {String(i + 1).padStart(2)} {label(s)} {s.title}  <Text color={s.status === 'In Progress' ? 'yellow' : s.isReady ? 'green' : undefined}>{stateOf(s)}</Text>
+          <Text wrap="truncate-end">
+            <Text dimColor={!s.isReady && s.status !== 'In Progress'}>{String(i + 1).padStart(2)} {label(s)} {s.title}  </Text>
+            <Text color={colourOf(s)}>{stateOf(s)}</Text>
           </Text>
         ))}
         {current.order.length > 30 && <Text dimColor>   … {current.order.length - 30} more</Text>}
@@ -204,7 +207,8 @@ export const register: Register = on => {
         <Text color="cyan" bold>Epics</Text>
         {current.epics.map(epic => (
           <Text wrap="truncate-end">
-            {epic.id.split('-epic-')[0]} {epic.title}  <Text dimColor>{epic.storiesDone}/{epic.storiesTotal} stories{epic.waitsOn.length > 0 ? ` · after ${epic.waitsOn.join(', ')}` : ''}</Text>
+            {epic.id.split('-epic-')[0]} {epic.title}  <Text dimColor>{epic.storiesDone}/{epic.storiesTotal} stories</Text>
+            {epic.waitsOn.length > 0 && <Text color="red">  {after(epic.waitsOn)}</Text>}
           </Text>
         ))}
         <Text> </Text>

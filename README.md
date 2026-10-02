@@ -405,7 +405,7 @@ mock up the admin panel for this PRD
 
 [View full documentation](./filament-mockup/SKILL.md)
 
-### What's Next (v0.1.0)
+### What's Next (v0.1.1)
 
 **A live pane and band showing the cpm-next work left in the current repository**
 
