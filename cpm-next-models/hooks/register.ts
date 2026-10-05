@@ -10,12 +10,8 @@ import {
 const pin = atom({ plugin: 'cpm-next-models', key: 'pin' } as const, null)
 const pending = atom({ plugin: 'cpm-next-models', key: 'pending' } as const, null)
 
-// The status line command can't see a per-request model, so the held one is written where it can read it:
-// ~/.claude/cpm-next-models/{session id}, holding the footer label, or empty when nothing is held.
 async function setPin($: EngineInterface, value: ModelPin) {
   await update($, pin, () => value)
-  const home = await $.env.get('HOME')
-  if (home !== undefined) await $.fs.write(`${home}/.claude/cpm-next-models/${await $.session.id()}`, statusText(value) ?? '')
 }
 
 async function release($: EngineInterface) {

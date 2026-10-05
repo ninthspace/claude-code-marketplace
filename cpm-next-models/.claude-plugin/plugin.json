@@ -1,6 +1,6 @@
 {
   "name": "cpm-next-models",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Keeps a cpm-next skill's frontmatter model and effort for every turn of its run, including your replies to its questions, and runs `do all` at high effort; released when another skill runs, you switch model or effort, or /clear.",
   "author": { "name": "Chris Aves" },
   "license": "MIT",
