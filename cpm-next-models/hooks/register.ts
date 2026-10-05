@@ -1,8 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { ModelPin } from '../types'
-import { effortFor, effortStep, isHeldSkill, isPersonsSwitch, overrideFor, skillName, statusText } from './pin'
+import type { ModelPin, PendingSkill } from '../types'
+import {
+  effortFor, effortStep, isHeldSkill, isPersonsSwitch, overrideFor, parseFrontmatter, pickInstall,
+  resolveModel, skillName, slashSkill, statusText,
+} from './pin'
 
 const pin = atom({ plugin: 'cpm-next-models', key: 'pin' } as const, null)
 const pending = atom({ plugin: 'cpm-next-models', key: 'pending' } as const, null)
@@ -20,47 +23,59 @@ async function release($: EngineInterface) {
   await setPin($, null)
 }
 
-// The arguments of the last skill invoked by slash command; the expansion hook and `skill.prompt` may
-// arrive in either order, so whichever comes second joins them.
-let slashArgs: { skill: string; args: string } | null = null
+// A skill is seen by up to three events (the typed prompt, the expansion, the Skill tool); the first one
+// to name it sets the pending skill and the rest leave it be.
+async function capture($: EngineInterface, name: string, args: string) {
+  const skill = skillName(name)
+  if (!isHeldSkill(skill)) return
+  const waiting: PendingSkill = await read($, pending)
+  if (waiting?.skill === skill) return
+  await update($, pending, () => ({ skill, args }))
+}
+
+// The engine doesn't pass a skill's frontmatter effort on to the request, and passes its model only in the
+// Skill tool's result, so both are read from the installed SKILL.md.
+async function frontmatterOf($: EngineInterface, skill: string) {
+  try {
+    const home = await $.env.get('HOME')
+    const [plugin, name] = skill.split(':')
+    const installed = JSON.parse(await $.fs.read(`${home}/.claude/plugins/installed_plugins.json`)) as {
+      plugins?: Record<string, { scope?: string; projectPath?: string; installPath: string }[]>
+    }
+    const key = Object.keys(installed.plugins ?? {}).find(k => k.startsWith(`${plugin}@`))
+    const path = pickInstall(installed.plugins?.[key ?? ''] ?? [], await $.session.root())
+
+    return path === undefined ? {} : parseFrontmatter(await $.fs.read(`${path}/skills/${name}/SKILL.md`))
+  } catch {
+    return {}
+  }
+}
 
 export const register: Register = on => {
+  on('prompt.submit', async ($, e, next) => {
+    const typed = slashSkill(e.text)
+    if (typed !== null) await capture($, typed.skill, typed.args)
+
+    return next(e)
+  })
+
   on('classic.UserPromptExpansion', async ($, e, next) => {
-    const skill = skillName(e.command_name)
-    if (isHeldSkill(skill)) {
-      slashArgs = { skill, args: e.command_args }
-      const waiting = await read($, pending)
-      if (waiting !== null && waiting.skill === skill) await update($, pending, () => ({ ...waiting, args: e.command_args }))
-    }
+    await capture($, e.command_name, e.command_args)
 
     return next(e)
   })
 
-  // A skill's frontmatter model and effort apply from its expansion to the end of that turn. Remember which
-  // skill expanded; the next main-loop request carries what the engine resolved for it.
   on('skill.prompt', async ($, e, next) => {
-    const skill = skillName(e.skill)
-    if (isHeldSkill(skill)) {
-      const waiting = await read($, pending)
-      if (waiting?.skill !== skill) await update($, pending, () => ({ skill, args: slashArgs?.skill === skill ? slashArgs.args : '' }))
-    } else {
-      await release($)
-    }
+    if (isHeldSkill(skillName(e.skill))) await capture($, e.skill, '')
+    else await release($)
 
     return next(e)
   })
 
-  // The Skill tool carries the arguments, and its result reports the frontmatter model when one took effect.
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
-    const skill = skillName(e.skill)
-    if (isHeldSkill(skill)) await update($, pending, () => ({ skill, args: e.args ?? '' }))
-    const ran = await next(e)
-    if (ran.deny !== undefined || ran.isError === true) return ran
-    const model = (ran.result as { model?: string }).model
-    const waiting = await read($, pending)
-    if (model !== undefined && waiting !== null && waiting.skill === skill) await update($, pending, () => ({ ...waiting, model }))
+    await capture($, e.skill, e.args ?? '')
 
-    return ran
+    return next(e)
   })
 
   // Main loop only: subagents keep the model and effort their spawn chose.
@@ -70,8 +85,9 @@ export const register: Register = on => {
     const waiting = await read($, pending)
     if (waiting !== null) {
       await update($, pending, () => null)
-      const model = waiting.model ?? e.model
-      const effort = effortFor(waiting.skill, waiting.args, e.effort)
+      const found = await frontmatterOf($, waiting.skill)
+      const model = resolveModel(found.model, e.model)
+      const effort = effortFor(waiting.skill, waiting.args, found.effort ?? e.effort)
       await setPin($, { skill: waiting.skill, model, effort, turnId: e.turnId })
       return yield* next({ ...e, model, effort })
     }

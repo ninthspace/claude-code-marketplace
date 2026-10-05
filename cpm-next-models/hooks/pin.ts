@@ -56,3 +56,35 @@ export function statusText(pin: ModelPin): string | undefined {
 
   return `${pin.skill} · ${familyOf(pin.model)}${effort}`
 }
+
+const LEVELS = ['low', 'medium', 'high', 'xhigh', 'max']
+
+/** The `model` and `effort` lines of a SKILL.md's frontmatter; absent keys, or an unknown effort, are left out. */
+export function parseFrontmatter(text: string): { model?: string; effort?: Effort } {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1]
+  if (block === undefined) return {}
+  const get = (key: string) => new RegExp(`^${key}:\\s*(\\S+)\\s*$`, 'm').exec(block)?.[1]
+  const effort = get('effort')
+
+  return { model: get('model'), effort: LEVELS.includes(effort ?? '') ? (effort as Effort) : undefined }
+}
+
+/** `/cpm-next:do all` → `{ skill: 'cpm-next:do', args: 'all' }`; null for anything else a person types. */
+export function slashSkill(text: string): { skill: string; args: string } | null {
+  const found = /^\/(cpm-next:[\w-]+)(?:\s+([\s\S]*))?$/.exec(text.trim())
+
+  return found === null ? null : { skill: found[1] ?? '', args: found[2] ?? '' }
+}
+
+/** A frontmatter model as a request can name it: a bare family (`sonnet`) takes the session model's version. */
+export function resolveModel(requested: string | undefined, sessionModel: string): string {
+  if (requested === undefined || requested === 'inherit') return sessionModel
+  if (!/^(opus|sonnet|haiku|fable)$/.test(requested)) return requested
+
+  return sessionModel.replace(/opus|sonnet|haiku|fable/, requested)
+}
+
+/** Which install of a plugin the session runs: the project's own, else the user-scope one, else the first. */
+export function pickInstall(installs: { scope?: string; projectPath?: string; installPath: string }[], root: string): string | undefined {
+  return (installs.find(i => i.projectPath === root) ?? installs.find(i => i.scope === 'user') ?? installs[0])?.installPath
+}

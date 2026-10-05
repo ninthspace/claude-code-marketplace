@@ -1,6 +1,9 @@
 import { expect, test } from 'claude-code/testing'
 
-import { effortFor, effortStep, familyOf, isHeldSkill, isPersonsSwitch, overrideFor, skillName, statusText } from './pin'
+import {
+  effortFor, effortStep, familyOf, isHeldSkill, isPersonsSwitch, overrideFor, parseFrontmatter, pickInstall,
+  resolveModel, skillName, slashSkill, statusText,
+} from './pin'
 
 test('every cpm-next skill is held, others are not', () => {
   expect(isHeldSkill('cpm-next:do')).toBe(true)
@@ -64,4 +67,36 @@ test('footer label', () => {
   expect(statusText({ skill: 'cpm-next:do', model: 'claude-sonnet-5-5', effort: 'high', turnId: 't1' })).toBe('cpm-next:do · sonnet · high')
   expect(statusText({ skill: 'cpm-next:party', model: 'claude-sonnet-5-5', turnId: 't1' })).toBe('cpm-next:party · sonnet')
   expect(statusText(null)).toBeUndefined()
+})
+
+test('frontmatter model and effort are read from a SKILL.md', () => {
+  const text = '---\nname: status\ndescription: x: y\nmodel: sonnet\neffort: low\n---\n\n# Status\nmodel: opus'
+  expect(parseFrontmatter(text)).toEqual({ model: 'sonnet', effort: 'low' })
+  expect(parseFrontmatter('---\nname: x\neffort: loud\n---\n')).toEqual({ model: undefined, effort: undefined })
+  expect(parseFrontmatter('# no frontmatter')).toEqual({})
+})
+
+test('a typed cpm-next skill is recognised with its arguments', () => {
+  expect(slashSkill('/cpm-next:do all')).toEqual({ skill: 'cpm-next:do', args: 'all' })
+  expect(slashSkill('  /cpm-next:status  ')).toEqual({ skill: 'cpm-next:status', args: '' })
+  expect(slashSkill('/cpm-next:plan add a thing\nover two lines')).toEqual({ skill: 'cpm-next:plan', args: 'add a thing\nover two lines' })
+  expect(slashSkill('/commit')).toBeNull()
+  expect(slashSkill('yes, /cpm-next:do')).toBeNull()
+})
+
+test('a frontmatter model family takes the session model version', () => {
+  expect(resolveModel('sonnet', 'claude-opus-5-5')).toBe('claude-sonnet-5-5')
+  expect(resolveModel('claude-haiku-4-5-20251001', 'claude-opus-5-5')).toBe('claude-haiku-4-5-20251001')
+  expect(resolveModel(undefined, 'claude-opus-5-5')).toBe('claude-opus-5-5')
+  expect(resolveModel('inherit', 'claude-opus-5-5')).toBe('claude-opus-5-5')
+})
+
+test('the project install wins over the user install', () => {
+  const installs = [
+    { scope: 'user', installPath: '/c/0.6.0' },
+    { scope: 'project', projectPath: '/work/a', installPath: '/c/0.3.0' },
+  ]
+  expect(pickInstall(installs, '/work/a')).toBe('/c/0.3.0')
+  expect(pickInstall(installs, '/work/b')).toBe('/c/0.6.0')
+  expect(pickInstall([], '/work/b')).toBeUndefined()
 })
