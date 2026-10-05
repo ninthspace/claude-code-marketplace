@@ -38,15 +38,12 @@ What each model is for, as of September 2026:
 | **Fable 5.1** | The hardest reasoning and longest-horizon work, where Opus 5.5 has already fallen short | Priced above Opus, with long turns. Recommend it only with a stated reason. |
 | **Haiku 4.5** | Narrow, mechanical subagent work: lookups, extraction, formatting | Has no effort setting. |
 
-Rules of thumb for the cpm-next skills:
+Every cpm-next skill except this one sets its own model and effort in frontmatter, for the turn that invokes it: `plan` and `review` on Opus 5.5 at `medium` with Opus subagents; `do` on Sonnet 5.5 at `medium` with Sonnet subagents and an Opus 5.5 `auditor` for each story; `party` and `library` on Sonnet 5.5 at `medium`; `status` on Sonnet 5.5 at `low`. The `cpm-next-models` mod, when installed, holds that model and effort for the rest of the skill's run and raises `do all` to `high`. So for a cpm-next skill, recommend a setting only where these defaults don't fit, and give the command for it:
 
-- `status`, `library`: Sonnet 5.5 at `low` or `medium`.
-- `party`: Sonnet 5.5 at `medium` keeps turns quick. Opus 5.5 at `medium` suits a decision whose trade-offs are subtle.
-`plan`, `review` and `do` set their own model in frontmatter, and it applies for the turn that invokes them: `plan` and `review` run on Opus 5.5 with Opus subagents, and `do` builds on Sonnet 5.5 with Sonnet subagents and has each story audited by the `auditor` agent on Opus 5.5. For these three, recommend effort only, and recommend a model just for a turn that continues the run after the invoking one, which falls back to the session's model.
-
-- `plan`: `medium`, or `high` for greenfield work, a large spec, or deep brownfield grounding.
-- `review`: `medium`.
-- `do`: `medium` for one attended epic of well-specified stories; `high` for `all`, for unattended runs, and for epics that cut across unfamiliar code, since Sonnet 5.5 tends to stop and check in during long runs at `medium`. For a continuation turn, `/model sonnet`, unless the `cpm-next-models` mod is installed, which holds the skill's model for it.
+- `plan`: `/effort high` for greenfield work, a large spec, or deep brownfield grounding.
+- `party`: `/model opus` for a decision whose trade-offs are subtle.
+- `do`: `/effort high` for an attended epic that cuts across unfamiliar code.
+- Without the mod, a turn that continues the run falls back to the session's model and effort: give the `/model` and `/effort` to match the skill's frontmatter.
 
 If the user names a model this table doesn't cover, or the table looks out of date, check the current prompting guide for that model under `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/` before recommending it, and say that you did.
 

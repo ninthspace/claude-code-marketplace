@@ -2,6 +2,7 @@
 name: review
 description: Adversarial review of CPM epics before they are built — roster personas, working independently, look for criteria that can't be checked, hidden complexity, missing or wrong dependencies, Must Have requirements no story covers, and conflicts with ADRs or the code. Fixes what it can in Pending stories, and writes a review record of the rest. Use before running a large or risky epic, after a pivot, or whenever the user wants a second opinion on a plan. Triggers on "/cpm-next:review".
 model: opus
+effort: medium
 ---
 
 # Review

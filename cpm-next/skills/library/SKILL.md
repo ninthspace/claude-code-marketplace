@@ -1,6 +1,8 @@
 ---
 name: library
 description: Curate the project reference library in docs/library/ — import a local file or URL with front-matter that tells every skill what the document constrains and when to read it, promote durable lessons from retros into it, back-fill front-matter on documents that have none, or fold accumulated amendment blocks into a clean current version. Use whenever the user wants to add standards, architecture notes, API contracts, domain glossaries or other reference material for planning and building to draw on. Triggers on "/cpm-next:library".
+model: sonnet
+effort: medium
 ---
 
 # Library

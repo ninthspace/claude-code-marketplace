@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { ModelPin } from '../types'
-import { isHeldSkill, isPersonsSwitch, overrideFor, statusText } from './pin'
+import { effortFor, effortStep, isHeldSkill, isPersonsSwitch, overrideFor, skillName, statusText } from './pin'
 
 const pin = atom({ plugin: 'cpm-next-models', key: 'pin' } as const, null)
 const pending = atom({ plugin: 'cpm-next-models', key: 'pending' } as const, null)
@@ -20,42 +20,68 @@ async function release($: EngineInterface) {
   await setPin($, null)
 }
 
+// The arguments of the last skill invoked by slash command; the expansion hook and `skill.prompt` may
+// arrive in either order, so whichever comes second joins them.
+let slashArgs: { skill: string; args: string } | null = null
+
 export const register: Register = on => {
-  // A skill's frontmatter model applies from its expansion to the end of that turn. Remember which
-  // skill expanded; the next main-loop request carries the model the engine resolved for it.
-  on('skill.prompt', async ($, e, next) => {
-    if (isHeldSkill(e.skill)) await update($, pending, () => e.skill)
-    else await release($)
+  on('classic.UserPromptExpansion', async ($, e, next) => {
+    const skill = skillName(e.command_name)
+    if (isHeldSkill(skill)) {
+      slashArgs = { skill, args: e.command_args }
+      const waiting = await read($, pending)
+      if (waiting !== null && waiting.skill === skill) await update($, pending, () => ({ ...waiting, args: e.command_args }))
+    }
 
     return next(e)
   })
 
-  // The Skill tool reports the frontmatter model outright, when one took effect.
+  // A skill's frontmatter model and effort apply from its expansion to the end of that turn. Remember which
+  // skill expanded; the next main-loop request carries what the engine resolved for it.
+  on('skill.prompt', async ($, e, next) => {
+    const skill = skillName(e.skill)
+    if (isHeldSkill(skill)) {
+      const waiting = await read($, pending)
+      if (waiting?.skill !== skill) await update($, pending, () => ({ skill, args: slashArgs?.skill === skill ? slashArgs.args : '' }))
+    } else {
+      await release($)
+    }
+
+    return next(e)
+  })
+
+  // The Skill tool carries the arguments, and its result reports the frontmatter model when one took effect.
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
+    const skill = skillName(e.skill)
+    if (isHeldSkill(skill)) await update($, pending, () => ({ skill, args: e.args ?? '' }))
     const ran = await next(e)
     if (ran.deny !== undefined || ran.isError === true) return ran
-    const result = ran.result as { commandName?: string; model?: string }
-    if (result.commandName !== undefined && result.model !== undefined && isHeldSkill(result.commandName)) {
-      await update($, pending, () => null)
-      await setPin($, { skill: result.commandName, model: result.model })
-    }
+    const model = (ran.result as { model?: string }).model
+    const waiting = await read($, pending)
+    if (model !== undefined && waiting !== null && waiting.skill === skill) await update($, pending, () => ({ ...waiting, model }))
 
     return ran
   })
 
-  // Main loop only: subagents keep the model their spawn chose.
+  // Main loop only: subagents keep the model and effort their spawn chose.
   on('turn.step', async function* ($, e, next) {
     if (e.agentId !== undefined) return yield* next(e)
 
-    const skill = await read($, pending)
-    if (skill !== null) {
+    const waiting = await read($, pending)
+    if (waiting !== null) {
       await update($, pending, () => null)
-      await setPin($, { skill, model: e.model })
-      return yield* next(e)
+      const model = waiting.model ?? e.model
+      const effort = effortFor(waiting.skill, waiting.args, e.effort)
+      await setPin($, { skill: waiting.skill, model, effort, turnId: e.turnId })
+      return yield* next({ ...e, model, effort })
     }
 
-    const model = overrideFor(await read($, pin), e.model)
-    return yield* next(model === undefined ? e : { ...e, model })
+    const held = await read($, pin)
+    const stepped = effortStep(held, e.turnId, e.effort)
+    if (stepped.pin !== held) await setPin($, stepped.pin)
+    const model = overrideFor(held, e.model) ?? e.model
+
+    return yield* next({ ...e, model, effort: stepped.effort })
   })
 
   on('classic.PostModelSwitch', async ($, e, next) => {
@@ -71,7 +97,7 @@ export const register: Register = on => {
   })
 
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'cpm-models', description: 'Show which cpm-next skill model is held, or "off" to release it' })
+    await $.command.register({ name: 'cpm-models', description: 'Show which cpm-next skill model and effort are held, or "off" to release them' })
     // A status entry pinned by an earlier load outlives a reload; this mod draws in the footer instead.
     $.ui.status(undefined)
 
@@ -93,6 +119,6 @@ export const register: Register = on => {
     }
     const held = await read($, pin)
 
-    return { text: held === null ? 'Nothing held: turns run on the session model.' : `Holding ${held.model} for ${held.skill}. "/cpm-models off" releases it.` }
+    return { text: held === null ? 'Nothing held: turns run on the session model.' : `Holding ${held.model}${held.effort === undefined ? '' : ` at ${held.effort} effort`} for ${held.skill}. "/cpm-models off" releases it.` }
   })
 }

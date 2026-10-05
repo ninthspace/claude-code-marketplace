@@ -1,6 +1,8 @@
 ---
 name: status
 description: Read-only project status from the CPM artefacts and git — what the project is, what's been built, what's in flight or blocked, what's waiting on the user, and the next command to run. Use whenever the user returns to a project, asks where things stand, what's next, what's blocked, or what state an epic or spec is in. Triggers on "/cpm-next:status".
+model: sonnet
+effort: low
 ---
 
 # Status

@@ -2,6 +2,7 @@
 name: plan
 description: Turn whatever planning material already exists into the next artefacts needed to build — product brief, spec, and epics with stories and acceptance criteria — for greenfield or brownfield projects in any starting state. Reads existing discussions, briefs, specs, ADRs, epics, PRDs, READMEs and code, fills only the gaps, and amends existing documents when direction changes. Use whenever the user wants to plan, scope, specify, break down or re-plan work, even if they only name one of brief, spec or epics. Triggers on "/cpm-next:plan".
 model: opus
+effort: medium
 ---
 
 # Plan

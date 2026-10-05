@@ -1,9 +1,9 @@
 {
   "name": "cpm-next-models",
-  "version": "0.1.0",
-  "description": "Keeps a cpm-next skill's frontmatter model (do on Sonnet, plan and review on Opus) for every turn of its run, including your replies to its questions, until another skill runs, you switch model, or /clear.",
+  "version": "0.2.0",
+  "description": "Keeps a cpm-next skill's frontmatter model and effort for every turn of its run, including your replies to its questions, and runs `do all` at high effort; released when another skill runs, you switch model or effort, or /clear.",
   "author": { "name": "Chris Aves" },
   "license": "MIT",
-  "keywords": ["cpm-next", "model", "sonnet", "opus", "mod"],
+  "keywords": ["cpm-next", "model", "effort", "sonnet", "opus", "mod"],
   "types": "./types/index.d.ts"
 }

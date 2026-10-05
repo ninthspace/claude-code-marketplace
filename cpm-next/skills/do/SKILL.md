@@ -2,6 +2,7 @@
 name: do
 description: Build from CPM epic documents until every story in scope is Complete and the tests pass — one story, one epic, or all remaining epics unattended — or carry out a small change directly when there is no epic. Picks the next unblocked work, implements it, verifies each acceptance criterion with evidence, and keeps the epic doc as the live task list. Use whenever the user wants planned work built, continued or finished, or a small well-defined change made. Triggers on "/cpm-next:do".
 model: sonnet
+effort: medium
 ---
 
 # Do

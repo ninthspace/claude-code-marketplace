@@ -1,6 +1,8 @@
 ---
 name: party
 description: Multi-perspective discussion with named specialist personas (PM, Architect, Developer, UX, QA, DevOps and others) who build on and disagree with each other, or a focused one-to-one with a single expert. Use for brainstorming, weighing trade-offs, or testing an idea before committing to a plan, whether or not any planning documents exist yet. Saves a discussion record that /cpm-next:plan can read. Triggers on "/cpm-next:party", "party mode", "get the team's view", or a request to hear several perspectives on a decision.
+model: sonnet
+effort: medium
 ---
 
 # Party
