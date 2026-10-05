@@ -137,6 +137,7 @@ The criterion line itself is never edited to record verification, so its text st
 ### Fields `do` may add to a story
 
 - `**Retro**: {an observation worth carrying into future work}`
+- `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes.
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.
 - `**Amended**: {what changed} ({YYYY-MM-DD}) — cited: {file:line | FRn | conflicting criterion}`
 - `**Pivot deferred**: {change} → {artefact path} (Story {N}, {YYYY-MM-DD}) — cited: {citation}`

@@ -42,11 +42,11 @@ Rules of thumb for the cpm-next skills:
 
 - `status`, `library`: Sonnet 5.5 at `low` or `medium`.
 - `party`: Sonnet 5.5 at `medium` keeps turns quick. Opus 5.5 at `medium` suits a decision whose trade-offs are subtle.
-- `plan`: Opus 5.5 at `medium`, or `high` for greenfield work, a large spec, or deep brownfield grounding. Sonnet 5.5 at `high` is enough for a small change heading to a `00-` epic.
-- `review`: Opus 5.5 at `medium` as the lead. Its persona subagents already start on Sonnet.
+`plan`, `review` and `do` set their own model in frontmatter, and it applies for the turn that invokes them: `plan` and `review` run on Opus 5.5 with Opus subagents, and `do` builds on Sonnet 5.5 with Sonnet subagents and has each story audited by the `auditor` agent on Opus 5.5. For these three, recommend effort only, and recommend a model just for a turn that continues the run after the invoking one, which falls back to the session's model.
 
-Subagents started by `plan` and `do` use `CLAUDE_CODE_SUBAGENT_MODEL` when it is set, and the session's model otherwise. Setting it to `sonnet` suits them when the stories and areas they are given are well specified. Recommend it that way rather than asking for edits to the skills.
-- `do`: Sonnet 5.5 at `medium` or `high` for one attended epic of well-specified stories. Opus 5.5 at `medium` or `high` for `all`, for unattended runs, and for epics that cut across unfamiliar code.
+- `plan`: `medium`, or `high` for greenfield work, a large spec, or deep brownfield grounding.
+- `review`: `medium`.
+- `do`: `medium` for one attended epic of well-specified stories; `high` for `all`, for unattended runs, and for epics that cut across unfamiliar code, since Sonnet 5.5 tends to stop and check in during long runs at `medium`. For a continuation turn, `/model sonnet`, unless the `cpm-next-models` mod is installed, which holds the skill's model for it.
 
 If the user names a model this table doesn't cover, or the table looks out of date, check the current prompting guide for that model under `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/` before recommending it, and say that you did.
 

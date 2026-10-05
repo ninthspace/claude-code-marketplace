@@ -1,6 +1,7 @@
 ---
 name: do
 description: Build from CPM epic documents until every story in scope is Complete and the tests pass — one story, one epic, or all remaining epics unattended — or carry out a small change directly when there is no epic. Picks the next unblocked work, implements it, verifies each acceptance criterion with evidence, and keeps the epic doc as the live task list. Use whenever the user wants planned work built, continued or finished, or a small well-defined change made. Triggers on "/cpm-next:do".
+model: sonnet
 ---
 
 # Do
@@ -23,14 +24,14 @@ Read `$ARGUMENTS`:
 
 In every case the full test suite must also pass at the end, or any failures that remain must have been failing before the run started. Record the baseline before changing anything.
 
-For a small change with no epic: do it, test it, and write a short `docs/quick/` record. If it turns out to need more than one story's worth of work, stop and suggest `/cpm-next:plan`.
+For a small change with no epic: do it, test it, have it audited as below, and write a short `docs/quick/` record that includes the audit verdict. If it turns out to need more than one story's worth of work, stop and suggest `/cpm-next:plan`.
 
 ## Before the first story
 
 - Read `CLAUDE.md`, `docs/library/`, the epic, its source spec, and any ADRs it cites.
 - Skim `docs/retros/` for observations that bear on this epic's area and treat them as context, skipping any marked `**Retired`.
 - Find the test command from the library, `composer.json`, `package.json`, `Makefile`, `pyproject.toml` or `Cargo.toml`. Run the suite to get the baseline.
-- Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything. If every one of its criteria already has an `Evidence` line, confirm the evidence still holds, then close it as step 4 of the loop says, before picking any other work.
+- Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything. If every one of its criteria already has an `Evidence` line, confirm the evidence still holds, audit it if it has no `**Audit**` line, then close it as step 5 of the loop says, before picking any other work.
 
 ## The loop
 
@@ -39,9 +40,10 @@ For each unblocked story, lowest number first:
 1. Set the story (and the epic, if it was Pending) to `In Progress`.
 2. Build it, task by task. Set each task `In Progress` when you start it and `Complete` when it's done. Follow the project's existing conventions over your own preferences. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available, before verifying, so the evidence is gathered against the final code.
 3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write an `Evidence` line directly under that criterion, as the contract shows, so each proof sits beside the claim it proves. A criterion without its own evidence isn't met.
-4. Close the story in the same edit that writes its last `Evidence` line: set any remaining tasks and the story's `**Status**` to `Complete`. If it was the epic's last open story, set the epic's `**Status**` to `Complete` too. Add a `**Retro**` line only for something future work genuinely needs to know.
+4. Have the story audited before closing it (see **Audit** below). If it returns `fix needed`, fix every Critical and Warning finding, update the `Evidence` lines the fixes affect, and audit once more. If the second audit still returns `fix needed`, record each unresolved finding in a `Not met` line under the criterion it concerns, or as a `**Retro**` line when it concerns no criterion, and treat the story as blocked.
+5. Close the story in the same edit that writes its `**Audit**` line: set any remaining tasks and the story's `**Status**` to `Complete`. If it was the epic's last open story, set the epic's `**Status**` to `Complete` too. Add a `**Retro**` line only for something future work genuinely needs to know.
 
-Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete`, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
+Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete` with an `**Audit**` line, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
 
 Stories that are unblocked together can go to subagents in parallel, but only when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports.
 
@@ -52,6 +54,16 @@ The lead agent owns everything shared, and subagents don't touch it:
 - Each subagent's prompt names the resources it must leave alone. It won't know about them otherwise.
 
 When a subagent reports back, check its evidence against the files and test output before marking its story Complete. After a parallel batch, run the full suite once, since conflicts between stories show up only when the pieces are combined. When stories share files or state, run them one at a time.
+
+Start each parallel subagent on the `sonnet` model, the same model this skill builds on.
+
+## Audit
+
+This skill builds on Sonnet; the `auditor` agent checks each story on Opus before it closes. Start it with the Agent tool, `subagent_type` `cpm-next:auditor`, and give it the epic path and story number (or the change description), the files the story changed, the test command, and the resources it must leave alone. It gets none of this conversation. Audit a parallel subagent's story the same way after checking its report; audits of stories that share no files or state can run in parallel.
+
+Check each finding against the code before acting on it, and drop any that don't hold up. Suggestions are not fixed in this run; record one as a `**Retro**` line only if future work needs it. When a finding contradicts the story's criterion rather than the code, it is a criterion question and goes through **When a criterion looks wrong**, not a fix.
+
+Record the outcome on the story as `**Audit**: pass ({YYYY-MM-DD})`, adding `, {n} findings fixed` when the first audit returned `fix needed`. If the `auditor` agent isn't available, write `**Audit**: skipped — auditor unavailable` and say so under **Found** at the end of the run.
 
 Leave commits, branches and pushes to the user unless they've said otherwise.
 

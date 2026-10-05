@@ -1,6 +1,7 @@
 ---
 name: plan
 description: Turn whatever planning material already exists into the next artefacts needed to build — product brief, spec, and epics with stories and acceptance criteria — for greenfield or brownfield projects in any starting state. Reads existing discussions, briefs, specs, ADRs, epics, PRDs, READMEs and code, fills only the gaps, and amends existing documents when direction changes. Use whenever the user wants to plan, scope, specify, break down or re-plan work, even if they only name one of brief, spec or epics. Triggers on "/cpm-next:plan".
+model: opus
 ---
 
 # Plan
@@ -26,7 +27,7 @@ Read what exists before asking anything:
 
 - `docs/` in full: discussions, plans, briefs, architecture, specs, epics (including status), retros, library, quick.
 - Planning material outside CPM's shape: `PRD.md`, `README.md`, `docs/*.md`, `CLAUDE.md`, issue text the user pastes.
-- In a brownfield project, the code: stack, conventions, the modules the work touches, the test setup and test command. For a large codebase, give each area to its own subagent, running in parallel, and check what each one reports against the files it cites.
+- In a brownfield project, the code: stack, conventions, the modules the work touches, the test setup and test command. For a large codebase, give each area to its own subagent on the `opus` model, running in parallel, and check what each one reports against the files it cites.
 - `$ARGUMENTS`, which may be a description, a path, a target, or nothing. With nothing, the most recent unconcluded discussion or the most recent spec without epics is the likely starting point. Say which one you picked.
 
 From this, name the starting point in one or two sentences: what exists, what's missing, and what this run will produce. Then carry on without waiting for approval.
@@ -49,7 +50,7 @@ Work top-down from the first missing artefact. Skip any level that would only re
 
 **Epics**: split by coherent deliverable, not by layer. Stories are units of value with testable criteria; tasks are the steps inside a story. Set `**Blocked by**` only for real ordering constraints, since `do` runs unblocked stories and may run independent ones in parallel.
 
-When the spec is non-trivial, put it through a challenge pass before writing epics: give the draft to two or three roster personas as subagents, each told to find what would make the plan fail from their perspective. Fold in what holds up, and note in Assumptions what you chose not to act on and why.
+When the spec is non-trivial, put it through a challenge pass before writing epics: give the draft to two or three roster personas as subagents on the `opus` model, each told to find what would make the plan fail from their perspective. Fold in what holds up, and note in Assumptions what you chose not to act on and why.
 
 ## Existing material
 
