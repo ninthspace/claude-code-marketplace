@@ -514,6 +514,64 @@ For issues or questions:
 - Check plugin-specific documentation
 - Review the [Claude Code plugin docs](https://docs.claude.com/en/docs/claude-code/plugins)
 
+### CPM Next Progress (v0.2.0)
+
+**A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
+
+A Claude Code mod (a plugin of function hooks). You set the build order for a spec's stories in a small JSON file, and Claude publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file.
+
+**The mod only reads.** It lists the artifact's rows through the `ArtifactData` tool, which auto mode does not ask about, and never writes to it. Claude's own `ArtifactData` calls do the writing, so no permission rule is needed. An earlier version wrote to the artifact itself, and auto mode refused those calls intermittently with "The server-side auto mode classifier gave no verdict for ArtifactData".
+
+**Build-order file:** `docs/specifications/NN-build-order.json`:
+```json
+{
+  "title": "01-Series Build Order",
+  "spec": "docs/specifications/01-spec-requirements-matrix-todos.md",
+  "decisions": ["Questions still open, shown in a box above the table"],
+  "phases": [
+    { "label": "No visible change", "items": [
+      { "epic": "01-05", "story": 1, "note": "Default value keeps today's text" },
+      { "epic": "01-05", "task": "3.1" }
+    ] },
+    { "label": "Waiting on input", "note": "Shown beside the phase label", "items": [
+      { "epic": "01-05", "story": 2, "waitingOn": "new name from the client" }
+    ] }
+  ]
+}
+```
+An item is a story (`story`) or one task (`task`) of an epic, named by the epic's number prefix. `waitingOn` shows the item as **Waiting on input** until it is removed from the file or the item starts. `artifact` holds the tracker's link; Claude adds it when it publishes the page.
+
+**Statuses:** Complete, In progress (the story says so, or one of its tasks has started), Waiting on input, Pending. A row's date moves only when its status changes. Blockers shown are the story's and epic's `**Blocked by**` items not yet Complete, earlier unfinished tasks of the same story, and any `waitingOn`.
+
+**How it works:**
+1. After any tool call that writes (Edit, Write, Bash and so on), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more.
+2. If one did, it reads the tracker and works out the writes that would bring it in line. If there are none, it says nothing.
+3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch.
+
+The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); the Quick Start adds it to the project's `.gitignore`.
+
+**Commands:**
+- `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date".
+- `/progress-tracker init NN-build-order.json` — writes the page to `.claude/cpm-next-progress/` and tells you what to ask Claude to do next: publish it with the `Artifact` tool, put the link in the file's `artifact` field, and write the rows the next check lists.
+
+**Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions.
+
+**Quick Start:**
+```bash
+/plugin install cpm-next-progress@ninthspace-marketplace
+/reload-plugins
+
+# The mod writes generated files here; keep them out of git
+echo '/.claude/cpm-next-progress' >> .gitignore
+
+/progress-tracker init 01-build-order.json
+```
+Then ask Claude to publish the page and fill the table.
+
+**Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`), as What's Next does.
+
+**Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`.
+
 ## Changelog
 
 See individual plugin CHANGELOG.md files for version history.

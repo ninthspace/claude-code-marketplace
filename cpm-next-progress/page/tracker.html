@@ -1,0 +1,205 @@
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column register — header, status summary, then the ordered table grouped by risk phase. */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --fg: #1d2622;
+  --muted: #5d6b64;
+  --rule: #d9dfdb;
+  --accent: #2f5d4e;
+  --ok: #2e7d4f;
+  --ok-bg: #e3f2e8;
+  --work: #9a6400;
+  --work-bg: #fbf0d9;
+  --wait: #6b4fa3;
+  --wait-bg: #eee8f8;
+  --pend: #56625c;
+  --pend-bg: #eceeed;
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141917; --surface: #1b2220; --fg: #e3e9e5; --muted: #9aa8a1; --rule: #2e3834; --accent: #8cc4ae;
+    --ok: #7fd09f; --ok-bg: #1d3327; --work: #e5b45a; --work-bg: #3a2e14; --wait: #b9a2ea; --wait-bg: #2c2440; --pend: #a9b4ae; --pend-bg: #262e2b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141917; --surface: #1b2220; --fg: #e3e9e5; --muted: #9aa8a1; --rule: #2e3834; --accent: #8cc4ae;
+  --ok: #7fd09f; --ok-bg: #1d3327; --work: #e5b45a; --work-bg: #3a2e14; --wait: #b9a2ea; --wait-bg: #2c2440; --pend: #a9b4ae; --pend-bg: #262e2b;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 48px; display: grid; gap: 24px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 600 30px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 68ch; }
+.sub code, td code { font: 13px var(--font-mono); }
+.summary { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+.bar { flex: 1 1 260px; height: 10px; border-radius: 5px; background: var(--pend-bg); display: flex; overflow: hidden; }
+.bar span { display: block; height: 100%; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px 18px; font-variant-numeric: tabular-nums; }
+.counts b { font-weight: 700; }
+.decisions { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--wait); padding: 12px 16px; border-radius: 4px; }
+.decisions h2 { font: 600 13px/1.3 var(--font-body); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 6px; color: var(--wait); }
+.decisions ul { margin: 0; padding-left: 18px; }
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+thead th { font: 600 12px/1.2 var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface); position: sticky; top: 0; }
+tr.phase td { background: var(--bg); font-weight: 600; color: var(--accent); padding-top: 14px; }
+tr.phase td small { font-weight: 400; color: var(--muted); margin-left: 8px; }
+td.num { font: 13px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; width: 2.5em; }
+td.ref { font: 13px var(--font-mono); white-space: nowrap; }
+td.note { color: var(--muted); font-size: 14px; }
+td.date { font: 13px var(--font-mono); color: var(--muted); white-space: nowrap; }
+.pill { display: inline-block; font: 600 12px/1 var(--font-body); padding: 4px 8px; border-radius: 10px; white-space: nowrap; }
+.s-complete { color: var(--ok); background: var(--ok-bg); }
+.s-progress { color: var(--work); background: var(--work-bg); }
+.s-waiting { color: var(--wait); background: var(--wait-bg); }
+.s-pending { color: var(--pend); background: var(--pend-bg); }
+tr.is-complete td:not(.status) { opacity: .62; }
+.empty { padding: 28px 16px; color: var(--muted); text-align: center; }
+footer { color: var(--muted); font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">{{REPO}}</div>
+    <h1>{{TITLE}}</h1>
+    <p class="sub">Stories in build order. Status comes from the epic docs and updates as each story is built. Source: <code>{{SPEC}}</code>.</p>
+  </header>
+
+  <section class="summary" aria-label="Progress">
+    <div class="bar" id="bar" role="img" aria-label="Progress bar"></div>
+    <div class="counts" id="counts"></div>
+  </section>
+
+  <section class="decisions" id="decisions" hidden>
+    <h2>Decisions needed</h2>
+    <ul id="decision-list"></ul>
+  </section>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Item</th><th>Title</th><th>Status</th><th>Blocked by</th><th>Risk / notes</th><th>Updated</th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="7" class="empty">Loading progress. Items appear here once the tracker data has loaded.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer id="footer">Last updated: —</footer>
+</div>
+
+<script>
+const STATUS = {
+  "Complete": "s-complete",
+  "In progress": "s-progress",
+  "Waiting on input": "s-waiting",
+  "Pending": "s-pending",
+};
+const ORDER = ["Complete", "In progress", "Pending", "Waiting on input"];
+const BAR_COLOR = { "Complete": "var(--ok)", "In progress": "var(--work)", "Waiting on input": "var(--wait)", "Pending": "transparent" };
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) { node.className = cls; }
+  if (text !== undefined) { node.textContent = text; }
+  return node;
+}
+
+function renderItems(items) {
+  const body = document.getElementById("rows");
+  body.replaceChildren();
+  if (items.length === 0) {
+    const tr = el("tr");
+    const td = el("td", "empty", "No items yet. Claude adds the build order here.");
+    td.colSpan = 7;
+    tr.append(td);
+    body.append(tr);
+    return;
+  }
+  let lastPhase = null;
+  for (const item of items) {
+    if (item.phase !== lastPhase) {
+      lastPhase = item.phase;
+      const tr = el("tr", "phase");
+      const td = el("td");
+      td.colSpan = 7;
+      td.append(document.createTextNode("Phase " + item.phase + " · " + (item.phaseLabel || "")));
+      if (item.phaseNote) { td.append(el("small", null, item.phaseNote)); }
+      tr.append(td);
+      body.append(tr);
+    }
+    const tr = el("tr", item.status === "Complete" ? "is-complete" : "");
+    tr.append(el("td", "num", String(item.seq)));
+    tr.append(el("td", "ref", item.epic + " " + item.story));
+    tr.append(el("td", null, item.title || ""));
+    const st = el("td", "status");
+    st.append(el("span", "pill " + (STATUS[item.status] || "s-pending"), item.status || "Pending"));
+    tr.append(st);
+    tr.append(el("td", "note", item.blockedBy || "—"));
+    tr.append(el("td", "note", item.note || ""));
+    tr.append(el("td", "date", item.updated || ""));
+    body.append(tr);
+  }
+
+  const counts = {};
+  for (const item of items) { counts[item.status] = (counts[item.status] || 0) + 1; }
+  const bar = document.getElementById("bar");
+  bar.replaceChildren();
+  const countBox = document.getElementById("counts");
+  countBox.replaceChildren();
+  for (const status of ORDER) {
+    const n = counts[status] || 0;
+    if (n > 0 && status !== "Pending") {
+      const seg = el("span");
+      seg.style.width = (n / items.length * 100) + "%";
+      seg.style.background = BAR_COLOR[status];
+      bar.append(seg);
+    }
+    const c = el("span");
+    c.append(el("b", null, String(n)), document.createTextNode(" " + status.toLowerCase()));
+    countBox.append(c);
+  }
+  bar.setAttribute("aria-label", (counts["Complete"] || 0) + " of " + items.length + " complete");
+}
+
+function renderMeta(meta) {
+  const box = document.getElementById("decisions");
+  const list = document.getElementById("decision-list");
+  list.replaceChildren();
+  const decisions = Array.isArray(meta?.decisions) ? meta.decisions : [];
+  for (const d of decisions) { list.append(el("li", null, String(d))); }
+  box.hidden = decisions.length === 0;
+  document.getElementById("footer").textContent = "Last updated: " + (meta?.updated || "—");
+}
+
+(async () => {
+  const db = await window.claude?.use?.("db");
+  if (!db) {
+    const body = document.getElementById("rows");
+    body.replaceChildren();
+    const tr = el("tr");
+    const td = el("td", "empty", "Progress data is not available in this view. Sign in to claude.ai to see it.");
+    td.colSpan = 7;
+    tr.append(td);
+    body.append(tr);
+    return;
+  }
+  db.collection("items").orderBy("seq").onSnapshot(
+    snap => renderItems(snap.docs.map(d => d.data())),
+    () => {}
+  );
+  db.doc("meta/tracker").onSnapshot(snap => renderMeta(snap.exists ? snap.data() : null), () => {});
+})();
+</script>

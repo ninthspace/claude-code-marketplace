@@ -1,0 +1,17 @@
+{
+  "name": "cpm-next-progress",
+  "version": "0.2.0",
+  "description": "Checks a claude.ai progress tracker for a cpm-next spec's epics against the epic docs, in the build order you set, and tells Claude which rows to update; it never writes to the tracker itself.",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "cpm-next",
+    "epics",
+    "progress",
+    "tracker",
+    "artifact",
+    "mod"
+  ]
+}
