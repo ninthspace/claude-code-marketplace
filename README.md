@@ -514,7 +514,7 @@ For issues or questions:
 - Check plugin-specific documentation
 - Review the [Claude Code plugin docs](https://docs.claude.com/en/docs/claude-code/plugins)
 
-### CPM Next Progress (v0.2.0)
+### CPM Next Progress (v0.2.1)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
