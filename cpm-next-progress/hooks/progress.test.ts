@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import type { BuildOrder, LiveDoc } from './progress'
 import {
-  artifactUrlIn, buildItems, chunk, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson,
+  artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, withArtifact,
 } from './progress'
 
 const MEMBERS = {
@@ -213,4 +213,36 @@ test('the pending file holds the writes in batches of at most 50', () => {
 
   expect(parsed.url).toBe(DRIFT.url)
   expect(parsed.batches.map(b => b.length)).toEqual([50, 1])
+})
+
+const SPEC = { name: '01-spec-requirements.md', text: '# Spec: Requirements Matrix\n\n**Status**: Approved\n' }
+
+test('a spec gets a first build order: epics by their blockers, one phase each, stories by blockers then number', () => {
+  const later = { name: '01-02-epic-later.md', text: `# Later\n\n**Status**: Pending\n\n## Third\n**Story**: 3\n**Status**: Pending\n\n## First\n**Story**: 1\n**Status**: Pending\n**Blocked by**: Story 2\n\n## Second\n**Story**: 2\n**Status**: Pending\n\n## Gone\n**Story**: 4\n**Status**: Withdrawn\n` }
+  const first = { ...MEMBERS, name: '01-03-epic-member-rules.md', text: MEMBERS.text }
+  const blocked = { ...later, text: later.text.replace('**Status**: Pending\n\n## Third', '**Status**: Pending\n**Blocked by**: Epic 01-03\n\n## Third') }
+  const otherSpec = { ...NAMING, name: '02-01-epic-naming.md' }
+  const dropped = { name: '01-04-epic-old.md', text: '# Old\n\n**Status**: Superseded\n\n## A\n**Story**: 1\n**Status**: Pending\n' }
+
+  const order = defaultBuildOrder(SPEC, [blocked, first, otherSpec, dropped])
+
+  expect(order.title).toBe('01 Requirements Matrix: build order')
+  expect(order.spec).toBe('docs/specifications/01-spec-requirements.md')
+  expect(order.phases.map(p => p.label)).toEqual(['01-03 Member Rules', '01-02 Later'])
+  expect(order.phases[1]?.items).toEqual([{ epic: '01-02', story: 2 }, { epic: '01-02', story: 1 }, { epic: '01-02', story: 3 }])
+  expect(buildItems(order, [blocked, first], TODAY).missing).toEqual([])
+})
+
+test('epics that block each other keep number order rather than being dropped', () => {
+  const a = { name: '01-01-epic-a.md', text: '# A\n\n**Blocked by**: Epic 01-02\n\n## S\n**Story**: 1\n' }
+  const b = { name: '01-02-epic-b.md', text: '# B\n\n**Blocked by**: Epic 01-01\n\n## S\n**Story**: 1\n' }
+
+  expect(defaultBuildOrder(SPEC, [b, a]).phases.map(p => p.label)).toEqual(['01-01 A', '01-02 B'])
+})
+
+test('the published link is added to the build-order file', () => {
+  const text = withArtifact(JSON.stringify(ORDER), 'https://claude.ai/artifact/abc')
+
+  expect(parseBuildOrder(text)).toEqual({ ...ORDER, artifact: 'https://claude.ai/artifact/abc' })
+  expect(text.endsWith('}\n')).toBe(true)
 })

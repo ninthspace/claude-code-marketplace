@@ -514,11 +514,11 @@ For issues or questions:
 - Check plugin-specific documentation
 - Review the [Claude Code plugin docs](https://docs.claude.com/en/docs/claude-code/plugins)
 
-### CPM Next Progress (v0.2.1)
+### CPM Next Progress (v0.3.0)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
-A Claude Code mod (a plugin of function hooks). You set the build order for a spec's stories in a small JSON file, and Claude publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file.
+A Claude Code mod (a plugin of function hooks). Name a spec and the mod writes a build order for its stories to a small JSON file, which you can edit; Claude then publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file.
 
 **The mod only reads.** It lists the artifact's rows through the `ArtifactData` tool, which auto mode does not ask about, and never writes to it. Claude's own `ArtifactData` calls do the writing, so no permission rule is needed. An earlier version wrote to the artifact itself, and auto mode refused those calls intermittently with "The server-side auto mode classifier gave no verdict for ArtifactData".
 
@@ -539,7 +539,9 @@ A Claude Code mod (a plugin of function hooks). You set the build order for a sp
   ]
 }
 ```
-An item is a story (`story`) or one task (`task`) of an epic, named by the epic's number prefix. `waitingOn` shows the item as **Waiting on input** until it is removed from the file or the item starts. `artifact` holds the tracker's link; Claude adds it when it publishes the page.
+An item is a story (`story`) or one task (`task`) of an epic, named by the epic's number prefix. `waitingOn` shows the item as **Waiting on input** until it is removed from the file or the item starts. `artifact` holds the tracker's link; the mod adds it when Claude publishes the page.
+
+**The first build order** is written from the spec's epics (those whose number starts with the spec's): one phase per epic, epics ordered by their `**Blocked by**` epics, each epic's stories ordered by their `**Blocked by**` stories and then by number. Superseded and withdrawn epics and stories are left out. Edit the file afterwards to reorder, regroup, split a story into tasks or add `waitingOn`.
 
 **Statuses:** Complete, In progress (the story says so, or one of its tasks has started), Waiting on input, Pending. A row's date moves only when its status changes. Blockers shown are the story's and epic's `**Blocked by**` items not yet Complete, earlier unfinished tasks of the same story, and any `waitingOn`.
 
@@ -548,11 +550,11 @@ An item is a story (`story`) or one task (`task`) of an epic, named by the epic'
 2. If one did, it reads the tracker and works out the writes that would bring it in line. If there are none, it says nothing.
 3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch.
 
-The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); the Quick Start adds it to the project's `.gitignore`.
+The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); `/progress-tracker 01` adds it to the project's `.gitignore`.
 
 **Commands:**
 - `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date".
-- `/progress-tracker init NN-build-order.json` — writes the page to `.claude/cpm-next-progress/` and tells you what to ask Claude to do next: publish it with the `Artifact` tool, put the link in the file's `artifact` field, and write the rows the next check lists.
+- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. Then ask Claude to publish the page. When it does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works.
 
 **Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions.
 
@@ -561,12 +563,9 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 /plugin install cpm-next-progress@ninthspace-marketplace
 /reload-plugins
 
-# The mod writes generated files here; keep them out of git
-echo '/.claude/cpm-next-progress' >> .gitignore
-
-/progress-tracker init 01-build-order.json
+/progress-tracker 01
 ```
-Then ask Claude to publish the page and fill the table.
+Then ask Claude to publish the page. The spec needs its epics in `docs/epics/` first.
 
 **Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`), as What's Next does.
 

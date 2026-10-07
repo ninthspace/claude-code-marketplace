@@ -49,7 +49,7 @@ export type EpicFile = { name: string; text: string }
 
 type ParsedTask = { id: string; title: string; status: WorkStatus }
 type ParsedStory = { number: number; title: string; status: WorkStatus; blockedBy: string[]; tasks: ParsedTask[] }
-export type ParsedEpic = { id: string; short: string; status: WorkStatus; blockedBy: string[]; stories: ParsedStory[] }
+export type ParsedEpic = { id: string; short: string; title: string; status: WorkStatus; blockedBy: string[]; stories: ParsedStory[] }
 
 const FIELD = /^\*\*([A-Za-z ]+)\*\*:\s*(.*?)\s*$/
 
@@ -74,13 +74,17 @@ export const shortId = (id: string) => id.split('-epic-')[0] ?? id
 
 export function parseEpic(file: EpicFile): ParsedEpic {
   const id = file.name.replace(/\.md$/, '')
-  const epic: ParsedEpic = { id, short: shortId(id), status: 'Pending', blockedBy: [], stories: [] }
+  const epic: ParsedEpic = { id, short: shortId(id), title: '', status: 'Pending', blockedBy: [], stories: [] }
   const stories: (ParsedStory & { hasNumber: boolean })[] = []
   let story: (ParsedStory & { hasNumber: boolean }) | null = null
   let task: (ParsedTask & { hasId: boolean }) | null = null
   const tasks = new Map<ParsedStory, (ParsedTask & { hasId: boolean })[]>()
 
   for (const line of file.text.split(/\r?\n/)) {
+    if (line.startsWith('# ') && story === null && epic.title === '') {
+      epic.title = line.slice(2).trim()
+      continue
+    }
     if (line.startsWith('## ')) {
       task = null
       story = { number: 0, title: line.slice(3).trim(), status: 'Pending', blockedBy: [], tasks: [], hasNumber: false }
@@ -209,6 +213,69 @@ export function buildItems(order: BuildOrder, files: EpicFile[], today: string):
   })
 
   return { items, missing }
+}
+
+const isDropped = (status: WorkStatus) => status === 'Superseded' || status === 'Withdrawn'
+
+/**
+ * Orders nodes so each comes after the nodes it depends on, ties broken by `compare`. Nodes caught in
+ * a cycle keep their `compare` order at the end rather than being dropped.
+ */
+function dependencyOrder<T>(nodes: T[], dependsOn: (node: T) => T[], compare: (a: T, b: T) => number): T[] {
+  const left = [...nodes].sort(compare)
+  const placed = new Set<T>()
+  const out: T[] = []
+  while (left.length > 0) {
+    const index = left.findIndex(node => dependsOn(node).every(dep => placed.has(dep) || !nodes.includes(dep)))
+    const [next] = left.splice(index === -1 ? 0 : index, 1)
+    if (next === undefined) break
+    placed.add(next)
+    out.push(next)
+  }
+
+  return out
+}
+
+const byShort = (a: ParsedEpic, b: ParsedEpic) => a.short.localeCompare(b.short, undefined, { numeric: true })
+
+/**
+ * A first build order for a spec: its epics (prefixed with the spec's number) ordered by their
+ * blockers, one phase per epic, each epic's stories ordered by their blockers and then by number.
+ * Superseded and withdrawn epics and stories are left out.
+ */
+export function defaultBuildOrder(spec: { name: string; text: string }, files: EpicFile[]): BuildOrder {
+  const number = /^(\d+)-/.exec(spec.name)?.[1] ?? ''
+  const heading = /^#\s+(?:Spec:\s*)?(.+?)\s*$/m.exec(spec.text)?.[1]
+  const all = files.map(parseEpic)
+  const epics = all.filter(e => e.short.startsWith(`${number}-`) && !isDropped(e.status))
+
+  const epicDeps = (epic: ParsedEpic) => [epic.blockedBy, ...epic.stories.map(s => s.blockedBy)].flat()
+    .map(token => findEpic(epics, token))
+    .filter((dep): dep is ParsedEpic => dep !== undefined && dep !== epic)
+
+  const phases: BuildOrderPhase[] = []
+  for (const epic of dependencyOrder(epics, epicDeps, byShort)) {
+    const stories = epic.stories.filter(s => !isDropped(s.status))
+    const storyDeps = (story: ParsedStory) => story.blockedBy
+      .map(token => /^story\s+(\d+)$/i.exec(token)?.[1])
+      .map(n => stories.find(s => s.number === Number(n)))
+      .filter((dep): dep is ParsedStory => dep !== undefined && dep !== story)
+    const ordered = dependencyOrder(stories, storyDeps, (a, b) => a.number - b.number)
+    if (ordered.length === 0) continue
+    phases.push({ label: epic.title === '' ? `Epic ${epic.short}` : `${epic.short} ${epic.title}`, items: ordered.map(s => ({ epic: epic.short, story: s.number })) })
+  }
+
+  return {
+    title: `${number} ${heading ?? spec.name.replace(/\.md$/, '')}: build order`,
+    spec: `docs/specifications/${spec.name}`,
+    decisions: [],
+    phases,
+  }
+}
+
+/** A build-order file's text with its `artifact` link set. */
+export function withArtifact(text: string, url: string): string {
+  return `${JSON.stringify({ ...(JSON.parse(text) as BuildOrder), artifact: url }, null, 2)}\n`
 }
 
 function trackerStatus(status: WorkStatus, waitingOn: string | undefined): TrackerStatus {
