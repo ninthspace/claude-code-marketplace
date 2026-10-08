@@ -3,9 +3,11 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { ModelPin, PendingSkill } from '../types'
 import {
-  effortFor, effortStep, isHeldSkill, isPersonsSwitch, overrideFor, parseFrontmatter, pickInstall,
-  resolveModel, skillName, slashSkill, statusText,
+  effortFor, effortStep, floorFor, isHeldSkill, isPersonsSwitch, isStoryEffort, overrideFor, parseFrontmatter,
+  pickInstall, resolveModel, skillName, slashSkill, statusText, storyStep,
 } from './pin'
+
+const STORY_TOOL = 'set_story_effort'
 
 const pin = atom({ plugin: 'cpm-next-models', key: 'pin' } as const, null)
 const pending = atom({ plugin: 'cpm-next-models', key: 'pending' } as const, null)
@@ -84,7 +86,8 @@ export const register: Register = on => {
       const found = await frontmatterOf($, waiting.skill)
       const model = resolveModel(found.model, e.model)
       const effort = effortFor(waiting.skill, waiting.args, found.effort ?? e.effort)
-      await setPin($, { skill: waiting.skill, model, effort, turnId: e.turnId })
+      const floor = floorFor(waiting.skill, waiting.args)
+      await setPin($, { skill: waiting.skill, model, effort, turnId: e.turnId, ...(floor === undefined ? {} : { floor }) })
       return yield* next({ ...e, model, effort })
     }
 
@@ -110,6 +113,18 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'cpm-models', description: 'Show which cpm-next skill model and effort are held, or "off" to release them' })
+    await $.tool.register({
+      name: STORY_TOOL,
+      description: 'Sets the effort the current /cpm-next:do run builds at, for the story it is starting or the fix it is making. Changes nothing outside a do run, never goes below the run\'s floor, and leaves an effort the person set with /effort alone.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          effort: { type: 'string', enum: ['low', 'medium', 'high', 'xhigh'] },
+          story: { type: 'string', description: 'The story number, e.g. "3"' },
+        },
+        required: ['effort'],
+      },
+    })
     // A status entry pinned by an earlier load outlives a reload; this mod draws in the footer instead.
     $.ui.status(undefined)
 
@@ -123,6 +138,18 @@ export const register: Register = on => {
 
     return next({ ...e, props: { ...e.props, modes: [...e.props.modes, label] } })
   })
+
+  // Unfiltered: a registered tool's name is not in the typed tool list until the mod has reloaded once.
+  on('tool.call', async ($, e, next) => {
+    if (String(e.tool) !== `mcp__cpm-next-models__${STORY_TOOL}`) return next(e)
+    const { effort, story } = e as unknown as { effort?: unknown; story?: unknown }
+    if (!isStoryEffort(effort)) return { deny: 'effort must be one of low, medium, high, xhigh.' }
+    const held = await read($, pin)
+    const step = storyStep(held, effort, typeof story === 'string' && story !== '' ? story : undefined)
+    if (step.pin !== held) await setPin($, step.pin)
+
+    return { result: step.text }
+  }).catch(($, e, next) => (next.called ? next(e) : { deny: `${STORY_TOOL} failed; build at the current effort.` }))
 
   on('command.run', { command: 'cpm-models' }, async ($, e) => {
     if (e.args.trim() === 'off') {

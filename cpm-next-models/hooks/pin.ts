@@ -17,8 +17,37 @@ export function isHeldSkill(skill: string): boolean {
  * check in at `medium`; otherwise the frontmatter's, as the engine resolved it for the skill's first request.
  */
 export function effortFor(skill: string, args: string, resolved: Effort | undefined): Effort | undefined {
-  return skillName(skill) === 'cpm-next:do' && /^\s*all\b/i.test(args) ? 'high' : resolved
+  return floorFor(skill, args) ?? resolved
 }
+
+/** The lowest effort a story may set in this run: `high` for `do all`, so a `low` story can't bring back the check-ins. */
+export function floorFor(skill: string, args: string): Effort | undefined {
+  return skillName(skill) === 'cpm-next:do' && /^\s*all\b/i.test(args) ? 'high' : undefined
+}
+
+const STORY_LEVELS = ['low', 'medium', 'high', 'xhigh'] as const
+
+/** Whether a value is an effort a story may set: one of the four build levels. */
+export function isStoryEffort(value: unknown): value is (typeof STORY_LEVELS)[number] {
+  return typeof value === 'string' && (STORY_LEVELS as readonly string[]).includes(value)
+}
+
+/**
+ * The pin after `do` sets a story's effort, and what the tool tells the model. Only a `do` run's held effort
+ * changes, never below its floor; a person's `/effort` (which clears the held effort) is left to stand.
+ */
+export function storyStep(pin: ModelPin, effort: Effort, story: string | undefined): { pin: ModelPin; text: string } {
+  if (pin === null || pin.skill !== 'cpm-next:do') return { pin, text: 'No /cpm-next:do run is held; the session effort applies.' }
+  if (pin.effort === undefined) return { pin, text: 'The person set /effort during this run; their effort applies.' }
+  const floor = pin.floor
+  const level = floor !== undefined && rank(effort) < rank(floor) ? floor : effort
+  const next = { ...pin, effort: level, ...(story === undefined ? {} : { story }) }
+  const raised = level === effort ? '' : ` (raised from ${effort}: this run's floor is ${floor})`
+
+  return { pin: next, text: `Effort ${level}${raised}${story === undefined ? '' : ` for story ${story}`}.` }
+}
+
+const rank = (effort: Effort) => typeof effort === 'number' ? effort : LEVELS.indexOf(effort)
 
 /** The model a main-loop request should be sent on instead of `stepModel`, or undefined to leave it. */
 export function overrideFor(pin: ModelPin, stepModel: string): string | undefined {
@@ -49,12 +78,13 @@ export function familyOf(model: string): string {
   return /opus|sonnet|haiku|fable/.exec(model)?.[0] ?? model
 }
 
-/** The footer label, e.g. "cpm-next:do · sonnet · high"; undefined when nothing is held. */
+/** The footer label, e.g. "cpm-next:do · story 3 · sonnet · high"; undefined when nothing is held. */
 export function statusText(pin: ModelPin): string | undefined {
   if (pin === null) return undefined
+  const story = pin.story === undefined ? '' : ` · story ${pin.story}`
   const effort = pin.effort === undefined ? '' : ` · ${pin.effort}`
 
-  return `${pin.skill} · ${familyOf(pin.model)}${effort}`
+  return `${pin.skill}${story} · ${familyOf(pin.model)}${effort}`
 }
 
 const LEVELS = ['low', 'medium', 'high', 'xhigh', 'max']

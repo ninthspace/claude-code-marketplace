@@ -106,6 +106,8 @@ Requirement labels (`FR3`, `NFR2`, `AD1`) are stable identifiers. When amending,
 **Status**: Pending
 **Blocked by**: —
 **Satisfies**: {FR1, NFR2 — omit only for 00- epics}
+**Effort**: {low | high — optional}
+**Model**: haiku {optional, on a low story only}
 
 **Acceptance Criteria**:
 - {criterion} `[tag]`
@@ -117,6 +119,8 @@ Requirement labels (`FR3`, `NFR2`, `AD1`) are stable identifiers. When amending,
 
 ---
 ```
+
+`**Effort**` is how hard `do` thinks while building the story; a story without one is built at `medium`. `**Model**: haiku` marks a `low` story as a fixed, mechanical edit that a Haiku subagent can make. Neither field changes what the story must deliver or how it is audited.
 
 Stories are numbered from 1 within each epic. Tasks use `{story}.{seq}`. Intra-epic dependencies name stories (`Story 2`); cross-epic dependencies name the epic by filename prefix (`Epic 28-01-epic-setup`).
 

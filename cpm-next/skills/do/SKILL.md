@@ -38,10 +38,10 @@ For a small change with no epic: do it, test it, have it audited as below, and w
 
 For each unblocked story, lowest number first:
 
-1. Set the story (and the epic, if it was Pending) to `In Progress`.
+1. Set the story (and the epic, if it was Pending) to `In Progress`. Call `mcp__cpm-next-models__set_story_effort` with the story's `**Effort**` (`medium` when it has none) and its number. The tool comes from the `cpm-next-models` mod; when it isn't available, build at the session's effort.
 2. Build it, task by task. Set each task `In Progress` when you start it and `Complete` when it's done. Follow the project's existing conventions over your own preferences. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available, before verifying, so the evidence is gathered against the final code.
 3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write an `Evidence` line directly under that criterion, as the contract shows, so each proof sits beside the claim it proves. A criterion without its own evidence isn't met.
-4. Have the story audited before closing it (see **Audit** below). If it returns `fix needed`, fix every Critical and Warning finding, update the `Evidence` lines the fixes affect, and audit once more. If the second audit still returns `fix needed`, record each unresolved finding in a `Not met` line under the criterion it concerns, or as a `**Retro**` line when it concerns no criterion, and treat the story as blocked.
+4. Have the story audited before closing it (see **Audit** below). If it returns `fix needed`, set the effort for the fix with the same tool, `high`, or `xhigh` for a story already at `high`, then fix every Critical and Warning finding, update the `Evidence` lines the fixes affect, and audit once more. If the second audit still returns `fix needed`, record each unresolved finding in a `Not met` line under the criterion it concerns, or as a `**Retro**` line when it concerns no criterion, and treat the story as blocked.
 5. Close the story in the same edit that writes its `**Audit**` line: set any remaining tasks and the story's `**Status**` to `Complete`. If it was the epic's last open story, set the epic's `**Status**` to `Complete` too. Add a `**Retro**` line only for something future work genuinely needs to know.
 
 Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete` with an `**Audit**` line, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
@@ -56,7 +56,9 @@ The lead agent owns everything shared, and subagents don't touch it:
 
 When a subagent reports back, check its evidence against the files and test output before marking its story Complete. After a parallel batch, run the full suite once, since conflicts between stories show up only when the pieces are combined. When stories share files or state, run them one at a time.
 
-Start each parallel subagent on the `sonnet` model, the same model this skill builds on.
+Start each parallel subagent on the `sonnet` model, the same model this skill builds on. A story marked `**Model**: haiku` goes to a subagent on `haiku` even when nothing runs beside it, so the lead keeps its own model and the conversation's cache. The lead makes any fixes its audit asks for.
+
+Hand plain lookups to the `cpm-next:scout` agent: where something is defined or used, which files a change touches, what a read-only query returns. It runs on Haiku and returns only the answer, which keeps search output out of this conversation. Do the reading yourself when the answer depends on understanding the code, not finding it.
 
 ## Audit
 

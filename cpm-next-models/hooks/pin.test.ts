@@ -1,8 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
 import {
-  effortFor, effortStep, familyOf, isHeldSkill, isPersonsSwitch, overrideFor, parseFrontmatter, pickInstall,
-  resolveModel, skillName, slashSkill, statusText,
+  effortFor, effortStep, familyOf, floorFor, isHeldSkill, isPersonsSwitch, isStoryEffort, overrideFor, parseFrontmatter,
+  pickInstall, resolveModel, skillName, slashSkill, statusText, storyStep,
 } from './pin'
 
 test('every cpm-next skill is held, others are not', () => {
@@ -99,4 +99,47 @@ test('the project install wins over the user install', () => {
   expect(pickInstall(installs, '/work/a')).toBe('/c/0.3.0')
   expect(pickInstall(installs, '/work/b')).toBe('/c/0.6.0')
   expect(pickInstall([], '/work/b')).toBeUndefined()
+})
+
+const DO = { skill: 'cpm-next:do', model: 'claude-sonnet-5-5', effort: 'medium' as const, turnId: 't1' }
+
+test('do all keeps high as its floor; other runs have none', () => {
+  expect(floorFor('cpm-next:do', 'all')).toBe('high')
+  expect(floorFor('/cpm-next:do', ' ALL epics')).toBe('high')
+  expect(floorFor('cpm-next:do', '3')).toBeUndefined()
+  expect(floorFor('cpm-next:plan', 'all')).toBeUndefined()
+})
+
+test('a story effort is one of the four build levels', () => {
+  expect(['low', 'medium', 'high', 'xhigh'].every(isStoryEffort)).toBe(true)
+  expect(isStoryEffort('max')).toBe(false)
+  expect(isStoryEffort(3)).toBe(false)
+  expect(isStoryEffort(undefined)).toBe(false)
+})
+
+test('a story sets the held effort of a do run and names the story', () => {
+  const step = storyStep(DO, 'low', '3')
+  expect(step.pin).toEqual({ ...DO, effort: 'low', story: '3' })
+  expect(step.text).toBe('Effort low for story 3.')
+  expect(storyStep(step.pin, 'xhigh', undefined).pin).toEqual({ ...DO, effort: 'xhigh', story: '3' })
+})
+
+test('a story effort never goes below the floor', () => {
+  const all = { ...DO, effort: 'high' as const, floor: 'high' as const }
+  const step = storyStep(all, 'low', '2')
+  expect(step.pin?.effort).toBe('high')
+  expect(step.text).toContain('raised from low')
+  expect(storyStep(all, 'xhigh', '2').pin?.effort).toBe('xhigh')
+})
+
+test('a story leaves the person\'s /effort, other skills and no run alone', () => {
+  const released = { ...DO, effort: undefined }
+  expect(storyStep(released, 'high', '1').pin).toBe(released)
+  const plan = { ...DO, skill: 'cpm-next:plan' }
+  expect(storyStep(plan, 'high', '1').pin).toBe(plan)
+  expect(storyStep(null, 'high', '1').pin).toBeNull()
+})
+
+test('the footer names the story when one is held', () => {
+  expect(statusText({ ...DO, effort: 'low', story: '3' })).toBe('cpm-next:do · story 3 · sonnet · low')
 })
