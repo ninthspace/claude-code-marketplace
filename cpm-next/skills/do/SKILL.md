@@ -36,7 +36,7 @@ For a small change with no epic: do it, test it, have it audited as below, and w
 
 ## The loop
 
-For each unblocked story, lowest number first:
+Take unblocked stories lowest number first. When two or more are unblocked at once, build them in parallel as described below. Each story goes through these steps wherever it is built:
 
 1. Set the story (and the epic, if it was Pending) to `In Progress`. Call `mcp__cpm-next-models__set_story_effort` with the story's `**Effort**` (`medium` when it has none) and its number. The tool comes from the `cpm-next-models` mod; when it isn't available, build at the session's effort.
 2. Build it, task by task. Set each task `In Progress` when you start it and `Complete` when it's done. Follow the project's existing conventions over your own preferences. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available, before verifying, so the evidence is gathered against the final code.
@@ -46,7 +46,7 @@ For each unblocked story, lowest number first:
 
 Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete` with an `**Audit**` line, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
 
-Stories that are unblocked together can go to subagents in parallel, but only when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports.
+Stories that are unblocked together are built in parallel by default, one subagent each, when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports. Judge overlap from the files each story's tasks name and the code they touch; ask the `scout` agent where that isn't clear. Build them one at a time when they overlap, or when the user is working alongside you on a single story or task.
 
 The lead agent owns everything shared, and subagents don't touch it:
 

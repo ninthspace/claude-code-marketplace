@@ -333,7 +333,7 @@
   <header class="hero">
     <h1>cpm-next training guide</h1>
     <p>A reference for developers who plan and build with cpm-next in Claude Code: what to install, what each skill reads and writes, how <code>do</code> builds and audits work, how model and effort are set, and how to follow progress.</p>
-    <div class="meta">Covers cpm-next 0.7.1, cpm-next-models 0.3.0, cpm-next-progress 0.3.1, whats-next 0.2.2 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
+    <div class="meta">Covers cpm-next 0.7.2, cpm-next-models 0.3.0, cpm-next-progress 0.3.1, whats-next 0.2.2 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
   </header>
 
   <!-- 1 -->
@@ -1007,7 +1007,7 @@ summary: &gt;
     <p>A small change with no epic is audited the same way, and its <code>docs/quick/</code> record includes the verdict.</p>
 
     <h3 id="do-parallel">Parallel subagents</h3>
-    <p>Stories that are unblocked together can go to subagents in parallel, but only when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, <code>.env</code>, and ports. When stories share files or state, they run one at a time.</p>
+    <p>Stories that are unblocked together are built in parallel by default, one subagent each, when they share neither files nor runtime state. <code>do</code> judges overlap from the files each story's tasks name and the code they touch, and asks the <code>scout</code> agent where that isn't clear. It builds them one at a time when they overlap, or when you are working alongside it on a single story or task. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, <code>.env</code>, and ports.</p>
     <ul>
       <li>The lead agent owns everything shared. It runs migrations, dependency installs and the full test suite. A story needing a schema or dependency change goes first, run by the lead, before any fan-out.</li>
       <li>A subagent runs only its own story's tests, against isolated state: the project's parallel-testing support where it has one (for example Pest's <code>--parallel</code>, which gives each process its own test database) or an in-memory database. Without that isolation, the subagent writes code only and the lead runs its tests after it reports.</li>

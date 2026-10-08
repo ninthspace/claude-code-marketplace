@@ -81,7 +81,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 
 ## Available Plugins
 
-### CPM Next (v0.7.1)
+### CPM Next (v0.7.2)
 
 **Plan and build with six skills: party, plan, review, do, library, status**
 
