@@ -7,12 +7,14 @@ set -euo pipefail
 MARKETPLACE=ninthspace-marketplace
 SHA=${1:-}
 
+# Each remote read gives up after 10 seconds, and the wait after two minutes in all.
+remote_main() { GIT_SSH_COMMAND="ssh -o ConnectTimeout=10" git ls-remote origin refs/heads/main 2>/dev/null | cut -f1; }
+
 if [[ -n "$SHA" ]]; then
-  for _ in $(seq 1 60); do
-    [[ "$(git ls-remote origin refs/heads/main | cut -f1)" == "$SHA" ]] && break
+  until [[ "$(remote_main)" == "$SHA" ]]; do
+    (( SECONDS < 120 )) || { echo "origin/main did not reach $SHA within two minutes; nothing updated"; exit 1; }
     sleep 2
   done
-  [[ "$(git ls-remote origin refs/heads/main | cut -f1)" == "$SHA" ]] || { echo "origin/main never reached $SHA; nothing updated"; exit 1; }
 fi
 
 claude plugin marketplace update "$MARKETPLACE"
