@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.30.0",
+  "version": "4.0.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -40,55 +40,10 @@
       ]
     },
     {
-      "name": "cpm",
-      "source": "./cpm",
-      "description": "Claude Planning Method — facilitated planning with multi-perspective party mode for Claude Code, tuned for Claude Opus 5. Structured discovery, specification, and work breakdown through guided conversation with named agent personas.",
-      "version": "3.12.1",
-      "keywords": [
-        "planning",
-        "discovery",
-        "requirements",
-        "specification",
-        "architecture",
-        "facilitation",
-        "agile",
-        "stories",
-        "tasks",
-        "bmad",
-        "party-mode",
-        "multi-perspective",
-        "personas",
-        "consult",
-        "audit"
-      ]
-    },
-    {
-      "name": "dpm",
-      "source": "./dpm",
-      "description": "Data-Modelled Planning Method — SQLite-backed persistence for planning artefacts. Artefacts are rows, cross-artefact references are foreign keys, and markdown is a generated one-way projection. Skills write through typed MCP tools; nothing parses prose.",
-      "version": "0.8.0",
-      "keywords": [
-        "planning",
-        "sqlite",
-        "persistence",
-        "mcp",
-        "artefacts",
-        "specification",
-        "requirements",
-        "epics",
-        "stories",
-        "coverage",
-        "traceability",
-        "projection",
-        "schema",
-        "migrations"
-      ]
-    },
-    {
       "name": "cpm-next",
       "source": "./cpm-next",
-      "description": "Experimental six-skill CPM for Opus 5.5: party (divergent discussion), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (autonomous execution to a stated finish line), library (reference documents and promoted retro lessons), status (where things stand and what to run next). Reads and writes the CPM v3 artefact formats, so the board and v3 skills keep working.",
-      "version": "0.7.0",
+      "description": "Six skills for planning and building with Claude Code: party (discussion with specialist personas), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (build, verify and audit each story to a stated finish line), library (reference documents and promoted retro lessons), status (where things stand and what to run next).",
+      "version": "0.7.1",
       "keywords": [
         "planning",
         "party-mode",

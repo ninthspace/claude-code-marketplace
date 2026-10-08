@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cpm-next Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --surface-2: #eef0f6;
+    --border: #d9dce8;
+    --text: #1b1d2a;
+    --text-dim: #565b74;
+    --accent: #5442d0;
+    --accent-soft: rgba(84, 66, 208, 0.10);
+    --green: #15803d;
+    --amber: #a16207;
+    --rose: #be123c;
+    --code-text: #24273a;
+    --radius: 10px;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117;
+      --surface: #171a25;
+      --surface-2: #1f2232;
+      --border: #2c3044;
+      --text: #e4e6f2;
+      --text-dim: #9095ae;
+      --accent: #9d8dff;
+      --accent-soft: rgba(157, 141, 255, 0.14);
+      --green: #4ade80;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --code-text: #d7daea;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117;
+    --surface: #171a25;
+    --surface-2: #1f2232;
+    --border: #2c3044;
+    --text: #e4e6f2;
+    --text-dim: #9095ae;
+    --accent: #9d8dff;
+    --accent-soft: rgba(157, 141, 255, 0.14);
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --code-text: #d7daea;
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+
+  .deck { flex: 1; position: relative; overflow: hidden; }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 40px 56px 32px;
+  }
+  .slide.active { display: flex; animation: fade 0.25s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .slide-inner { max-width: 1000px; width: 100%; margin: auto; }
+
+  .tag {
+    font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+  }
+  h1 { font-size: 46px; font-weight: 700; line-height: 1.15; letter-spacing: -1px; margin-bottom: 16px; }
+  h2 { font-size: 32px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 20px; }
+  h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  p { margin-bottom: 12px; font-size: 17px; }
+  .lead { font-size: 20px; color: var(--text-dim); max-width: 720px; }
+  .dim { color: var(--text-dim); }
+  .small { font-size: 14px; }
+
+  ul.bullets { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  ul.bullets li { font-size: 17px; padding-left: 22px; position: relative; }
+  ul.bullets li::before {
+    content: ''; position: absolute; left: 2px; top: 10px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  }
+  ol.steps { padding-left: 24px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  ol.steps li { font-size: 17px; padding-left: 4px; }
+  ol.steps li::marker { color: var(--accent); font-weight: 600; }
+
+  code {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere;
+  }
+  pre {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+    overflow-x: auto; max-width: 100%;
+  }
+  pre code {
+    background: none; border: none; padding: 0; font-size: 13.5px;
+    line-height: 1.55; color: var(--code-text); display: block; white-space: pre;
+    overflow-wrap: normal;
+  }
+  pre .c { color: var(--text-dim); }
+  pre .k { color: var(--accent); font-weight: 500; }
+  pre .ok { color: var(--green); }
+  pre .no { color: var(--rose); }
+
+  .table-wrap { width: 100%; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td {
+    text-align: left; vertical-align: top; padding: 8px 10px;
+    border-bottom: 1px solid var(--border); overflow-wrap: anywhere;
+  }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); font-weight: 600; }
+  td:first-child { white-space: nowrap; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 14px; }
+  .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; min-width: 0;
+  }
+  .card p, .card li { font-size: 15px; }
+  .card ul.bullets li { font-size: 15px; }
+  .card pre code { font-size: 12.5px; }
+
+  .chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 18px; }
+  .chain .step {
+    flex: 1 1 150px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px; min-width: 0;
+  }
+  .chain .step b { display: block; font-size: 16px; margin-bottom: 4px; }
+  .chain .step span { font-size: 13px; color: var(--text-dim); display: block; overflow-wrap: anywhere; }
+  .chain .arrow { align-self: center; color: var(--accent); font-weight: 700; }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 15px; margin-bottom: 14px;
+  }
+  .note.warn { border-left-color: var(--amber); }
+
+  .nav-bar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 20px; border-top: 1px solid var(--border); background: var(--surface);
+  }
+  .counter { font-family: var(--mono); font-size: 13px; color: var(--text-dim); min-width: 64px; }
+  .progress-track { flex: 1; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0; transition: width 0.25s ease; }
+  .nav-btn {
+    font: inherit; font-size: 15px; background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  .nav-btn:disabled { opacity: 0.4; cursor: default; }
+  .hint { font-size: 12px; color: var(--text-dim); }
+
+  @media (max-width: 760px) {
+    .slide { padding: 24px 16px 20px; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 24px; }
+    .lead { font-size: 17px; }
+    p, ul.bullets li, ol.steps li { font-size: 15px; }
+    .grid, .grid.three { grid-template-columns: minmax(0, 1fr); }
+    table { font-size: 13.5px; }
+    th, td { padding: 6px 6px; }
+    td:first-child { white-space: normal; }
+    pre code { font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .chain .arrow { display: none; }
+    .hint { display: none; }
+    .nav-bar { padding: 8px 16px; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<main class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Onboarding · technical team</div>
+    <h1>cpm-next</h1>
+    <p class="lead">A planning-and-building method for Claude Code. This deck takes you from installing it to running your first spec end to end, in one afternoon.</p>
+    <ul class="bullets" style="margin-top:24px">
+      <li>What it is, and the six skills</li>
+      <li>The artefacts it writes in <code>docs/</code></li>
+      <li>Installing the full set, and setting up a project</li>
+      <li>A first walkthrough: plan, review, do one story, status</li>
+      <li>Unattended runs, story effort, the two agents, staying up to date</li>
+    </ul>
+    <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">What it is</div>
+    <h2>An idea becomes tested code through a short chain of documents</h2>
+    <ul class="bullets">
+      <li>cpm-next keeps a chain of Markdown artefacts in your repository's <code>docs/</code> folder: a discussion record, a product brief, a specification, and epics made of stories with acceptance criteria.</li>
+      <li>Six skills cover the whole path. Each skill states what "finished" means and when to stop.</li>
+      <li>The artefacts are the only state. There are no progress files to clean up. The epic doc is the task list: you read it to see where a run is, and the next session resumes from it.</li>
+      <li>Each skill declares its model and effort. Opus plans and reviews. Sonnet builds. An Opus <code>auditor</code> agent checks every story before it closes. A Haiku <code>scout</code> agent answers lookups. <code>status</code> runs on Haiku.</li>
+      <li>It works for greenfield and brownfield projects. In a brownfield project, <code>plan</code> grounds every requirement in the current code.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">The six skills</div>
+    <h2>Each skill has a finish line</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Skill</th><th>What it does</th><th>Finished when</th></tr></thead>
+        <tbody>
+          <tr><td><code>/cpm-next:party</code></td><td>Discussion with named specialist personas (PM, Architect, Developer, UX, QA and others)</td><td>A discussion record is saved and the next step is named</td></tr>
+          <tr><td><code>/cpm-next:plan</code></td><td>Writes whatever is missing of brief, spec and epics, from whatever already exists</td><td>The artefacts down to the epics exist and trace upward</td></tr>
+          <tr><td><code>/cpm-next:review</code></td><td>Independent challenge of the epics before they are built</td><td>Critical and Warning findings are fixed or waiting on you</td></tr>
+          <tr><td><code>/cpm-next:do</code></td><td>Builds stories, verifies each acceptance criterion with evidence, and has each story audited</td><td>Every story in scope is Complete and the tests pass</td></tr>
+          <tr><td><code>/cpm-next:library</code></td><td>Curates reference documents in <code>docs/library/</code> that planning and building read</td><td>Documents carry complete front-matter</td></tr>
+          <tr><td><code>/cpm-next:status</code></td><td>Read-only report of where things stand and the next command to run</td><td>Nothing is written</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dim small"><code>party</code> and <code>review</code> are optional. The minimum path is <code>plan</code> then <code>do</code>.</p>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">The artefact chain</div>
+    <h2>What lands in <code>docs/</code></h2>
+    <div class="chain">
+      <div class="step"><b>Discussion</b><span>docs/discussions/<br>{nn}-discussion-{slug}.md</span><span>party</span></div>
+      <div class="arrow">&rarr;</div>
+      <div class="step"><b>Brief</b><span>docs/briefs/<br>{nn}-brief-{slug}.md</span><span>plan</span></div>
+      <div class="arrow">&rarr;</div>
+      <div class="step"><b>Spec</b><span>docs/specifications/<br>{nn}-spec-{slug}.md</span><span>plan</span></div>
+      <div class="arrow">&rarr;</div>
+      <div class="step"><b>Epics</b><span>docs/epics/<br>{parent}-{seq}-epic-{slug}.md</span><span>plan writes, do updates</span></div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Alongside the chain</h3>
+        <ul class="bullets">
+          <li><code>docs/architecture/</code> ADRs, only for decisions that outlive one spec</li>
+          <li><code>docs/reviews/</code> review records</li>
+          <li><code>docs/retros/</code> retros written by <code>do</code></li>
+          <li><code>docs/quick/</code> records of small changes made without an epic</li>
+          <li><code>docs/library/</code> reference documents every skill reads</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Numbering</h3>
+        <ul class="bullets">
+          <li><code>{nn}</code> is one more than the highest number already used, in the folder and its archive. Numbers are never reused.</li>
+          <li>An epic's <code>{parent}</code> is its spec's number, or <code>00</code> when there is no spec. So spec <code>01</code> has epics <code>01-01</code>, <code>01-02</code> and so on.</li>
+          <li>A level that would only restate the one above is skipped. A small change can go from a description straight to a <code>00-</code> epic.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">The epic format</div>
+    <h2>Stories, criteria and tasks, as <code>plan</code> writes them</h2>
+    <p class="dim small">Example epic from Starling Library, an imaginary lending-library app used for every example in this deck. The <code>whats-next</code> and <code>cpm-next-progress</code> mods parse these fields, so the format is fixed.</p>
+<pre><code><span class="k"># Loans CSV Export</span>
+
+**Source spec**: docs/specifications/01-spec-loans-csv-export.md
+**Date**: 2026-10-08
+**Status**: Pending
+**Blocked by**: —
+
+<span class="k">## Export the filtered report as CSV</span>
+**Story**: 1
+**Status**: Pending
+**Blocked by**: —
+**Satisfies**: FR1, FR2
+**Effort**: high
+
+**Acceptance Criteria**:
+- The export contains exactly the rows the report's current filters show `[feature]`
+- A user without the reports permission receives a 403 response `[feature]`
+
+<span class="k">### Add the export route and controller</span>
+**Task**: 1.1
+**Description**: Route behind the reports permission that returns the CSV
+**Status**: Pending
+
+---
+
+<span class="k">## Add the export to the reports menu</span>
+**Story**: 2
+**Status**: Pending
+**Blocked by**: Story 1
+**Satisfies**: FR3
+**Effort**: low
+**Model**: haiku</code></pre>
+    <p class="small dim">Status values: <code>Pending</code>, <code>In Progress</code>, <code>Complete</code>. Epics may also be <code>Superseded</code> or <code>Withdrawn</code>, which only you set. A story is unblocked when its <code>**Blocked by**</code> is <code>—</code> or everything it names is <code>Complete</code>. A dependency on another epic names it by filename prefix, for example <code>Epic 28-01-epic-setup</code>.</p>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Evidence and Audit</div>
+    <h2>What <code>do</code> adds when a story closes</h2>
+<pre><code><span class="k">## Export the filtered report as CSV</span>
+**Story**: 1
+**Status**: <span class="ok">Complete</span>
+**Blocked by**: —
+**Satisfies**: FR1, FR2
+**Effort**: high
+
+**Acceptance Criteria**:
+- The export contains exactly the rows the report's current filters show `[feature]`
+  <span class="ok">- Evidence: tests/Feature/LoansCsvExportTest.php "exports only filtered rows", php artisan test --filter=LoansCsvExportTest, 4 passed</span>
+- A user without the reports permission receives a 403 response `[feature]`
+  <span class="ok">- Evidence: tests/Feature/LoansCsvExportTest.php "forbids users without the reports permission", same run</span>
+
+<span class="ok">**Audit**: pass (2026-10-08), 2 findings fixed</span></code></pre>
+    <ul class="bullets">
+      <li>Each criterion gets its own indented <code>Evidence</code> line: a test name and command, a <code>file:line</code>, or the manual step taken and what was seen.</li>
+      <li>The criterion line itself is never edited.</li>
+      <li>A story is <code>Complete</code> only when every criterion has an <code>Evidence</code> line. A <code>Not met</code> line leaves it blocked.</li>
+      <li><code>**Audit**</code> is written in the same edit that closes the story. If the auditor is unavailable it reads <code>**Audit**: skipped — auditor unavailable</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Installation</div>
+    <h2>Install the full set at user scope</h2>
+    <p>Inside Claude Code, add the marketplace once:</p>
+<pre><code>/plugin marketplace add ninthspace/claude-code-marketplace</code></pre>
+    <p>Then install the five plugins. User scope is the default, so one install serves every repository.</p>
+<pre><code>/plugin install cpm-next@ninthspace-marketplace
+/plugin install cpm-next-models@ninthspace-marketplace
+/plugin install cpm-next-progress@ninthspace-marketplace
+/plugin install whats-next@ninthspace-marketplace
+/plugin install plugin-sync@ninthspace-marketplace
+/reload-plugins</code></pre>
+    <div class="note warn">The suffix is the marketplace's name, <code>ninthspace-marketplace</code>, not the repository's. <code>cpm-next@claude-code-marketplace</code> resolves to nothing.</div>
+    <p class="small dim"><code>/reload-plugins</code> loads the new plugins into the session you are in. Any other session that was already open needs it too.</p>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">What each plugin adds</div>
+    <h2>One required plugin and four mods</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Plugin</th><th>Adds</th><th>Without it</th></tr></thead>
+        <tbody>
+          <tr><td><code>cpm-next</code></td><td>The six skills, the auditor and scout agents</td><td>Required</td></tr>
+          <tr><td><code>cpm-next-models</code></td><td>Holds each skill's model and effort for its whole run; builds each story at its own effort</td><td>A skill's model and effort last only for the turn that invoked it; later turns of a <code>do</code> run fall back to the session model</td></tr>
+          <tr><td><code>cpm-next-progress</code></td><td><code>/progress-tracker</code>, a claude.ai tracker for a spec's epics</td><td>No shareable progress page; read the epic docs or run <code>/cpm-next:status</code></td></tr>
+          <tr><td><code>whats-next</code></td><td><code>/next</code>, a live pane of the work left in the repository</td><td>No live pane; run <code>/cpm-next:status</code></td></tr>
+          <tr><td><code>plugin-sync</code></td><td>Reloads open sessions when a plugin from this marketplace is updated</td><td>After an update, run <code>/reload-plugins</code> in each open session</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>What a mod is.</b> A plugin of function hooks that runs inside Claude Code. Mods load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin.</div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Per-project setup</div>
+    <h2>The progress tracker and the <code>/next</code> pane</h2>
+    <div class="grid">
+      <div class="card">
+        <h3><code>/progress-tracker NN</code></h3>
+        <p>Run it once the spec's epics exist in <code>docs/epics/</code>. <code>NN</code> is the spec's number.</p>
+<pre><code>/progress-tracker 01</code></pre>
+        <ol class="steps">
+          <li>Writes <code>docs/specifications/01-build-order.json</code> from the spec's epics, if it does not exist yet.</li>
+          <li>Writes the page to <code>.claude/cpm-next-progress/</code> and adds that folder to <code>.gitignore</code>.</li>
+          <li>You ask Claude to publish the page. It becomes a private claude.ai artifact.</li>
+          <li>The mod saves the link in the build-order file and keeps the table in step with the epic docs from then on.</li>
+        </ol>
+        <p class="small dim">Edit the build-order file to reorder, regroup, split a story into tasks, or add <code>waitingOn</code>. <code>/progress-tracker</code> on its own checks every tracker and prints what differs.</p>
+      </div>
+      <div class="card">
+        <h3><code>/next</code></h3>
+        <p>No setup. The mod reads <code>docs/epics/</code> and <code>docs/specifications/</code> directly, with no model calls.</p>
+        <ul class="bullets">
+          <li>The pane lists every story not yet <code>Complete</code>, in build order, and every spec with no epics yet.</li>
+          <li>It opens by itself in a repository with work left when the terminal is at least 144 columns wide. <code>/next</code> opens it at any width and prints the list into the conversation.</li>
+          <li>A band above the prompt shows the next story, its next task, and how many stories are left.</li>
+          <li><b>Ask Claude</b> (hotkey <code>a</code>) asks Sonnet for a short note on what to do next.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">First walkthrough · 1 of 4</div>
+    <h2>Plan</h2>
+<pre><code>/cpm-next:plan a CSV export for the loans report</code></pre>
+    <ol class="steps">
+      <li><b>Takes stock.</b> Reads <code>docs/</code>, <code>README.md</code>, <code>CLAUDE.md</code> and, in a brownfield project, the code and test setup. It says what exists, what is missing and what this run will produce, then carries on.</li>
+      <li><b>Asks once.</b> Questions only you can answer, which would change scope, cost or a hard-to-reverse choice, come in one batch of up to four, each with a recommended default. Everything else it decides and records under Assumptions.</li>
+      <li><b>Writes what is missing.</b> Brief if needed, then the spec (MoSCoW requirements with labels such as <code>FR1</code>, measurable NFRs, decisions, scope, testing strategy), then epics. A non-trivial spec goes through a challenge pass by two or three personas first.</li>
+      <li><b>Finishes</b> with three headings: <b>Needs you</b>, <b>Written</b> and <b>Next</b>.</li>
+    </ol>
+    <p class="small dim">To talk an idea through first, run <code>/cpm-next:party {topic}</code>, type <b>wrap up</b> when done, then <code>/cpm-next:plan {record path}</code>. Do not type "exit" or "quit": those close Claude Code itself.</p>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">First walkthrough · 2 of 4</div>
+    <h2>Review the epic before building it</h2>
+<pre><code>/cpm-next:review docs/epics/01-01-epic-loans-csv-export.md</code></pre>
+    <ul class="bullets">
+      <li>Three roster personas, each in its own subagent on Opus, read the epic independently. They get none of the conversation that produced the plan.</li>
+      <li>They look for criteria <code>do</code> could not verify, missing edge cases, work that looks simple and is not, wrong <code>**Blocked by**</code> lines, Must Have requirements no story covers, and conflicts with ADRs, the library or the code.</li>
+      <li>Critical and Warning findings with a clear fix are fixed in <code>Pending</code> stories, with an <code>**Amended**</code> line. Findings that would change scope go to <b>Needs you</b>, unfixed.</li>
+      <li>A review record is written to <code>docs/reviews/</code>.</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Argument</th><th>Scope</th></tr></thead>
+        <tbody>
+          <tr><td>epic path</td><td>that epic</td></tr>
+          <tr><td>epic path and story number</td><td>that story, in its epic's context</td></tr>
+          <tr><td><code>all</code></td><td>every epic with no story started</td></tr>
+          <tr><td>nothing</td><td>the lowest-numbered epic with no story started</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">First walkthrough · 3 of 4</div>
+    <h2>Build one story</h2>
+<pre><code>/cpm-next:do 1</code></pre>
+    <p class="small dim">With a story number and no epic, <code>do</code> uses the lowest-numbered In Progress epic, else the lowest-numbered epic with nothing started.</p>
+    <ol class="steps">
+      <li>Before the first story it reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the suite to record a baseline.</li>
+      <li>Sets the story <code>In Progress</code> and, with <code>cpm-next-models</code>, sets the story's effort.</li>
+      <li>Builds it task by task, following the project's existing conventions.</li>
+      <li>Verifies every acceptance criterion and writes an <code>Evidence</code> line under each.</li>
+      <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes Critical and Warning findings and audits once more.</li>
+      <li>Closes the story in the same edit as its <code>**Audit**</code> line.</li>
+    </ol>
+    <p>The run ends with <b>Blocked on me</b>, <b>Changed</b> and <b>Found</b>. Commits, branches and pushes are left to you.</p>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">First walkthrough · 4 of 4</div>
+    <h2>Check where things stand</h2>
+<pre><code>/cpm-next:status</code></pre>
+    <p>A read-only, one-screen report from <code>docs/</code> and git. Nothing is written.</p>
+    <div class="grid three">
+      <div class="card"><h3>Where it stands</h3><p>What the project is, what has been built, recent work, and what is in flight.</p></div>
+      <div class="card"><h3>Needs you</h3><p><code>**Pivot deferred**</code> lines, stories blocked by a <code>Not met</code> criterion, open discussions, and suspect records such as a <code>Complete</code> story with a criterion that has no evidence.</p></div>
+      <div class="card"><h3>Next</h3><p>The commands worth running, most useful first.</p></div>
+    </div>
+    <p>Then finish the epic: <code>/cpm-next:do docs/epics/01-01-epic-loans-csv-export.md</code>. When the epic reaches <code>Complete</code>, <code>do</code> writes a short retro to <code>docs/retros/</code>, or adds <code>**Retro waived**: clean run</code> to the epic header.</p>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Unattended runs</div>
+    <h2><code>/cpm-next:do all</code></h2>
+    <p>Runs every unfinished epic in dependency order. It is done when no unblocked story remains, and the full suite passes or any failures were failing before the run.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>What it does not stop for</h3>
+        <ul class="bullets">
+          <li>A test failure it cannot explain.</li>
+          <li>A criterion that contradicts reality, where fixing it would change scope.</li>
+        </ul>
+        <p>For these it marks the story blocked with the reason and moves on to other unblocked work.</p>
+        <h3 style="margin-top:12px">What always stops it</h3>
+        <p>A destructive action, or one that reaches outside the repository: deleting data, rewriting history, touching shared infrastructure.</p>
+      </div>
+      <div class="card">
+        <h3>What "blocked" means</h3>
+        <p>The story has a <code>Not met</code> line under a criterion, saying what was tried:</p>
+<pre><code>- Exports of 50,000 rows stay under 64 MB peak memory `[feature]`
+  <span class="no">- Not met: streamed with a cursor; peak was 180 MB in the
+    seeded test; cause not found</span></code></pre>
+        <p>Stories that depend on it stay blocked, because it is not <code>Complete</code>. <code>/cpm-next:status</code> lists it under <b>Needs you</b>.</p>
+      </div>
+    </div>
+    <p class="small dim">A scope change in an unattended run is made in that epic only, with an <code>**Amended**</code> line and its citation. Each upstream document that now disagrees gets a <code>**Pivot deferred**</code> line, which <code>plan</code> resolves later with you. A criterion is never changed because it is hard to meet.</p>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Story effort and model</div>
+    <h2><code>**Effort**</code> and <code>**Model**</code></h2>
+    <div class="grid">
+      <div class="card">
+        <h3>What <code>plan</code> sets</h3>
+        <ul class="bullets">
+          <li><code>**Effort**: high</code> where a mistake is costly or hard to see: security, authorisation, migrations and other data changes, concurrency, executable scripts and hooks.</li>
+          <li><code>**Effort**: low</code> for mechanical edits: a config value, a copy change, a rename, a row in a table.</li>
+          <li>No field means <code>medium</code>.</li>
+          <li><code>**Model**: haiku</code> only on a <code>low</code> story whose edit is fully determined by the story.</li>
+        </ul>
+        <p class="small dim">Neither field changes what the story must deliver or how it is audited.</p>
+      </div>
+      <div class="card">
+        <h3>What <code>do</code> does with them</h3>
+        <ul class="bullets">
+          <li>With <code>cpm-next-models</code>, it builds each story at that effort, and raises it to <code>high</code> (or <code>xhigh</code> for a <code>high</code> story) for the fix after a failed audit.</li>
+          <li>In a <code>do all</code> run no story goes below <code>high</code>.</li>
+          <li>A Haiku story is built by a Haiku subagent.</li>
+          <li>Without the mod, <code>do</code> builds at the session's effort.</li>
+        </ul>
+        <p class="small">The footer shows what is held, for example <code>cpm-next:do · story 3 · sonnet · low</code>. <code>/cpm-models</code> shows it; <code>/cpm-models off</code> releases it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Agents</div>
+    <h2>The auditor and the scout</h2>
+    <div class="grid">
+      <div class="card">
+        <h3><code>auditor</code> · Opus · read-only</h3>
+        <p>Started by <code>do</code> before each story, or small change, is closed. It gets none of the builder's conversation and checks what is on disk.</p>
+        <ul class="bullets">
+          <li>Each criterion against its evidence, re-running the tests the evidence names.</li>
+          <li>The diff for defects, security problems, data loss and queries whose memory grows with the data.</li>
+          <li>Scope creep, and anything the story asked for that is missing.</li>
+          <li>Departures from <code>CLAUDE.md</code>, the library and existing patterns.</li>
+          <li>Tests that assert nothing, or were weakened or skipped.</li>
+        </ul>
+        <p class="small dim">Returns <code>Verdict: pass</code> or <code>fix needed</code>. Any Critical or Warning finding means <code>fix needed</code>. It never edits files.</p>
+      </div>
+      <div class="card">
+        <h3><code>scout</code> · Haiku · read-only</h3>
+        <p>Started by <code>plan</code> and <code>do</code> for lookups: where something is defined or used, which files match, what a config value is, what a read-only database query returns.</p>
+        <ul class="bullets">
+          <li>Answers with <code>path:line</code> references or the query and its result.</li>
+          <li>Runs only <code>SELECT</code>, <code>SHOW</code>, <code>DESCRIBE</code> or <code>EXPLAIN</code>, and does not read <code>.env</code> files.</li>
+          <li>Makes no judgement calls and recommends no changes.</li>
+        </ul>
+        <p class="small dim">Search output stays out of the main conversation, which every later request would otherwise carry.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Keeping up to date</div>
+    <h2>Updates install at start-up and reach open sessions</h2>
+    <ul class="bullets">
+      <li>The marketplace auto-updates when Claude Code starts.</li>
+      <li><code>plugin-sync</code> checks every five minutes, and after each answer, whether the installed versions differ from the ones the session loaded. When one does, it shows a one-line notice and runs <code>/reload-plugins</code>, which waits until the session is idle.</li>
+      <li><code>plugin-sync</code> does not install updates. A session that was open before you installed it needs one manual <code>/reload-plugins</code>; after that it reloads itself.</li>
+    </ul>
+    <p>To update straight away, from any directory:</p>
+<pre><code>claude plugin marketplace update ninthspace-marketplace
+claude plugin update cpm-next@ninthspace-marketplace   <span class="c"># and each other plugin that changed</span></code></pre>
+  </div>
+</section>
+
+<!-- 18 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Cheat sheet</div>
+    <h2>Commands</h2>
+    <div class="grid">
+      <div class="card">
+<pre><code><span class="c"># Plan</span>
+/cpm-next:party {topic}           <span class="c"># or a persona's name for a one-to-one</span>
+/cpm-next:plan {description|path}
+/cpm-next:review {epic} | all
+
+<span class="c"># Build</span>
+/cpm-next:do                      <span class="c"># next epic</span>
+/cpm-next:do 3                    <span class="c"># one story (or task 2.1)</span>
+/cpm-next:do {epic path}          <span class="c"># one epic</span>
+/cpm-next:do all                  <span class="c"># everything, unattended</span>
+/cpm-next:do {small change}       <span class="c"># no epic; writes docs/quick/</span>
+
+<span class="c"># Read</span>
+/cpm-next:status</code></pre>
+      </div>
+      <div class="card">
+<pre><code><span class="c"># Library</span>
+/cpm-next:library {path|URL}      <span class="c"># import</span>
+/cpm-next:library learn           <span class="c"># promote retro lessons</span>
+/cpm-next:library consolidate     <span class="c"># back-fill front-matter</span>
+/cpm-next:library consolidate {path}
+
+<span class="c"># Mods</span>
+/progress-tracker 01              <span class="c"># then ask Claude to publish</span>
+/progress-tracker                 <span class="c"># check every tracker</span>
+/next                             <span class="c"># open the pane</span>
+/cpm-models                       <span class="c"># show held model/effort</span>
+/cpm-models off                   <span class="c"># release it</span>
+/reload-plugins</code></pre>
+      </div>
+    </div>
+    <p class="small dim">Artefact formats: <code>cpm-next/shared/artifacts.md</code>. Change log: <code>cpm-next/README.md</code>.</p>
+  </div>
+</section>
+
+</main>
+
+<nav class="nav-bar" id="navbar" aria-label="Slide navigation">
+  <span class="counter" id="counter">1 / 1</span>
+  <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+  <span class="hint">&larr; &rarr; space · T theme</span>
+  <button class="nav-btn" id="themeBtn" type="button" aria-label="Switch light and dark">&#9680;</button>
+  <button class="nav-btn" id="prevBtn" type="button" aria-label="Previous slide">&larr;</button>
+  <button class="nav-btn" id="nextBtn" type="button" aria-label="Next slide">&rarr;</button>
+</nav>
+
+<script>
+  (function () {
+    var slides = document.querySelectorAll('.slide');
+    var total = slides.length;
+    var current = 0;
+
+    function show(i) {
+      if (i < 0 || i >= total) return;
+      slides[current].classList.remove('active');
+      current = i;
+      slides[current].classList.add('active');
+      slides[current].scrollTop = 0;
+      document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+      document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+      document.getElementById('prevBtn').disabled = current === 0;
+      document.getElementById('nextBtn').disabled = current === total - 1;
+      try { history.replaceState(null, '', '#' + (current + 1)); } catch (e) {}
+    }
+
+    function toggleTheme() {
+      var root = document.documentElement;
+      var dark = root.getAttribute('data-theme') === 'dark' ||
+        (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', function () { show(current - 1); });
+    document.getElementById('nextBtn').addEventListener('click', function () { show(current + 1); });
+    document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) { e.preventDefault(); show(current + 1); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) { e.preventDefault(); show(current - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); show(0); }
+      else if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+      else if (e.key === 't' || e.key === 'T') { toggleTheme(); }
+    });
+
+    var startX = null, startY = null;
+    document.getElementById('deck').addEventListener('touchstart', function (e) {
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    }, { passive: true });
+    document.getElementById('deck').addEventListener('touchend', function (e) {
+      if (startX === null) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      var dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(current + (dx < 0 ? 1 : -1));
+      startX = null;
+    }, { passive: true });
+
+    var start = parseInt((location.hash || '').slice(1), 10);
+    slides[0].classList.add('active');
+    show(start >= 1 && start <= total ? start - 1 : 0);
+  })();
+</script>
+
+</body>
+</html>

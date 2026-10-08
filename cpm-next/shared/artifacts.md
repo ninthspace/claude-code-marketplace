@@ -1,6 +1,6 @@
 # cpm-next Artefact Contract
 
-The skills in this plugin keep their procedures short and their data strict. This file is the strict part. The cpm board, `/cpm:status`, and the v3 skills parse these files, so the formats below are a contract: write them exactly, read them tolerantly.
+The skills in this plugin keep their procedures short and their data strict. This file is the strict part. The `whats-next` and `cpm-next-progress` mods parse these files, so the formats below are a contract: write them exactly, read them tolerantly.
 
 ## Where things live
 
@@ -17,7 +17,7 @@ The skills in this plugin keep their procedures short and their data strict. Thi
 | Reference library | `docs/library/*.md` | library, or the user; every skill reads it |
 | Persona roster override | `docs/agents/roster.yaml` | the user; replaces the plugin default entirely |
 
-Read all of these as context whenever they bear on the work. Existing v3 files, including legacy flat epics (`{nn}-epic-{slug}.md`) and coverage matrices (`*-coverage-*.md`), are valid input. This plugin does not create coverage matrices; the `**Satisfies**` field on each story carries the traceability instead.
+Read all of these as context whenever they bear on the work. Files from CPM v3, including legacy flat epics (`{nn}-epic-{slug}.md`) and coverage matrices (`*-coverage-*.md`), are valid input. This plugin does not create coverage matrices; the `**Satisfies**` field on each story carries the traceability instead.
 
 ## Numbering
 

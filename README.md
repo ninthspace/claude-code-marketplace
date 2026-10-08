@@ -1,68 +1,229 @@
 # Claude Code Marketplace
 
-A Claude Code plugin marketplace providing development tools and productivity utilities.
+A Claude Code plugin marketplace whose main offering is **cpm-next**: a planning and building method for Claude Code, plus the mods that keep its model, effort and progress in view. It also holds smaller development tools.
 
-## Overview
+## cpm-next in brief
 
-This marketplace contains plugins for facilitated planning (CPM), database-backed planning artefacts (DPM), note searching, PHP code intelligence, JavaScript/TypeScript code simplification, Filament v5 admin mockups, a live view of the cpm-next work left in a repository, quick access to the files Claude generates, and the current weather in the prompt footer. All tools are designed to work seamlessly with Claude Code.
+cpm-next turns an idea into working, tested code through a short chain of artefacts kept in your repository's `docs/` folder: a discussion record, a product brief, a specification, and epics made of stories with acceptance criteria. Six skills cover the whole path:
+
+| Skill | What it does | Finished when |
+|---|---|---|
+| `/cpm-next:party` | Discussion with named specialist personas (PM, Architect, Developer, UX, QA and others) | A discussion record is saved and the next step is named |
+| `/cpm-next:plan` | Writes whatever is missing of brief, spec and epics, from whatever already exists | The artefacts down to the epics exist and trace upward |
+| `/cpm-next:review` | Independent challenge of the epics before they are built | Critical and Warning findings are fixed or waiting on you |
+| `/cpm-next:do` | Builds stories, verifies each acceptance criterion with evidence, and has each story audited | Every story in scope is Complete and the tests pass |
+| `/cpm-next:library` | Curates reference documents in `docs/library/` that planning and building read | Documents carry complete front-matter |
+| `/cpm-next:status` | Read-only report of where things stand and the next command to run | Nothing is written |
+
+Each skill declares its model and effort: Opus plans and reviews, Sonnet builds, an Opus `auditor` agent checks every story before it closes, a Haiku `scout` agent answers lookups, and `status` runs on Haiku. The artefact formats are defined in `cpm-next/shared/artifacts.md`; the plugin's own log of changes is in `cpm-next/README.md`.
+
+**Training material** (open in a browser):
+- [`cpm-next-onboarding.html`](cpm-next-onboarding.html) — install it and run your first spec in an afternoon
+- [`cpm-next-presentation.html`](cpm-next-presentation.html) — a slide deck introducing the method
+- [`cpm-next-training-guide.html`](cpm-next-training-guide.html) — the full guide: every skill, the artefacts, the mods and day-to-day practice
+
+CPM and DPM, the earlier planning plugins, were withdrawn on 2026-10-08. Their source is in this repository's git history.
 
 ## Installation
 
-### Install from Marketplace (inside Claude Code)
+Inside Claude Code:
 
 ```bash
-# Install the marketplace
 /plugin marketplace add ninthspace/claude-code-marketplace
+```
 
-# Install individual plugins
+**The suffix is the marketplace's name, not the repository's.** `marketplace.json` declares `ninthspace-marketplace`, and every installed plugin is keyed by it, so `cpm-next@claude-code-marketplace` resolves to nothing.
+
+### The cpm-next set
+
+Install these at user scope (the default), so one install serves every repository:
+
+```bash
+/plugin install cpm-next@ninthspace-marketplace           # the six skills, the auditor and scout agents
+/plugin install cpm-next-models@ninthspace-marketplace    # mod: holds each skill's model and effort, per-story effort
+/plugin install cpm-next-progress@ninthspace-marketplace  # mod: /progress-tracker, a claude.ai tracker for a spec's epics
+/plugin install whats-next@ninthspace-marketplace         # mod: /next, a live pane of the work left in the repository
+/plugin install plugin-sync@ninthspace-marketplace        # mod: reloads open sessions when a plugin here is updated
+/reload-plugins
+```
+
+Only `cpm-next` is required. The four mods are optional, and each adds one thing:
+
+| Plugin | Kind | Without it |
+|---|---|---|
+| `cpm-next` | Skills and agents | — |
+| `cpm-next-models` | Mod (function hooks) | A skill's model and effort last only for the turn that invoked it; later turns of a `do` run fall back to the session model, and stories are not given their own effort |
+| `cpm-next-progress` | Mod, adds `/progress-tracker` | No shareable progress page; read the epic docs or run `/cpm-next:status` |
+| `whats-next` | Mod, adds `/next` | No live pane; run `/cpm-next:status` |
+| `plugin-sync` | Mod | After an update, run `/reload-plugins` in each open session |
+
+**Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
+
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number), then ask Claude to publish the page it writes. The mod saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v031).
+
+**Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
+
+```bash
+claude plugin marketplace update ninthspace-marketplace
+claude plugin update cpm-next@ninthspace-marketplace      # and each other plugin that changed
+```
+
+### Other plugins
+
+```bash
 /plugin install noteplan@ninthspace-marketplace
 /plugin install php-lsp@ninthspace-marketplace
-/plugin install cpm@ninthspace-marketplace
-/plugin install dpm@ninthspace-marketplace
 /plugin install js-simplifier@ninthspace-marketplace
 /plugin install filament-mockup@ninthspace-marketplace
-/plugin install whats-next@ninthspace-marketplace
 /plugin install generated-files@ninthspace-marketplace
 /plugin install weather@ninthspace-marketplace
 ```
 
-**The suffix is the marketplace's name, not the repository's.** `marketplace.json` declares
-`ninthspace-marketplace`, and that is what every installed plugin is keyed by — so
-`cpm@claude-code-marketplace` resolves to nothing however the repository is spelled in the
-`marketplace add` line above it.
+## Available Plugins
 
-### Also needed for `/cpm:ralph` — the ralph-loop fork
+### CPM Next (v0.7.1)
 
-CPM's autonomous loop (`/cpm:ralph`) does not implement the loop itself. It writes a state
-file and relies on a **Stop hook** supplied by a separate plugin. Install ours:
+**Plan and build with six skills: party, plan, review, do, library, status**
 
+The skills read and write Markdown artefacts under `docs/`: `discussions/`, `briefs/`, `architecture/`, `specifications/`, `epics/`, `reviews/`, `retros/`, `quick/` and `library/`. The artefacts are the only state; there are no progress files to clean up. A typical path:
+
+1. `/cpm-next:party` to talk an idea through (optional).
+2. `/cpm-next:plan` to write the brief, spec and epics. It reads what exists, asks its questions in one batch, and fills only the gaps. In a brownfield project it grounds every requirement in the current code.
+3. `/cpm-next:review` before a large or risky epic (optional).
+4. `/cpm-next:do` to build: one story (`/cpm-next:do 3`), one epic, or `all`, which runs unattended and marks a blocked story instead of stopping. Each acceptance criterion gets an `Evidence` line, and each story is audited before it closes.
+5. `/cpm-next:status` whenever you return to the project.
+
+**Story effort.** `plan` gives a story `**Effort**: high` where a mistake is costly or hard to see, and `**Effort**: low` for mechanical edits; with `cpm-next-models` installed, `do` builds each story at that effort and raises it for a fix after a failed audit. A `low` story marked `**Model**: haiku` is built by a Haiku subagent.
+
+**Agents:** `auditor` (Opus, read-only) checks a finished story's evidence, diff, scope and tests; `scout` (Haiku, read-only) answers lookups such as where something is used or what a read-only query returns.
+
+**Quick Start:**
 ```bash
-/plugin marketplace add ninthspace/ralph-loop
-/plugin install ralph-loop@ninthspace-ralph
+/plugin install cpm-next@ninthspace-marketplace
+/reload-plugins
+/cpm-next:plan a CSV export for the bookings report
 ```
 
-This is a fork of Anthropic's [`ralph-loop`](https://github.com/anthropics/claude-plugins-public/tree/main/plugins/ralph-loop)
-(Apache-2.0), which is itself the maintained line descended from Daisy Hollman's
-`ralph-wiggum`. The fork's first commit is the upstream plugin unmodified, so every change
-is visible as a diff against it.
+### CPM Next Models (v0.3.0)
 
-**One behavioural change, and it is the reason to prefer the fork**: the Stop hook no longer
-deletes the loop's state file when it cannot read the transcript. Upstream treats a missing
-transcript, a failed `grep` for assistant records, and a `jq` parse error as reasons to end
-the run — and the state file *is* the loop, so ending it that way exits 0 with no promise
-and no state file, which is indistinguishable from a completed run. The fork continues on
-all three: failing to read a turn's output means *no promise this iteration*, not *the work
-is finished*. An unattended overnight run is precisely where that difference is invisible
-and expensive.
+**Holds each cpm-next skill's model and effort for its whole run**
 
-CPM works with any of the three — `cpm/hooks/lib/ralph-hook-probe.sh` detects the hook
-whichever plugin provides it, and warns when none is present. The upstream plugins remain
-usable; the fork is what `/cpm:ralph` is developed and tested against.
+A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts only for the turn that invoked it. This mod keeps them for every later turn of the run, including your replies to the skill's questions, until another skill runs, you switch model or effort yourself, or `/clear`. It runs `do all` at `high` effort, and gives `/cpm-next:do` a `set_story_effort` tool so each story is built at its own `**Effort**`, never below `high` in a `do all` run. The footer shows what is held, for example `cpm-next:do · story 3 · sonnet · low`.
 
-**Do not enable more than one at a time.** All three register a Stop hook, both fire on the
-same session, and the state file only has to be deleted by one of them for the loop to end.
+**Commands:** `/cpm-models` shows what is held; `/cpm-models off` releases it.
 
-## Available Plugins
+**Quick Start:**
+```bash
+/plugin install cpm-next-models@ninthspace-marketplace
+/reload-plugins
+```
+
+**Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
+
+### CPM Next Progress (v0.3.1)
+
+**A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
+
+A Claude Code mod (a plugin of function hooks). Name a spec and the mod writes a build order for its stories to a small JSON file, which you can edit; Claude then publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file.
+
+**The mod only reads.** It lists the artifact's rows through the `ArtifactData` tool, which auto mode does not ask about, and never writes to it. Claude's own `ArtifactData` calls do the writing, so no permission rule is needed. An earlier version wrote to the artifact itself, and auto mode refused those calls intermittently with "The server-side auto mode classifier gave no verdict for ArtifactData".
+
+**Build-order file:** `docs/specifications/NN-build-order.json`:
+```json
+{
+  "title": "01-Series Build Order",
+  "spec": "docs/specifications/01-spec-requirements-matrix-todos.md",
+  "decisions": ["Questions still open, shown in a box above the table"],
+  "phases": [
+    { "label": "No visible change", "items": [
+      { "epic": "01-05", "story": 1, "note": "Default value keeps today's text" },
+      { "epic": "01-05", "task": "3.1" }
+    ] },
+    { "label": "Waiting on input", "note": "Shown beside the phase label", "items": [
+      { "epic": "01-05", "story": 2, "waitingOn": "new name from the client" }
+    ] }
+  ]
+}
+```
+An item is a story (`story`) or one task (`task`) of an epic, named by the epic's number prefix. `waitingOn` shows the item as **Waiting on input** until it is removed from the file or the item starts. `artifact` holds the tracker's link; the mod adds it when Claude publishes the page.
+
+**The first build order** is written from the spec's epics (those whose number starts with the spec's): one phase per epic, epics ordered by their `**Blocked by**` epics, each epic's stories ordered by their `**Blocked by**` stories and then by number. Superseded and withdrawn epics and stories are left out. Edit the file afterwards to reorder, regroup, split a story into tasks or add `waitingOn`.
+
+**Statuses:** Complete, In progress (the story says so, or one of its tasks has started), Waiting on input, Pending. A row's date moves only when its status changes. Blockers shown are the story's and epic's `**Blocked by**` items not yet Complete, earlier unfinished tasks of the same story, and any `waitingOn`.
+
+**How it works:**
+1. After any tool call that writes (Edit, Write, Bash and so on), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more.
+2. If one did, it reads the tracker and works out the writes that would bring it in line. If there are none, it says nothing.
+3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch. More than eight writes stay in the file, and Claude hands them to a Haiku subagent, which reads the file and applies each batch, so they never enter the main conversation.
+
+The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); `/progress-tracker 01` adds it to the project's `.gitignore`.
+
+**Commands:**
+- `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date".
+- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. Then ask Claude to publish the page. When it does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works.
+
+**Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions.
+
+**Quick Start:**
+```bash
+/plugin install cpm-next-progress@ninthspace-marketplace
+/reload-plugins
+
+/progress-tracker 01
+```
+Then ask Claude to publish the page. The spec needs its epics in `docs/epics/` first.
+
+**Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`), as What's Next does.
+
+**Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`.
+
+### What's Next (v0.2.2)
+
+**A live pane and band showing the cpm-next work left in the current repository**
+
+A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `docs/specifications/` folders of the repository the session runs in — or the nearest folder above it that has either — and shows every story not yet `Complete`, in the order to build them, and every spec no epic has been planned from yet. It reads the files directly, with no model calls, so it stays current as `/cpm-next:do` or you edit the epics.
+
+**What it shows:**
+- **Pane** — the story in progress and its next task, every remaining story in order (`doing`, `ready`, or `after Story 1` / `after Epic …`), and each open epic's story count. Opens by itself in a repository with work left when the terminal is at least 144 columns wide; `/next` opens it at any width.
+- **Specs without epics** — each spec in `docs/specifications/` that no epic was planned from, in number order. A spec counts as planned when an epic is numbered after it (`03-spec-…` → `03-01-epic-…`) or an epic names its file in `**Source spec**`; a spec whose own `**Status**` is `Complete`, `Superseded` or `Withdrawn` is left out, as is a withdrawal notice (a `**Withdrawn**` or `**Superseded by**` field, or `WITHDRAWN` / `SUPERSEDED` in its title).
+- **Band** — one line above the prompt with the next story, its next task, and how many stories are left; with no stories left, the first spec to plan.
+- **Next steps** — an `Ask Claude` button (hotkey `a`) that asks Sonnet for a short note on what to do next, from the ordered list and the first two stories in full. The note is kept per repository across sessions and dimmed once the epics change after it was written.
+
+**Order of execution:** stories already `In Progress` first; then the other stories of epics under way (the epic's own `**Status**` is `In Progress`, or one of its stories is); then everything else. Within each group, repeatedly, the ready story with the lowest epic number and story number, treating each as done before choosing the next. So working on a higher-numbered epic out of order moves it to the top once its Status says `In Progress`. A story is ready when everything its own `**Blocked by**` and its epic's `**Blocked by**` name is `Complete`; epics in `docs/archive/epics/` count when resolving those dependencies. Stories whose dependencies can never be met (an unknown epic, a cycle) are listed last.
+
+**Quick Start:**
+```bash
+/plugin install whats-next@ninthspace-marketplace
+/reload-plugins
+
+# Open the pane and print the ordered list into the conversation
+/next
+```
+
+**Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`) — `**Status**`, `**Blocked by**`, `**Story**` and `**Task**` fields, read case-insensitively, with `Done` read as `Complete`. `Superseded` and `Withdrawn` epics are skipped.
+
+**Develop:** `claude plugin validate whats-next` and `claude plugin test whats-next`. To run the working tree instead of the installed release, start Claude Code with `--plugin-dir whats-next` (and uninstall the release, or both draw).
+
+### Plugin Sync (v0.1.0)
+
+**Open sessions pick up plugin updates without a manual `/reload-plugins`**
+
+A Claude Code mod (a plugin of function hooks). Every five minutes, and after each answer, it compares `~/.claude/plugins/installed_plugins.json` with the versions of this marketplace's plugins that the session loaded. When one differs, it shows a one-line notice naming the plugins and versions, and runs `/reload-plugins`, which waits until the session is idle. A project-scope install is compared for sessions in that project, and the user-scope install for all others.
+
+**It does not install updates.** The marketplace's auto-update does that when any new session starts, or run it yourself once, from any directory:
+```bash
+claude plugin marketplace update ninthspace-marketplace
+claude plugin update cpm-next@ninthspace-marketplace   # each plugin that changed
+```
+
+**Quick Start:**
+```bash
+/plugin install plugin-sync@ninthspace-marketplace
+/reload-plugins
+```
+Install it at user scope so every session loads it. A session already open needs one manual `/reload-plugins` to load the mod; after that it reloads itself.
+
+**Develop:** `claude plugin validate plugin-sync` and `claude plugin test plugin-sync`.
 
 ### NotePlan Search (v1.0.0)
 
@@ -145,196 +306,6 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### Claude Planning Method (v3.12.1)
-
-**Facilitated planning with multi-perspective party mode and focused consultation for Claude Code**
-
-Structured discovery, product ideation, architecture exploration, specification, work breakdown, task execution, retrospectives, and course correction through guided conversation. Includes party mode — a multi-agent discussion where named specialist personas (PM, Architect, Developer, UX Designer, QA, DevOps, Tech Writer, Scrum Master) debate trade-offs and surface blind spots — and consult mode for focused one-to-one expert dialogue with dynamic membership. Inspired by the BMAD-METHOD.
-
-v3 is tuned for Opus 5 and later: all skills use positive-voice instructions, explicit stop criteria, outcome-oriented procedural guidance, and a reduced token footprint.
-
-**Twenty-two skills forming a pipeline:**
-
-| Skill | Purpose | Output |
-|-------|---------|--------|
-| `/cpm:party` | Multi-perspective discussion with agent personas | Discussion summary + optional pipeline handoff |
-| `/cpm:consult` | Focused one-to-one consultation with a chosen expert | `docs/discussions/{nn}-discussion-{slug}.md` |
-| `/cpm:discover` | Facilitated problem discovery | `docs/plans/01-plan-{slug}.md` |
-| `/cpm:brief` | Product ideation — vision, features, user journeys | `docs/briefs/01-brief-{slug}.md` |
-| `/cpm:architect` | Architecture exploration — ADRs with trade-offs | `docs/architecture/01-adr-{slug}.md` |
-| `/cpm:spec` | Requirements & architecture specification | `docs/specifications/01-spec-{slug}.md` |
-| `/cpm:epics` | Work breakdown into epic documents | `docs/epics/{parent}-{seq}-epic-{slug}.md` + coverage matrix |
-| `/cpm:do` | Task execution with acceptance criteria | Updated epic doc + implemented code |
-| `/cpm:ralph` | Autonomous execution — a set of epics, or a whole spec end to end | Ralph loop command + execution log |
-| `/cpm:review` | Adversarial review with agent personas | `docs/reviews/{nn}-review-{slug}.md` + optional autofix |
-| `/cpm:audit` | Independent codebase health audit across nine dimensions | `docs/audits/{nn}-audit-{slug}.md` |
-| `/cpm:inspect` | What a change set did, and where it sits in the repo | Ephemeral (+ optional published artifact) |
-| `/cpm:retro` | Lightweight retrospective from completed work | `docs/retros/01-retro-{slug}.md` |
-| `/cpm:pivot` | Course correction — amend any planning artefact | Surgically edited docs + cascaded downstream updates |
-| `/cpm:present` | Audience-aware artifact transformation | `docs/communications/{nn}-{format}-{slug}.md` (+ optional HTML, + optional published artifact) |
-| `/cpm:templates` | Template discoverability & scaffolding | Template previews + override files at `docs/templates/` |
-| `/cpm:library` | Import reference docs for all skills to use | `docs/library/{name}.md` with YAML front-matter |
-| `/cpm:archive` | Archive completed or stale planning documents | Files moved to `docs/archive/` |
-| `/cpm:quick` | Lightweight execution for small changes | `docs/quick/{nn}-quick-{slug}-spec.md` |
-| `/cpm:status` | Project status reconnaissance and next-step recommendations | Ephemeral (stdout only) |
-| `/cpm:clean` | On-demand cleanup of leftover session-state files | None (removes files, reports what was deleted) |
-| `/cpm:artifact` | Register published artifacts against the work that produced them | `docs/artifacts/index.md` + backlinks in associated documents |
-
-**Quick Start:**
-```bash
-# Brainstorm with your team of agent personas
-/cpm:party should we use a monorepo or separate repos?
-
-# Focused consultation with one expert
-/cpm:consult Margot
-
-# Full pipeline: discover → brief → architect → spec → epics → do → retro
-/cpm:discover build a customer portal for our booking system
-/cpm:brief docs/plans/01-plan-customer-portal.md
-/cpm:architect docs/briefs/01-brief-customer-portal.md
-/cpm:spec docs/briefs/01-brief-customer-portal.md
-/cpm:epics docs/specifications/01-spec-customer-portal.md
-/cpm:do
-/cpm:retro
-
-# Import reference docs for skills to use as context
-/cpm:library docs/architecture-decisions.md
-
-# Review planning artifacts before or after execution
-/cpm:review docs/epics/01-epic-customer-portal.md
-
-# Course correct mid-flow
-/cpm:pivot docs/specifications/01-spec-customer-portal.md
-
-# Transform artifacts for stakeholders
-/cpm:present docs/specifications/01-spec-customer-portal.md
-
-# Explore and customise templates
-/cpm:templates preview brief
-
-# Clean up completed artefacts
-/cpm:archive
-
-# Hand a whole spec to the autonomous loop — epics first, then the work
-/cpm:ralph docs/specifications/01-spec-customer-portal.md
-
-# Small change? Skip the full pipeline
-/cpm:quick add a --verbose flag to the deploy script
-
-# Check project status and get next-step recommendations
-/cpm:status
-
-# Clean up leftover session-state files on demand
-/cpm:clean
-
-# Register a published artifact against the work that produced it
-/cpm:artifact https://claude.ai/code/artifact/... auth flow explorer, from spec 12
-
-# Or jump to any step independently
-/cpm:spec I need a REST API for inventory management
-/cpm:do 3  # work on a specific task
-```
-
-**Key Features:**
-- Party mode — named agent personas discuss, debate, and disagree constructively
-- Consult mode — focused one-to-one expert dialogue with invite/dismiss and lead transfer
-- Multi-perspective insights woven into discover and spec phases
-- Product ideation — explore vision, value propositions, and user journeys before requirements
-- Architecture exploration — facilitated ADRs with trade-off analysis and dependency mapping
-- Facilitated conversations, not forms — builds on your answers
-- One topic at a time with user-gated progression
-- Scales depth to complexity — skips phases that don't add value
-- MoSCoW prioritisation for requirements
-- Architecture decisions with rationale and alternatives (references existing ADRs)
-- Spec requirement traceability — stories link back to the requirements they satisfy
-- Right-sized epics and stories with acceptance criteria and dependencies
-- Testing thread through the pipeline — spec defines test approach tags, epics propagate them to criteria and generate testing tasks, do discovers and runs tests in verification gates
-- Task execution loop with acceptance criteria verification and ADR awareness
-- Test runner discovery — convention-based detection from project config files, cached per session
-- Epic-level verification — completed epics are checked against their source spec
-- Spec coverage roll-up — one command joins every epic's coverage matrix back to the spec's requirements and answers "is this spec fully delivered?", naming untraced requirements first
-- Autonomous spec delivery — point `/cpm:ralph` at a spec and it generates the epics, then works them; the loop stops on the roll-up script's verdict, not on its own judgement
-- Spec, ADR, and test coverage compliance review dimensions
-- Lightweight retros with testing gap analysis that feed forward into the next planning cycle
-- Adversarial review — agent personas challenge assumptions, spot gaps, and flag risks with optional autofix
-- Independent codebase audit — nine dimensions of code health with `file:line` citations, prioritised findings, and handoff to spec/library/quick
-- Course correction — surgically amend any artefact with cascading downstream updates (5 artifact types)
-- Audience-aware artifact transformation — present planning artifacts to any audience in any format
-- Two-tier template system — structural (fixed data contracts) and presentational (overridable)
-- Project reference library — import docs that skills auto-discover and use as context
-- Archive — clean up completed artefacts with staleness heuristics and chain detection
-- Project status reconnaissance — scan artifacts and git history, produce a narrative briefing with next steps
-- Customisable agent roster — override default personas per project
-- Compaction resilience — seamlessly survives Claude Code context compaction, with `/cpm:clean` for on-demand cleanup of leftover session-state files
-
-**Companion tool — cpm board:** a standalone terminal UI (`cpm/tools/board/`) that shows the CPM status of every project you register — a three-column Projects → Epics → Stories browser — and launches the right `/cpm:*` session for each without leaving the board. It reads each project's `docs/` planning artifacts read-only. See [the board README](./cpm/tools/board/README.md).
-
-**`/cpm:ralph` needs a Stop hook, and CPM does not ship one.** The autonomous loop is driven by a Stop hook from a separate plugin; every other skill works without one. Install:
-
-```
-/plugin marketplace add ninthspace/ralph-loop
-/plugin install ralph-loop@ninthspace-ralph
-```
-
-**`ralph-loop@ninthspace-ralph` 1.2.0 or later** is the supported configuration — it is what CPM's documented loop behaviour is written against. The loop also runs on `ralph-loop@claude-plugins-official` and `ralph-wiggum@claude-code-plugins`, and `/cpm:ralph` probes whichever hook is installed rather than checking a name or a version. What you lose below 1.2.0 is not an error message: an unreadable transcript ends the run silently and looks like a clean finish, every `<promise>` in the transcript is the hook's own reminder rather than the model's, and `active: false` in the loop's state file does nothing at all. See [the fork's README](https://github.com/ninthspace/ralph-loop) for what each change does.
-
-**Thinking about DPM instead?** The two are the same pipeline over different substrates, and a repository can only sensibly use one. [Moving to DPM from CPM](./dpm/MIGRATION.md) covers what carries across, what does not, and the one move to make before DPM's first publish — CPM can run it with you while you still have both installed.
-
-[View full documentation](./cpm/README.md) | [Interactive Training Guide](./cpm-training-guide.html)
-
----
-
-### DPM — Data-Modelled Planning Method (v0.8.0)
-
-**Planning artefacts as database rows, with markdown as a generated projection**
-
-CPM's pipeline with a different substrate. Every artefact — spec, epic, story, requirement, coverage row — is a row with typed columns, and every cross-artefact reference is a foreign key rather than a path in prose. The markdown under `docs/` is a generated, one-way projection: it is committed so pull requests still show a readable diff, but it is never read back. Skills write exclusively through typed MCP tools, so no skill contains SQL and nothing parses prose.
-
-**What the substrate buys:**
-- **Referential integrity** — a story cannot point at an epic that does not exist, and a renumber updates every reference by construction rather than by search-and-replace
-- **Queryable state** — "which requirements have no covering criterion" is a query, not a grep across four hundred files
-- **A guard that cannot be fooled** — a pre-commit hook regenerates both artefacts and refuses a commit that disagrees with the database, so a hand-edit to a generated file is caught rather than silently overwritten at the next render
-- **Restorable from text** — `.dpm/dpm.sql` is the committed form; the binary database is derived and gitignored
-
-> **Coming from CPM? Read [MIGRATION.md](./dpm/MIGRATION.md) before you run anything in
-> that repository.** There is no importer and there will not be one — DPM cannot read
-> prose, which is the point of it — so the move is a short list of things worth carrying
-> by hand and a longer list to leave alone. One step has to happen first: DPM's first
-> publish offers to delete files it did not write, and your CPM corpus has to be out of
-> its reach before then. CPM can also walk you through the whole thing, which is worth
-> doing while you still have both systems installed.
-
-**Quick Start:**
-```bash
-# After installing, in each repository DPM keeps artefacts in — check the path is free first,
-# because DPM's hook replaces an existing pre-commit rather than running after it:
-git config core.hooksPath && ls -l .git/hooks/pre-commit   # both should come back empty
-
-# (an absolute <plugin path> — a symlink resolves its target from .git/hooks/)
-ln -s <plugin path>/dpm/hooks/pre-commit .git/hooks/pre-commit
-
-# Then, after any skill run that wrote something:
-/dpm:publish
-```
-
-**If either check came back with something**, the DPM README's [When something else owns the hook](./dpm/README.md#when-something-else-owns-the-hook) covers it — a stale link from a previous release, a hook manager that has moved the directory, the `pre-commit` framework, or a hook of your own to run alongside.
-
-**Re-make that symlink after each DPM upgrade**, with `ln -sf` since the old link is in the way. A release installs beside the previous one and re-points nothing, so the link keeps running the version you installed it from. The guard notices — it refuses a database whose schema is newer than it understands, rather than reporting on a comparison it can only half make — but re-linking is yours to do.
-
-**A link that has gone missing is the case nothing reports.** `.git/hooks/` is not tracked, so the link does not survive a re-clone or anything that rewrites the directory — and git skips a hook it cannot find without a warning and without failing the commit. Unlike the stale-link case above, there is no refusal to notice: commits simply go in unchecked. Since 0.5.5 the first tool call of a session looks for the hook and writes one line to stderr when there is nothing there; it warns on absence only, and stays quiet outside a repository, in a linked worktree, and where `core.hooksPath` has moved the hooks directory. The DPM README's [First run](./dpm/README.md#first-run) has the detail, and two shell functions that fold the manual checks into the linking commands.
-
-The database is created on the first tool call rather than at launch, so a session in a directory that does not use DPM leaves no `.dpm/` behind. When one is created, `.dpm/.gitignore` is written before the database file exists — keeping the binary out of your commits is not a step you perform. On a fresh clone the first tool call finds the committed `.dpm/dpm.sql` and builds the database from it.
-
-**Requires:** Node 22.5.0 or later. DPM reaches SQLite through `node:sqlite` in the standard library — no native module, no `node-gyp`, no build step.
-
-**Companion tool — DPM board:** a standalone terminal UI (`dpm/tools/board/`) showing the state of every project you register — a three-column Projects → Epics → Stories browser — and launching the right `/dpm:*` session for each without leaving the board. Unlike CPM's board it reads nothing off disk: it is an MCP client, so a blocked epic *names* its blocker from a `dependency` row instead of having one guessed from a `**Blocked by**` line, and it can answer questions a markdown corpus cannot — `Ctrl+G` lists every requirement no coverage row traces, and a per-project badge carries what `check_integrity` reported. Servers are spawned read-only, so observing a project leaves it byte-identical. See [the board README](./dpm/tools/board/README.md).
-
-**Status:** in use, still settling. The skill corpus, the tool surface, the database lifecycle and the board are in place — specs `47-spec-dpm-sqlite-persistence.md`, `48-spec-dpm-board.md` and `49-spec-dpm-database-lifecycle.md` under `docs/cpm/specifications/`, with the work broken down across `docs/cpm/epics/47-*`, `48-*` and `49-*`. Those paths carry `cpm/` because this repository has itself migrated from CPM to DPM: the CPM-era planning corpus is parked under `docs/cpm/`, and `docs/` is now DPM's generated output.
-
-[View full documentation](./dpm/README.md) | [Moving to DPM from CPM](./dpm/MIGRATION.md)
-
----
-
 ### JS/TS Simplifier (v1.0.0)
 
 **Simplify and improve JavaScript and TypeScript code across an entire codebase**
@@ -407,33 +378,6 @@ mock up the admin panel for this PRD
 
 [View full documentation](./filament-mockup/SKILL.md)
 
-### What's Next (v0.2.2)
-
-**A live pane and band showing the cpm-next work left in the current repository**
-
-A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `docs/specifications/` folders of the repository the session runs in — or the nearest folder above it that has either — and shows every story not yet `Complete`, in the order to build them, and every spec no epic has been planned from yet. It reads the files directly, with no model calls, so it stays current as `/cpm-next:do` or you edit the epics.
-
-**What it shows:**
-- **Pane** — the story in progress and its next task, every remaining story in order (`doing`, `ready`, or `after Story 1` / `after Epic …`), and each open epic's story count. Opens by itself in a repository with work left when the terminal is at least 144 columns wide; `/next` opens it at any width.
-- **Specs without epics** — each spec in `docs/specifications/` that no epic was planned from, in number order. A spec counts as planned when an epic is numbered after it (`03-spec-…` → `03-01-epic-…`) or an epic names its file in `**Source spec**`; a spec whose own `**Status**` is `Complete`, `Superseded` or `Withdrawn` is left out, as is a withdrawal notice (a `**Withdrawn**` or `**Superseded by**` field, or `WITHDRAWN` / `SUPERSEDED` in its title).
-- **Band** — one line above the prompt with the next story, its next task, and how many stories are left; with no stories left, the first spec to plan.
-- **Next steps** — an `Ask Claude` button (hotkey `a`) that asks Sonnet for a short note on what to do next, from the ordered list and the first two stories in full. The note is kept per repository across sessions and dimmed once the epics change after it was written.
-
-**Order of execution:** stories already `In Progress` first; then the other stories of epics under way (the epic's own `**Status**` is `In Progress`, or one of its stories is); then everything else. Within each group, repeatedly, the ready story with the lowest epic number and story number, treating each as done before choosing the next. So working on a higher-numbered epic out of order moves it to the top once its Status says `In Progress`. A story is ready when everything its own `**Blocked by**` and its epic's `**Blocked by**` name is `Complete`; epics in `docs/archive/epics/` count when resolving those dependencies. Stories whose dependencies can never be met (an unknown epic, a cycle) are listed last.
-
-**Quick Start:**
-```bash
-/plugin install whats-next@ninthspace-marketplace
-/reload-plugins
-
-# Open the pane and print the ordered list into the conversation
-/next
-```
-
-**Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`) — `**Status**`, `**Blocked by**`, `**Story**` and `**Task**` fields, read case-insensitively, with `Done` read as `Complete`. `Superseded` and `Withdrawn` epics are skipped.
-
-**Develop:** `claude plugin validate whats-next` and `claude plugin test whats-next`. To run the working tree instead of the installed release, start Claude Code with `--plugin-dir whats-next` (and uninstall the release, or both draw).
-
 ### Generated Files (v0.1.1)
 
 **A pane listing the files Claude generated this session, each with an Open button**
@@ -479,14 +423,15 @@ A Claude Code mod (a plugin of function hooks). Shows the condition and temperat
 ## Removing Plugins (when in Claude Code)
 
 ```bash
-# Uninstall individual plugins
+/plugin uninstall cpm-next@ninthspace-marketplace
+/plugin uninstall cpm-next-models@ninthspace-marketplace
+/plugin uninstall cpm-next-progress@ninthspace-marketplace
+/plugin uninstall whats-next@ninthspace-marketplace
+/plugin uninstall plugin-sync@ninthspace-marketplace
 /plugin uninstall noteplan@ninthspace-marketplace
 /plugin uninstall php-lsp@ninthspace-marketplace
-/plugin uninstall cpm@ninthspace-marketplace
-/plugin uninstall dpm@ninthspace-marketplace
 /plugin uninstall js-simplifier@ninthspace-marketplace
 /plugin uninstall filament-mockup@ninthspace-marketplace
-/plugin uninstall whats-next@ninthspace-marketplace
 /plugin uninstall generated-files@ninthspace-marketplace
 /plugin uninstall weather@ninthspace-marketplace
 
@@ -513,88 +458,6 @@ For issues or questions:
 - Open an issue on GitHub
 - Check plugin-specific documentation
 - Review the [Claude Code plugin docs](https://docs.claude.com/en/docs/claude-code/plugins)
-
-### CPM Next Progress (v0.3.1)
-
-**A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
-
-A Claude Code mod (a plugin of function hooks). Name a spec and the mod writes a build order for its stories to a small JSON file, which you can edit; Claude then publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file.
-
-**The mod only reads.** It lists the artifact's rows through the `ArtifactData` tool, which auto mode does not ask about, and never writes to it. Claude's own `ArtifactData` calls do the writing, so no permission rule is needed. An earlier version wrote to the artifact itself, and auto mode refused those calls intermittently with "The server-side auto mode classifier gave no verdict for ArtifactData".
-
-**Build-order file:** `docs/specifications/NN-build-order.json`:
-```json
-{
-  "title": "01-Series Build Order",
-  "spec": "docs/specifications/01-spec-requirements-matrix-todos.md",
-  "decisions": ["Questions still open, shown in a box above the table"],
-  "phases": [
-    { "label": "No visible change", "items": [
-      { "epic": "01-05", "story": 1, "note": "Default value keeps today's text" },
-      { "epic": "01-05", "task": "3.1" }
-    ] },
-    { "label": "Waiting on input", "note": "Shown beside the phase label", "items": [
-      { "epic": "01-05", "story": 2, "waitingOn": "new name from the client" }
-    ] }
-  ]
-}
-```
-An item is a story (`story`) or one task (`task`) of an epic, named by the epic's number prefix. `waitingOn` shows the item as **Waiting on input** until it is removed from the file or the item starts. `artifact` holds the tracker's link; the mod adds it when Claude publishes the page.
-
-**The first build order** is written from the spec's epics (those whose number starts with the spec's): one phase per epic, epics ordered by their `**Blocked by**` epics, each epic's stories ordered by their `**Blocked by**` stories and then by number. Superseded and withdrawn epics and stories are left out. Edit the file afterwards to reorder, regroup, split a story into tasks or add `waitingOn`.
-
-**Statuses:** Complete, In progress (the story says so, or one of its tasks has started), Waiting on input, Pending. A row's date moves only when its status changes. Blockers shown are the story's and epic's `**Blocked by**` items not yet Complete, earlier unfinished tasks of the same story, and any `waitingOn`.
-
-**How it works:**
-1. After any tool call that writes (Edit, Write, Bash and so on), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more.
-2. If one did, it reads the tracker and works out the writes that would bring it in line. If there are none, it says nothing.
-3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch. More than eight writes stay in the file, and Claude hands them to a Haiku subagent, which reads the file and applies each batch, so they never enter the main conversation.
-
-The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); `/progress-tracker 01` adds it to the project's `.gitignore`.
-
-**Commands:**
-- `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date".
-- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. Then ask Claude to publish the page. When it does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works.
-
-**Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions.
-
-**Quick Start:**
-```bash
-/plugin install cpm-next-progress@ninthspace-marketplace
-/reload-plugins
-
-/progress-tracker 01
-```
-Then ask Claude to publish the page. The spec needs its epics in `docs/epics/` first.
-
-**Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`), as What's Next does.
-
-**Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`.
-
-### Plugin Sync (v0.1.0)
-
-**Open sessions pick up plugin updates without a manual `/reload-plugins`**
-
-A Claude Code mod (a plugin of function hooks). Every five minutes, and after each answer, it compares `~/.claude/plugins/installed_plugins.json` with the versions of this marketplace's plugins that the session loaded. When one differs, it shows a one-line notice naming the plugins and versions, and runs `/reload-plugins`, which waits until the session is idle. A project-scope install is compared for sessions in that project, and the user-scope install for all others.
-
-**It does not install updates.** The marketplace's auto-update does that when any new session starts, or run it yourself once, from any directory:
-```bash
-claude plugin marketplace update ninthspace-marketplace
-claude plugin update cpm-next@ninthspace-marketplace   # each plugin that changed
-```
-
-**Quick Start:**
-```bash
-/plugin install plugin-sync@ninthspace-marketplace
-/reload-plugins
-```
-Install it at user scope so every session loads it. A session already open needs one manual `/reload-plugins` to load the mod; after that it reloads itself.
-
-**Develop:** `claude plugin validate plugin-sync` and `claude plugin test plugin-sync`.
-
-## Changelog
-
-See individual plugin CHANGELOG.md files for version history.
 
 ## Author
 

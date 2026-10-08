@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cpm-next introduction</title>
+<meta name="description" content="A short slide deck introducing cpm-next, a planning and building method for Claude Code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #eeece6;
+    --border: #d9d6cc;
+    --text: #1d1f24;
+    --text-dim: #5a5e68;
+    --accent: #2f5fb3;
+    --accent-soft: #e3ebf8;
+    --ok: #2e7d4f;
+    --ok-soft: #e1f1e7;
+    --warn: #a3620a;
+    --warn-soft: #f8ecd9;
+    --stop: #b3383a;
+    --stop-soft: #f8e3e3;
+    --code-bg: #efede7;
+    --radius: 10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b;
+      --surface: #1c1f26;
+      --surface-2: #242832;
+      --border: #343946;
+      --text: #e6e8ee;
+      --text-dim: #a0a6b4;
+      --accent: #7fa6ec;
+      --accent-soft: #1f2b44;
+      --ok: #6cc890;
+      --ok-soft: #1a3226;
+      --warn: #e5a752;
+      --warn-soft: #3a2c17;
+      --stop: #ec7a7c;
+      --stop-soft: #3d1f21;
+      --code-bg: #232731;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b;
+    --surface: #1c1f26;
+    --surface-2: #242832;
+    --border: #343946;
+    --text: #e6e8ee;
+    --text-dim: #a0a6b4;
+    --accent: #7fa6ec;
+    --accent-soft: #1f2b44;
+    --ok: #6cc890;
+    --ok-soft: #1a3226;
+    --warn: #e5a752;
+    --warn-soft: #3a2c17;
+    --stop: #ec7a7c;
+    --stop-soft: #3d1f21;
+    --code-bg: #232731;
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  code, .mono { font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace; font-size: 0.9em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+  .deck { flex: 1; position: relative; overflow: hidden; }
+  .slide {
+    position: absolute; inset: 0;
+    overflow-y: auto; overflow-x: hidden;
+    padding: 48px 64px;
+    display: flex; flex-direction: column; align-items: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.25s ease;
+  }
+  .slide.active { opacity: 1; visibility: visible; }
+  .slide-inner { max-width: 980px; width: 100%; margin: auto 0; }
+
+  .label {
+    font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  h1 { font-size: 48px; font-weight: 700; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 18px; }
+  h2 { font-size: 32px; font-weight: 700; line-height: 1.2; margin-bottom: 22px; }
+  h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  p { margin-bottom: 12px; }
+  .lead { font-size: 21px; color: var(--text-dim); max-width: 720px; }
+  .dim { color: var(--text-dim); }
+  .small { font-size: 14px; }
+
+  ul.plain { list-style: none; }
+  ul.plain li { padding: 7px 0 7px 22px; position: relative; font-size: 18px; }
+  ul.plain li::before {
+    content: ''; position: absolute; left: 4px; top: 17px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  }
+
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; min-width: 0;
+  }
+  .card p { font-size: 15px; margin-bottom: 6px; }
+  .card .done { font-size: 14px; color: var(--text-dim); border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px; margin-bottom: 0; }
+  .card .done strong { color: var(--text); font-weight: 600; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.stop { border-left: 4px solid var(--stop); }
+  .card.acc { border-left: 4px solid var(--accent); }
+  .tag {
+    display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); margin-right: 4px; margin-bottom: 4px;
+  }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .tag.stop { background: var(--stop-soft); color: var(--stop); }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  pre .k { color: var(--accent); font-weight: 500; }
+  pre .e { color: var(--ok); }
+  pre .c { color: var(--text-dim); }
+
+  /* Artefact chain */
+  .chain { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; margin: 8px 0 18px; }
+  .node {
+    flex: 1 1 0; min-width: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 12px; text-align: center;
+  }
+  .node .t { font-weight: 600; font-size: 16px; }
+  .node .p { font-size: 12px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; overflow-wrap: anywhere; }
+  .node .w { font-size: 12px; color: var(--accent); margin-top: 4px; }
+  .arrow { flex: 0 0 28px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 20px; }
+  .side-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+
+  .two-col { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+
+  svg.diagram { width: 100%; height: auto; max-height: 64vh; display: block; }
+  svg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+  svg .box-acc { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  svg .box-ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+  svg .box-warn { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.5; }
+  svg .box-stop { fill: var(--stop-soft); stroke: var(--stop); stroke-width: 1.5; }
+  svg .tx { fill: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; }
+  svg .tx-b { fill: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; }
+  svg .tx-d { fill: var(--text-dim); font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; }
+  svg .ln { stroke: var(--text-dim); stroke-width: 1.5; fill: none; }
+  svg .ah { fill: var(--text-dim); }
+
+  table.t { width: 100%; border-collapse: collapse; font-size: 15px; table-layout: fixed; }
+  table.t th, table.t td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+  table.t th { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); font-weight: 600; }
+
+  .note {
+    margin-top: 18px; padding: 12px 16px; border-radius: var(--radius);
+    background: var(--accent-soft); font-size: 15px;
+  }
+  .note strong { color: var(--accent); }
+
+  /* Navigation bar */
+  .nav {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 20px; border-top: 1px solid var(--border); background: var(--surface);
+  }
+  .nav button {
+    font: inherit; font-size: 14px; background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: 0.4; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .counter { font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .hint { font-size: 12px; color: var(--text-dim); }
+  .bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); transition: width 0.25s ease; z-index: 2; }
+
+  @media (max-width: 860px) {
+    .slide { padding: 32px 16px; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 25px; margin-bottom: 16px; }
+    .lead { font-size: 18px; }
+    ul.plain li { font-size: 16px; }
+    .g2, .g3, .two-col, .side-row { grid-template-columns: minmax(0, 1fr); }
+    .two-col { gap: 18px; }
+    .chain { flex-direction: column; }
+    .arrow { flex-basis: 24px; transform: rotate(90deg); }
+    .hint { display: none; }
+    table.t { font-size: 14px; }
+    svg.diagram { max-height: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .slide, .bar { transition: none; } }
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+<main class="deck" id="deck">
+
+<!-- 1. Title -->
+<section class="slide" aria-label="Slide 1">
+  <div class="slide-inner">
+    <div class="label">Introduction</div>
+    <h1>cpm-next</h1>
+    <p class="lead">A planning and building method for Claude Code. It turns an idea into working, tested code through a short chain of documents kept in the repository.</p>
+    <p class="dim small" style="margin-top:28px">Use the arrow keys or space to move between slides. On a touch screen, swipe or use the buttons below.</p>
+  </div>
+</section>
+
+<!-- 2. Problem -->
+<section class="slide" aria-label="Slide 2">
+  <div class="slide-inner">
+    <div class="label">The problem</div>
+    <h2>Coding with an AI assistant and no plan</h2>
+    <div class="grid g3">
+      <div class="card stop">
+        <h3>The work drifts</h3>
+        <p>Without written requirements, each session decides scope again. What gets built depends on how the request was phrased that day.</p>
+      </div>
+      <div class="card warn">
+        <h3>"Done" is not defined</h3>
+        <p>If nobody stated a finish line, the assistant stops when it thinks it has finished. That may not be when the work is finished.</p>
+      </div>
+      <div class="card acc">
+        <h3>Claims without proof</h3>
+        <p>"It works" is a claim. A reviewer needs to see which test or check shows that each requirement is met.</p>
+      </div>
+    </div>
+    <div class="note"><strong>cpm-next's answer:</strong> write the plan down before building, give every piece of work a stated finish line, and record evidence for every acceptance criterion.</div>
+  </div>
+</section>
+
+<!-- 3. What it is -->
+<section class="slide" aria-label="Slide 3">
+  <div class="slide-inner">
+    <div class="label">What it is</div>
+    <h2>Six skills and a set of Markdown documents</h2>
+    <ul class="plain">
+      <li>cpm-next is a Claude Code plugin. You run its skills as slash commands, such as <code>/cpm-next:plan</code>.</li>
+      <li>The skills read and write Markdown files under <code>docs/</code> in your repository: discussions, briefs, specs, epics, reviews, retros and quick-change records.</li>
+      <li>Those files are the only state. There are no progress files to clean up.</li>
+      <li>Each skill states what "done" means and when to stop. How to get there is left to the model.</li>
+      <li>Four optional mods add model and effort control, a progress page, a live pane of remaining work, and automatic reloads after updates.</li>
+    </ul>
+    <h3 style="margin-top:22px">A typical path</h3>
+    <div class="grid g3" style="margin-top:8px">
+      <div class="card"><p><span class="tag">optional</span></p><p><code>/cpm-next:party</code> to talk an idea through.</p></div>
+      <div class="card"><p><span class="tag ok">core</span></p><p><code>/cpm-next:plan</code> to write the brief, spec and epics.</p></div>
+      <div class="card"><p><span class="tag">optional</span></p><p><code>/cpm-next:review</code> before a large or risky epic.</p></div>
+      <div class="card"><p><span class="tag ok">core</span></p><p><code>/cpm-next:do</code> to build one story, one epic, or <code>all</code>.</p></div>
+      <div class="card"><p><span class="tag">any time</span></p><p><code>/cpm-next:status</code> when you return to the project.</p></div>
+      <div class="card"><p><span class="tag">any time</span></p><p><code>/cpm-next:library</code> to add reference documents.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Six skills and finish lines -->
+<section class="slide" aria-label="Slide 4">
+  <div class="slide-inner">
+    <div class="label">The six skills</div>
+    <h2>Each skill has a finish line</h2>
+    <div class="grid g3">
+      <div class="card acc">
+        <h3><code>party</code></h3>
+        <p>Discussion with named specialist personas (PM, Architect, Developer, UX, QA and others) who disagree with each other.</p>
+        <p class="done"><strong>Finished when</strong> the discussion record is concluded and the next step is named.</p>
+      </div>
+      <div class="card acc">
+        <h3><code>plan</code></h3>
+        <p>Writes whatever is missing of brief, spec and epics, from whatever already exists.</p>
+        <p class="done"><strong>Finished when</strong> the artefacts down to the epics exist and trace upward.</p>
+      </div>
+      <div class="card acc">
+        <h3><code>review</code></h3>
+        <p>Independent challenge of the epics before they are built.</p>
+        <p class="done"><strong>Finished when</strong> Critical and Warning findings are fixed or waiting on you, and a review record is written.</p>
+      </div>
+      <div class="card ok">
+        <h3><code>do</code></h3>
+        <p>Builds stories, verifies each acceptance criterion with evidence, and has each story audited.</p>
+        <p class="done"><strong>Finished when</strong> every story in scope is Complete and the test suite is no worse than its baseline.</p>
+      </div>
+      <div class="card">
+        <h3><code>library</code></h3>
+        <p>Curates reference documents in <code>docs/library/</code> that planning and building read.</p>
+        <p class="done"><strong>Finished when</strong> the documents carry complete front-matter.</p>
+      </div>
+      <div class="card">
+        <h3><code>status</code></h3>
+        <p>Read-only report of where things stand and the next command to run.</p>
+        <p class="done"><strong>Finished when</strong> the report is given. Nothing is written.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Artefacts -->
+<section class="slide" aria-label="Slide 5">
+  <div class="slide-inner">
+    <div class="label">Artefacts are the state</div>
+    <h2>Everything lives in <code>docs/</code></h2>
+    <div class="chain" role="img" aria-label="Discussion, then brief, then spec, then epics, then retro or quick record">
+      <div class="node"><div class="t">Discussion</div><div class="p">docs/discussions/</div><div class="w">party</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Brief</div><div class="p">docs/briefs/</div><div class="w">plan</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Spec</div><div class="p">docs/specifications/</div><div class="w">plan</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Epics</div><div class="p">docs/epics/</div><div class="w">plan writes, do updates</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Retro</div><div class="p">docs/retros/</div><div class="w">do</div></div>
+    </div>
+    <div class="side-row">
+      <div class="card"><h3>Reviews</h3><p><code>docs/reviews/</code>, written by <code>review</code>.</p></div>
+      <div class="card"><h3>Quick changes</h3><p><code>docs/quick/</code>, written by <code>do</code> for a small change with no epic.</p></div>
+      <div class="card"><h3>Library</h3><p><code>docs/library/</code>. Every skill reads it.</p></div>
+    </div>
+    <ul class="plain" style="margin-top:16px">
+      <li>Each level traces to the one above it. A story's <code>**Satisfies**</code> line names the spec requirements it covers.</li>
+      <li>The epic doc is the task list. It is what you read to see where a run is, and what the next session resumes from.</li>
+      <li>A level that would only restate the one above is skipped. A small change can go straight to an epic.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6. Plan -->
+<section class="slide" aria-label="Slide 6">
+  <div class="slide-inner">
+    <div class="label">Planning</div>
+    <h2>plan works from what already exists</h2>
+    <div class="grid g2">
+      <div class="card acc">
+        <h3>1. Take stock</h3>
+        <p>Reads <code>docs/</code>, other planning material such as a PRD or README, and in an existing codebase the code itself. It then says what exists, what is missing and what this run will produce.</p>
+      </div>
+      <div class="card acc">
+        <h3>2. Ask once</h3>
+        <p>Questions that only you can answer, and that change scope, cost or a hard-to-reverse choice, are asked together in one batch, each with a recommended default.</p>
+      </div>
+      <div class="card acc">
+        <h3>3. Record its own decisions</h3>
+        <p>Everything else it decides itself and writes into the document's Assumptions section, so you can overturn it when you read the plan.</p>
+      </div>
+      <div class="card acc">
+        <h3>4. Write only what is missing</h3>
+        <p>A brief, a spec with MoSCoW requirements and measurable non-functional requirements, then epics. A change of direction is an amendment to the existing file.</p>
+      </div>
+    </div>
+    <div class="note"><strong>plan is done when</strong> every Must Have requirement is covered by at least one story, every acceptance criterion can be checked by a test or a concrete manual step, and no decision you still have to make is hidden inside a story.</div>
+  </div>
+</section>
+
+<!-- 7. Inside a story -->
+<section class="slide" aria-label="Slide 7">
+  <div class="slide-inner">
+    <div class="label">Inside an epic</div>
+    <h2>A story states its finish line</h2>
+    <div class="two-col">
+      <pre><span class="k">## Export loans as CSV</span>
+<span class="k">**Story**</span>: 2
+<span class="k">**Status**</span>: Complete
+<span class="k">**Blocked by**</span>: Story 1
+<span class="k">**Satisfies**</span>: FR3
+<span class="k">**Effort**</span>: high
+
+<span class="k">**Acceptance Criteria**</span>:
+- The export includes every loan in
+  the selected range `[feature]`
+  <span class="e">- Evidence: {test name and command}</span>
+- {next criterion} `[manual]`
+  <span class="e">- Evidence: {manual step taken and
+    what was observed}</span>
+
+<span class="k">**Audit**</span>: pass ({date})</pre>
+      <div>
+        <ul class="plain">
+          <li><strong>Status</strong> is one of Pending, In Progress or Complete. Tools read it.</li>
+          <li><strong>Blocked by</strong> names real ordering constraints. Unblocked stories can be built, some in parallel.</li>
+          <li><strong>Satisfies</strong> links the story to spec requirements.</li>
+          <li><strong>Acceptance criteria</strong> each carry a tag: unit, feature, integration or manual.</li>
+          <li><strong>Evidence</strong> sits directly under the criterion it proves.</li>
+        </ul>
+        <p class="dim small" style="margin-top:10px">The story and criterion text come from Starling Library, an imaginary lending-library app; the field names and layout are the real format.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. Story loop -->
+<section class="slide" aria-label="Slide 8">
+  <div class="slide-inner">
+    <div class="label">Building</div>
+    <h2>How do builds one story</h2>
+    <div class="two-col">
+      <svg class="diagram" viewBox="0 0 420 470" role="img" aria-label="Story loop: start, build, evidence, audit, then close or fix and audit once more">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" class="ah"/>
+          </marker>
+        </defs>
+        <rect class="box" x="10" y="10" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="34">1. Start</text>
+        <text class="tx-d" x="24" y="54">In Progress; set the story's effort</text>
+
+        <rect class="box" x="10" y="96" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="120">2. Build, task by task</text>
+        <text class="tx-d" x="24" y="140">following project conventions</text>
+
+        <rect class="box-acc" x="10" y="182" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="206">3. Verify each criterion</text>
+        <text class="tx-d" x="24" y="226">write an Evidence line under it</text>
+
+        <rect class="box-warn" x="10" y="268" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="292">4. Opus auditor</text>
+        <text class="tx-d" x="24" y="312">verdict: pass or fix needed</text>
+
+        <rect class="box-ok" x="10" y="370" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="394">5. Close in one edit</text>
+        <text class="tx-d" x="24" y="414">Complete, with an Audit line</text>
+
+        <rect class="box" x="276" y="250" width="134" height="92" rx="8"/>
+        <text class="tx-b" x="288" y="272">Fix needed</text>
+        <text class="tx-d" x="288" y="292">fix at high effort,</text>
+        <text class="tx-d" x="288" y="310">update evidence,</text>
+        <text class="tx-d" x="288" y="328">audit once more</text>
+
+        <rect class="box-stop" x="276" y="370" width="134" height="56" rx="8"/>
+        <text class="tx-b" x="288" y="394">Fails again</text>
+        <text class="tx-d" x="288" y="414">Not met; blocked</text>
+
+        <line class="ln" x1="130" y1="66" x2="130" y2="94" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="152" x2="130" y2="180" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="238" x2="130" y2="266" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="324" x2="130" y2="368" marker-end="url(#ah)"/>
+        <text class="tx-d" x="138" y="352">pass</text>
+        <line class="ln" x1="250" y1="290" x2="274" y2="290" marker-end="url(#ah)"/>
+        <path class="ln" d="M343,342 L343,368" marker-end="url(#ah)"/>
+        <path class="ln" d="M276,320 L253,320" marker-end="url(#ah)"/>
+        <text class="tx-d" x="10" y="456">After closing, do re-reads the story before the next one.</text>
+      </svg>
+      <div>
+        <ul class="plain">
+          <li>A criterion without its own Evidence line is not met.</li>
+          <li>Evidence is a test name and command, a <code>file:line</code>, or the manual step taken and what was observed.</li>
+          <li>The auditor's Critical and Warning findings are fixed; suggestions are not.</li>
+          <li>A story that fails the second audit is blocked, with each unresolved finding recorded.</li>
+          <li>At the end of the run the full suite must pass, or any failures must have been failing before the run started.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. Auditor -->
+<section class="slide" aria-label="Slide 9">
+  <div class="slide-inner">
+    <div class="label">Independent audit</div>
+    <h2>A second model checks every story before it closes</h2>
+    <p class="lead" style="margin-bottom:20px">Sonnet builds the story. The <code>auditor</code> agent, on Opus, checks it. It gets none of the builder's conversation, so it checks what is on disk, not what the builder says is there.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>What it checks</h3>
+        <ul class="plain">
+          <li>Each criterion against its evidence, re-running the cited tests</li>
+          <li>The diff for defects, including security problems and data loss</li>
+          <li>Scope: changes nobody asked for, and anything missing</li>
+          <li>Departures from the project's conventions</li>
+          <li>Tests that assert nothing, or were weakened or skipped</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>How it is limited</h3>
+        <ul class="plain">
+          <li>Read-only. It never edits files.</li>
+          <li>It may run the project's tests, but nothing that changes state outside them.</li>
+          <li>It reports what it can show, not what might be true.</li>
+          <li>The result is recorded on the story, for example <code>**Audit**: pass ({date}), 2 findings fixed</code>.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="dim small" style="margin-top:14px">Small changes made without an epic are audited the same way and recorded in <code>docs/quick/</code>.</p>
+  </div>
+</section>
+
+<!-- 10. Models -->
+<section class="slide" aria-label="Slide 10">
+  <div class="slide-inner">
+    <div class="label">Models by role</div>
+    <h2>Each job runs on a chosen model</h2>
+    <div class="grid g3">
+      <div class="card acc">
+        <h3>Opus</h3>
+        <p><span class="tag">plans</span><span class="tag">reviews</span><span class="tag">audits</span></p>
+        <p><code>plan</code>, <code>review</code> and their subagents, including the review personas. The <code>auditor</code> agent.</p>
+      </div>
+      <div class="card ok">
+        <h3>Sonnet</h3>
+        <p><span class="tag ok">builds</span><span class="tag ok">discusses</span></p>
+        <p><code>do</code> and its parallel subagents. Also <code>party</code> and <code>library</code>.</p>
+      </div>
+      <div class="card warn">
+        <h3>Haiku</h3>
+        <p><span class="tag warn">looks up</span><span class="tag warn">reports</span></p>
+        <p>The <code>scout</code> agent, which answers lookups. <code>status</code>. Stories marked <code>**Model**: haiku</code>.</p>
+      </div>
+    </div>
+    <h3 style="margin-top:24px">Effort per story</h3>
+    <table class="t">
+      <thead><tr><th style="width:22%">Effort</th><th>When plan sets it</th></tr></thead>
+      <tbody>
+        <tr><td><code>high</code></td><td>A mistake is costly or hard to see: security, authorisation, migrations and data changes, concurrency, scripts and hooks.</td></tr>
+        <tr><td><code>medium</code></td><td>The default when a story has no Effort field.</td></tr>
+        <tr><td><code>low</code></td><td>Mechanical edits: a config value, a copy change, a rename. A fully determined low story may go to Haiku.</td></tr>
+      </tbody>
+    </table>
+    <p class="dim small" style="margin-top:12px">With the <code>cpm-next-models</code> mod, do builds each story at its effort, raises it to high (or xhigh) for a fix after a failed audit, and keeps every story at high or above in a <code>do all</code> run. Without the mod, do builds at the session's effort.</p>
+  </div>
+</section>
+
+<!-- 11. Questions and stops -->
+<section class="slide" aria-label="Slide 11">
+  <div class="slide-inner">
+    <div class="label">When you are asked</div>
+    <h2>do keeps going unless it has to stop</h2>
+    <div class="grid g2">
+      <div class="card stop">
+        <h3>do stops and asks when</h3>
+        <ul class="plain">
+          <li>A test fails for a reason it cannot explain after investigating.</li>
+          <li>An acceptance criterion contradicts reality, and fixing that would change scope.</li>
+          <li>The next action is destructive or reaches outside the repository: deleting data, rewriting history, touching shared infrastructure.</li>
+        </ul>
+      </div>
+      <div class="card ok">
+        <h3>Otherwise it keeps going</h3>
+        <ul class="plain">
+          <li>No pauses to summarise progress, offer to carry on, or report that a story finished.</li>
+          <li>In an unattended <code>do all</code> run, the first two cases mark the story blocked and work moves on. A destructive action always stops the run.</li>
+          <li>Commits, branches and pushes are left to you.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card">
+        <h3>Elsewhere</h3>
+        <p><code>plan</code> asks its questions once, in one batch. <code>party</code> asks you only about intent, priorities and preferences. <code>review</code> lists findings that need a decision under "Needs you".</p>
+      </div>
+      <div class="card">
+        <h3>A hard criterion is not a wrong one</h3>
+        <p>"The tests fail" never justifies changing a criterion. It can change only when something specific contradicts it: a <code>file:line</code>, a named requirement, or another criterion.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12. Progress visibility -->
+<section class="slide" aria-label="Slide 12">
+  <div class="slide-inner">
+    <div class="label">Seeing progress</div>
+    <h2>Three ways to see where the work stands</h2>
+    <div class="grid g3">
+      <div class="card acc">
+        <h3><code>/cpm-next:status</code></h3>
+        <p>Part of cpm-next. A read-only, one-screen report from the artefacts and git: what has been built, what is in flight or blocked, what is waiting on you, and the next command to run.</p>
+      </div>
+      <div class="card acc">
+        <h3><code>/next</code></h3>
+        <p>From the <code>whats-next</code> mod. A live pane listing every story not yet Complete, in build order, and each spec with no epics yet. It reads the files directly, with no model calls.</p>
+      </div>
+      <div class="card acc">
+        <h3><code>/progress-tracker</code></h3>
+        <p>From the <code>cpm-next-progress</code> mod. A private claude.ai page showing a spec's stories as a table grouped by phase. The mod keeps it in step with the epic docs. Anyone it is shared with can read it.</p>
+      </div>
+    </div>
+    <div class="note"><strong>Every do run ends with three headings:</strong> Blocked on me (decisions and anything held back), Changed (stories completed, files touched, test result against the baseline) and Found (anything surprising).</div>
+  </div>
+</section>
+
+<!-- 13. Close -->
+<section class="slide" aria-label="Slide 13">
+  <div class="slide-inner">
+    <div class="label">Next steps</div>
+    <h2>Where to go from here</h2>
+    <div class="grid g2">
+      <div class="card ok">
+        <h3><a href="cpm-next-onboarding.html" style="color:inherit">cpm-next-onboarding.html</a></h3>
+        <p>Install cpm-next and run your first spec in an afternoon.</p>
+      </div>
+      <div class="card ok">
+        <h3><a href="cpm-next-training-guide.html" style="color:inherit">cpm-next-training-guide.html</a></h3>
+        <p>The full guide: every skill, the artefacts, the mods and day-to-day practice.</p>
+      </div>
+    </div>
+    <h3 style="margin-top:26px">In summary</h3>
+    <ul class="plain">
+      <li>The plan is written down in <code>docs/</code>, and those files are the only state.</li>
+      <li>Every story has acceptance criteria, and every criterion gets its own evidence.</li>
+      <li>Opus plans, reviews and audits; Sonnet builds; Haiku looks things up and reports status.</li>
+      <li>do stops for unexplained failures, scope changes and destructive actions, and otherwise keeps going.</li>
+    </ul>
+    <p class="dim small" style="margin-top:14px">Both files are in the same folder as this deck.</p>
+  </div>
+</section>
+
+</main>
+<nav class="nav" aria-label="Slide navigation">
+  <button id="prev" type="button" aria-label="Previous slide">&larr; Back</button>
+  <span class="counter" id="counter" aria-live="polite">1 / 13</span>
+  <span class="hint">Arrow keys or space</span>
+  <button id="next" type="button" aria-label="Next slide">Next &rarr;</button>
+</nav>
+<script>
+(function () {
+  var slides = document.querySelectorAll('.slide');
+  var total = slides.length;
+  var current = 0;
+  function show(i) {
+    if (i < 0 || i >= total) return;
+    slides[current].classList.remove('active');
+    current = i;
+    slides[current].classList.add('active');
+    slides[current].scrollTop = 0;
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('bar').style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('prev').disabled = current === 0;
+    document.getElementById('next').disabled = current === total - 1;
+    try { history.replaceState(null, '', '#' + (current + 1)); } catch (e) {}
+  }
+  var start = parseInt((location.hash || '').slice(1), 10);
+  slides[0].classList.add('active');
+  show(start >= 1 && start <= total ? start - 1 : 0);
+  document.getElementById('prev').addEventListener('click', function () { show(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { show(current + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest && e.target.closest('button')) {
+      if (e.key === ' ' || e.key === 'Enter') return;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) { e.preventDefault(); show(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) { e.preventDefault(); show(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+  });
+  var x0 = null, y0 = null;
+  var deck = document.getElementById('deck');
+  deck.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  deck.addEventListener('touchend', function (e) {
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(dx < 0 ? current + 1 : current - 1);
+    x0 = null;
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

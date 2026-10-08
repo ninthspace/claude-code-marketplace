@@ -1,24 +1,16 @@
 # macOS
 .DS_Store
 
-# CPM transient session-state files (created/deleted by running skills)
-# All three are per-session scratch keyed by CPM_SESSION_ID. Only the progress file
-# was ignored, so summaries and cleancheck markers from dead sessions accumulated in
-# git — three of them were committed before this was noticed.
+# Session scratch files left by the retired CPM plugin's skills.
 docs/plans/.cpm-progress-*.md
 docs/plans/.cpm-compact-summary-*.md
 docs/plans/.cpm-cleancheck-*
 
-# dpm's generated database (AD4). `.dpm/dpm.sql` is the committed form and is NOT ignored;
-# `.dpm/dpm.db` is built from it and is machine-local. Added when Epic 47-03 Story 2 wired the
-# tool registry to the entry point, which is the point at which launching the server anywhere
-# in this tree started producing the file.
-.dpm/dpm.db
-
-# The ralph loop's own state, rewritten on every iteration. An unattended run commits after
-# each story and stages everything, so without this line the loop's iteration counter lands in
-# the work's commits. The run's memory is a dpm session row, not this file.
+# The ralph loop's own state, rewritten on every iteration.
 .claude/ralph-loop.local.md
+
+# Generated machine-local database from the retired DPM plugin.
+.dpm/
 
 # Type declarations Claude Code writes beside a function-hook plugin on every load.
 whats-next/.claude-plugin/types/
