@@ -1,0 +1,15 @@
+{
+  "name": "plugin-sync",
+  "version": "0.1.0",
+  "description": "Reloads plugins in every open Claude Code session when a ninthspace-marketplace plugin is updated, so each session picks up the new version without a manual /reload-plugins.",
+  "author": {
+    "name": "Chris Aves"
+  },
+  "license": "MIT",
+  "keywords": [
+    "plugins",
+    "update",
+    "reload",
+    "mod"
+  ]
+}

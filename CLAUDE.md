@@ -27,9 +27,17 @@ node dpm/bin/dpm-guard.js
 
 Three directories under `docs/` are neither generated nor parked, and stay where they are: `docs/maintenance/` (see below), `docs/stories/` and `docs/artifacts/`. `docs/archive/` also stays — it is work archived *during* the CPM era, which is a different thing from the CPM era itself.
 
+## A push to main updates this machine's plugin installs
+
+`.git/hooks/pre-push` is a link to `bin/pre-push`. On a push to `main` it starts `bin/update-installed-plugins.sh` in the background, which waits until `origin/main` holds the pushed commit, updates the marketplace, and runs `claude plugin update --scope user` for each installed plugin whose version differs from `marketplace.json`. The `plugin-sync` mod then reloads open sessions. Output goes to `.git/plugin-update.log`; the hook never blocks or fails the push. A plugin only updates when its version was bumped. Re-make the link if it is ever lost:
+
+```sh
+ln -sf "$(git rev-parse --show-toplevel)/bin/pre-push" .git/hooks/pre-push
+```
+
 ## Critical: Source vs. Cache Paths
 
-This repository contains the source code for multiple plugins: `cpm`, `cpm-next`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`, `whats-next`, `generated-files`, `weather`, `cpm-next-models`, `cpm-next-progress`.
+This repository contains the source code for multiple plugins: `cpm`, `cpm-next`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`, `whats-next`, `generated-files`, `weather`, `cpm-next-models`, `cpm-next-progress`, `plugin-sync`.
 
 **NEVER read or write files in the plugin cache directory** (`~/.claude/plugins/cache/ninthspace-marketplace/`). That directory contains installed copies of plugins and is overwritten on updates. Changes made there are lost and not tracked by git.
 
@@ -48,6 +56,7 @@ This repository contains the source code for multiple plugins: `cpm`, `cpm-next`
 | Weather | `weather/` |
 | CPM Next Models | `cpm-next-models/` |
 | CPM Next Progress | `cpm-next-progress/` |
+| Plugin Sync | `plugin-sync/` |
 
 Common source locations (using CPM as an example — same pattern applies to all plugins):
 

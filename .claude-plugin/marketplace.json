@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.29.1",
+  "version": "3.30.0",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -201,6 +201,18 @@
         "progress",
         "tracker",
         "artifact",
+        "mod"
+      ]
+    },
+    {
+      "name": "plugin-sync",
+      "source": "./plugin-sync",
+      "description": "Reloads plugins in every open Claude Code session when a ninthspace-marketplace plugin is updated, so each session picks up the new version without a manual /reload-plugins.",
+      "version": "0.1.0",
+      "keywords": [
+        "plugins",
+        "update",
+        "reload",
         "mod"
       ]
     }

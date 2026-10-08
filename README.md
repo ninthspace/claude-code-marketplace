@@ -571,6 +571,27 @@ Then ask Claude to publish the page. The spec needs its epics in `docs/epics/` f
 
 **Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`.
 
+### Plugin Sync (v0.1.0)
+
+**Open sessions pick up plugin updates without a manual `/reload-plugins`**
+
+A Claude Code mod (a plugin of function hooks). Every five minutes, and after each answer, it compares `~/.claude/plugins/installed_plugins.json` with the versions of this marketplace's plugins that the session loaded. When one differs, it shows a one-line notice naming the plugins and versions, and runs `/reload-plugins`, which waits until the session is idle. A project-scope install is compared for sessions in that project, and the user-scope install for all others.
+
+**It does not install updates.** The marketplace's auto-update does that when any new session starts, or run it yourself once, from any directory:
+```bash
+claude plugin marketplace update ninthspace-marketplace
+claude plugin update cpm-next@ninthspace-marketplace   # each plugin that changed
+```
+
+**Quick Start:**
+```bash
+/plugin install plugin-sync@ninthspace-marketplace
+/reload-plugins
+```
+Install it at user scope so every session loads it. A session already open needs one manual `/reload-plugins` to load the mod; after that it reloads itself.
+
+**Develop:** `claude plugin validate plugin-sync` and `claude plugin test plugin-sync`.
+
 ## Changelog
 
 See individual plugin CHANGELOG.md files for version history.

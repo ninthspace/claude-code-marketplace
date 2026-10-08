@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Git pre-push hook: after a push to main, updates this machine's plugin installs in the background
+# (bin/update-installed-plugins.sh), logging to .git/plugin-update.log. Never blocks or fails the push.
+while read -r local_ref local_sha remote_ref _; do
+  if [[ "$remote_ref" == "refs/heads/main" && "$local_sha" != 0000000000000000000000000000000000000000 ]]; then
+    nohup "$(git rev-parse --show-toplevel)/bin/update-installed-plugins.sh" "$local_sha" \
+      > "$(git rev-parse --git-dir)/plugin-update.log" 2>&1 &
+  fi
+done
+exit 0
