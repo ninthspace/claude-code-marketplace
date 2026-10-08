@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "3.29.0",
+  "version": "3.29.1",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -194,7 +194,7 @@
       "name": "cpm-next-progress",
       "source": "./cpm-next-progress",
       "description": "Checks a claude.ai progress tracker for a cpm-next spec's epics against the epic docs, in the build order you set, and tells Claude which rows to update; it never writes to the tracker itself.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "keywords": [
         "cpm-next",
         "epics",

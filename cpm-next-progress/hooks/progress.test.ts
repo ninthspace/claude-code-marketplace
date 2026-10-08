@@ -203,7 +203,8 @@ test('the note for the model names the tool, the link and the writes', () => {
 
   const many = Array.from({ length: 12 }, (_, i) => ({ op: 'set' as const, collection: 'items', doc_id: `r${i}`, data: {}, if_version: 1 }))
   const big = modelNote([{ ...DRIFT, writes: many }])
-  expect(big).toContain('12 writes, in batches of at most 50, are in that file')
+  expect(big).toContain('Agent tool, model "haiku"')
+  expect(big).toContain('read /repo/.claude/cpm-next-progress/01-build-order.pending.json')
   expect(big).not.toContain('"doc_id":"r0"')
 })
 

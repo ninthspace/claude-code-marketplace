@@ -514,7 +514,7 @@ For issues or questions:
 - Check plugin-specific documentation
 - Review the [Claude Code plugin docs](https://docs.claude.com/en/docs/claude-code/plugins)
 
-### CPM Next Progress (v0.3.0)
+### CPM Next Progress (v0.3.1)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
@@ -548,7 +548,7 @@ An item is a story (`story`) or one task (`task`) of an epic, named by the epic'
 **How it works:**
 1. After any tool call that writes (Edit, Write, Bash and so on), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more.
 2. If one did, it reads the tracker and works out the writes that would bring it in line. If there are none, it says nothing.
-3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch.
+3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch. More than eight writes stay in the file, and Claude hands them to a Haiku subagent, which reads the file and applies each batch, so they never enter the main conversation.
 
 The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); `/progress-tracker 01` adds it to the project's `.gitignore`.
 
