@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.3.2)
+### CPM Next Progress (v0.3.3)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
@@ -155,6 +155,7 @@ An item is a story (`story`) or one task (`task`) of an epic, named by the epic'
 1. After any tool call that writes (Edit, Write, Bash and so on), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more.
 2. If one did, it reads the tracker and works out the writes that would bring it in line. If there are none, it says nothing.
 3. If there are some, it saves them to `.claude/cpm-next-progress/NN-build-order.pending.json`, shows you a one-line notice, and gives Claude a note with the artifact link and the writes. Claude applies them with one `ArtifactData` batch. More than eight writes stay in the file, and Claude hands them to a Haiku subagent, which reads the file and applies each batch, so they never enter the main conversation.
+4. When Claude's turn ends with a tracker still behind, the mod submits a prompt of its own asking for the same writes, so they are not passed over in the middle of a task. It checks again at the end of that turn, and after two such prompts in a row it stops and shows you a notice instead. A tracker left behind by an earlier session is picked up the same way, at the end of the first turn.
 
 The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); `/progress-tracker 01` adds it to the project's `.gitignore`.
 

@@ -2,7 +2,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Drift, EpicFile, LiveDoc } from './progress'
 import {
-  artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, withArtifact,
+  MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson,
+  turnEndNote, withArtifact,
 } from './progress'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
@@ -15,6 +16,8 @@ const WORK_DIR = '.claude/cpm-next-progress'
 
 type Listing = { name: string; mtimeMs: number; size: number }
 type Check = { lines: string[]; drift: Drift[] }
+/** When a check reads the artifact: always, when a doc changed, or also when the last check left a tracker behind. */
+type When = 'now' | 'ifChanged' | 'ifChangedOrBehind'
 
 async function findRoot($: EngineInterface): Promise<string | null> {
   const home = await $.env.get('HOME')
@@ -66,9 +69,14 @@ async function checkOne($: EngineInterface, root: string, name: string): Promise
   const liveMeta = (await readLive($, order.artifact, 'meta')).find(d => d.id === 'tracker')
   const writes = diff(items, { title: order.title, spec: order.spec ?? '', decisions: order.decisions ?? [] }, live, liveMeta)
   const skipped = missing.length === 0 ? '' : `; not found in the epics: ${missing.join(', ')}`
-  if (writes.length === 0) return { line: `${name}: up to date${skipped}` }
-
   const file = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.pending.json`
+  if (writes.length === 0) {
+    // Writes saved by an earlier check have been applied; the file must not offer them again.
+    if (await $.fs.exists(file)) await $.fs.write(file, pendingJson({ url: order.artifact, writes: [] }))
+
+    return { line: `${name}: up to date${skipped}` }
+  }
+
   const drift: Drift = { name, url: order.artifact, file, writes }
   await $.fs.write(file, pendingJson(drift))
 
@@ -78,11 +86,11 @@ async function checkOne($: EngineInterface, root: string, name: string): Promise
 let isChecking = false
 
 /**
- * Checks every tracker in the repository. Unless forced, it does nothing when the epic docs and
- * build-order files are as they were at the last check, so a tool call that changed neither costs
- * two directory listings.
+ * Checks every tracker in the repository. Unless told to check now, it does nothing when the epic
+ * docs and build-order files are as they were at the last check, so a tool call that changed neither
+ * costs two directory listings. `ifChangedOrBehind` also checks while a tracker is known to be behind.
  */
-async function checkAll($: EngineInterface, isForced: boolean): Promise<Check> {
+async function checkAll($: EngineInterface, when: When): Promise<Check> {
   if (isChecking) return { lines: ['A check is already running.'], drift: [] }
   isChecking = true
   try {
@@ -91,7 +99,8 @@ async function checkAll($: EngineInterface, isForced: boolean): Promise<Check> {
     const orders = await listDocs($, `${root}/docs/specifications`, ORDER_FILE)
     if (orders.length === 0) return { lines: [`No docs/specifications/NN-build-order.json in ${root}.`], drift: [] }
     const signature = `${root}|${signatureOf(orders, await listDocs($, `${root}/docs/epics`, EPIC_FILE))}`
-    if (!isForced && signature === (await $.store.get(`checked:${root}`))) return { lines: [], drift: [] }
+    const isBehind = when === 'ifChangedOrBehind' && (await $.store.get(`behind:${root}`)) === true
+    if (when !== 'now' && !isBehind && signature === (await $.store.get(`checked:${root}`))) return { lines: [], drift: [] }
 
     const lines: string[] = []
     const drift: Drift[] = []
@@ -106,8 +115,10 @@ async function checkAll($: EngineInterface, isForced: boolean): Promise<Check> {
         lines.push(`${order.name}: check failed: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
-    // A failed check is repeated at the next change; a finished one, drift or not, is reported once.
+    // A failed check is repeated at the next change. A finished one is not repeated by a tool call,
+    // drift or not; the drift it found is asked for again at the turn's end until the rows match.
     if (!isFailed) await $.store.set(`checked:${root}`, signature)
+    if (!isFailed) await $.store.set(`behind:${root}`, drift.length > 0)
 
     return { lines, drift }
   } finally {
@@ -188,9 +199,32 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
   if (parseBuildOrder(text).artifact !== undefined) return null
   await $.fs.write(path, withArtifact(text, url))
 
-  const { drift } = await checkAll($, true)
+  const { drift } = await checkAll($, 'now')
 
   return [`Saved the tracker link to docs/specifications/${base}.json.`, ...(drift.length > 0 ? [modelNote(drift)] : [])].join(' ')
+}
+
+let nudges = 0
+
+/**
+ * At the end of a turn, asks for the writes a tracker still lacks as a prompt of its own. A note on
+ * a tool result is easily passed over in the middle of a task; this one is the task.
+ */
+async function nudge($: EngineInterface) {
+  const { drift } = await checkAll($, 'ifChangedOrBehind')
+  if (drift.length === 0) {
+    nudges = 0
+
+    return
+  }
+  // The same writes are not asked for without end: refused writes are left to the person.
+  nudges += 1
+  if (nudges > MAX_NUDGES) {
+    if (nudges === MAX_NUDGES + 1) $.ui.toast(`Progress tracker still out of date after ${MAX_NUDGES} reminders; run /${COMMAND}`)
+
+    return
+  }
+  await $.prompt.submit({ text: turnEndNote(drift) })
 }
 
 let isStarted = false
@@ -199,7 +233,7 @@ async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
   await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, or name a spec ("01") to prepare its tracker' })
-  const { lines, drift } = await checkAll($, false)
+  const { lines, drift } = await checkAll($, 'ifChangedOrBehind')
   if (drift.length > 0) $.ui.toast(`Progress tracker out of date: ${lines.join(' · ')}`)
 }
 
@@ -213,6 +247,8 @@ export const register: Register = on => {
   // A plugin loaded by /reload-plugins sees no session.start; start on the first prompt.
   on('prompt.submit', async ($, e, next) => {
     await start($).catch(() => undefined)
+    // A prompt from the person starts the count of reminders afresh.
+    if (e.origin.kind !== 'plugin') nudges = 0
 
     return next(e)
   })
@@ -221,7 +257,7 @@ export const register: Register = on => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
     if (verb === 'init') return { text: await prepare($, rest.join(' ')) }
     if (verb !== '') return { text: await prepare($, verb) }
-    const { lines } = await checkAll($, true)
+    const { lines } = await checkAll($, 'now')
 
     return { text: lines.join('\n') }
   })
@@ -237,13 +273,21 @@ export const register: Register = on => {
     return { ...result, context: [...(result.context ?? []), note] }
   })
 
+  // When the main loop's turn ends with a tracker behind, start a turn that brings it in line.
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId === undefined && e.reason === 'answer') void nudge($).catch(() => undefined)
+
+    return result
+  })
+
   // After a tool call that writes, check the trackers if an epic doc or build-order file changed, and
   // tell the model what to write. The tracker is only ever written by the model's own ArtifactData calls.
   on('tool.call', async ($, e, next) => {
     const result = await next(e)
     if (!WRITING_TOOLS.has(String(e.tool)) || result.deny !== undefined || result.isError === true) return result
 
-    const found = await checkAll($, false).catch(() => null)
+    const found = await checkAll($, 'ifChanged').catch(() => null)
     if (found === null || found.drift.length === 0) return result
     $.ui.toast(`Progress tracker out of date: ${found.lines.join(' · ')}`)
 

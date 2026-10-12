@@ -2,7 +2,8 @@ import { expect, test } from 'claude-code/testing'
 
 import type { BuildOrder, LiveDoc } from './progress'
 import {
-  artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, withArtifact,
+  artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, turnEndNote,
+  withArtifact,
 } from './progress'
 
 const MEMBERS = {
@@ -206,6 +207,14 @@ test('the note for the model names the tool, the link and the writes', () => {
   expect(big).toContain('Agent tool, model "haiku"')
   expect(big).toContain('read /repo/.claude/cpm-next-progress/01-build-order.pending.json')
   expect(big).not.toContain('"doc_id":"r0"')
+})
+
+test('the prompt at a turn\'s end carries the same writes and asks for them first', () => {
+  const note = turnEndNote([DRIFT])
+
+  expect(note).toContain('The turn ended with a progress tracker still behind the epic docs.')
+  expect(note).toContain(modelNote([DRIFT]))
+  expect(note).toContain('before anything else')
 })
 
 test('the pending file holds the writes in batches of at most 50', () => {
