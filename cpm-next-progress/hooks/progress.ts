@@ -429,7 +429,14 @@ export function modelNote(drifts: Drift[]): string {
 /** How many turns in a row end by asking for the same outstanding writes before they are left to the person. */
 export const MAX_NUDGES = 2
 
-/** The prompt the model is given when a turn ended with a tracker still behind the epic docs. */
-export function turnEndNote(drifts: Drift[]): string {
-  return `The turn ended with a progress tracker still behind the epic docs. ${modelNote(drifts)} Do this now, before anything else, then say in one line what was written.`
+/**
+ * The prompt the model is given when a turn ended with a tracker still behind the epic docs: a short
+ * `text` the person sees, and the writes as `context` only the model reads. The text names the file
+ * the writes are saved to, so they can be found without the context.
+ */
+export function turnEndNote(drifts: Drift[]): { text: string; context: string } {
+  return {
+    text: `The turn ended with a progress tracker still behind the epic docs. ${drifts.map(describeDrift).join('. ')}. Apply the writes given with this message now, before anything else, then say in one line what was written.`,
+    context: modelNote(drifts),
+  }
 }

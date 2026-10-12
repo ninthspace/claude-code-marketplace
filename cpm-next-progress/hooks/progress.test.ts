@@ -209,12 +209,15 @@ test('the note for the model names the tool, the link and the writes', () => {
   expect(big).not.toContain('"doc_id":"r0"')
 })
 
-test('the prompt at a turn\'s end carries the same writes and asks for them first', () => {
+test('the prompt at a turn\'s end is short, and carries the writes as context', () => {
   const note = turnEndNote([DRIFT])
 
-  expect(note).toContain('The turn ended with a progress tracker still behind the epic docs.')
-  expect(note).toContain(modelNote([DRIFT]))
-  expect(note).toContain('before anything else')
+  expect(note.text).toContain('The turn ended with a progress tracker still behind the epic docs.')
+  expect(note.text).toContain('before anything else')
+  // The person sees which rows and where the writes are saved, never the writes themselves.
+  expect(note.text).toContain(describeDrift(DRIFT))
+  expect(note.text).not.toContain('"doc_id"')
+  expect(note.context).toBe(modelNote([DRIFT]))
 })
 
 test('the pending file holds the writes in batches of at most 50', () => {

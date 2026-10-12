@@ -205,6 +205,8 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
 }
 
 let nudges = 0
+// The writes for the prompt on its way in; the prompt.submit hook attaches them where the person does not see them.
+let nudgeContext: string | null = null
 
 /**
  * At the end of a turn, asks for the writes a tracker still lacks as a prompt of its own. A note on
@@ -224,7 +226,9 @@ async function nudge($: EngineInterface) {
 
     return
   }
-  await $.prompt.submit({ text: turnEndNote(drift) })
+  const note = turnEndNote(drift)
+  nudgeContext = note.context
+  await $.prompt.submit({ text: note.text })
 }
 
 let isStarted = false
@@ -249,6 +253,12 @@ export const register: Register = on => {
     await start($).catch(() => undefined)
     // A prompt from the person starts the count of reminders afresh.
     if (e.origin.kind !== 'plugin') nudges = 0
+    if (e.origin.kind === 'plugin' && e.origin.name === $.plugin.name && nudgeContext !== null) {
+      const context = [...(e.context ?? []), nudgeContext]
+      nudgeContext = null
+
+      return next({ ...e, context })
+    }
 
     return next(e)
   })
