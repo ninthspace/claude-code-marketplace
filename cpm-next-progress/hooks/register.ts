@@ -17,12 +17,16 @@ type Listing = { name: string; mtimeMs: number; size: number }
 type Check = { lines: string[]; drift: Drift[] }
 
 async function findRoot($: EngineInterface): Promise<string | null> {
+  const home = await $.env.get('HOME')
   let dir = await $.session.cwd()
   for (;;) {
     if (await $.fs.exists(`${dir}/docs/specifications`)) return dir
+    // The climb ends at the repo's top and never enters the home folder, so docs above a project are not taken for its own.
+    if (await $.fs.exists(`${dir}/.git`)) return null
     const cut = dir.lastIndexOf('/')
     if (cut <= 0) return null
     dir = dir.slice(0, cut)
+    if (dir === home) return null
   }
 }
 

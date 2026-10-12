@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.3.1)
+### CPM Next Progress (v0.3.2)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
@@ -177,11 +177,11 @@ Then ask Claude to publish the page. The spec needs its epics in `docs/epics/` f
 
 **Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`.
 
-### What's Next (v0.2.2)
+### What's Next (v0.2.3)
 
 **A live pane and band showing the cpm-next work left in the current repository**
 
-A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `docs/specifications/` folders of the repository the session runs in — or the nearest folder above it that has either — and shows every story not yet `Complete`, in the order to build them, and every spec no epic has been planned from yet. It reads the files directly, with no model calls, so it stays current as `/cpm-next:do` or you edit the epics.
+A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `docs/specifications/` folders of the repository the session runs in — or the nearest folder above it that has either, up to the repository's top and never the home folder — and shows every story not yet `Complete`, in the order to build them, and every spec no epic has been planned from yet. It reads the files directly, with no model calls, so it stays current as `/cpm-next:do` or you edit the epics.
 
 **What it shows:**
 - **Pane** — the story in progress and its next task, every remaining story in order (`doing`, `ready`, or `after Story 1` / `after Epic …`), and each open epic's story count. Opens by itself in a repository with work left when the terminal is at least 144 columns wide; `/next` opens it at any width.
