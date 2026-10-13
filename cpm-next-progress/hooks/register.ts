@@ -12,6 +12,7 @@ const PAGE_FILE = /(?:^|\/)\.claude\/cpm-next-progress\/(\d+-build-order)\.html$
 const EPIC_FILE = /-epic-.*\.md$/
 const WRITING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'])
 const COMMAND = 'progress-tracker'
+const TRACKER_TOOL = 'publish_tracker'
 const WORK_DIR = '.claude/cpm-next-progress'
 
 type Listing = { name: string; mtimeMs: number; size: number }
@@ -181,7 +182,6 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
   const text = [
     found.created === undefined ? `Using docs/specifications/${name}.` : `Wrote docs/specifications/${name}: ${found.created}. Edit it to change the order or phases.`,
     `Page written to ${page}.${isIgnored ? ` Added /${WORK_DIR} to .gitignore.` : ''}`,
-    `Claude is now asked to publish it. The link is saved to ${name} when it publishes, and Claude is then given the rows to write.`,
   ].join('\n')
 
   return { text, page }
@@ -190,9 +190,29 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
 /** Prepares a spec's tracker and, when a page was written, asks the model to publish it in a turn of its own. */
 async function prepareAndPublish($: EngineInterface, arg: string): Promise<string> {
   const { text, page } = await prepare($, arg)
-  if (page !== undefined) void $.prompt.submit({ text: publishNote(page) }).catch(() => undefined)
+  if (page === undefined) return text
+  void $.prompt.submit({ text: publishNote(page) }).catch(() => undefined)
 
-  return text
+  return `${text}\nClaude is now asked to publish it. The link is saved to the build-order file when it publishes, and Claude is then given the rows to write.`
+}
+
+/** The number of the repository's only spec, for a request that names none. */
+async function soleSpec($: EngineInterface): Promise<{ number: string } | string> {
+  const root = await findRoot($)
+  if (root === null) return 'No docs/specifications folder in this directory or above it.'
+  const numbers = (await listDocs($, `${root}/docs/specifications`, SPEC_FILE)).map(e => SPEC_FILE.exec(e.name)?.[1] ?? '')
+  if (numbers.length === 1 && numbers[0] !== undefined) return { number: numbers[0] }
+
+  return numbers.length === 0 ? `No docs/specifications/NN-spec-*.md in ${root}.` : `Name the spec: ${numbers.join(', ')}.`
+}
+
+/** Answers the model's own request for a tracker: the page is written, and the result says how to publish it. */
+async function prepareForModel($: EngineInterface, spec: unknown): Promise<string> {
+  const named = typeof spec === 'string' && spec.trim() !== '' ? { number: spec } : await soleSpec($)
+  if (typeof named === 'string') return named
+  const { text, page } = await prepare($, named.number)
+
+  return page === undefined ? text : `${text}\n${publishNote(page)}`
 }
 
 /**
@@ -249,6 +269,15 @@ async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
   await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, or name a spec ("01") to prepare its tracker' })
+  await $.tool.register({
+    name: TRACKER_TOOL,
+    description: 'Prepares the cpm-next progress tracker for a spec: the claude.ai page that shows the build order and status of its epics and stories. Call this when asked to make, publish or share a progress tracker or progress page for planned work, and never write such a page by hand. It writes the page from the plugin\'s template and answers with how to publish it; the rows are then kept in step with the epic docs.',
+    inputSchema: {
+      type: 'object',
+      properties: { spec: { type: 'string', description: 'The spec\'s number, e.g. "01". May be left out when the repository has one spec.' } },
+    },
+    isDeferred: false,
+  })
   const { lines, drift } = await checkAll($, 'ifChangedOrBehind')
   if (drift.length > 0) $.ui.toast(`Progress tracker out of date: ${lines.join(' · ')}`)
 }
@@ -279,6 +308,10 @@ export const register: Register = on => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
     if (verb === 'init') return { text: await prepareAndPublish($, rest.join(' ')) }
     if (verb !== '') return { text: await prepareAndPublish($, verb) }
+    // With no tracker to check and one spec to make one for, the bare command makes it.
+    const root = await findRoot($)
+    const sole = root !== null && (await listDocs($, `${root}/docs/specifications`, ORDER_FILE)).length === 0 ? await soleSpec($) : ''
+    if (typeof sole !== 'string') return { text: await prepareAndPublish($, sole.number) }
     const { lines } = await checkAll($, 'now')
 
     return { text: lines.join('\n') }
@@ -305,7 +338,15 @@ export const register: Register = on => {
 
   // After a tool call that writes, check the trackers if an epic doc or build-order file changed, and
   // tell the model what to write. The tracker is only ever written by the model's own ArtifactData calls.
+  // The mod's own tool is answered here too: its name is not in the typed tool list a matcher takes.
   on('tool.call', async ($, e, next) => {
+    if (String(e.tool) === `mcp__${$.plugin.name}__${TRACKER_TOOL}`) {
+      try {
+        return { result: await prepareForModel($, (e as unknown as { spec?: unknown }).spec) }
+      } catch {
+        return { deny: `${TRACKER_TOOL} failed; run /${COMMAND} with the spec's number instead.` }
+      }
+    }
     const result = await next(e)
     if (!WRITING_TOOLS.has(String(e.tool)) || result.deny !== undefined || result.isError === true) return result
 
