@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Drift, EpicFile, LiveDoc } from './progress'
 import {
   MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson,
-  turnEndNote, withArtifact,
+  publishNote, turnEndNote, withArtifact,
 } from './progress'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
@@ -160,27 +160,39 @@ async function orderFileFor($: EngineInterface, root: string, arg: string): Prom
   return { name: orderName, created: `${stories} ${stories === 1 ? 'story' : 'stories'} in ${order.phases.length} ${order.phases.length === 1 ? 'phase' : 'phases'}, one per epic` }
 }
 
-/** Writes the page for a spec's tracker; publishing it is left to the model, which is the one the permission system evaluates. */
-async function prepare($: EngineInterface, arg: string): Promise<string> {
+/**
+ * Writes the page for a spec's tracker and names it as `page`, to be published. Publishing is left
+ * to the model, which is the one the permission system evaluates.
+ */
+async function prepare($: EngineInterface, arg: string): Promise<{ text: string; page?: string }> {
   const root = await findRoot($)
-  if (root === null) return 'No docs/specifications folder in this directory or above it.'
+  if (root === null) return { text: 'No docs/specifications folder in this directory or above it.' }
   const found = await orderFileFor($, root, arg.trim())
-  if (typeof found === 'string') return found
+  if (typeof found === 'string') return { text: found }
   const { name } = found
   const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
-  if (order.artifact !== undefined) return `${name} already has a tracker: ${order.artifact}`
+  if (order.artifact !== undefined) return { text: `${name} already has a tracker: ${order.artifact}` }
 
   const repo = root.split('/').filter(Boolean).at(-1) ?? root
   const page = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.html`
   await $.fs.write(page, fillTemplate(await $.fs.read(`${$.plugin.root}/page/tracker.html`), order, repo))
   const isIgnored = await ignoreWorkDir($, root)
 
-  return [
+  const text = [
     found.created === undefined ? `Using docs/specifications/${name}.` : `Wrote docs/specifications/${name}: ${found.created}. Edit it to change the order or phases.`,
     `Page written to ${page}.${isIgnored ? ` Added /${WORK_DIR} to .gitignore.` : ''}`,
-    `Ask Claude to publish it: the Artifact tool, icon "checklist", capabilities {"db":{"rules":[{"path":"","read":"view","write":"admin"}]}}.`,
-    `The link is saved to ${name} when it publishes, and Claude is then given the rows to write.`,
+    `Claude is now asked to publish it. The link is saved to ${name} when it publishes, and Claude is then given the rows to write.`,
   ].join('\n')
+
+  return { text, page }
+}
+
+/** Prepares a spec's tracker and, when a page was written, asks the model to publish it in a turn of its own. */
+async function prepareAndPublish($: EngineInterface, arg: string): Promise<string> {
+  const { text, page } = await prepare($, arg)
+  if (page !== undefined) void $.prompt.submit({ text: publishNote(page) }).catch(() => undefined)
+
+  return text
 }
 
 /**
@@ -265,8 +277,8 @@ export const register: Register = on => {
 
   on('command.run', { command: COMMAND }, async ($, e) => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
-    if (verb === 'init') return { text: await prepare($, rest.join(' ')) }
-    if (verb !== '') return { text: await prepare($, verb) }
+    if (verb === 'init') return { text: await prepareAndPublish($, rest.join(' ')) }
+    if (verb !== '') return { text: await prepareAndPublish($, verb) }
     const { lines } = await checkAll($, 'now')
 
     return { text: lines.join('\n') }

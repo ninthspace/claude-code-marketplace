@@ -59,7 +59,7 @@ Only `cpm-next` is required. The four mods are optional, and each adds one thing
 
 **Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
 
-**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number), then ask Claude to publish the page it writes. The mod saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v031).
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v035).
 
 **Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
 
@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.3.4)
+### CPM Next Progress (v0.3.5)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
@@ -161,7 +161,7 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 
 **Commands:**
 - `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date".
-- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. Then ask Claude to publish the page. When it does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works.
+- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. It then submits a prompt asking Claude to publish the page. When Claude does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works.
 
 **Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions.
 
@@ -172,7 +172,7 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 
 /progress-tracker 01
 ```
-Then ask Claude to publish the page. The spec needs its epics in `docs/epics/` first.
+The mod asks Claude to publish the page. The spec needs its epics in `docs/epics/` first.
 
 **Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`), as What's Next does.
 

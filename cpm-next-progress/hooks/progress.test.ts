@@ -2,8 +2,8 @@ import { expect, test } from 'claude-code/testing'
 
 import type { BuildOrder, LiveDoc } from './progress'
 import {
-  artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, turnEndNote,
-  withArtifact,
+  artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, publishNote,
+  turnEndNote, withArtifact,
 } from './progress'
 
 const MEMBERS = {
@@ -218,6 +218,14 @@ test('the prompt at a turn\'s end is short, and carries the writes as context', 
   expect(note.text).toContain(describeDrift(DRIFT))
   expect(note.text).not.toContain('"doc_id"')
   expect(note.context).toBe(modelNote([DRIFT]))
+})
+
+test('the publish prompt names the page, the icon and the database rules', () => {
+  const note = publishNote('/repo/.claude/cpm-next-progress/01-build-order.html')
+
+  expect(note).toContain('Publish the progress tracker page /repo/.claude/cpm-next-progress/01-build-order.html with the Artifact tool')
+  expect(note).toContain('icon "checklist"')
+  expect(note).toContain('{"db":{"rules":[{"path":"","read":"view","write":"admin"}]}}')
 })
 
 test('the pending file holds the writes in batches of at most 50', () => {
