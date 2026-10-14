@@ -59,7 +59,7 @@ Only `cpm-next` is required. The four mods are optional, and each adds one thing
 
 **Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
 
-**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v036).
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v037).
 
 **Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
 
@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.3.6)
+### CPM Next Progress (v0.3.7)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
@@ -149,7 +149,7 @@ An item is a story (`story`) or one task (`task`) of an epic, named by the epic'
 
 **The first build order** is written from the spec's epics (those whose number starts with the spec's): one phase per epic, epics ordered by their `**Blocked by**` epics, each epic's stories ordered by their `**Blocked by**` stories and then by number. Superseded and withdrawn epics and stories are left out. Edit the file afterwards to reorder, regroup, split a story into tasks or add `waitingOn`.
 
-**Statuses:** Complete, In progress (the story says so, or one of its tasks has started), Waiting on input, Pending. A row's date moves only when its status changes. Blockers shown are the story's and epic's `**Blocked by**` items not yet Complete, earlier unfinished tasks of the same story, and any `waitingOn`.
+**Statuses:** Complete, In progress (the story says so, or one of its tasks has started), Waiting on input, Pending. The page shows a Pending row with no blockers as Ready, as whats-next does; the stored status stays Pending. A row's date moves only when its status changes. Blockers shown are the story's and epic's `**Blocked by**` items not yet Complete, earlier unfinished tasks of the same story, and any `waitingOn`.
 
 **How it works:**
 1. After any tool call that writes (Edit, Write, Bash and so on), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more.
@@ -161,7 +161,7 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 
 **Commands:**
 - `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date". In a repository with one spec and no tracker yet, it prepares that spec's tracker instead.
-- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. It then submits a prompt asking Claude to publish the page. When Claude does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works.
+- `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. It then submits a prompt asking Claude to publish the page. When Claude does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works. For a spec that already has a tracker, it rewrites the page from the current template and asks Claude to republish it to the same link, keeping the rows.
 
 **Asking in words.** Claude has a `publish_tracker` tool that does what `/progress-tracker 01` does, so "publish the progress tracker" in a prompt gets the plugin's page and not one Claude writes by hand.
 

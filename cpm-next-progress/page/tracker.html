@@ -64,6 +64,7 @@ td.date { font: 13px var(--font-mono); color: var(--muted); white-space: nowrap;
 .s-progress { color: var(--work); background: var(--work-bg); }
 .s-waiting { color: var(--wait); background: var(--wait-bg); }
 .s-pending { color: var(--pend); background: var(--pend-bg); }
+.s-ready { color: var(--ok); background: transparent; box-shadow: inset 0 0 0 1px var(--ok); }
 tr.is-complete td:not(.status) { opacity: .62; }
 .empty { padding: 28px 16px; color: var(--muted); text-align: center; }
 footer { color: var(--muted); font-size: 13px; }
@@ -105,16 +106,23 @@ const STATUS = {
   "Complete": "s-complete",
   "In progress": "s-progress",
   "Waiting on input": "s-waiting",
+  "Ready": "s-ready",
   "Pending": "s-pending",
 };
-const ORDER = ["Complete", "In progress", "Pending", "Waiting on input"];
-const BAR_COLOR = { "Complete": "var(--ok)", "In progress": "var(--work)", "Waiting on input": "var(--wait)", "Pending": "transparent" };
+const ORDER = ["Complete", "In progress", "Ready", "Pending", "Waiting on input"];
+const BAR_COLOR = { "Complete": "var(--ok)", "In progress": "var(--work)", "Waiting on input": "var(--wait)", "Ready": "transparent", "Pending": "transparent" };
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
   if (cls) { node.className = cls; }
   if (text !== undefined) { node.textContent = text; }
   return node;
+}
+
+// A pending item with nothing left to wait for can be started now; the stored status stays "Pending".
+function shownStatus(item) {
+  const status = item.status || "Pending";
+  return status === "Pending" && !item.blockedBy ? "Ready" : status;
 }
 
 function renderItems(items) {
@@ -145,7 +153,8 @@ function renderItems(items) {
     tr.append(el("td", "ref", item.epic + " " + item.story));
     tr.append(el("td", null, item.title || ""));
     const st = el("td", "status");
-    st.append(el("span", "pill " + (STATUS[item.status] || "s-pending"), item.status || "Pending"));
+    const shown = shownStatus(item);
+    st.append(el("span", "pill " + (STATUS[shown] || "s-pending"), shown));
     tr.append(st);
     tr.append(el("td", "note", item.blockedBy || "—"));
     tr.append(el("td", "note", item.note || ""));
@@ -154,14 +163,14 @@ function renderItems(items) {
   }
 
   const counts = {};
-  for (const item of items) { counts[item.status] = (counts[item.status] || 0) + 1; }
+  for (const item of items) { const shown = shownStatus(item); counts[shown] = (counts[shown] || 0) + 1; }
   const bar = document.getElementById("bar");
   bar.replaceChildren();
   const countBox = document.getElementById("counts");
   countBox.replaceChildren();
   for (const status of ORDER) {
     const n = counts[status] || 0;
-    if (n > 0 && status !== "Pending") {
+    if (n > 0 && BAR_COLOR[status] !== "transparent") {
       const seg = el("span");
       seg.style.width = (n / items.length * 100) + "%";
       seg.style.background = BAR_COLOR[status];

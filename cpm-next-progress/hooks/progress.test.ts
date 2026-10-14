@@ -228,6 +228,14 @@ test('the publish prompt names the page, the icon and the database rules', () =>
   expect(note).toContain('{"db":{"rules":[{"path":"","read":"view","write":"admin"}]}}')
 })
 
+test('the republish prompt sends the page to the existing link and keeps its icon and capabilities', () => {
+  const note = publishNote('/repo/.claude/cpm-next-progress/01-build-order.html', 'https://claude.ai/artifact/abc')
+
+  expect(note).toContain('url https://claude.ai/artifact/abc')
+  expect(note).toContain('leaving out icon and capabilities')
+  expect(note).not.toContain('"db"')
+})
+
 test('the pending file holds the writes in batches of at most 50', () => {
   const many = Array.from({ length: 51 }, (_, i) => ({ op: 'set' as const, collection: 'items', doc_id: `r${i}`, data: {}, if_version: 1 }))
   const parsed = JSON.parse(pendingJson({ url: DRIFT.url, writes: many })) as { url: string; batches: unknown[][] }

@@ -165,19 +165,19 @@ async function orderFileFor($: EngineInterface, root: string, arg: string): Prom
  * Writes the page for a spec's tracker and names it as `page`, to be published. Publishing is left
  * to the model, which is the one the permission system evaluates.
  */
-async function prepare($: EngineInterface, arg: string): Promise<{ text: string; page?: string }> {
+async function prepare($: EngineInterface, arg: string): Promise<{ text: string; page?: string; url?: string }> {
   const root = await findRoot($)
   if (root === null) return { text: 'No docs/specifications folder in this directory or above it.' }
   const found = await orderFileFor($, root, arg.trim())
   if (typeof found === 'string') return { text: found }
   const { name } = found
   const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
-  if (order.artifact !== undefined) return { text: `${name} already has a tracker: ${order.artifact}` }
-
   const repo = root.split('/').filter(Boolean).at(-1) ?? root
   const page = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.html`
   await $.fs.write(page, fillTemplate(await $.fs.read(`${$.plugin.root}/page/tracker.html`), order, repo))
   const isIgnored = await ignoreWorkDir($, root)
+  // A tracker that exists gets the page again, so a newer template reaches it; its rows are untouched.
+  if (order.artifact !== undefined) return { text: `${name} already has a tracker, ${order.artifact}; its page was rewritten from the current template to ${page}.`, page, url: order.artifact }
 
   const text = [
     found.created === undefined ? `Using docs/specifications/${name}.` : `Wrote docs/specifications/${name}: ${found.created}. Edit it to change the order or phases.`,
@@ -189,11 +189,13 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
 
 /** Prepares a spec's tracker and, when a page was written, asks the model to publish it in a turn of its own. */
 async function prepareAndPublish($: EngineInterface, arg: string): Promise<string> {
-  const { text, page } = await prepare($, arg)
+  const { text, page, url } = await prepare($, arg)
   if (page === undefined) return text
-  void $.prompt.submit({ text: publishNote(page) }).catch(() => undefined)
+  void $.prompt.submit({ text: publishNote(page, url) }).catch(() => undefined)
 
-  return `${text}\nClaude is now asked to publish it. The link is saved to the build-order file when it publishes, and Claude is then given the rows to write.`
+  return url !== undefined
+    ? `${text}\nClaude is now asked to republish it to the same link.`
+    : `${text}\nClaude is now asked to publish it. The link is saved to the build-order file when it publishes, and Claude is then given the rows to write.`
 }
 
 /** The number of the repository's only spec, for a request that names none. */
@@ -210,9 +212,9 @@ async function soleSpec($: EngineInterface): Promise<{ number: string } | string
 async function prepareForModel($: EngineInterface, spec: unknown): Promise<string> {
   const named = typeof spec === 'string' && spec.trim() !== '' ? { number: spec } : await soleSpec($)
   if (typeof named === 'string') return named
-  const { text, page } = await prepare($, named.number)
+  const { text, page, url } = await prepare($, named.number)
 
-  return page === undefined ? text : `${text}\n${publishNote(page)}`
+  return page === undefined ? text : `${text}\n${publishNote(page, url)}`
 }
 
 /**

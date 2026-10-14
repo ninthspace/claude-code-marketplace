@@ -427,7 +427,9 @@ export function modelNote(drifts: Drift[]): string {
 }
 
 /** The prompt that asks the model to publish a tracker page the mod has just written. */
-export function publishNote(page: string): string {
+export function publishNote(page: string, url?: string): string {
+  if (url !== undefined) return `Republish the progress tracker page ${page} with the Artifact tool to its existing link: url ${url}, leaving out icon and capabilities so the stored ones are kept. Publish the file as it is, without editing it, then say in one line that it was republished.`
+
   return `Publish the progress tracker page ${page} with the Artifact tool: icon "checklist", capabilities {"db":{"rules":[{"path":"","read":"view","write":"admin"}]}}. Publish the file as it is, without editing it, then give the link in one line.`
 }
 
