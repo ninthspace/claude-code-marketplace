@@ -25,14 +25,16 @@ Read `$ARGUMENTS`:
 
 In every case the full test suite must also pass at the end, or any failures that remain must have been failing before the run started. Record the baseline before changing anything.
 
+A full-suite result already in this conversation stands for the baseline or the end-of-run check when `git status` and `git diff` show no file has changed since that run; run the suite again only when one has.
+
 For a small change with no epic: do it, test it, have it audited as below, and write a short `docs/quick/` record that includes the audit verdict. If it turns out to need more than one story's worth of work, stop and suggest `/cpm-next:plan`.
 
 ## Before the first story
 
 - Read `CLAUDE.md`, `docs/library/`, the epic, its source spec, and any ADRs it cites.
 - Skim `docs/retros/` for observations that bear on this epic's area and treat them as context, skipping any marked `**Retired`.
-- Find the test command from the library, `composer.json`, `package.json`, `Makefile`, `pyproject.toml` or `Cargo.toml`. Run the suite to get the baseline.
-- Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything. If every one of its criteria already has an `Evidence` line, confirm the evidence still holds, audit it if it has no `**Audit**` line, then close it as step 5 of the loop says, before picking any other work.
+- Find the test command from the library, `composer.json`, `package.json`, `Makefile`, `pyproject.toml` or `Cargo.toml`. Run the suite to get the baseline, unless this conversation already holds a result for the code as it stands.
+- Resume honestly: a story marked `In Progress` from an earlier session may be partly done. Check the code before redoing or skipping anything. If every one of its criteria already has an `Evidence` line, confirm the evidence still holds, audit it if it has no `**Audit**` line, then close it as step 6 of the loop says, before picking any other work.
 
 ## The loop
 
@@ -41,8 +43,9 @@ Take unblocked stories lowest number first. When two or more are unblocked at on
 1. Set the story (and the epic, if it was Pending) to `In Progress`. Call `mcp__cpm-next-models__set_story_effort` with the story's `**Effort**` (`medium` when it has none) and its number. The tool comes from the `cpm-next-models` mod; when it isn't available, build at the session's effort.
 2. Build it, task by task. Set each task `In Progress` when you start it and `Complete` when it's done. Follow the project's existing conventions over your own preferences. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available, before verifying, so the evidence is gathered against the final code.
 3. Verify every acceptance criterion. Run the tests its tag names, or carry out the manual check and say what you observed. Write an `Evidence` line directly under that criterion, as the contract shows, so each proof sits beside the claim it proves. A criterion without its own evidence isn't met.
-4. Have the story audited before closing it (see **Audit** below). If it returns `fix needed`, set the effort for the fix with the same tool, `high`, or `xhigh` for a story already at `high`, then fix every Critical and Warning finding, update the `Evidence` lines the fixes affect, and audit once more. If the second audit still returns `fix needed`, record each unresolved finding in a `Not met` line under the criterion it concerns, or as a `**Retro**` line when it concerns no criterion, and treat the story as blocked.
-5. Close the story in the same edit that writes its `**Audit**` line: set any remaining tasks and the story's `**Status**` to `Complete`. If it was the epic's last open story, set the epic's `**Status**` to `Complete` too. Add a `**Retro**` line only for something future work genuinely needs to know.
+4. Check the story the way the auditor will, before asking for the audit; these are the findings a first audit most often returns. Run the full suite once, and fix what it shows; in a parallel batch, the lead's run after the batch is that run. For each test the story added, confirm it fails without the change: undo the line it covers and run it, or show why it must. Feed the new code the inputs it doesn't expect: empty, missing, null, non-numeric, boundary. Read every help text, doc and `Evidence` line the story touched against the code.
+5. Have the story audited before closing it (see **Audit** below). If it returns `fix needed`, set the effort for the fix with the same tool, `high`, or `xhigh` for a story already at `high`. Fix every Critical and Warning finding wherever its mistake occurs, not only at the line cited, and give each fix a test that fails without it. Treat the fix as new code and check it as step 4 says, update the `Evidence` lines the fixes affect, and audit once more. That second audit is the last. If it still returns `fix needed`, record each unresolved finding in a `Not met` line under the criterion it concerns, or as a `**Retro**` line when it concerns no criterion, and treat the story as blocked.
+6. Close the story in the same edit that writes its `**Audit**` line: set any remaining tasks and the story's `**Status**` to `Complete`. If it was the epic's last open story, set the epic's `**Status**` to `Complete` too. Add a `**Retro**` line only for something future work genuinely needs to know.
 
 Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete` with an `**Audit**` line, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
 
@@ -62,7 +65,9 @@ Hand plain lookups to the `cpm-next:scout` agent: where something is defined or 
 
 ## Audit
 
-This skill builds on Sonnet; the `auditor` agent checks each story on Opus before it closes. Start it with the Agent tool, `subagent_type` `cpm-next:auditor`, and give it the epic path and story number (or the change description), the files the story changed, the test command, and the resources it must leave alone. It gets none of this conversation. Audit a parallel subagent's story the same way after checking its report; audits of stories that share no files or state can run in parallel.
+This skill builds on Sonnet; the `auditor` agent checks each story on Opus before it closes. Start it with the Agent tool, `subagent_type` `cpm-next:auditor`, and give it the epic path and story number (or the change description), the files the story changed, the test command, the result of the full-suite run before the audit (counts, and any test that failed), and the resources it must leave alone. It gets none of this conversation. One auditor checks one story, with no limit on its length and nothing in its checklist narrowed; several stories to one auditor, or a word cap, leaves findings for the next round. Audit a parallel subagent's story the same way after checking its report; audits of stories that share no files or state can run in parallel.
+
+For the second audit, give it the first audit's findings as it wrote them, which you dismissed and why, and the files the fixes changed. Don't describe the fixes or ask it to check only them: it audits the fix code as new code, which is where second audits find most problems.
 
 Check each finding against the code before acting on it, and drop any that don't hold up. Suggestions are not fixed in this run; record one as a `**Retro**` line only if future work needs it. When a finding contradicts the story's criterion rather than the code, it is a criterion question and goes through **When a criterion looks wrong**, not a fix.
 

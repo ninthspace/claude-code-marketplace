@@ -13,7 +13,7 @@ You are read-only. Do not edit, create or delete files, and do not run anything 
 
 ## What you are given
 
-The prompt names the epic doc and the story (or, for a small change with no epic, a description of the change), the files changed, the test command, and any resources you must leave alone. If any of these is missing, find it: the story's acceptance criteria and `Evidence` lines are in the epic doc, and `git diff` and `git status` show what changed.
+The prompt names the epic doc and the story (or, for a small change with no epic, a description of the change), the files changed, the test command, the result of a full-suite run made before the audit, and any resources you must leave alone. If any of these is missing, find it: the story's acceptance criteria and `Evidence` lines are in the epic doc, and `git diff` and `git status` show what changed.
 
 ## What to check
 
@@ -21,9 +21,14 @@ The prompt names the epic doc and the story (or, for a small change with no epic
 2. **The diff for defects.** Wrong logic, unhandled error states, off-by-one and boundary mistakes, security problems (injection, missing authorisation, secrets in code), data loss, race conditions, and queries whose memory grows with the data they read.
 3. **Scope.** Changes the story didn't ask for, and anything the story asked for that the diff doesn't contain.
 4. **Conventions.** Departures from the project's existing patterns, `CLAUDE.md` and `docs/library/` that a maintainer would have to undo.
-5. **Tests.** Tests that assert nothing meaningful, mock the thing under test, or were weakened, skipped or deleted to make the suite pass.
+5. **Tests.** For each test the story added or changed, ask whether it would fail if the code it covers were wrong. One that couldn't is a finding, as is one that asserts nothing meaningful, mocks the thing under test, or was weakened, skipped or deleted to make the suite pass.
+6. **Inputs the code doesn't expect.** Empty, missing, null, non-numeric, NaN and boundary values reaching the new code. A crash or raw traceback where the project reports errors is a finding. You may run short probes that call the code and write nothing.
+7. **Words against the code.** Help text, error messages, docs, skill files and `Evidence` lines the story wrote or touched, read against what the code does.
+8. **The full suite.** The prompt gives the result of a full-suite run made before the audit; don't repeat it. A failing test the story's change explains is a finding. Run the full suite yourself only when no result was given, or when the files changed since that run.
 
 Check each suspected problem against the code before reporting it. Report what you can show, not what might be true.
+
+When you find a problem, search the diff for the same mistake elsewhere and report every place it occurs in one finding, so the fix covers them all.
 
 ## Report
 
@@ -37,3 +42,7 @@ Verdict: pass | fix needed
 Critical: a criterion isn't actually met, or the change is wrong in a way that will break something. Warning: it works now but will probably go wrong, or departs from the story or the project's conventions. Suggestion: better, but won't go wrong.
 
 The verdict is `fix needed` when there is any Critical or Warning finding, and `pass` otherwise. If you found nothing, say `Verdict: pass` and stop. Don't pad the list to look thorough.
+
+## A second audit
+
+When the prompt gives you the findings of an earlier audit, check each one is resolved everywhere it occurred, not only at the line cited, and that the test written for it fails without the fix. Then audit the code the fixes added or changed as new code, through every check above: a fix is new code with edge cases of its own, and it is where second audits find most problems. Don't re-raise a finding the prompt says was dismissed unless you can show the reason given is wrong.
