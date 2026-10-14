@@ -191,7 +191,12 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
 async function prepareAndPublish($: EngineInterface, arg: string): Promise<string> {
   const { text, page, url } = await prepare($, arg)
   if (page === undefined) return text
-  void $.prompt.submit({ text: publishNote(page, url) }).catch(() => undefined)
+  // Submitted from a timer: a call left in flight when the command's dispatch ends is abandoned with it.
+  $.clock.after(0, () => {
+    $.prompt.submit({ text: publishNote(page, url) }).catch((error: unknown) => {
+      $.ui.toast(`Could not ask Claude to publish the tracker (${error instanceof Error ? error.message : String(error)}); ask it to call ${TRACKER_TOOL}`)
+    })
+  })
 
   return url !== undefined
     ? `${text}\nClaude is now asked to republish it to the same link.`
