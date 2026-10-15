@@ -445,6 +445,76 @@ export function publishNote(page: string, url?: string): string {
   return `Publish the progress tracker page ${page} with the Artifact tool: icon "checklist", capabilities {"db":{"rules":[{"path":"","read":"view","write":"admin"}]}}. Publish the file as it is, without editing it, then give the link in one line.`
 }
 
+/**
+ * One tracker's entry in the index of every tracker checked in any project, kept in the mod's store
+ * so the overview pane can show them all without reading a repository. `changed` is the date the
+ * counts last moved; `checked` the date of the last check.
+ */
+export type IndexEntry = {
+  root: string
+  name: string
+  title: string
+  state: 'tracked' | 'untracked' | 'gone'
+  artifact?: string
+  done: number
+  total: number
+  active: string[]
+  waiting: number
+  changed: string
+  checked: string
+}
+
+/** A tracker's entry from its rows, keeping the date the counts last moved from the entry before. */
+export function indexEntry(
+  base: Pick<IndexEntry, 'root' | 'name' | 'title' | 'state' | 'artifact'>,
+  items: Map<string, TrackerItem>,
+  today: string,
+  before: IndexEntry | undefined,
+): IndexEntry {
+  const rows = [...items.values()]
+  const counts = {
+    done: rows.filter(r => r.status === 'Complete').length,
+    total: rows.length,
+    active: rows.filter(r => r.status === 'In progress').map(r => `${r.epic} ${r.story}`),
+    waiting: rows.filter(r => r.status === 'Waiting on input').length,
+  }
+  const isSame = before !== undefined && before.done === counts.done && before.total === counts.total
+    && JSON.stringify(before.active) === JSON.stringify(counts.active) && before.waiting === counts.waiting
+
+  return { ...base, ...counts, changed: isSame ? before.changed : today, checked: today }
+}
+
+/** A text progress bar `width` cells wide. */
+export function bar(done: number, total: number, width: number): string {
+  const filled = total === 0 ? 0 : Math.round((done / total) * width)
+
+  return `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`
+}
+
+/** What an overview row says after its bar: the work in flight, or why there is none. */
+export function overviewNote(entry: IndexEntry): string {
+  if (entry.state === 'gone') return 'tracker deleted'
+  const parts = [
+    ...(entry.active.length === 0 ? [] : [`in progress: ${entry.active.join(', ')}`]),
+    ...(entry.waiting === 0 ? [] : [`${entry.waiting} waiting on input`]),
+    ...(entry.state === 'untracked' ? ['no tracker'] : []),
+  ]
+  if (parts.length === 0) return entry.total > 0 && entry.done === entry.total ? `complete ${entry.changed}` : `last moved ${entry.changed}`
+
+  return parts.join(' · ')
+}
+
+/** Index entries grouped by project, unfinished projects first, each project's trackers in file order. */
+export function overviewGroups(entries: IndexEntry[]): { root: string; repo: string; entries: IndexEntry[] }[] {
+  const byRoot = new Map<string, IndexEntry[]>()
+  for (const entry of entries) byRoot.set(entry.root, [...(byRoot.get(entry.root) ?? []), entry])
+  const isOpen = (list: IndexEntry[]) => list.some(e => e.state !== 'gone' && e.done < e.total)
+
+  return [...byRoot]
+    .map(([root, list]) => ({ root, repo: root.split('/').filter(Boolean).at(-1) ?? root, entries: list.sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => Number(isOpen(b.entries)) - Number(isOpen(a.entries)) || a.repo.localeCompare(b.repo))
+}
+
 /** How many turns in a row end by asking for the same outstanding writes before they are left to the person. */
 export const MAX_NUDGES = 2
 

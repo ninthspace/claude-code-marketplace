@@ -1,9 +1,10 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
-import type { BuildOrder, LiveDoc } from './progress'
+import { OVERVIEW } from './overview'
+import type { BuildOrder, IndexEntry, LiveDoc } from './progress'
 import {
-  artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, publishNote,
-  isMissingArtifact, turnEndNote, withArtifact, withoutArtifact,
+  artifactUrlIn, bar, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewGroups, overviewNote,
+  parseBuildOrder, parseDocs, pendingJson, publishNote, isMissingArtifact, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
 const MEMBERS = {
@@ -294,4 +295,59 @@ test('epics with no spec get a build order titled from their first epic, citing 
   expect(order.title).toBe('00 The branch: build order')
   expect(order.spec).toBe('docs/discussions/01-discussion-branch.md')
   expect(order.phases[0]?.items).toEqual([{ epic: '00-01', story: 4 }, { epic: '00-01', story: 2 }])
+})
+
+const INDEXED: BuildOrder = { title: 'T', phases: [{ label: 'P', items: [{ epic: '01-01', story: 1 }, { epic: '01-01', story: 2 }, { epic: '01-01', task: '3.1' }] }] }
+const BASE = { root: '/w/slate', name: '01-build-order.json', title: '01 Slate', state: 'tracked' as const }
+
+test('an index entry counts done, in-flight and waiting rows', () => {
+  const { items } = buildItems(INDEXED, [MEMBERS], '2026-10-15')
+  const entry = indexEntry(BASE, items, '2026-10-15', undefined)
+  expect(entry).toEqual({ ...BASE, done: 2, total: 3, active: [], waiting: 0, changed: '2026-10-15', checked: '2026-10-15' })
+})
+
+test('an index entry keeps the date its counts last moved', () => {
+  const { items } = buildItems(INDEXED, [MEMBERS], '2026-10-15')
+  const before = indexEntry(BASE, items, '2026-10-10', undefined)
+  expect(indexEntry(BASE, items, '2026-10-15', before)).toEqual({ ...before, checked: '2026-10-15' })
+  expect(indexEntry(BASE, items, '2026-10-15', { ...before, done: 1 }).changed).toBe('2026-10-15')
+})
+
+test('a bar fills in proportion and copes with no rows', () => {
+  expect(bar(1, 4, 8)).toBe('██░░░░░░')
+  expect(bar(0, 0, 4)).toBe('░░░░')
+  expect(bar(3, 3, 4)).toBe('████')
+})
+
+const ENTRY: IndexEntry = { ...BASE, done: 2, total: 5, active: [], waiting: 0, changed: '2026-10-12', checked: '2026-10-15' }
+
+test('an overview note names the work in flight, or the state of a tracker with none', () => {
+  expect(overviewNote({ ...ENTRY, active: ['03-03 S2', '03-03 S3'], waiting: 1 })).toBe('in progress: 03-03 S2, 03-03 S3 · 1 waiting on input')
+  expect(overviewNote(ENTRY)).toBe('last moved 2026-10-12')
+  expect(overviewNote({ ...ENTRY, done: 5 })).toBe('complete 2026-10-12')
+  expect(overviewNote({ ...ENTRY, state: 'gone' })).toBe('tracker deleted')
+  expect(overviewNote({ ...ENTRY, state: 'untracked' })).toBe('no tracker')
+})
+
+test('overview groups put projects with open work first', () => {
+  const groups = overviewGroups([
+    { ...ENTRY, root: '/w/alpha', done: 5 },
+    { ...ENTRY, root: '/w/zed', name: '02-build-order.json' },
+    { ...ENTRY, root: '/w/zed', name: '01-build-order.json' },
+  ])
+  expect(groups.map(g => g.repo)).toEqual(['zed', 'alpha'])
+  expect(groups[0]?.entries.map(e => e.name)).toEqual(['01-build-order.json', '02-build-order.json'])
+})
+
+test('the overview pane draws a row per indexed tracker', async ($, on) => {
+  mock.store(on, {
+    'index:/w/slate/01-build-order.json': { ...ENTRY, active: ['01-02 S1'] },
+    'index:/w/opus/03-build-order.json': { ...ENTRY, root: '/w/opus', name: '03-build-order.json', title: '03 Opus', done: 4, total: 4 },
+    'settled:/w/opus/03-build-order.json': { mark: '1:1', line: 'x' },
+  })
+  const ui = await $.ui.mount({ plugin: 'cpm-next-progress', surface: 'terminal', component: 'Pane', requestId: OVERVIEW, viewport: { columns: 120, rows: 30 }, props: {} as never })
+  expect((await ui.find({ type: 'Text', text: /01 Slate +█{5}░{7} +2\/5 +in progress: 01-02 S1/ }))).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /03 Opus .*4\/4 +complete/ }))?.props.dimColor).toBe(true)
+  expect((await ui.findAll({ type: 'Text' })).map(t => t.text).slice(0, 1)).toEqual(['slate'])
+  await ui.unmount()
 })

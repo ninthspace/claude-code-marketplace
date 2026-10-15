@@ -1,9 +1,10 @@
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Drift, EpicFile, LiveDoc } from './progress'
+import { OVERVIEW, renderOverview } from './overview'
+import type { Drift, EpicFile, IndexEntry, LiveDoc } from './progress'
 import {
-  MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson,
-  isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
+  MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, parseBuildOrder, parseDocs,
+  pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
@@ -78,15 +79,32 @@ async function isGone($: EngineInterface, url: string): Promise<boolean> {
   }
 }
 
+const INDEX = 'index:'
+
+/** Saves a tracker's entry in the cross-project index, and redraws the overview if it is open. */
+async function saveIndex($: EngineInterface, entry: IndexEntry) {
+  await $.store.set(`${INDEX}${entry.root}/${entry.name}`, entry)
+  $.ui.invalidate('ui.render')
+}
+
+async function indexEntries($: EngineInterface): Promise<IndexEntry[]> {
+  const keys = (await $.store.keys()).filter(key => key.startsWith(INDEX))
+
+  return (await Promise.all(keys.map(key => $.store.get(key)))) as IndexEntry[]
+}
+
 /** Compares one build-order file with the epic docs and the live artifact, and saves the writes that would bring them in line. */
 async function checkOne($: EngineInterface, root: string, file: Listing, epics: () => Promise<EpicFile[]>, when: When): Promise<{ line: string; drift?: Drift }> {
   const { name } = file
+  const indexKey = `${INDEX}${root}/${name}`
+  const indexed = await $.store.get(indexKey) as IndexEntry | undefined
   // A finished or deleted tracker is settled: neither its build-order file nor the artifact is read
-  // again until that file changes, so completed work costs nothing. A check asked for reads it anyway.
+  // again until that file changes, so completed work costs nothing. A check asked for reads it anyway,
+  // as does one for a tracker not yet in the index.
   const settledKey = `settled:${root}/${name}`
   const mark = `${file.mtimeMs}:${file.size}`
   const settled = await $.store.get(settledKey) as { mark?: unknown; line?: unknown } | undefined
-  if (when !== 'now' && settled?.mark === mark && typeof settled.line === 'string') return { line: settled.line }
+  if (when !== 'now' && indexed !== undefined && settled?.mark === mark && typeof settled.line === 'string') return { line: settled.line }
   const settle = async (line: string) => {
     await $.store.set(settledKey, { mark, line })
 
@@ -94,13 +112,25 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
   }
 
   const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
-  if (order.artifact === undefined) return { line: `${name}: no tracker yet; run /${COMMAND} init ${name}` }
+  const today = dateOf(await $.clock.now())
+  const base = { root, name, title: order.title.replace(/:\s*build order$/i, '') }
+  const { items, missing } = buildItems(order, await epics(), today)
+  if (order.artifact === undefined) {
+    await saveIndex($, indexEntry({ ...base, state: 'untracked' }, items, today, indexed))
+
+    return { line: `${name}: no tracker yet; run /${COMMAND} init ${name}` }
+  }
+  const tracked = indexEntry({ ...base, state: 'tracked', artifact: order.artifact }, items, today, indexed)
 
   // A tracker deleted once its work was done is not an error.
   const goneLine = `${name}: its tracker ${order.artifact} no longer exists, so it is not checked; /${COMMAND} ${name.slice(0, name.indexOf('-'))} publishes a new one`
-  if ((await $.store.get(`gone:${order.artifact}`)) === true) return settle(goneLine)
+  const settleGone = async () => {
+    await saveIndex($, { ...tracked, state: 'gone' })
 
-  const { items, missing } = buildItems(order, await epics(), dateOf(await $.clock.now()))
+    return settle(goneLine)
+  }
+  if ((await $.store.get(`gone:${order.artifact}`)) === true) return settleGone()
+
   let live: LiveDoc[]
   try {
     live = await readLive($, order.artifact, 'items')
@@ -108,8 +138,9 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
     if (!isMissingArtifact(error instanceof Error ? error.message : String(error))) throw error
     await $.store.set(`gone:${order.artifact}`, true)
 
-    return settle(goneLine)
+    return settleGone()
   }
+  await saveIndex($, tracked)
   const liveMeta = (await readLive($, order.artifact, 'meta')).find(d => d.id === 'tracker')
   const writes = diff(items, { title: order.title, spec: order.spec ?? '', decisions: order.decisions ?? [] }, live, liveMeta)
   const skipped = missing.length === 0 ? '' : `; not found in the epics: ${missing.join(', ')}`
@@ -219,7 +250,7 @@ async function orderFileFor($: EngineInterface, root: string, arg: string): Prom
     : await specless($, root, number)
   if (source === undefined) return `No docs/specifications/${number}-spec-*.md or docs/epics/${number}-*-epic-*.md in ${root}.`
   const order = defaultBuildOrder(source, await readEpics($, root))
-  if (order.phases.length === 0) return `No stories in docs/epics/${number}-*-epic-*.md yet; plan the epics for ${spec.name} first.`
+  if (order.phases.length === 0) return `No stories in docs/epics/${number}-*-epic-*.md yet; plan the epics for ${source.name} first.`
   await $.fs.write(`${root}/docs/specifications/${orderName}`, `${JSON.stringify(order, null, 2)}\n`)
   const stories = order.phases.reduce((n, p) => n + p.items.length, 0)
 
@@ -316,6 +347,24 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
   return [`Saved the tracker link to docs/specifications/${base}.json.`, ...(drift.length > 0 ? [modelNote(drift)] : [])].join(' ')
 }
 
+/** Drops index entries whose build-order file is gone, checks this project's trackers, and opens the overview. */
+async function openOverview($: EngineInterface): Promise<string> {
+  for (const key of await $.store.keys()) {
+    if (!key.startsWith(INDEX)) continue
+    const path = key.slice(INDEX.length)
+    const cut = path.lastIndexOf('/')
+    if (!(await $.fs.exists(`${path.slice(0, cut)}/docs/specifications/${path.slice(cut + 1)}`))) await $.store.delete(key)
+  }
+  await checkAll($, 'ifChanged').catch(() => undefined)
+  const { isPlaced } = await $.ui.open({ id: OVERVIEW, title: 'Progress', closeOnEscape: true })
+  // Other sessions write the index too; while the pane is open it is redrawn each minute to show them.
+  overviewTimer ??= $.clock.every(60_000, () => $.ui.invalidate('ui.render'))
+
+  return isPlaced ? 'Progress overview opened.' : 'Progress overview opened; widen the terminal to see it.'
+}
+
+let overviewTimer: { cancel: () => void } | undefined
+
 let nudges = 0
 // The writes for the prompt on its way in; the prompt.submit hook attaches them where the person does not see them.
 let nudgeContext: string | null = null
@@ -348,7 +397,7 @@ let isStarted = false
 async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
-  await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, or name a spec ("01") to prepare its tracker' })
+  await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, name a spec ("01") to prepare its tracker, or "all" for every project\'s progress in a pane' })
   await $.tool.register({
     name: TRACKER_TOOL,
     description: 'Prepares the cpm-next progress tracker for a spec: the claude.ai page that shows the build order and status of its epics and stories. Call this when asked to make, publish or share a progress tracker or progress page for planned work, and never write such a page by hand. It writes the page from the plugin\'s template and answers with how to publish it; the rows are then kept in step with the epic docs.',
@@ -386,6 +435,7 @@ export const register: Register = on => {
 
   on('command.run', { command: COMMAND }, async ($, e) => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
+    if (verb === 'all') return { text: await openOverview($) }
     if (verb === 'init') return { text: await prepareAndPublish($, rest.join(' ')) }
     if (verb !== '') return { text: await prepareAndPublish($, verb) }
     // With no tracker to check and one spec to make one for, the bare command makes it.
@@ -395,6 +445,17 @@ export const register: Register = on => {
     const { lines } = await checkAll($, 'now')
 
     return { text: lines.join('\n') }
+  })
+
+  on('ui.render', { component: 'Pane', requestId: OVERVIEW }, async ($, e) => renderOverview($, e, await indexEntries($)))
+
+  on('ui.close', async ($, e, next) => {
+    if (e.id === OVERVIEW) {
+      overviewTimer?.cancel()
+      overviewTimer = undefined
+    }
+
+    return next(e)
   })
 
   // When the model publishes a tracker page, save its link and hand over the first rows.
