@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { indexEntry, overviewNote, overviewRows } from './progress'
+import { indexEntry, overviewNote, overviewRows, overviewWrites } from './progress'
 import type { TrackerItem } from './progress'
 import type { Times } from './timing'
 import { MIN_STORIES, activeNote, timingOf, durations, estimate, estimateFor, observe, recordTimes, span, timesReport } from './timing'
@@ -146,4 +146,13 @@ test('timings pass from tracker rows to the index and the overview rows, without
   expect(overviewRows([entry]).get('opus-opus--04')?.timings).toEqual(entry.timings)
   expect(overviewRows([{ ...entry, state: 'gone' }]).get('opus-opus--04')?.timings).toBeUndefined()
   expect(indexEntry(base, new Map([row('S6', 'In progress')]), '2026-10-15', undefined).timings).toBeUndefined()
+})
+
+test('an overview row whose timings come back with their keys reordered needs no write', () => {
+  const entry = { root: '/w/opus-opus', name: '04-build-order.json', title: '04', state: 'tracked' as const, done: 13, total: 19, active: ['04-04 S1'], waiting: 0, changed: '2026-10-15', checked: '', timings: [{ story: '04-04 S1', started: T0, typical: '' }] }
+  const rows = overviewRows([entry])
+  const stored = JSON.parse(JSON.stringify(rows.get('opus-opus--04'))) as Record<string, unknown>
+  stored.timings = [{ started: T0, story: '04-04 S1', typical: '' }]
+
+  expect(overviewWrites(rows, [{ id: 'opus-opus--04', version: 28, data: stored }])).toEqual([])
 })

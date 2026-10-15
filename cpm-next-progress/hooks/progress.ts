@@ -308,11 +308,17 @@ export type Write =
   | { op: 'set'; collection: string; doc_id: string; data: Record<string, unknown>; if_version?: number }
   | { op: 'delete'; collection: string; doc_id: string; if_version: number }
 
+/** JSON with object keys sorted, since the database returns a nested object's keys in its own order. */
+const canonical = (value: unknown): string => JSON.stringify(value, (_key, v: unknown) =>
+  v !== null && typeof v === 'object' && !Array.isArray(v)
+    ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+    : v)
+
 const sameFields = (a: Record<string, unknown>, b: Record<string, unknown>, skip: string) => {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)])
   keys.delete(skip)
 
-  return [...keys].every(k => JSON.stringify(a[k]) === JSON.stringify(b[k]))
+  return [...keys].every(k => canonical(a[k]) === canonical(b[k]))
 }
 
 /**
