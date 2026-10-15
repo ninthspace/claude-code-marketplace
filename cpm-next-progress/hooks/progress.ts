@@ -415,7 +415,7 @@ export function pendingJson(drift: Pick<Drift, 'url' | 'writes'>): string {
   return `${JSON.stringify({ url: drift.url, batches: chunk(drift.writes) }, null, 2)}\n`
 }
 
-const rowIds = (writes: Write[]) => writes.filter(w => w.collection === 'items').map(w => w.doc_id)
+const rowIds = (writes: Write[]) => writes.filter(w => w.collection !== 'meta').map(w => w.doc_id)
 
 /** One line per drift, for the person: what differs and where the writes are saved. */
 export function describeDrift(drift: Drift): string {
@@ -464,6 +464,10 @@ export type IndexEntry = {
   checked: string
 }
 
+/** A build order's title as the overview shows it: no ": build order" tail, and "01 Spec 01: X" as "01 X". */
+export const shortTitle = (title: string) =>
+  title.replace(/:\s*build order$/i, '').replace(/^(\d+)\s+Spec\s+\1\s*:\s*/i, '$1 ')
+
 /** A tracker's entry from its rows, keeping the date the counts last moved from the entry before. */
 export function indexEntry(
   base: Pick<IndexEntry, 'root' | 'name' | 'title' | 'state' | 'artifact'>,
@@ -511,8 +515,76 @@ export function overviewGroups(entries: IndexEntry[]): { root: string; repo: str
   const isOpen = (list: IndexEntry[]) => list.some(e => e.state !== 'gone' && e.done < e.total)
 
   return [...byRoot]
-    .map(([root, list]) => ({ root, repo: root.split('/').filter(Boolean).at(-1) ?? root, entries: list.sort((a, b) => a.name.localeCompare(b.name)) }))
+    // Titles indexed before they were shortened are shortened here.
+    .map(([root, list]) => ({
+      root,
+      repo: root.split('/').filter(Boolean).at(-1) ?? root,
+      entries: list.map(e => ({ ...e, title: shortTitle(e.title) })).sort((a, b) => a.name.localeCompare(b.name)),
+    }))
     .sort((a, b) => Number(isOpen(b.entries)) - Number(isOpen(a.entries)) || a.repo.localeCompare(b.repo))
+}
+
+/** One row of the overview page's `trackers` collection: an index entry without the local path. */
+export type OverviewRow = {
+  repo: string
+  spec: string
+  title: string
+  state: IndexEntry['state']
+  done: number
+  total: number
+  active: string
+  waiting: number
+  changed: string
+  tracker: string
+}
+
+/**
+ * The overview page's rows, keyed by project and spec number. Only the project's folder name leaves
+ * the machine, never its path; two projects of the same name are told apart by a number.
+ */
+export function overviewRows(entries: IndexEntry[]): Map<string, OverviewRow> {
+  const rows = new Map<string, OverviewRow>()
+  const repoIds = new Map<string, string>()
+  for (const group of overviewGroups(entries)) {
+    const base = group.repo.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project'
+    let repoId = base
+    for (let n = 2; [...repoIds.values()].includes(repoId); n += 1) repoId = `${base}-${n}`
+    repoIds.set(group.root, repoId)
+    for (const entry of group.entries) {
+      const spec = /^(\d+)-/.exec(entry.name)?.[1] ?? entry.name.replace(/\.json$/, '')
+      rows.set(`${repoId}--${spec}`, {
+        repo: group.repo,
+        spec,
+        title: entry.title,
+        state: entry.state,
+        done: entry.done,
+        total: entry.total,
+        active: entry.active.join(', '),
+        waiting: entry.waiting,
+        changed: entry.changed,
+        tracker: entry.state === 'tracked' ? entry.artifact ?? '' : '',
+      })
+    }
+  }
+
+  return rows
+}
+
+/** The writes that bring the overview's `trackers` collection in line with its rows. Unchanged rows are left alone. */
+export function overviewWrites(desired: Map<string, OverviewRow>, live: LiveDoc[]): Write[] {
+  const writes: Write[] = []
+  const byId = new Map(live.map(d => [d.id, d]))
+  for (const [id, row] of desired) {
+    const current = byId.get(id)
+    const data = row as unknown as Record<string, unknown>
+    if (current !== undefined && sameFields(current.data, data, '')) continue
+    writes.push({ op: 'set', collection: 'trackers', doc_id: id, data, ...(current === undefined ? {} : { if_version: current.version }) })
+  }
+  for (const doc of live) {
+    if (!desired.has(doc.id)) writes.push({ op: 'delete', collection: 'trackers', doc_id: doc.id, if_version: doc.version })
+  }
+
+  return writes
 }
 
 /** How many turns in a row end by asking for the same outstanding writes before they are left to the person. */

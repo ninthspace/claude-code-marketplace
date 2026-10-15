@@ -3,13 +3,16 @@ import type { EngineInterface, Register } from 'claude-code'
 import { OVERVIEW, renderOverview } from './overview'
 import type { Drift, EpicFile, IndexEntry, LiveDoc } from './progress'
 import {
-  MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, parseBuildOrder, parseDocs,
-  pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
+  MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewRows, shortTitle, overviewWrites,
+  parseBuildOrder, parseDocs, pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
 const SPEC_FILE = /^(\d+)-spec-.*\.md$/
 const PAGE_FILE = /(?:^|\/)\.claude\/cpm-next-progress\/(\d+-build-order)\.html$/
+const OVERVIEW_FILE = /(?:^|\/)\.claude\/cpm-next-progress\/overview\.html$/
+const OVERVIEW_URL = 'overview:url'
+const OVERVIEW_SYNCED = 'overview:synced'
 const EPIC_FILE = /-epic-.*\.md$/
 const WRITING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'])
 const COMMAND = 'progress-tracker'
@@ -113,7 +116,7 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
 
   const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
   const today = dateOf(await $.clock.now())
-  const base = { root, name, title: order.title.replace(/:\s*build order$/i, '') }
+  const base = { root, name, title: shortTitle(order.title) }
   const { items, missing } = buildItems(order, await epics(), today)
   if (order.artifact === undefined) {
     await saveIndex($, indexEntry({ ...base, state: 'untracked' }, items, today, indexed))
@@ -161,6 +164,42 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
   return { line: `${describeDrift(drift)}${skipped}`, drift }
 }
 
+/**
+ * The writes the overview page lacks. Its rows come from the index, so the page is read only when the
+ * index changed since its rows last matched, or when a check is asked for. `dir` holds the pending file.
+ */
+async function overviewDrift($: EngineInterface, dir: string, when: When): Promise<Drift | undefined> {
+  const url = await $.store.get(OVERVIEW_URL)
+  if (typeof url !== 'string') return undefined
+  const rows = overviewRows(await indexEntries($))
+  const mark = JSON.stringify([...rows])
+  if (when !== 'now' && mark === (await $.store.get(OVERVIEW_SYNCED))) return undefined
+
+  let live: LiveDoc[]
+  try {
+    live = await readLive($, url, 'trackers')
+  } catch (error) {
+    if (!isMissingArtifact(error instanceof Error ? error.message : String(error))) throw error
+    await $.store.delete(OVERVIEW_URL)
+    await $.store.delete(OVERVIEW_SYNCED)
+    $.ui.toast(`The progress overview page ${url} no longer exists; /${COMMAND} all publish makes a new one`)
+
+    return undefined
+  }
+  const writes = overviewWrites(rows, live)
+  const file = `${dir}/${WORK_DIR}/overview.pending.json`
+  if (writes.length === 0) {
+    await $.store.set(OVERVIEW_SYNCED, mark)
+    if (await $.fs.exists(file)) await $.fs.write(file, pendingJson({ url, writes: [] }))
+
+    return undefined
+  }
+  const drift: Drift = { name: 'overview', url, file, writes }
+  await $.fs.write(file, pendingJson(drift))
+
+  return drift
+}
+
 let isChecking = false
 
 /**
@@ -195,6 +234,16 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
         isFailed = true
         lines.push(`${order.name}: check failed: ${error instanceof Error ? error.message : String(error)}`)
       }
+    }
+    try {
+      const overview = await overviewDrift($, root, when)
+      if (overview !== undefined) {
+        lines.push(describeDrift(overview))
+        drift.push(overview)
+      }
+    } catch (error) {
+      isFailed = true
+      lines.push(`overview: check failed: ${error instanceof Error ? error.message : String(error)}`)
     }
     // A failed check is repeated at the next change. A finished one is not repeated by a tool call,
     // drift or not; the drift it found is asked for again at the turn's end until the rows match.
@@ -291,9 +340,30 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
   return { text, page }
 }
 
+/**
+ * Writes the overview page, the claude.ai page of every indexed tracker, to the current project's
+ * generated-files folder (or the session's folder outside a project), to be published.
+ */
+async function prepareOverview($: EngineInterface): Promise<{ text: string; page: string; url?: string }> {
+  const root = await findRoot($)
+  const dir = root ?? (await $.session.cwd())
+  const page = `${dir}/${WORK_DIR}/overview.html`
+  await $.fs.write(page, await $.fs.read(`${$.plugin.root}/page/overview.html`))
+  const isIgnored = root !== null && (await ignoreWorkDir($, root))
+  const url = await $.store.get(OVERVIEW_URL)
+  const ignored = isIgnored ? ` Added /${WORK_DIR} to .gitignore.` : ''
+  if (typeof url === 'string') return { text: `The overview already has a page, ${url}; it was rewritten from the current template to ${page}.${ignored}`, page, url }
+
+  return { text: `Overview page written to ${page}.${ignored}`, page }
+}
+
 /** Prepares a spec's tracker and, when a page was written, asks the model to publish it in a turn of its own. */
 async function prepareAndPublish($: EngineInterface, arg: string): Promise<string> {
-  const { text, page, url } = await prepare($, arg)
+  return askToPublish($, await prepare($, arg))
+}
+
+/** Asks the model, in a turn of its own, to publish a page the mod has written. */
+function askToPublish($: EngineInterface, { text, page, url }: { text: string; page?: string; url?: string }): string {
   if (page === undefined) return text
   // Submitted from a timer: a call left in flight when the command's dispatch ends is abandoned with it.
   $.clock.after(0, () => {
@@ -304,7 +374,7 @@ async function prepareAndPublish($: EngineInterface, arg: string): Promise<strin
 
   return url !== undefined
     ? `${text}\nClaude is now asked to republish it to the same link.`
-    : `${text}\nClaude is now asked to publish it. The link is saved to the build-order file when it publishes, and Claude is then given the rows to write.`
+    : `${text}\nClaude is now asked to publish it. The link is saved when it publishes, and Claude is then given the rows to write.`
 }
 
 /** The number of the repository's only spec, for a request that names none. */
@@ -332,6 +402,7 @@ async function prepareForModel($: EngineInterface, spec: unknown): Promise<strin
  */
 async function savePublished($: EngineInterface, filePath: unknown, resultText: string): Promise<string | null> {
   if (typeof filePath !== 'string') return null
+  if (OVERVIEW_FILE.test(filePath)) return saveOverview($, filePath, resultText)
   const base = PAGE_FILE.exec(filePath)?.[1]
   const url = artifactUrlIn(resultText)
   const root = await findRoot($)
@@ -365,6 +436,17 @@ async function openOverview($: EngineInterface): Promise<string> {
 
 let overviewTimer: { cancel: () => void } | undefined
 
+/** After the model publishes the overview page, saves its link and returns the note for its first rows. */
+async function saveOverview($: EngineInterface, filePath: string, resultText: string): Promise<string | null> {
+  const url = artifactUrlIn(resultText)
+  if (url === undefined || typeof (await $.store.get(OVERVIEW_URL)) === 'string') return null
+  await $.store.set(OVERVIEW_URL, url)
+  await $.store.delete(OVERVIEW_SYNCED)
+  const drift = await overviewDrift($, filePath.slice(0, filePath.lastIndexOf(`/${WORK_DIR}/`)), 'now')
+
+  return ['Saved the progress overview link.', ...(drift === undefined ? [] : [modelNote([drift])])].join(' ')
+}
+
 let nudges = 0
 // The writes for the prompt on its way in; the prompt.submit hook attaches them where the person does not see them.
 let nudgeContext: string | null = null
@@ -397,7 +479,7 @@ let isStarted = false
 async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
-  await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, name a spec ("01") to prepare its tracker, or "all" for every project\'s progress in a pane' })
+  await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, name a spec ("01") to prepare its tracker, "all" for every project\'s progress in a pane, or "all publish" for it as a claude.ai page' })
   await $.tool.register({
     name: TRACKER_TOOL,
     description: 'Prepares the cpm-next progress tracker for a spec: the claude.ai page that shows the build order and status of its epics and stories. Call this when asked to make, publish or share a progress tracker or progress page for planned work, and never write such a page by hand. It writes the page from the plugin\'s template and answers with how to publish it; the rows are then kept in step with the epic docs.',
@@ -435,6 +517,7 @@ export const register: Register = on => {
 
   on('command.run', { command: COMMAND }, async ($, e) => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
+    if (verb === 'all' && rest[0] === 'publish') return { text: askToPublish($, await prepareOverview($)) }
     if (verb === 'all') return { text: await openOverview($) }
     if (verb === 'init') return { text: await prepareAndPublish($, rest.join(' ')) }
     if (verb !== '') return { text: await prepareAndPublish($, verb) }
@@ -450,7 +533,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: OVERVIEW }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
 
-    return renderOverview({ Box, Text }, e.viewport?.columns ?? 80, await indexEntries($))
+    return renderOverview({ Box, Text }, e.props.bodyColumns ?? e.viewport?.columns ?? 80, await indexEntries($))
   })
 
   on('ui.close', async ($, e, next) => {

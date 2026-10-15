@@ -59,7 +59,7 @@ Only `cpm-next` is required. The four mods are optional, and each adds one thing
 
 **Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
 
-**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v041).
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v050).
 
 **Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
 
@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.4.1)
+### CPM Next Progress (v0.5.0)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
@@ -168,9 +168,12 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 **Commands:**
 - `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date". In a repository with one spec and no tracker yet, it prepares that spec's tracker instead.
 - `/progress-tracker all` — opens the pane of every project's trackers.
+- `/progress-tracker all publish` — writes the overview page and asks Claude to publish it, or to republish it to its link if it has one.
 - `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. It then submits a prompt asking Claude to publish the page. When Claude does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works. For a spec that already has a tracker, it rewrites the page from the current template and asks Claude to republish it to the same link, keeping the rows.
 
-**Every project at a glance.** `/progress-tracker all` opens a pane with one row per tracker in every project, grouped by project, those with work left first: the title, a bar, done of total, and the stories in progress, or the date the counts last moved. Each check saves its tracker's counts to the mod's own store, so the pane reads no repository and no artifact; it is redrawn as checks run and once a minute while open, to show other sessions' checks. A project appears once a session there has run a check, and one whose build-order file was removed is dropped when the pane opens.
+**Every project at a glance.** `/progress-tracker all` opens a pane with one row per tracker in every project, grouped by project, those with work left first: the title, a bar, done of total, and the stories in progress, or the date the counts last moved. The rows fit the pane's own width: in a narrow pane, such as one side of a split, each title gets a line of its own with the bar beneath it. Each check saves its tracker's counts to the mod's own store, so the pane reads no repository and no artifact; it is redrawn as checks run and once a minute while open, to show other sessions' checks. A project appears once a session there has run a check, and one whose build-order file was removed is dropped when the pane opens.
+
+**The overview as a claude.ai page.** `/progress-tracker all publish` writes `.claude/cpm-next-progress/overview.html` and asks Claude to publish it; the mod keeps its link in its own store, since the page belongs to no one project. The page shows a card per project with a row per tracker, linked to that tracker, and totals across all of them. Its rows (collection `trackers`, one document per project and spec, such as `slate--01`) are copied from the index and carry the project's folder name, never its path. They are kept in step as the trackers are: a check that changes the index works out the rows the page lacks, and Claude writes them. The page is read only when the index changed since its rows last matched. If the page is deleted, the mod forgets the link and says so once; `/progress-tracker all publish` makes a new one.
 
 **Asking in words.** Claude has a `publish_tracker` tool that does what `/progress-tracker 01` does, so "publish the progress tracker" in a prompt gets the plugin's page and not one Claude writes by hand.
 

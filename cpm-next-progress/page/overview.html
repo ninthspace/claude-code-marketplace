@@ -1,0 +1,171 @@
+<title>Progress overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column — header, totals, then a card per project with one row per spec's tracker. */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --fg: #1d2622;
+  --muted: #5d6b64;
+  --rule: #d9dfdb;
+  --accent: #2f5d4e;
+  --ok: #2e7d4f;
+  --work: #9a6400;
+  --wait: #6b4fa3;
+  --track: #eceeed;
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141917; --surface: #1b2220; --fg: #e3e9e5; --muted: #9aa8a1; --rule: #2e3834; --accent: #8cc4ae;
+    --ok: #7fd09f; --work: #e5b45a; --wait: #b9a2ea; --track: #262e2b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141917; --surface: #1b2220; --fg: #e3e9e5; --muted: #9aa8a1; --rule: #2e3834; --accent: #8cc4ae;
+  --ok: #7fd09f; --work: #e5b45a; --wait: #b9a2ea; --track: #262e2b;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 48px; display: grid; gap: 24px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 600 30px/1.15 var(--font-display); margin: 0; }
+.sub { color: var(--muted); margin: 0; max-width: 68ch; }
+.totals { display: flex; flex-wrap: wrap; gap: 8px 22px; font-variant-numeric: tabular-nums; }
+.totals b { font-weight: 700; }
+.project { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+.project h2 { font: 600 17px/1.3 var(--font-body); margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 12px; }
+.project h2 small { font: 400 13px var(--font-mono); color: var(--muted); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 180px 64px; gap: 4px 16px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--rule); }
+.row:last-child { border-bottom: 0; }
+.row.is-done { opacity: .62; }
+.title { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.title a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.title a:hover { text-decoration-color: var(--accent); }
+.note { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+.note .active { color: var(--work); }
+.note .waiting { color: var(--wait); }
+.bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar span { display: block; height: 100%; background: var(--ok); }
+.count { font: 13px var(--font-mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.empty { padding: 28px 16px; color: var(--muted); text-align: center; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+@media (max-width: 560px) {
+  .row { grid-template-columns: minmax(0, 1fr) 56px; }
+  .bar { grid-column: 1 / -1; grid-row: 2; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">cpm-next progress</div>
+    <h1>Every project's trackers</h1>
+    <p class="sub">One row per spec's tracker, grouped by project, projects with work left first. Counts come from each project's epic docs and update whenever a Claude Code session there checks its trackers.</p>
+  </header>
+
+  <section class="totals" id="totals" aria-label="Totals"></section>
+
+  <div id="projects">
+    <div class="empty">Loading progress.</div>
+  </div>
+</div>
+
+<script>
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) { node.className = cls; }
+  if (text !== undefined) { node.textContent = text; }
+  return node;
+}
+
+const isDone = row => row.state === "gone" || (row.total > 0 && row.done >= row.total);
+
+// Only claude.ai artifact links are followed; anything else in a row is shown as text.
+const isTrackerLink = url => typeof url === "string" && /^https:\/\/claude\.ai\/(code\/)?artifact\/[A-Za-z0-9_-]+$/.test(url);
+
+function note(row) {
+  const box = el("div", "note");
+  if (row.state === "gone") { box.textContent = "Tracker deleted"; return box; }
+  const parts = [];
+  if (row.active) { parts.push(el("span", "active", "In progress: " + row.active)); }
+  if (row.waiting > 0) { parts.push(el("span", "waiting", row.waiting + " waiting on input")); }
+  if (row.state === "untracked") { parts.push(el("span", null, "No tracker yet")); }
+  if (parts.length === 0) { parts.push(el("span", null, (isDone(row) ? "Complete " : "Last moved ") + (row.changed || "—"))); }
+  parts.forEach((part, i) => { if (i > 0) { box.append(" · "); } box.append(part); });
+  return box;
+}
+
+function render(rows) {
+  const box = document.getElementById("projects");
+  box.replaceChildren();
+  const totals = document.getElementById("totals");
+  totals.replaceChildren();
+  if (rows.length === 0) {
+    box.append(el("div", "empty", "No trackers yet. Claude adds a row for each tracker once a session checks it."));
+    return;
+  }
+
+  const groups = new Map();
+  for (const row of rows) { groups.set(row.repo, [...(groups.get(row.repo) || []), row]); }
+  const ordered = [...groups].sort(([a, x], [b, y]) =>
+    Number(y.some(r => !isDone(r))) - Number(x.some(r => !isDone(r))) || String(a).localeCompare(String(b)));
+
+  for (const [repo, list] of ordered) {
+    list.sort((a, b) => String(a.spec).localeCompare(String(b.spec), undefined, { numeric: true }));
+    const card = el("section", "project");
+    const h2 = el("h2", null, repo);
+    const open = list.filter(r => !isDone(r)).length;
+    h2.append(el("small", null, open === 0 ? "all complete" : open + " open"));
+    card.append(h2);
+    for (const row of list) {
+      const line = el("div", "row" + (isDone(row) ? " is-done" : ""));
+      const title = el("div", "title");
+      if (isTrackerLink(row.tracker)) {
+        const a = el("a", null, row.title || row.spec);
+        a.href = row.tracker;
+        a.target = "_blank";
+        a.rel = "noopener";
+        title.append(a);
+      } else {
+        title.textContent = row.title || row.spec;
+      }
+      const bar = el("div", "bar");
+      const fill = el("span");
+      fill.style.width = (row.total > 0 ? Math.round(row.done / row.total * 100) : 0) + "%";
+      bar.append(fill);
+      bar.setAttribute("role", "img");
+      bar.setAttribute("aria-label", row.done + " of " + row.total + " complete");
+      line.append(title, bar, el("div", "count", row.done + "/" + row.total), note(row));
+      card.append(line);
+    }
+    box.append(card);
+  }
+
+  const live = rows.filter(r => r.state !== "gone");
+  const stats = [
+    [groups.size, groups.size === 1 ? "project" : "projects"],
+    [live.filter(r => !isDone(r)).length, "trackers open"],
+    [live.reduce((n, r) => n + (r.active ? r.active.split(",").length : 0), 0), "stories in progress"],
+    [live.reduce((n, r) => n + r.done, 0) + "/" + live.reduce((n, r) => n + r.total, 0), "stories complete"],
+  ];
+  for (const [n, label] of stats) {
+    const s = el("span");
+    s.append(el("b", null, String(n)), document.createTextNode(" " + label));
+    totals.append(s);
+  }
+}
+
+(async () => {
+  const db = await window.claude?.use?.("db");
+  if (!db) {
+    const box = document.getElementById("projects");
+    box.replaceChildren(el("div", "empty", "Progress data is not available in this view. Sign in to claude.ai to see it."));
+    return;
+  }
+  db.collection("trackers").onSnapshot(snap => render(snap.docs.map(d => d.data())), () => {});
+})();
+</script>

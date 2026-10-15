@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import { OVERVIEW } from './overview'
 import type { BuildOrder, IndexEntry, LiveDoc } from './progress'
 import {
-  artifactUrlIn, bar, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewGroups, overviewNote,
+  artifactUrlIn, bar, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewGroups, overviewNote, overviewRows, overviewWrites, shortTitle,
   parseBuildOrder, parseDocs, pendingJson, publishNote, isMissingArtifact, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
@@ -345,9 +345,53 @@ test('the overview pane draws a row per indexed tracker', async ($, on) => {
     'index:/w/opus/03-build-order.json': { ...ENTRY, root: '/w/opus', name: '03-build-order.json', title: '03 Opus', done: 4, total: 4 },
     'settled:/w/opus/03-build-order.json': { mark: '1:1', line: 'x' },
   })
-  const ui = await $.ui.mount({ plugin: 'cpm-next-progress', surface: 'terminal', component: 'Pane', requestId: OVERVIEW, viewport: { columns: 120, rows: 30 }, props: {} as never })
+  const ui = await $.ui.mount({ plugin: 'cpm-next-progress', surface: 'terminal', component: 'Pane', requestId: OVERVIEW, viewport: { columns: 200, rows: 30 }, props: { bodyColumns: 120 } as never })
   expect((await ui.find({ type: 'Text', text: /01 Slate +█{5}░{7} +2\/5 +in progress: 01-02 S1/ }))).toBeDefined()
   expect((await ui.find({ type: 'Text', text: /03 Opus .*4\/4 +complete/ }))?.props.dimColor).toBe(true)
   expect((await ui.findAll({ type: 'Text' })).map(t => t.text).slice(0, 1)).toEqual(['slate'])
   await ui.unmount()
+})
+
+test('overview rows drop the local path and tell same-named projects apart', () => {
+  const rows = overviewRows([
+    { ...ENTRY, artifact: 'https://claude.ai/artifact/abc', active: ['01-02 S1', '01-02 S2'] },
+    { ...ENTRY, root: '/other/Slate', name: '00-build-order.json', state: 'untracked' },
+  ])
+  expect([...rows.keys()].sort()).toEqual(['slate--01', 'slate-2--00'])
+  expect(rows.get('slate--01')).toEqual({
+    repo: 'slate', spec: '01', title: '01 Slate', state: 'tracked', done: 2, total: 5, active: '01-02 S1, 01-02 S2', waiting: 0, changed: '2026-10-12', tracker: 'https://claude.ai/artifact/abc',
+  })
+  expect(JSON.stringify([...rows.values()])).not.toContain('/w/')
+  expect(rows.get('slate-2--00')?.tracker).toBe('')
+})
+
+test('overview writes set new and changed rows, delete dropped ones, and leave the rest', () => {
+  const rows = overviewRows([{ ...ENTRY, artifact: 'https://claude.ai/artifact/abc' }])
+  const row = rows.get('slate--01') as unknown as Record<string, unknown>
+  expect(overviewWrites(rows, [{ id: 'slate--01', version: 3, data: row }])).toEqual([])
+  expect(overviewWrites(rows, [])).toEqual([{ op: 'set', collection: 'trackers', doc_id: 'slate--01', data: row }])
+  expect(overviewWrites(rows, [{ id: 'slate--01', version: 3, data: { ...row, done: 1 } }, { id: 'old--02', version: 1, data: {} }])).toEqual([
+    { op: 'set', collection: 'trackers', doc_id: 'slate--01', data: row, if_version: 3 },
+    { op: 'delete', collection: 'trackers', doc_id: 'old--02', if_version: 1 },
+  ])
+})
+
+test('a drift of the overview names its rows', () => {
+  const line = describeDrift({ name: 'overview', url: 'https://claude.ai/artifact/o', file: 'f', writes: [{ op: 'set', collection: 'trackers', doc_id: 'slate--01', data: {} }] })
+  expect(line).toContain('1 row out of date (slate--01)')
+})
+
+test('a narrow pane puts each title on a line of its own, in full', async ($, on) => {
+  const title = '02 The split of the av plugin into Slate and the Ableton system'
+  mock.store(on, { 'index:/w/slate/02-build-order.json': { ...ENTRY, name: '02-build-order.json', title } })
+  const ui = await $.ui.mount({ plugin: 'cpm-next-progress', surface: 'terminal', component: 'Pane', requestId: OVERVIEW, viewport: { columns: 200, rows: 30 }, props: { bodyColumns: 70 } as never })
+  const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+  expect(texts).toEqual(['slate', `  ${title}`, '    █████░░░░░░░     2/5  last moved 2026-10-12'])
+  await ui.unmount()
+})
+
+test('a short title drops the build-order tail and a repeated spec number', () => {
+  expect(shortTitle('01 Spec 01: Slate, the film system: build order')).toBe('01 Slate, the film system')
+  expect(shortTitle('03 Comments on review pages: build order')).toBe('03 Comments on review pages')
+  expect(overviewGroups([{ ...ENTRY, title: '01 Spec 01: Slate: build order' }])[0]?.entries[0]?.title).toBe('01 Slate')
 })
