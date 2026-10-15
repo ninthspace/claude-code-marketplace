@@ -41,7 +41,7 @@ Install these at user scope (the default), so one install serves every repositor
 ```bash
 /plugin install cpm-next@ninthspace-marketplace           # the six skills, the auditor and scout agents
 /plugin install cpm-next-models@ninthspace-marketplace    # mod: holds each skill's model and effort, per-story effort
-/plugin install cpm-next-progress@ninthspace-marketplace  # mod: /progress-tracker, a claude.ai tracker for a spec's epics
+/plugin install cpm-next-progress@ninthspace-marketplace  # mod: /progress-tracker, claude.ai trackers per spec and an overview of every project
 /plugin install whats-next@ninthspace-marketplace         # mod: /next, a live pane of the work left in the repository
 /plugin install plugin-sync@ninthspace-marketplace        # mod: reloads open sessions when a plugin here is updated
 /reload-plugins
@@ -53,13 +53,13 @@ Only `cpm-next` is required. The four mods are optional, and each adds one thing
 |---|---|---|
 | `cpm-next` | Skills and agents | — |
 | `cpm-next-models` | Mod (function hooks) | A skill's model and effort last only for the turn that invoked it; later turns of a `do` run fall back to the session model, and stories are not given their own effort |
-| `cpm-next-progress` | Mod, adds `/progress-tracker` | No shareable progress page; read the epic docs or run `/cpm-next:status` |
+| `cpm-next-progress` | Mod, adds `/progress-tracker` | No shareable progress pages or cross-project overview; read the epic docs or run `/cpm-next:status` |
 | `whats-next` | Mod, adds `/next` | No live pane; run `/cpm-next:status` |
 | `plugin-sync` | Mod | After an update, run `/reload-plugins` in each open session |
 
 **Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
 
-**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v051).
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. `/progress-tracker all` then shows every project's trackers in a pane, and `/progress-tracker all publish` puts the same overview on a claude.ai page. Details under [CPM Next Progress](#cpm-next-progress-v051).
 
 **Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
 
@@ -122,9 +122,9 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 ### CPM Next Progress (v0.5.1)
 
-**A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
+**claude.ai progress trackers for cpm-next specs, kept in step with the epic docs, and an overview of every project's**
 
-A Claude Code mod (a plugin of function hooks). Name a spec and the mod writes a build order for its stories to a small JSON file, which you can edit; Claude then publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file.
+A Claude Code mod (a plugin of function hooks). Name a spec and the mod writes a build order for its stories to a small JSON file, which you can edit; Claude then publishes a private claude.ai artifact showing that order as a table, grouped by phase. The mod compares the table with the epic docs in `docs/epics/` whenever they change, and tells Claude which rows to update. Status, titles and outstanding blockers come from the epic docs; the order, phase labels, notes and open decisions come from the build-order file. Every check also saves each tracker's counts to the mod's own store, which feeds a pane and an overview page showing all projects at once.
 
 **The mod only reads.** It lists the artifact's rows through the `ArtifactData` tool, which auto mode does not ask about, and never writes to it. Claude's own `ArtifactData` calls do the writing, so no permission rule is needed. An earlier version wrote to the artifact itself, and auto mode refused those calls intermittently with "The server-side auto mode classifier gave no verdict for ArtifactData".
 
@@ -163,7 +163,7 @@ An item is a story (`story`) or one task (`task`) of an epic, named by the epic'
 
 **Finished work costs nothing.** A tracker whose rows are all Complete and in step, or whose artifact was deleted, is settled: later checks skip it without reading its build-order file or its artifact, until that build-order file changes. A bare `/progress-tracker` still checks it. So a story reopened in a finished spec reaches its tracker only through `/progress-tracker` or an edit to the build-order file. The epic docs are read once per check, not once per tracker.
 
-The folder `.claude/cpm-next-progress/` holds generated files (the page and the pending writes); `/progress-tracker 01` adds it to the project's `.gitignore`.
+The folder `.claude/cpm-next-progress/` holds generated files (the pages and the pending writes, including `overview.html` and `overview.pending.json`); `/progress-tracker 01` and `/progress-tracker all publish` add it to the project's `.gitignore`.
 
 **Commands:**
 - `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date". In a repository with one spec and no tracker yet, it prepares that spec's tracker instead.
@@ -177,7 +177,9 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 
 **Asking in words.** Claude has a `publish_tracker` tool that does what `/progress-tracker 01` does, so "publish the progress tracker" in a prompt gets the plugin's page and not one Claude writes by hand.
 
-**Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions.
+**Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions. The overview page has one collection, `trackers`, one document per project and spec (`slate--01`).
+
+**Mod store** (`$.store`, on this machine only): `index:<root>/<file>` per tracker, `settled:` and `gone:` for finished and deleted trackers, `checked:` and `behind:` per project, and `overview:url` and `overview:synced` for the overview page.
 
 **Quick Start:**
 ```bash
@@ -185,12 +187,14 @@ The folder `.claude/cpm-next-progress/` holds generated files (the page and the 
 /reload-plugins
 
 /progress-tracker 01
+/progress-tracker all
+/progress-tracker all publish
 ```
-The mod asks Claude to publish the page. The spec needs its epics in `docs/epics/` first.
+The mod asks Claude to publish each page. The spec needs its epics in `docs/epics/` first.
 
 **Reads:** the cpm-next epic format (`cpm-next/shared/artifacts.md`), as What's Next does.
 
-**Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`.
+**Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`. Both commands run on the newest Claude Code installed, while open sessions may run an older one; see `docs/maintenance/README.md` for loading the mod under each.
 
 ### What's Next (v0.2.3)
 

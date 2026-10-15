@@ -148,7 +148,7 @@
     {
       "name": "cpm-next-progress",
       "source": "./cpm-next-progress",
-      "description": "Checks a claude.ai progress tracker for a cpm-next spec's epics against the epic docs, in the build order you set, and tells Claude which rows to update; it never writes to the tracker itself.",
+      "description": "Keeps a claude.ai progress tracker for each cpm-next spec in step with its epic docs, in the build order you set, and shows every project's trackers at a glance in a pane and on an overview page; it tells Claude which rows to write and never writes to a page itself.",
       "version": "0.5.1",
       "keywords": [
         "cpm-next",

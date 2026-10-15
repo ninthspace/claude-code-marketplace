@@ -17,6 +17,7 @@ one without the other and the suite fails on the half that moved.
 
 ## Contents
 
+- [`cpm-next-progress` ↔ the harness — tool output it parses, and older engines](#cpm-next-progress--the-harness--tool-output-it-parses-and-older-engines)
 - [`cpm:ralph` — ralph-loop state file schema](#cpmralph--ralph-loop-state-file-schema)
 - [`cpm:ralph` — `cpm:do` interaction gates](#cpmralph--cpmdo-interaction-gates)
 - [`cpm:epics` ↔ `coverage-rollup.sh` — the blocking classes](#cpmepics--coverage-rollupsh--the-blocking-classes)
@@ -89,6 +90,40 @@ loses its rows. Removing the `type === 'table'` condition breaks restore silentl
 and that the virtual table and its triggers are kept; `dpm/tests/round-trip.test.js` asserts the
 index is rebuilt from the data rather than carried. A real table caught by the prefix would fail
 the no-silent-omission assertion, which names exactly what was dropped.
+
+---
+
+## `cpm-next-progress` ↔ the harness — tool output it parses, and older engines
+
+**The record.** The mod never writes an artifact; it reads them and parses what the harness prints.
+Three formats are load-bearing, all in `cpm-next-progress/hooks/progress.ts`:
+
+- **`ArtifactData` list output.** `parseDocs` takes each line that starts with `{"id"` between the
+  `BEGIN`/`END` database markers as one document, `{id, version, data}`. A change to that line shape
+  reads as an empty collection: every row is then offered again as new, without `if_version`, and the
+  writes are refused as unpinned.
+- **A deleted artifact.** `isMissingArtifact` matches `no such artifact` or `HTTP 404` in the error a
+  read raises. Missed, a deleted tracker or overview page fails its check on every write instead of
+  being settled once.
+- **The publish result.** `artifactUrlIn` takes the first `https://claude.ai/[code/]artifact/<id>` in the
+  `Artifact` tool's result. Missed, a published tracker's link is never saved to its build-order file,
+  nor the overview's to the store.
+
+**Older engines.** `claude plugin validate` and `claude plugin test` run on the newest Claude Code
+installed, but open sessions keep the version they started on (`~/.local/share/claude/versions/`), and
+`/reload-plugins` loads the mod into that one. On 2026-10-15 Claude Code 2.1.296 refused 0.4.0 for
+passing `$` into a function imported from `overview.tsx` ("$ is followed only into a function declared
+in this same file, never across an import"), which 2.1.300 accepts, and `/progress-tracker` vanished
+from every open session. Load the mod headless under each installed version before releasing:
+
+```sh
+~/.local/share/claude/versions/<v> -p "reply ok" --debug-file /tmp/d.txt --plugin-dir cpm-next-progress
+grep -i 'hooks module cpm-next-progress@inline' /tmp/d.txt   # "loaded", or "failed to load: <reason>"
+```
+
+**What asserts it.** `cpm-next-progress/hooks/progress.test.ts` covers `parseDocs`, `isMissingArtifact` and
+`artifactUrlIn` against the formats above; nothing asserts the harness still prints them. Nothing
+automated covers older engines.
 
 ---
 
