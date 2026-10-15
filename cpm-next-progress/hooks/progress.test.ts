@@ -286,3 +286,12 @@ test('a deleted tracker is told apart from other failures, and its link can be d
   expect(JSON.parse(withoutArtifact(text))).toEqual({ title: 'T', phases: [] })
   expect(withoutArtifact(text).endsWith('}\n')).toBe(true)
 })
+
+test('epics with no spec get a build order titled from their first epic, citing its source', () => {
+  const epic = { name: '00-01-epic-branch.md', text: '# The branch\n\n**Source spec**: docs/discussions/01-discussion-branch.md\n**Status**: In Progress\n\n## Measure\n**Story**: 4\n**Status**: In Progress\n\n## Remove\n**Story**: 2\n**Status**: Pending\n**Blocked by**: Story 4\n' }
+  const order = defaultBuildOrder({ ...epic, path: 'docs/discussions/01-discussion-branch.md' }, [epic, MEMBERS])
+
+  expect(order.title).toBe('00 The branch: build order')
+  expect(order.spec).toBe('docs/discussions/01-discussion-branch.md')
+  expect(order.phases[0]?.items).toEqual([{ epic: '00-01', story: 4 }, { epic: '00-01', story: 2 }])
+})

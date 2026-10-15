@@ -187,6 +187,19 @@ async function ignoreWorkDir($: EngineInterface, root: string): Promise<boolean>
 }
 
 /**
+ * Epics planned without a spec (from a discussion, say) still get a tracker: their number's first
+ * epic stands in for the spec, giving the title, and its `**Source spec**` line, if any, the source.
+ */
+async function specless($: EngineInterface, root: string, number: string): Promise<{ name: string; text: string; path: string } | undefined> {
+  const first = (await listDocs($, `${root}/docs/epics`, EPIC_FILE)).find(e => e.name.startsWith(`${number}-`))
+  if (first === undefined) return undefined
+  const text = await $.fs.read(`${root}/docs/epics/${first.name}`)
+  const cited = /^\*\*Source spec\*\*:\s*(\S+)/m.exec(text)?.[1]
+
+  return { name: first.name, text, path: cited ?? `docs/epics/${first.name}` }
+}
+
+/**
  * The build-order file a spec number, spec file or build-order file names, writing a first one from
  * the spec's epics when none exists yet.
  */
@@ -201,8 +214,11 @@ async function orderFileFor($: EngineInterface, root: string, arg: string): Prom
   const orderName = `${number}-build-order.json`
   if (await $.fs.exists(`${root}/docs/specifications/${orderName}`)) return { name: orderName }
   const spec = (await listDocs($, `${root}/docs/specifications`, SPEC_FILE)).find(e => SPEC_FILE.exec(e.name)?.[1] === number)
-  if (spec === undefined) return `No docs/specifications/${number}-spec-*.md in ${root}.`
-  const order = defaultBuildOrder({ name: spec.name, text: await $.fs.read(`${root}/docs/specifications/${spec.name}`) }, await readEpics($, root))
+  const source = spec !== undefined
+    ? { name: spec.name, text: await $.fs.read(`${root}/docs/specifications/${spec.name}`) }
+    : await specless($, root, number)
+  if (source === undefined) return `No docs/specifications/${number}-spec-*.md or docs/epics/${number}-*-epic-*.md in ${root}.`
+  const order = defaultBuildOrder(source, await readEpics($, root))
   if (order.phases.length === 0) return `No stories in docs/epics/${number}-*-epic-*.md yet; plan the epics for ${spec.name} first.`
   await $.fs.write(`${root}/docs/specifications/${orderName}`, `${JSON.stringify(order, null, 2)}\n`)
   const stories = order.phases.reduce((n, p) => n + p.items.length, 0)

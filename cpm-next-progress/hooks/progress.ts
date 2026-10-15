@@ -243,7 +243,7 @@ const byShort = (a: ParsedEpic, b: ParsedEpic) => a.short.localeCompare(b.short,
  * blockers, one phase per epic, each epic's stories ordered by their blockers and then by number.
  * Superseded and withdrawn epics and stories are left out.
  */
-export function defaultBuildOrder(spec: { name: string; text: string }, files: EpicFile[]): BuildOrder {
+export function defaultBuildOrder(spec: { name: string; text: string; path?: string }, files: EpicFile[]): BuildOrder {
   const number = /^(\d+)-/.exec(spec.name)?.[1] ?? ''
   const heading = /^#\s+(?:Spec:\s*)?(.+?)\s*$/m.exec(spec.text)?.[1]
   const all = files.map(parseEpic)
@@ -267,7 +267,7 @@ export function defaultBuildOrder(spec: { name: string; text: string }, files: E
 
   return {
     title: `${number} ${heading ?? spec.name.replace(/\.md$/, '')}: build order`,
-    spec: `docs/specifications/${spec.name}`,
+    spec: spec.path ?? `docs/specifications/${spec.name}`,
     decisions: [],
     phases,
   }
