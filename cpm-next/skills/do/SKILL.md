@@ -23,6 +23,8 @@ Read `$ARGUMENTS`:
 | a description of a small change | no epic | the change works and is tested |
 | nothing | the lowest-numbered In Progress epic, else the lowest-numbered epic with nothing started | that epic's stories are Complete |
 
+`--parallel` may follow any scope but a small change, and builds in worktrees (see **Worktree mode**). `--parallel check` builds nothing and writes nothing: it reports what worktree mode would do with the scope.
+
 In every case the full test suite must also pass at the end, or any failures that remain must have been failing before the run started. Record the baseline before changing anything.
 
 A full-suite result already in this conversation stands for the baseline or the end-of-run check when `git status` and `git diff` show no file has changed since that run; run the suite again only when one has.
@@ -49,7 +51,7 @@ Take unblocked stories lowest number first. When two or more are unblocked at on
 
 Before starting the next story, re-read the one you just finished in the epic doc. Its `**Status**` must read `Complete` with an `**Audit**` line, or it must carry a `Not met` line and be marked blocked. An evidenced story left `In Progress` blocks every story that depends on it, because the unblocked rule reads only the status.
 
-Stories that are unblocked together are built in parallel by default, one subagent each, when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports. Judge overlap from the files each story's tasks name and the code they touch; ask the `scout` agent where that isn't clear. Build them one at a time when they overlap, or when the user is working alongside you on a single story or task.
+Stories that are unblocked together are built in parallel by default, one subagent each, when they share neither files nor runtime state. Shared runtime state includes databases, migrations, dependency installs and lock files, cache and queue state, storage directories, `.env`, and ports. Judge overlap from the files each story's tasks name and the code they touch; ask the `scout` agent where that isn't clear. Build them one at a time when they overlap, or when the user is working alongside you on a single story or task. With `--parallel`, stories that share files can also run together, each in its own worktree.
 
 The lead agent owns everything shared, and subagents don't touch it:
 
@@ -60,6 +62,35 @@ The lead agent owns everything shared, and subagents don't touch it:
 When a subagent reports back, check its evidence against the files and test output before marking its story Complete. After a parallel batch, run the full suite once, since conflicts between stories show up only when the pieces are combined. When stories share files or state, run them one at a time.
 
 Start each parallel subagent on the `sonnet` model, the same model this skill builds on. A story marked `**Model**: haiku` goes to a subagent on `haiku` even when nothing runs beside it, so the lead keeps its own model and the conversation's cache. The lead makes any fixes its audit asks for.
+
+### Worktree mode
+
+With `--parallel`, unblocked stories are built together even when they touch the same files. Each subagent works in its own git worktree (the Agent tool's `isolation: "worktree"`), and the lead merges them. The mode covers code and tests. The running app, its domains, real databases, webhooks and third-party services stay with the lead's checkout.
+
+These stories still run one at a time, after the batch:
+
+- a story that depends on another story in the batch;
+- one that changes a dependency lock file, `.env` or shared config;
+- a migration that changes a table another story in the batch uses;
+- a story whose criteria need the running app: a browser check, Dusk, a real webhook or a third-party call.
+
+Run no more than three at once. Each worktree runs its own tests, and on one machine more of them only slow each other down.
+
+A worktree's test results count only if the suite runs without shared services. That means a per-process or in-memory database (`phpunit.xml` with SQLite `:memory:`, or `php artisan test --parallel`), outbound HTTP faked with stray requests prevented (`Http::preventStrayRequests()`), queues and mail faked, no fixed port, and no build output the checkout lacks (in Laravel, Vite's manifest; tests can call `withoutVite()`). Check this once per run, from the test config and a few tests. Where it doesn't hold, the subagents write code only, and the lead runs each story's tests after merging it.
+
+A worktree starts from the last commit, so commit the run's own work before each fan-out. If the tree holds changes this run didn't make, don't use worktree mode: say so, and build one at a time. Asking for `--parallel` is the user's leave to commit and merge locally on the current branch. It never covers a push.
+
+Each subagent's prompt adds these to the usual one:
+
+- Set up the worktree first. Install dependencies from the lock file (`composer install`, `npm ci`), and copy from the lead's checkout the gitignored files its tests need (`.env`, local settings), pointed at test resources. Don't symlink `vendor/` or `node_modules/`: Composer's autoloader resolves paths from its real location, so it would load the lead's code.
+- Don't start a server, run migrations or seeders against a real database, call a real service, or edit the epic doc.
+- Commit the story on the worktree's branch. Report the branch, the files changed, the tests run with their output, and what proves each criterion; the lead writes the `Evidence` lines.
+
+The lead merges the branches in story order with `git merge --no-ff`. After resolving a conflict, run both stories' tests again. Then run the full suite once, as after any parallel batch. Audit each story with its merge commit, whose diff against its first parent is that story alone. The lead makes the fixes in its own checkout. Remove each worktree and its branch once the story is merged.
+
+`--parallel check` reads only. It reports the unblocked stories in scope, the batches worktree mode would form and why any story stays out, whether the suite is isolated (citing the config lines that show it), and the setup each worktree would need.
+
+A run without `--parallel` makes the same check, without the report, whenever two or more stories become unblocked at once. If a batch qualifies, say so in one line in the same message as the next tool call, naming the stories and `/cpm-next:do {scope} --parallel`, then carry on one at a time, and repeat it under **Found** at the end of the run. Don't switch to worktree mode unasked, since it commits. Check the suite's isolation once per run, not at every batch.
 
 Hand plain lookups to the `cpm-next:scout` agent: where something is defined or used, which files a change touches, what a read-only query returns. It runs on Haiku and returns only the answer, which keeps search output out of this conversation. Do the reading yourself when the answer depends on understanding the code, not finding it.
 
@@ -73,7 +104,7 @@ Check each finding against the code before acting on it, and drop any that don't
 
 Record the outcome on the story as `**Audit**: pass ({YYYY-MM-DD})`, adding `, {n} findings fixed` when the first audit returned `fix needed`. If the `auditor` agent isn't available, write `**Audit**: skipped — auditor unavailable` and say so under **Found** at the end of the run.
 
-Leave commits, branches and pushes to the user unless they've said otherwise.
+Leave commits, branches and pushes to the user unless they've said otherwise, or the run is in worktree mode.
 
 ## When to stop and when to keep going
 

@@ -31,6 +31,6 @@ Write it for someone picking the project up cold:
 
 - **Where it stands**: a few short paragraphs of prose. What the project is, what has been built (grouped into themes, not listed), what recent work has been about, and what is in flight. Lead with in-flight work when there is any.
 - **Needs you**: waiting items and suspect records, each with its path. Leave the heading out if there are none.
-- **Next**: the commands worth running, most useful first, such as `/cpm-next:do {epic}`, `/cpm-next:plan {spec}` for a spec without epics or a pending pivot, `/cpm-next:review {epic}` before a large epic's first run, or `/cpm-next:library learn` once retros have accumulated.
+- **Next**: the commands worth running, most useful first, such as `/cpm-next:do {epic}`, `/cpm-next:do {epic} --parallel check` when two or more of its stories are unblocked at once, `/cpm-next:plan {spec}` for a spec without epics or a pending pivot, `/cpm-next:review {epic}` before a large epic's first run, or `/cpm-next:library learn` once retros have accumulated.
 
 When no CPM artefacts exist, say so in one line and suggest `/cpm-next:party` or `/cpm-next:plan`.

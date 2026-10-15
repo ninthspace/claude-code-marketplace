@@ -81,7 +81,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 
 ## Available Plugins
 
-### CPM Next (v0.7.3)
+### CPM Next (v0.8.0)
 
 **Plan and build with six skills: party, plan, review, do, library, status**
 
@@ -90,7 +90,7 @@ The skills read and write Markdown artefacts under `docs/`: `discussions/`, `bri
 1. `/cpm-next:party` to talk an idea through (optional).
 2. `/cpm-next:plan` to write the brief, spec and epics. It reads what exists, asks its questions in one batch, and fills only the gaps. In a brownfield project it grounds every requirement in the current code.
 3. `/cpm-next:review` before a large or risky epic (optional).
-4. `/cpm-next:do` to build: one story (`/cpm-next:do 3`), one epic, or `all`, which runs unattended and marks a blocked story instead of stopping. Each acceptance criterion gets an `Evidence` line, and each story is audited before it closes. Before the audit, `do` checks the story the way the auditor will: the full suite, tests that would fail without the change, unexpected inputs, and the words it wrote against the code. A failed audit gets one more after its fixes, and that one audits the fix code as new code; a story still failing is marked blocked.
+4. `/cpm-next:do` to build: one story (`/cpm-next:do 3`), one epic, or `all`, which runs unattended and marks a blocked story instead of stopping. Each acceptance criterion gets an `Evidence` line, and each story is audited before it closes. Before the audit, `do` checks the story the way the auditor will: the full suite, tests that would fail without the change, unexpected inputs, and the words it wrote against the code. A failed audit gets one more after its fixes, and that one audits the fix code as new code; a story still failing is marked blocked. `--parallel` builds unblocked stories together in git worktrees, one subagent each, even when they touch the same files, and merges them; it covers code and tests, and stories that need the running app, a lock-file change or a shared migration still go one at a time. `--parallel check` says what it would do, and whether the test suite is isolated enough for it, without building anything. Without the flag, `do` makes the same check whenever two or more stories are unblocked at once, and names any batch that qualifies.
 5. `/cpm-next:status` whenever you return to the project.
 
 **Story effort.** `plan` gives a story `**Effort**: high` where a mistake is costly or hard to see, and `**Effort**: low` for mechanical edits; with `cpm-next-models` installed, `do` builds each story at that effort and raises it for a fix after a failed audit. A `low` story marked `**Model**: haiku` is built by a Haiku subagent.
