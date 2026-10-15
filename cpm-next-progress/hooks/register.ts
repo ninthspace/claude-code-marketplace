@@ -447,7 +447,11 @@ export const register: Register = on => {
     return { text: lines.join('\n') }
   })
 
-  on('ui.render', { component: 'Pane', requestId: OVERVIEW }, async ($, e) => renderOverview($, e, await indexEntries($)))
+  on('ui.render', { component: 'Pane', requestId: OVERVIEW }, async ($, e) => {
+    const { Box, Text } = $.ui.resolve(e)
+
+    return renderOverview({ Box, Text }, e.viewport?.columns ?? 80, await indexEntries($))
+  })
 
   on('ui.close', async ($, e, next) => {
     if (e.id === OVERVIEW) {

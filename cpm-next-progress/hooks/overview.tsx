@@ -8,10 +8,11 @@ export const OVERVIEW = 'progress-overview'
 
 const BAR = 12
 
-/** Every indexed tracker, one row each under its project: number and title, a bar, done of total, and what is in flight. */
-export function renderOverview($: EngineInterface, e: { surface: string; viewport?: { columns: number } }, entries: IndexEntry[]) {
-  const { Box, Text } = $.ui.resolve(e as Parameters<EngineInterface['ui']['resolve']>[0])
-  const columns = e.viewport?.columns ?? 80
+/**
+ * Every indexed tracker, one row each under its project: number and title, a bar, done of total, and
+ * what is in flight. Takes the surface's elements rather than `$`, which may not cross an import.
+ */
+export function renderOverview({ Box, Text }: Pick<ReturnType<EngineInterface['ui']['resolve']>, 'Box' | 'Text'>, columns: number, entries: IndexEntry[]) {
   const titleWidth = Math.max(12, Math.min(40, columns - BAR - 30))
   const groups = overviewGroups(entries)
 

@@ -59,7 +59,7 @@ Only `cpm-next` is required. The four mods are optional, and each adds one thing
 
 **Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
 
-**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v040).
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. Details under [CPM Next Progress](#cpm-next-progress-v041).
 
 **Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
 
@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.4.0)
+### CPM Next Progress (v0.4.1)
 
 **A claude.ai progress tracker for a cpm-next spec's epics, with a check that it matches the epic docs**
 
