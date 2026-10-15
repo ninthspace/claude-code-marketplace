@@ -347,8 +347,8 @@ test('the overview pane draws a row per indexed tracker', async ($, on) => {
   })
   const ui = await $.ui.mount({ plugin: 'cpm-next-progress', surface: 'terminal', component: 'Pane', requestId: OVERVIEW, viewport: { columns: 200, rows: 30 }, props: { bodyColumns: 120 } as never })
   expect((await ui.find({ type: 'Text', text: /01 Slate +█{5}░{7} +2\/5 +in progress: 01-02 S1/ }))).toBeDefined()
-  expect((await ui.find({ type: 'Text', text: /03 Opus .*4\/4 +complete/ }))?.props.dimColor).toBe(true)
-  expect((await ui.findAll({ type: 'Text' })).map(t => t.text).slice(0, 1)).toEqual(['slate'])
+  expect(await ui.find({ type: 'Text', text: /03 Opus/ })).toBeUndefined()
+  expect((await ui.findAll({ type: 'Text' })).map(t => t.text).slice(2)).toEqual(['opus', '  all 1 finished', '/progress-tracker all finished lists the finished trackers too.'])
   await ui.unmount()
 })
 

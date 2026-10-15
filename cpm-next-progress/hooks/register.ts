@@ -212,9 +212,14 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
   isChecking = true
   try {
     const root = await findRoot($)
-    if (root === null) return { lines: ['No docs/specifications folder in this directory or above it.'], drift: [] }
-    const orders = await listDocs($, `${root}/docs/specifications`, ORDER_FILE)
-    if (orders.length === 0) return { lines: [`No docs/specifications/NN-build-order.json in ${root}.`], drift: [] }
+    const orders = root === null ? [] : await listDocs($, `${root}/docs/specifications`, ORDER_FILE)
+    if (root === null || orders.length === 0) {
+      const none = root === null ? 'No docs/specifications folder in this directory or above it.' : `No docs/specifications/NN-build-order.json in ${root}.`
+      // Outside a project with trackers, only a check asked for brings the overview page in line.
+      const overview = when === 'now' ? await overviewDrift($, root ?? (await $.session.cwd()), when) : undefined
+
+      return overview === undefined ? { lines: [none], drift: [] } : { lines: [none, describeDrift(overview)], drift: [overview] }
+    }
     const signature = `${root}|${signatureOf(orders, await listDocs($, `${root}/docs/epics`, EPIC_FILE))}`
     const isBehind = when === 'ifChangedOrBehind' && (await $.store.get(`behind:${root}`)) === true
     if (when !== 'now' && !isBehind && signature === (await $.store.get(`checked:${root}`))) return { lines: [], drift: [] }
@@ -419,7 +424,10 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
 }
 
 /** Drops index entries whose build-order file is gone, checks this project's trackers, and opens the overview. */
-async function openOverview($: EngineInterface): Promise<string> {
+async function openOverview($: EngineInterface, withFinished: boolean): Promise<string> {
+  showFinished = withFinished
+  // An open pane is redrawn, since reopening it delivers only a title.
+  $.ui.invalidate('ui.render')
   for (const key of await $.store.keys()) {
     if (!key.startsWith(INDEX)) continue
     const path = key.slice(INDEX.length)
@@ -435,6 +443,8 @@ async function openOverview($: EngineInterface): Promise<string> {
 }
 
 let overviewTimer: { cancel: () => void } | undefined
+/** Whether the pane lists finished trackers; set by each `/progress-tracker all`. */
+let showFinished = false
 
 /** After the model publishes the overview page, saves its link and returns the note for its first rows. */
 async function saveOverview($: EngineInterface, filePath: string, resultText: string): Promise<string | null> {
@@ -518,14 +528,22 @@ export const register: Register = on => {
   on('command.run', { command: COMMAND }, async ($, e) => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
     if (verb === 'all' && rest[0] === 'publish') return { text: askToPublish($, await prepareOverview($)) }
-    if (verb === 'all') return { text: await openOverview($) }
+    if (verb === 'all') return { text: await openOverview($, rest[0] === 'finished') }
     if (verb === 'init') return { text: await prepareAndPublish($, rest.join(' ')) }
     if (verb !== '') return { text: await prepareAndPublish($, verb) }
     // With no tracker to check and one spec to make one for, the bare command makes it.
     const root = await findRoot($)
     const sole = root !== null && (await listDocs($, `${root}/docs/specifications`, ORDER_FILE)).length === 0 ? await soleSpec($) : ''
     if (typeof sole !== 'string') return { text: await prepareAndPublish($, sole.number) }
-    const { lines } = await checkAll($, 'now')
+    const { lines, drift } = await checkAll($, 'now')
+    // The check was asked for, so what it found is written now rather than at some later turn's end.
+    if (drift.length > 0) {
+      const note = turnEndNote(drift, `/${COMMAND} found writes the trackers lack.`)
+      $.clock.after(0, () => {
+        nudgeContext = note.context
+        $.prompt.submit({ text: note.text }).catch(() => undefined)
+      })
+    }
 
     return { text: lines.join('\n') }
   })
@@ -533,7 +551,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: OVERVIEW }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
 
-    return renderOverview({ Box, Text }, e.props.bodyColumns ?? e.viewport?.columns ?? 80, await indexEntries($))
+    return renderOverview({ Box, Text }, e.props.bodyColumns ?? e.viewport?.columns ?? 80, await indexEntries($), showFinished)
   })
 
   on('ui.close', async ($, e, next) => {

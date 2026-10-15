@@ -488,6 +488,9 @@ export function indexEntry(
   return { ...base, ...counts, changed: isSame ? before.changed : today, checked: today }
 }
 
+/** Whether a tracker has no work left: every row complete, or its artifact deleted. */
+export const isFinished = (entry: IndexEntry) => entry.state === 'gone' || (entry.total > 0 && entry.done >= entry.total)
+
 /** A text progress bar `width` cells wide. */
 export function bar(done: number, total: number, width: number): string {
   const filled = total === 0 ? 0 : Math.round((done / total) * width)
@@ -512,7 +515,7 @@ export function overviewNote(entry: IndexEntry): string {
 export function overviewGroups(entries: IndexEntry[]): { root: string; repo: string; entries: IndexEntry[] }[] {
   const byRoot = new Map<string, IndexEntry[]>()
   for (const entry of entries) byRoot.set(entry.root, [...(byRoot.get(entry.root) ?? []), entry])
-  const isOpen = (list: IndexEntry[]) => list.some(e => e.state !== 'gone' && e.done < e.total)
+  const isOpen = (list: IndexEntry[]) => list.some(e => !isFinished(e))
 
   return [...byRoot]
     // Titles indexed before they were shortened are shortened here.
@@ -595,9 +598,9 @@ export const MAX_NUDGES = 2
  * `text` the person sees, and the writes as `context` only the model reads. The text names the file
  * the writes are saved to, so they can be found without the context.
  */
-export function turnEndNote(drifts: Drift[]): { text: string; context: string } {
+export function turnEndNote(drifts: Drift[], lead = 'The turn ended with a progress tracker still behind the epic docs.'): { text: string; context: string } {
   return {
-    text: `The turn ended with a progress tracker still behind the epic docs. ${drifts.map(describeDrift).join('. ')}. Apply the writes given with this message now, before anything else, then say in one line what was written.`,
+    text: `${lead} ${drifts.map(describeDrift).join('. ')}. Apply the writes given with this message now, before anything else, then say in one line what was written.`,
     context: modelNote(drifts),
   }
 }
