@@ -92,6 +92,14 @@ let lastRows = [];
 
 const isDone = row => row.state === "gone" || (row.total > 0 && row.done >= row.total);
 
+// How long a timed story in progress has run, worked out here so the rows need no rewrite each minute.
+function timingText(started, typical) {
+  if (typeof started !== "number" || !isFinite(started) || started <= 0) { return ""; }
+  const m = Math.max(0, Math.round((Date.now() - started) / 60000));
+  const span = m < 60 ? m + " min" : (m % 60 === 0 ? m / 60 + " h" : Math.floor(m / 60) + " h " + (m % 60) + " min");
+  return span + " in" + (typeof typical === "string" && typical ? ", typically " + typical : "");
+}
+
 // Only claude.ai artifact links are followed; anything else in a row is shown as text.
 const isTrackerLink = url => typeof url === "string" && /^https:\/\/claude\.ai\/(code\/)?artifact\/[A-Za-z0-9_-]+$/.test(url);
 
@@ -99,7 +107,15 @@ function note(row) {
   const box = el("div", "note");
   if (row.state === "gone") { box.textContent = "Tracker deleted"; return box; }
   const parts = [];
-  if (row.active) { parts.push(el("span", "active", "In progress: " + row.active)); }
+  if (row.active) {
+    const timings = new Map((Array.isArray(row.timings) ? row.timings : []).map(t => [t?.story, t]));
+    const stories = String(row.active).split(", ").map(story => {
+      const t = timings.get(story);
+      const text = t ? timingText(t.started, t.typical) : "";
+      return text ? story + " (" + text + ")" : story;
+    });
+    parts.push(el("span", "active", "In progress: " + stories.join(", ")));
+  }
   if (row.waiting > 0) { parts.push(el("span", "waiting", row.waiting + " waiting on input")); }
   if (row.state === "untracked") { parts.push(el("span", null, "No tracker yet")); }
   if (parts.length === 0) { parts.push(el("span", null, (isDone(row) ? "Complete " : "Last moved ") + (row.changed || "—"))); }
@@ -186,6 +202,7 @@ function render(rows) {
     box.replaceChildren(el("div", "empty", "Progress data is not available in this view. Sign in to claude.ai to see it."));
     return;
   }
+  setInterval(() => render(lastRows), 60000);
   db.collection("trackers").onSnapshot(snap => render(snap.docs.map(d => d.data())), () => {});
 })();
 </script>

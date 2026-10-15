@@ -7,7 +7,7 @@ import {
   parseBuildOrder, parseDocs, pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 import type { Times } from './timing'
-import { activeNote, observe, recordTimes, timesReport } from './timing'
+import { activeNote, observe, recordTimes, timesReport, timingOf } from './timing'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
 const SPEC_FILE = /^(\d+)-spec-.*\.md$/
@@ -116,7 +116,7 @@ async function indexEntries($: EngineInterface): Promise<IndexEntry[]> {
 }
 
 /** Compares one build-order file with the epic docs and the live artifact, and saves the writes that would bring them in line. */
-async function checkOne($: EngineInterface, root: string, file: Listing, epics: () => Promise<EpicFile[]>, when: When): Promise<{ line: string; drift?: Drift }> {
+async function checkOne($: EngineInterface, root: string, file: Listing, epics: () => Promise<EpicFile[]>, times: Times, when: When): Promise<{ line: string; drift?: Drift }> {
   const { name } = file
   const indexKey = `${INDEX}${root}/${name}`
   const indexed = await $.store.get(indexKey) as IndexEntry | undefined
@@ -137,6 +137,13 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
   const today = dateOf(await $.clock.now())
   const base = { root, name, title: shortTitle(order.title) }
   const { items, missing } = buildItems(order, await epics(), today)
+  // A timed story in progress carries its start and typical range; the pages work out the time in themselves.
+  for (const item of items.values()) {
+    const timing = item.status === 'In progress' && item.story.startsWith('S') ? timingOf(times, `${item.epic} ${item.story}`) : undefined
+    if (timing === undefined) continue
+    item.started = timing.started
+    if (timing.typical !== '') item.typical = timing.typical
+  }
   if (order.artifact === undefined) {
     await saveIndex($, indexEntry({ ...base, state: 'untracked' }, items, today, indexed))
 
@@ -256,9 +263,10 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
     } catch {
       // A failed timing record costs one story's time, never the check.
     }
+    const times = (await $.store.get(`${TIMES}${root}`) ?? {}) as Times
     for (const order of orders) {
       try {
-        const found = await checkOne($, root, order, epics, when)
+        const found = await checkOne($, root, order, epics, times, when)
         lines.push(found.line)
         if (found.drift !== undefined) drift.push(found.drift)
       } catch (error) {

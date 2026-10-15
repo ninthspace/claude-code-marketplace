@@ -149,7 +149,7 @@
       "name": "cpm-next-progress",
       "source": "./cpm-next-progress",
       "description": "Keeps a claude.ai progress tracker for each cpm-next spec in step with its epic docs, in the build order you set, and shows every project's trackers at a glance in a pane and on an overview page, and times each story so it can say how long the next one should take; it tells Claude which rows to write and never writes to a page itself.",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "keywords": [
         "cpm-next",
         "epics",

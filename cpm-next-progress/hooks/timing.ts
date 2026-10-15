@@ -105,7 +105,16 @@ export function span(minutes: number): string {
 }
 
 /** "35–50 min", "50 min–1 h 20 min". */
-const range = (e: Estimate) => (Math.round(e.high) < 60 ? `${Math.round(e.low)}–${span(e.high)}` : `${span(e.low)}–${span(e.high)}`)
+export const range = (e: Estimate) => (Math.round(e.high) < 60 ? `${Math.round(e.low)}–${span(e.high)}` : `${span(e.low)}–${span(e.high)}`)
+
+/** What a page row carries for a story in progress: when it started, and its typical range when that is a prediction. */
+export function timingOf(times: Times, key: string): { started: number; typical: string } | undefined {
+  const story = times[key]
+  if (story?.started === undefined || story.status !== 'In Progress') return undefined
+  const found = estimateFor(times, story.effort)
+
+  return { started: story.started, typical: found?.estimate.isSteady === true ? range(found.estimate) : '' }
+}
 
 /** What the overview pane adds after an in-progress story: how long it has run, and the steady estimate if there is one. */
 export function activeNote(times: Times, key: string, now: number): string {

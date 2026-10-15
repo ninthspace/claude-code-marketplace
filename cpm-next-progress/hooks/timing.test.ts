@@ -1,8 +1,9 @@
 import { expect, test } from 'claude-code/testing'
 
-import { overviewNote } from './progress'
+import { indexEntry, overviewNote, overviewRows } from './progress'
+import type { TrackerItem } from './progress'
 import type { Times } from './timing'
-import { MIN_STORIES, activeNote, durations, estimate, estimateFor, observe, recordTimes, span, timesReport } from './timing'
+import { MIN_STORIES, activeNote, timingOf, durations, estimate, estimateFor, observe, recordTimes, span, timesReport } from './timing'
 
 const MIN = 60_000
 const T0 = Date.UTC(2026, 9, 15, 9)
@@ -122,4 +123,27 @@ test('the report says what is timed and what is left, and why there is no estima
   expect(report).toMatch(/All: half took 36–49 min, median 40 min, of 10\./)
   expect(report).toMatch(/04-01 S5 \(medium\): 20 min in; medium stories typically take 36–49 min, so about 16–29 min left\./)
   expect(timesReport('opus-opus', many, T0 + 90 * MIN)).toMatch(/past the slower half of medium stories \(49 min\)/)
+})
+
+test('a page row carries the start of a timed story in progress, and its range only when steady', () => {
+  const running = { status: 'In Progress' as const, effort: 'medium', started: T0 }
+  expect(timingOf({ ...finished([30, 30, 35, 40, 40, 40, 45, 50, 50, 60]), '04-01 S5': running }, '04-01 S5')).toEqual({ started: T0, typical: '36–49 min' })
+  expect(timingOf({ '04-01 S5': running }, '04-01 S5')).toEqual({ started: T0, typical: '' })
+  expect(timingOf({ '04-01 S5': { status: 'In Progress', effort: 'medium' } }, '04-01 S5')).toBeUndefined()
+  expect(timingOf({ '04-01 S5': { ...running, status: 'Complete' } }, '04-01 S5')).toBeUndefined()
+})
+
+test('timings pass from tracker rows to the index and the overview rows, without moving the changed date', () => {
+  const row = (story: string, status: TrackerItem['status'], extra: Partial<TrackerItem> = {}): [string, TrackerItem] =>
+    [`04-01-${story.toLowerCase()}`, { seq: 1, phase: 1, phaseLabel: 'p', epic: '04-01', story, title: 't', status, blockedBy: '', note: '', updated: '2026-10-15', ...extra }]
+  const items = new Map([row('S4', 'Complete'), row('S5', 'In progress', { started: T0, typical: '36–49 min' }), row('S6', 'In progress')])
+  const base = { root: '/w/opus-opus', name: '04-build-order.json', title: '04 Tools', state: 'tracked' as const }
+  const before = indexEntry(base, new Map([row('S4', 'Complete'), row('S5', 'In progress'), row('S6', 'In progress')]), '2026-10-14', undefined)
+  const entry = indexEntry(base, items, '2026-10-15', before)
+
+  expect(entry.timings).toEqual([{ story: '04-01 S5', started: T0, typical: '36–49 min' }])
+  expect(entry.changed).toBe('2026-10-14')
+  expect(overviewRows([entry]).get('opus-opus--04')?.timings).toEqual(entry.timings)
+  expect(overviewRows([{ ...entry, state: 'gone' }]).get('opus-opus--04')?.timings).toBeUndefined()
+  expect(indexEntry(base, new Map([row('S6', 'In progress')]), '2026-10-15', undefined).timings).toBeUndefined()
 })

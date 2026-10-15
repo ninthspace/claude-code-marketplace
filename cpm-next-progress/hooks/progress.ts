@@ -40,6 +40,9 @@ export type TrackerItem = {
   blockedBy: string
   note: string
   updated: string
+  /** For a story in progress that was timed: when it started (epoch ms), and its typical range if it has one. */
+  started?: number
+  typical?: string
 }
 
 /** The `meta/tracker` document. */
@@ -464,7 +467,11 @@ export type IndexEntry = {
   waiting: number
   changed: string
   checked: string
+  /** The timed stories in progress, for the pages to show how long each has run. */
+  timings?: Timing[]
 }
+
+export type Timing = { story: string; started: number; typical: string }
 
 /** A build order's title as the overview shows it: no ": build order" tail, and "01 Spec 01: X" as "01 X". */
 export const shortTitle = (title: string) =>
@@ -484,10 +491,13 @@ export function indexEntry(
     active: rows.filter(r => r.status === 'In progress').map(r => `${r.epic} ${r.story}`),
     waiting: rows.filter(r => r.status === 'Waiting on input').length,
   }
+  const timings: Timing[] = rows
+    .filter(r => r.status === 'In progress' && r.started !== undefined)
+    .map(r => ({ story: `${r.epic} ${r.story}`, started: r.started ?? 0, typical: r.typical ?? '' }))
   const isSame = before !== undefined && before.done === counts.done && before.total === counts.total
     && JSON.stringify(before.active) === JSON.stringify(counts.active) && before.waiting === counts.waiting
 
-  return { ...base, ...counts, changed: isSame ? before.changed : today, checked: today }
+  return { ...base, ...counts, ...(timings.length === 0 ? {} : { timings }), changed: isSame ? before.changed : today, checked: today }
 }
 
 /** Whether a tracker has no work left: every row complete, or its artifact deleted. */
@@ -546,6 +556,7 @@ export type OverviewRow = {
   waiting: number
   changed: string
   tracker: string
+  timings?: Timing[]
 }
 
 /**
@@ -573,6 +584,7 @@ export function overviewRows(entries: IndexEntry[]): Map<string, OverviewRow> {
         waiting: entry.waiting,
         changed: entry.changed,
         tracker: entry.state === 'tracked' ? entry.artifact ?? '' : '',
+        ...(entry.state !== 'gone' && entry.timings !== undefined && entry.timings.length > 0 ? { timings: entry.timings } : {}),
       })
     }
   }

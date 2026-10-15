@@ -58,6 +58,7 @@ tr.phase td small { font-weight: 400; color: var(--muted); margin-left: 8px; }
 td.num { font: 13px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; width: 2.5em; }
 td.ref { font: 13px var(--font-mono); white-space: nowrap; }
 td.note { color: var(--muted); font-size: 14px; }
+.timing { margin-top: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 td.date { font: 13px var(--font-mono); color: var(--muted); white-space: nowrap; }
 .pill { display: inline-block; font: 600 12px/1 var(--font-body); padding: 4px 8px; border-radius: 10px; white-space: nowrap; }
 .s-complete { color: var(--ok); background: var(--ok-bg); }
@@ -119,13 +120,24 @@ function el(tag, cls, text) {
   return node;
 }
 
+// How long a timed story in progress has run, worked out here so the rows need no rewrite each minute.
+function timingText(started, typical) {
+  if (typeof started !== "number" || !isFinite(started) || started <= 0) { return ""; }
+  const m = Math.max(0, Math.round((Date.now() - started) / 60000));
+  const span = m < 60 ? m + " min" : (m % 60 === 0 ? m / 60 + " h" : Math.floor(m / 60) + " h " + (m % 60) + " min");
+  return span + " in" + (typeof typical === "string" && typical ? ", typically " + typical : "");
+}
+
 // A pending item with nothing left to wait for can be started now; the stored status stays "Pending".
 function shownStatus(item) {
   const status = item.status || "Pending";
   return status === "Pending" && !item.blockedBy ? "Ready" : status;
 }
 
+let lastItems = null;
+
 function renderItems(items) {
+  lastItems = items;
   const body = document.getElementById("rows");
   body.replaceChildren();
   if (items.length === 0) {
@@ -155,6 +167,8 @@ function renderItems(items) {
     const st = el("td", "status");
     const shown = shownStatus(item);
     st.append(el("span", "pill " + (STATUS[shown] || "s-pending"), shown));
+    const timing = item.status === "In progress" ? timingText(item.started, item.typical) : "";
+    if (timing) { st.append(el("div", "timing", timing)); }
     tr.append(st);
     tr.append(el("td", "note", item.blockedBy || "—"));
     tr.append(el("td", "note", item.note || ""));
@@ -209,6 +223,7 @@ function renderMeta(meta) {
     snap => renderItems(snap.docs.map(d => d.data())),
     () => {}
   );
+  setInterval(() => { if (lastItems) { renderItems(lastItems); } }, 60000);
   db.doc("meta/tracker").onSnapshot(snap => renderMeta(snap.exists ? snap.data() : null), () => {});
 })();
 </script>
