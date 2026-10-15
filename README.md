@@ -59,7 +59,7 @@ Only `cpm-next` is required. The four mods are optional, and each adds one thing
 
 **Mods** are plugins of function hooks that run inside Claude Code. They load like any plugin, run no model calls of their own unless stated, and are switched off and on with the plugin. A session that was open before you installed one needs `/reload-plugins` to load it.
 
-**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. `/progress-tracker all` then shows every project's trackers in a pane, and `/progress-tracker all publish` puts the same overview on a claude.ai page. Details under [CPM Next Progress](#cpm-next-progress-v051).
+**Per-project setup for `/progress-tracker`.** In a repository whose spec has epics in `docs/epics/`, run `/progress-tracker 01` (the spec's number). The mod writes the page and asks Claude to publish it, then saves the tracker's link and keeps the table in step with the epic docs from then on. `/progress-tracker all` then shows every project's trackers in a pane, and `/progress-tracker all publish` puts the same overview on a claude.ai page. Details under [CPM Next Progress](#cpm-next-progress).
 
 **Keeping up to date.** The marketplace auto-updates when Claude Code starts. `plugin-sync` then reloads sessions that were already open. To update straight away, from any directory:
 
@@ -81,7 +81,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 
 ## Available Plugins
 
-### CPM Next (v0.8.1)
+### CPM Next
 
 **Plan and build with six skills: party, plan, review, do, library, status**
 
@@ -104,7 +104,7 @@ The skills read and write Markdown artefacts under `docs/`: `discussions/`, `bri
 /cpm-next:plan a CSV export for the bookings report
 ```
 
-### CPM Next Models (v0.3.0)
+### CPM Next Models
 
 **Holds each cpm-next skill's model and effort for its whole run**
 
@@ -120,7 +120,7 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Develop:** `claude plugin validate cpm-next-models` and `claude plugin test cpm-next-models`.
 
-### CPM Next Progress (v0.5.1)
+### CPM Next Progress
 
 **claude.ai progress trackers for cpm-next specs, kept in step with the epic docs, and an overview of every project's**
 
@@ -196,7 +196,7 @@ The mod asks Claude to publish each page. The spec needs its epics in `docs/epic
 
 **Develop:** `claude plugin validate cpm-next-progress` and `claude plugin test cpm-next-progress`. To run the working tree, start Claude Code with `--plugin-dir cpm-next-progress`. Both commands run on the newest Claude Code installed, while open sessions may run an older one; see `docs/maintenance/README.md` for loading the mod under each.
 
-### What's Next (v0.2.3)
+### What's Next
 
 **A live pane and band showing the cpm-next work left in the current repository**
 
@@ -223,7 +223,7 @@ A Claude Code mod (a plugin of function hooks). It reads the `docs/epics/` and `
 
 **Develop:** `claude plugin validate whats-next` and `claude plugin test whats-next`. To run the working tree instead of the installed release, start Claude Code with `--plugin-dir whats-next` (and uninstall the release, or both draw).
 
-### Plugin Sync (v0.1.0)
+### Plugin Sync
 
 **Open sessions pick up plugin updates without a manual `/reload-plugins`**
 
@@ -244,7 +244,7 @@ Install it at user scope so every session loads it. A session already open needs
 
 **Develop:** `claude plugin validate plugin-sync` and `claude plugin test plugin-sync`.
 
-### NotePlan Search (v1.0.0)
+### NotePlan Search
 
 **Search and query NotePlan notes from Claude Code**
 
@@ -289,7 +289,7 @@ Results are sorted by most recently modified first.
 
 ---
 
-### PHP LSP (v1.0.0)
+### PHP LSP
 
 **PHP semantic code intelligence for Claude Code**
 
@@ -325,7 +325,7 @@ Adds 24 LSP tools to Claude Code for PHP files via [intelephense](https://intele
 
 ---
 
-### JS/TS Simplifier (v1.0.0)
+### JS/TS Simplifier
 
 **Simplify and improve JavaScript and TypeScript code across an entire codebase**
 
@@ -363,7 +363,7 @@ A skill that scans all JS/TS files (or a configurable subset) and applies clarit
 
 [View full documentation](./js-simplifier/SKILL.md)
 
-### Filament Mockup (v1.1.0)
+### Filament Mockup
 
 **Build high-fidelity Filament v5 admin mockups for stakeholder sign-off**
 
@@ -397,7 +397,7 @@ mock up the admin panel for this PRD
 
 [View full documentation](./filament-mockup/SKILL.md)
 
-### Generated Files (v0.1.1)
+### Generated Files
 
 **A pane listing the files Claude generated this session, each with an Open button**
 
@@ -421,7 +421,7 @@ A Claude Code mod (a plugin of function hooks). Skills such as `code-to-uml`, `f
 
 **Develop:** `claude plugin validate generated-files` and `claude plugin test generated-files`.
 
-### Weather (v0.1.2)
+### Weather
 
 **The current weather for a place you set, in the prompt footer**
 
