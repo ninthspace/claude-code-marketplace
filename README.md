@@ -168,6 +168,7 @@ The folder `.claude/cpm-next-progress/` holds generated files (the pages and the
 **Commands:**
 - `/progress-tracker` — checks every tracker in the repository now and prints what differs, or "up to date". In a repository with one spec and no tracker yet, it prepares that spec's tracker instead.
 - `/progress-tracker all` — opens the pane of every project's trackers; `/progress-tracker all finished` includes the finished ones.
+- `/progress-tracker times` — how long this project's stories have taken and how long each story in progress has run (see **Story timings**).
 - `/progress-tracker all publish` — writes the overview page and asks Claude to publish it, or to republish it to its link if it has one.
 - `/progress-tracker 01` (or a spec file, or a build-order file) — writes `docs/specifications/01-build-order.json` from the spec's epics if it does not exist yet, writes the page to `.claude/cpm-next-progress/`, and adds that folder to `.gitignore`. It then submits a prompt asking Claude to publish the page. When Claude does, the mod saves the link to the build-order file and gives Claude the rows to write. `init` before the name still works. For a spec that already has a tracker, it rewrites the page from the current template and asks Claude to republish it to the same link, keeping the rows.
 
@@ -175,11 +176,13 @@ The folder `.claude/cpm-next-progress/` holds generated files (the pages and the
 
 **The overview as a claude.ai page.** `/progress-tracker all publish` writes `.claude/cpm-next-progress/overview.html` and asks Claude to publish it; the mod keeps its link in its own store, since the page belongs to no one project. The page shows a card per project with a row per tracker, linked to that tracker, and totals across all of them. Finished trackers are counted under each project, with a button to list them; the choice is remembered in that browser. Its rows (collection `trackers`, one document per project and spec, such as `slate--01`) are copied from the index and carry the project's folder name, never its path. They are kept in step as the trackers are: a check that changes the index works out the rows the page lacks, and Claude writes them. The page is read only when the index changed since its rows last matched. A bare `/progress-tracker` brings the page in line from any folder, and asks Claude to write what it found at once. If the page is deleted, the mod forgets the link and says so once; `/progress-tracker all publish` makes a new one.
 
-**Asking in words.** Claude has a `publish_tracker` tool that does what `/progress-tracker 01` does, so "publish the progress tracker" in a prompt gets the plugin's page and not one Claude writes by hand.
+**Story timings.** Each check that sees an epic doc change records the stories whose status moved, stamped with the time the doc was written. A story is timed from the check that sees it go from Pending to In Progress to the one that sees it Complete; a story already under way when timing began, or one seen to jump straight from Pending to Complete, gets no time, and a reopened story goes on from its first start. Only projects with a build-order file are checked, so only they are timed. Once a project has 10 timed stories, `/progress-tracker times` gives the middle half of their times and the median, overall and for each `**Effort**` with 10 of its own, and for each story in progress, how long it has run and roughly how long is left. An estimate counts as a prediction only while the slower quartile is within three times the quicker one; past that the times are shown but no time left is given. The pane adds the time in to each story in progress, and the typical range when it is a prediction. Times run from the first start to the close, so a story left In Progress overnight takes the night with it; the median and quartiles keep one such story from moving the estimate much.
+
+**Asking in words.** Claude has a `publish_tracker` tool that does what `/progress-tracker 01` does, so "publish the progress tracker" in a prompt gets the plugin's page and not one Claude writes by hand. A `story_times` tool answers "how long until story 5 is done?" from the timings, as `/progress-tracker times` does, rather than from Claude's guess at the steps left.
 
 **Data layout** (in the artifact's database, readable by anyone it is shared with, writable by editors): collection `items`, one document per row (`01-05-s1`, `01-05-t3.1`); document `meta/tracker` with the title, spec, last update and decisions. The overview page has one collection, `trackers`, one document per project and spec (`slate--01`).
 
-**Mod store** (`$.store`, on this machine only): `index:<root>/<file>` per tracker, `settled:` and `gone:` for finished and deleted trackers, `checked:` and `behind:` per project, and `overview:url` and `overview:synced` for the overview page.
+**Mod store** (`$.store`, on this machine only): `index:<root>/<file>` per tracker, `settled:` and `gone:` for finished and deleted trackers, `checked:`, `behind:` and `times:` (each story's status, effort, start and finish) per project, and `overview:url` and `overview:synced` for the overview page.
 
 **Quick Start:**
 ```bash
@@ -189,6 +192,7 @@ The folder `.claude/cpm-next-progress/` holds generated files (the pages and the
 /progress-tracker 01
 /progress-tracker all
 /progress-tracker all publish
+/progress-tracker times
 ```
 The mod asks Claude to publish each page. The spec needs its epics in `docs/epics/` first.
 

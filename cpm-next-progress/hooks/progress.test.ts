@@ -340,6 +340,7 @@ test('overview groups put projects with open work first', () => {
 })
 
 test('the overview pane draws a row per indexed tracker', async ($, on) => {
+  mock.clock(on)
   mock.store(on, {
     'index:/w/slate/01-build-order.json': { ...ENTRY, active: ['01-02 S1'] },
     'index:/w/opus/03-build-order.json': { ...ENTRY, root: '/w/opus', name: '03-build-order.json', title: '03 Opus', done: 4, total: 4 },
@@ -383,6 +384,7 @@ test('a drift of the overview names its rows', () => {
 
 test('a narrow pane puts each title on a line of its own, in full', async ($, on) => {
   const title = '02 The split of the av plugin into Slate and the Ableton system'
+  mock.clock(on)
   mock.store(on, { 'index:/w/slate/02-build-order.json': { ...ENTRY, name: '02-build-order.json', title } })
   const ui = await $.ui.mount({ plugin: 'cpm-next-progress', surface: 'terminal', component: 'Pane', requestId: OVERVIEW, viewport: { columns: 200, rows: 30 }, props: { bodyColumns: 70 } as never })
   const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)

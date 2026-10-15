@@ -6,6 +6,8 @@ import {
   MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewRows, shortTitle, overviewWrites,
   parseBuildOrder, parseDocs, pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
+import type { Times } from './timing'
+import { activeNote, observe, recordTimes, timesReport } from './timing'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
 const SPEC_FILE = /^(\d+)-spec-.*\.md$/
@@ -17,6 +19,8 @@ const EPIC_FILE = /-epic-.*\.md$/
 const WRITING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash'])
 const COMMAND = 'progress-tracker'
 const TRACKER_TOOL = 'publish_tracker'
+const TIMES_TOOL = 'story_times'
+const TIMES = 'times:'
 const WORK_DIR = '.claude/cpm-next-progress'
 
 type Listing = { name: string; mtimeMs: number; size: number }
@@ -83,6 +87,21 @@ async function isGone($: EngineInterface, url: string): Promise<boolean> {
 }
 
 const INDEX = 'index:'
+
+/** Records the stories that started or finished since the last check of this project's epic docs. */
+async function saveTimes($: EngineInterface, root: string, listing: Listing[], files: EpicFile[]) {
+  const stamped = files.map(file => ({ ...file, mtimeMs: listing.find(e => e.name === file.name)?.mtimeMs ?? 0 }))
+  const before = (await $.store.get(`${TIMES}${root}`) ?? {}) as Times
+  await $.store.set(`${TIMES}${root}`, recordTimes(before, observe(stamped)))
+}
+
+async function timesReportHere($: EngineInterface): Promise<string> {
+  const root = await findRoot($)
+  if (root === null) return 'No docs/specifications folder in this directory or above it.'
+  await checkAll($, 'ifChanged').catch(() => undefined)
+
+  return timesReport(root.split('/').filter(Boolean).at(-1) ?? root, (await $.store.get(`${TIMES}${root}`) ?? {}) as Times, await $.clock.now())
+}
 
 /** Saves a tracker's entry in the cross-project index, and redraws the overview if it is open. */
 async function saveIndex($: EngineInterface, entry: IndexEntry) {
@@ -220,7 +239,8 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
 
       return overview === undefined ? { lines: [none], drift: [] } : { lines: [none, describeDrift(overview)], drift: [overview] }
     }
-    const signature = `${root}|${signatureOf(orders, await listDocs($, `${root}/docs/epics`, EPIC_FILE))}`
+    const epicList = await listDocs($, `${root}/docs/epics`, EPIC_FILE)
+    const signature = `${root}|${signatureOf(orders, epicList)}`
     const isBehind = when === 'ifChangedOrBehind' && (await $.store.get(`behind:${root}`)) === true
     if (when !== 'now' && !isBehind && signature === (await $.store.get(`checked:${root}`))) return { lines: [], drift: [] }
 
@@ -230,6 +250,12 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
     // The epic docs are read once per check, and only when a tracker needs them.
     let epicFiles: Promise<EpicFile[]> | undefined
     const epics = () => (epicFiles ??= readEpics($, root))
+    // Timings are read from every change of the epic docs, settled trackers or not.
+    try {
+      await saveTimes($, root, epicList, await epics())
+    } catch {
+      // A failed timing record costs one story's time, never the check.
+    }
     for (const order of orders) {
       try {
         const found = await checkOne($, root, order, epics, when)
@@ -489,7 +515,7 @@ let isStarted = false
 async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
-  await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, name a spec ("01") to prepare its tracker, "all" for every project\'s progress in a pane, or "all publish" for it as a claude.ai page' })
+  await $.command.register({ name: COMMAND, description: 'Check the cpm-next progress trackers against the epic docs, name a spec ("01") to prepare its tracker, "times" for how long stories take, "all" for every project\'s progress in a pane, or "all publish" for it as a claude.ai page' })
   await $.tool.register({
     name: TRACKER_TOOL,
     description: 'Prepares the cpm-next progress tracker for a spec: the claude.ai page that shows the build order and status of its epics and stories. Call this when asked to make, publish or share a progress tracker or progress page for planned work, and never write such a page by hand. It writes the page from the plugin\'s template and answers with how to publish it; the rows are then kept in step with the epic docs.',
@@ -497,6 +523,12 @@ async function start($: EngineInterface) {
       type: 'object',
       properties: { spec: { type: 'string', description: 'The spec\'s number, e.g. "01". May be left out when the repository has one spec.' } },
     },
+    isDeferred: false,
+  })
+  await $.tool.register({
+    name: TIMES_TOOL,
+    description: 'How long this project\'s cpm-next stories have taken, measured from the epic docs, and how long each story in progress has run, with the time left where the timings are steady enough to predict it. Call this when asked how long a story, an epic or the remaining work will take or has taken, and answer from it rather than estimating from the steps left.',
+    inputSchema: { type: 'object', properties: {} },
     isDeferred: false,
   })
   const { lines, drift } = await checkAll($, 'ifChangedOrBehind')
@@ -529,6 +561,7 @@ export const register: Register = on => {
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
     if (verb === 'all' && rest[0] === 'publish') return { text: askToPublish($, await prepareOverview($)) }
     if (verb === 'all') return { text: await openOverview($, rest[0] === 'finished') }
+    if (verb === 'times') return { text: await timesReportHere($) }
     if (verb === 'init') return { text: await prepareAndPublish($, rest.join(' ')) }
     if (verb !== '') return { text: await prepareAndPublish($, verb) }
     // With no tracker to check and one spec to make one for, the bare command makes it.
@@ -551,7 +584,12 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: OVERVIEW }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
 
-    return renderOverview({ Box, Text }, e.props.bodyColumns ?? e.viewport?.columns ?? 80, await indexEntries($), showFinished)
+    const entries = await indexEntries($)
+    const now = await $.clock.now()
+    const times = new Map<string, Times>()
+    for (const root of new Set(entries.map(entry => entry.root))) times.set(root, (await $.store.get(`${TIMES}${root}`) ?? {}) as Times)
+
+    return renderOverview({ Box, Text }, e.props.bodyColumns ?? e.viewport?.columns ?? 80, entries, showFinished, (root, story) => activeNote(times.get(root) ?? {}, story, now))
   })
 
   on('ui.close', async ($, e, next) => {
@@ -591,6 +629,13 @@ export const register: Register = on => {
         return { result: await prepareForModel($, (e as unknown as { spec?: unknown }).spec) }
       } catch {
         return { deny: `${TRACKER_TOOL} failed; run /${COMMAND} with the spec's number instead.` }
+      }
+    }
+    if (String(e.tool) === `mcp__${$.plugin.name}__${TIMES_TOOL}`) {
+      try {
+        return { result: await timesReportHere($) }
+      } catch (error) {
+        return { deny: `${TIMES_TOOL} failed: ${error instanceof Error ? error.message : String(error)}` }
       }
     }
     const result = await next(e)

@@ -48,7 +48,7 @@ export type TrackerMeta = { title: string; spec: string; updated: string; decisi
 export type EpicFile = { name: string; text: string }
 
 type ParsedTask = { id: string; title: string; status: WorkStatus }
-type ParsedStory = { number: number; title: string; status: WorkStatus; blockedBy: string[]; tasks: ParsedTask[] }
+export type ParsedStory = { number: number; title: string; status: WorkStatus; effort: string; blockedBy: string[]; tasks: ParsedTask[] }
 export type ParsedEpic = { id: string; short: string; title: string; status: WorkStatus; blockedBy: string[]; stories: ParsedStory[] }
 
 const FIELD = /^\*\*([A-Za-z ]+)\*\*:\s*(.*?)\s*$/
@@ -87,7 +87,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
     }
     if (line.startsWith('## ')) {
       task = null
-      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', blockedBy: [], tasks: [], hasNumber: false }
+      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', effort: '', blockedBy: [], tasks: [], hasNumber: false }
       stories.push(story)
       tasks.set(story, [])
       continue
@@ -109,6 +109,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       if (name === 'story') { story.number = Number.parseInt(value, 10); story.hasNumber = true }
       if (name === 'status') story.status = normaliseStatus(value)
       if (name === 'blocked by') story.blockedBy = parseBlockers(value)
+      if (name === 'effort') story.effort = value.trim().toLowerCase()
     } else {
       if (name === 'status') epic.status = normaliseStatus(value)
       if (name === 'blocked by') epic.blockedBy = parseBlockers(value)
@@ -122,6 +123,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       number: s.number,
       title: s.title,
       status: s.status,
+      effort: s.effort,
       blockedBy: s.blockedBy,
       tasks: (tasks.get(s) ?? []).filter(t => t.hasId).map(({ id, title, status }) => ({ id, title, status })),
     }))
@@ -129,7 +131,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
   return epic
 }
 
-function storyStatus(story: ParsedStory, epic: ParsedEpic): WorkStatus {
+export function storyStatus(story: ParsedStory, epic: ParsedEpic): WorkStatus {
   if (epic.status === 'Complete' || story.status === 'Complete') return 'Complete'
   const isStarted = story.tasks.some(t => t.status !== 'Pending')
 
@@ -498,11 +500,16 @@ export function bar(done: number, total: number, width: number): string {
   return `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`
 }
 
-/** What an overview row says after its bar: the work in flight, or why there is none. */
-export function overviewNote(entry: IndexEntry): string {
+/** What an overview row says after its bar: the work in flight, with what `timing` says of each story, or why there is none. */
+export function overviewNote(entry: IndexEntry, timing: (story: string) => string = () => ''): string {
   if (entry.state === 'gone') return 'tracker deleted'
+  const withTiming = (story: string) => {
+    const note = timing(story)
+
+    return note === '' ? story : `${story} (${note})`
+  }
   const parts = [
-    ...(entry.active.length === 0 ? [] : [`in progress: ${entry.active.join(', ')}`]),
+    ...(entry.active.length === 0 ? [] : [`in progress: ${entry.active.map(withTiming).join(', ')}`]),
     ...(entry.waiting === 0 ? [] : [`${entry.waiting} waiting on input`]),
     ...(entry.state === 'untracked' ? ['no tracker'] : []),
   ]

@@ -14,7 +14,7 @@ const SPLIT_BELOW = 90
  * The indexed trackers under their projects: title, a bar, done of total, and what is in flight.
  * Finished and deleted trackers are counted under their project, not listed, unless `showFinished`.
  * In a wide pane each tracker is one line; in a narrow one (a split) the title gets the whole width
- * and the bar and note go on the line beneath. Takes the surface's elements rather than `$`, which
+ * and the bar and note go on the line beneath. `timing` says how long an in-progress story has run. Takes the surface's elements rather than `$`, which
  * may not cross an import.
  */
 export function renderOverview(
@@ -22,6 +22,7 @@ export function renderOverview(
   columns: number,
   entries: IndexEntry[],
   showFinished: boolean,
+  timing: (root: string, story: string) => string = () => '',
 ) {
   const groups = overviewGroups(entries).map(group => ({
     ...group,
@@ -33,7 +34,8 @@ export function renderOverview(
   // Wide: the title column fits the longest title, leaving the note at least 30 columns.
   const titleWidth = Math.max(16, Math.min(longest, columns - BAR - 2 - 8 - 2 - 30 - 2))
   const fit = (text: string, width: number) => (text.length > width ? `${text.slice(0, width - 1)}…` : text.padEnd(width))
-  const figures = (entry: IndexEntry) => `${bar(entry.done, entry.total, BAR)} ${`${entry.done}/${entry.total}`.padStart(7)}  ${overviewNote(entry)}`
+  const figures = (entry: IndexEntry) =>
+    `${bar(entry.done, entry.total, BAR)} ${`${entry.done}/${entry.total}`.padStart(7)}  ${overviewNote(entry, story => timing(entry.root, story))}`
   const hiddenNote = (group: { shown: IndexEntry[]; hidden: number }) =>
     `  ${group.shown.length === 0 ? 'all ' : ''}${group.hidden} finished`
 
