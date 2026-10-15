@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import type { BuildOrder, LiveDoc } from './progress'
 import {
   artifactUrlIn, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson, publishNote,
-  turnEndNote, withArtifact,
+  isMissingArtifact, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
 const MEMBERS = {
@@ -274,4 +274,15 @@ test('the published link is added to the build-order file', () => {
 
   expect(parseBuildOrder(text)).toEqual({ ...ORDER, artifact: 'https://claude.ai/artifact/abc' })
   expect(text.endsWith('}\n')).toBe(true)
+})
+
+test('a deleted tracker is told apart from other failures, and its link can be dropped', () => {
+  expect(isMissingArtifact('db read failed (invalid_argument): no such artifact, collection, or document (or no access)')).toBe(true)
+  expect(isMissingArtifact('the lookup got HTTP 404: no such artifact')).toBe(true)
+  expect(isMissingArtifact('network timeout')).toBe(false)
+  expect(isMissingArtifact('HTTP 500')).toBe(false)
+
+  const text = withArtifact(JSON.stringify({ title: 'T', phases: [] }), 'https://claude.ai/artifact/abc')
+  expect(JSON.parse(withoutArtifact(text))).toEqual({ title: 'T', phases: [] })
+  expect(withoutArtifact(text).endsWith('}\n')).toBe(true)
 })

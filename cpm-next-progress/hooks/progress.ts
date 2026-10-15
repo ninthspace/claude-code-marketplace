@@ -278,6 +278,18 @@ export function withArtifact(text: string, url: string): string {
   return `${JSON.stringify({ ...(JSON.parse(text) as BuildOrder), artifact: url }, null, 2)}\n`
 }
 
+/** A build-order file's text without an `artifact` link, for a tracker whose artifact was deleted. */
+export function withoutArtifact(text: string): string {
+  const { artifact: _, ...rest } = JSON.parse(text) as BuildOrder
+
+  return `${JSON.stringify(rest, null, 2)}\n`
+}
+
+/** Whether a failed read says the artifact is gone: deleted, or never one this account can open. */
+export function isMissingArtifact(message: string): boolean {
+  return /no such artifact|HTTP 404/i.test(message)
+}
+
 function trackerStatus(status: WorkStatus, waitingOn: string | undefined): TrackerStatus {
   if (status === 'Complete') return 'Complete'
   if (status === 'In Progress') return 'In progress'

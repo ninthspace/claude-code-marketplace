@@ -40,7 +40,7 @@ For a small change with no epic: do it, test it, have it audited as below, and w
 
 ## The loop
 
-Take unblocked stories lowest number first. When two or more are unblocked at once, build them in parallel as described below. Each story goes through these steps wherever it is built:
+Take unblocked stories lowest number first. When two or more are unblocked at once, build them in parallel as described below. A story is unblocked only when every story in its `**Blocked by**` is `Complete` with an `**Audit**` line, not when that story's code is written. Don't start a dependent story while the one it depends on waits for its audit. Code built on an unaudited story has to be reworked when that audit's fixes change it, and then one audit covers two stories' changes. Each story goes through these steps wherever it is built:
 
 1. Set the story (and the epic, if it was Pending) to `In Progress`. Call `mcp__cpm-next-models__set_story_effort` with the story's `**Effort**` (`medium` when it has none) and its number. The tool comes from the `cpm-next-models` mod; when it isn't available, build at the session's effort.
 2. Build it, task by task. Set each task `In Progress` when you start it and `Complete` when it's done. Follow the project's existing conventions over your own preferences. In a Laravel project, run the `laravel-simplifier` agent over the story's changes if it's available, before verifying, so the evidence is gathered against the final code.

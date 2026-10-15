@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Drift, EpicFile, LiveDoc } from './progress'
 import {
   MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, parseBuildOrder, parseDocs, pendingJson,
-  publishNote, turnEndNote, withArtifact,
+  isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
@@ -60,26 +60,72 @@ async function readLive($: EngineInterface, url: string, collection: string): Pr
   return parseDocs(result.text ?? '')
 }
 
+/**
+ * Whether a tracker's artifact no longer exists. A deleted one is remembered, so later checks skip it
+ * without a read; any other failure is not taken for deletion.
+ */
+async function isGone($: EngineInterface, url: string): Promise<boolean> {
+  if ((await $.store.get(`gone:${url}`)) === true) return true
+  try {
+    await readLive($, url, 'meta')
+
+    return false
+  } catch (error) {
+    if (!isMissingArtifact(error instanceof Error ? error.message : String(error))) return false
+    await $.store.set(`gone:${url}`, true)
+
+    return true
+  }
+}
+
 /** Compares one build-order file with the epic docs and the live artifact, and saves the writes that would bring them in line. */
-async function checkOne($: EngineInterface, root: string, name: string): Promise<{ line: string; drift?: Drift }> {
+async function checkOne($: EngineInterface, root: string, file: Listing, epics: () => Promise<EpicFile[]>, when: When): Promise<{ line: string; drift?: Drift }> {
+  const { name } = file
+  // A finished or deleted tracker is settled: neither its build-order file nor the artifact is read
+  // again until that file changes, so completed work costs nothing. A check asked for reads it anyway.
+  const settledKey = `settled:${root}/${name}`
+  const mark = `${file.mtimeMs}:${file.size}`
+  const settled = await $.store.get(settledKey) as { mark?: unknown; line?: unknown } | undefined
+  if (when !== 'now' && settled?.mark === mark && typeof settled.line === 'string') return { line: settled.line }
+  const settle = async (line: string) => {
+    await $.store.set(settledKey, { mark, line })
+
+    return { line }
+  }
+
   const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
   if (order.artifact === undefined) return { line: `${name}: no tracker yet; run /${COMMAND} init ${name}` }
 
-  const { items, missing } = buildItems(order, await readEpics($, root), dateOf(await $.clock.now()))
-  const live = await readLive($, order.artifact, 'items')
+  // A tracker deleted once its work was done is not an error.
+  const goneLine = `${name}: its tracker ${order.artifact} no longer exists, so it is not checked; /${COMMAND} ${name.slice(0, name.indexOf('-'))} publishes a new one`
+  if ((await $.store.get(`gone:${order.artifact}`)) === true) return settle(goneLine)
+
+  const { items, missing } = buildItems(order, await epics(), dateOf(await $.clock.now()))
+  let live: LiveDoc[]
+  try {
+    live = await readLive($, order.artifact, 'items')
+  } catch (error) {
+    if (!isMissingArtifact(error instanceof Error ? error.message : String(error))) throw error
+    await $.store.set(`gone:${order.artifact}`, true)
+
+    return settle(goneLine)
+  }
   const liveMeta = (await readLive($, order.artifact, 'meta')).find(d => d.id === 'tracker')
   const writes = diff(items, { title: order.title, spec: order.spec ?? '', decisions: order.decisions ?? [] }, live, liveMeta)
   const skipped = missing.length === 0 ? '' : `; not found in the epics: ${missing.join(', ')}`
-  const file = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.pending.json`
+  const pending = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.pending.json`
   if (writes.length === 0) {
     // Writes saved by an earlier check have been applied; the file must not offer them again.
-    if (await $.fs.exists(file)) await $.fs.write(file, pendingJson({ url: order.artifact, writes: [] }))
+    if (await $.fs.exists(pending)) await $.fs.write(pending, pendingJson({ url: order.artifact, writes: [] }))
+    const isDone = missing.length === 0 && items.size > 0 && [...items.values()].every(item => item.status === 'Complete')
+    if (isDone) return settle(`${name}: complete`)
+    await $.store.delete(settledKey)
 
     return { line: `${name}: up to date${skipped}` }
   }
 
-  const drift: Drift = { name, url: order.artifact, file, writes }
-  await $.fs.write(file, pendingJson(drift))
+  const drift: Drift = { name, url: order.artifact, file: pending, writes }
+  await $.fs.write(pending, pendingJson(drift))
 
   return { line: `${describeDrift(drift)}${skipped}`, drift }
 }
@@ -106,9 +152,12 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
     const lines: string[] = []
     const drift: Drift[] = []
     let isFailed = false
+    // The epic docs are read once per check, and only when a tracker needs them.
+    let epicFiles: Promise<EpicFile[]> | undefined
+    const epics = () => (epicFiles ??= readEpics($, root))
     for (const order of orders) {
       try {
-        const found = await checkOne($, root, order.name)
+        const found = await checkOne($, root, order, epics, when)
         lines.push(found.line)
         if (found.drift !== undefined) drift.push(found.drift)
       } catch (error) {
@@ -171,7 +220,14 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
   const found = await orderFileFor($, root, arg.trim())
   if (typeof found === 'string') return { text: found }
   const { name } = found
-  const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
+  let order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
+  // A deleted tracker's link is dropped, so the page is published afresh and the new link saved.
+  const gone = order.artifact !== undefined && (await isGone($, order.artifact)) ? order.artifact : undefined
+  if (gone !== undefined) {
+    const text = withoutArtifact(await $.fs.read(`${root}/docs/specifications/${name}`))
+    await $.fs.write(`${root}/docs/specifications/${name}`, text)
+    order = parseBuildOrder(text)
+  }
   const repo = root.split('/').filter(Boolean).at(-1) ?? root
   const page = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.html`
   await $.fs.write(page, fillTemplate(await $.fs.read(`${$.plugin.root}/page/tracker.html`), order, repo))
@@ -180,6 +236,7 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
   if (order.artifact !== undefined) return { text: `${name} already has a tracker, ${order.artifact}; its page was rewritten from the current template to ${page}.`, page, url: order.artifact }
 
   const text = [
+    ...(gone === undefined ? [] : [`Its tracker ${gone} no longer exists; its link was removed from docs/specifications/${name}.`]),
     found.created === undefined ? `Using docs/specifications/${name}.` : `Wrote docs/specifications/${name}: ${found.created}. Edit it to change the order or phases.`,
     `Page written to ${page}.${isIgnored ? ` Added /${WORK_DIR} to .gitignore.` : ''}`,
   ].join('\n')

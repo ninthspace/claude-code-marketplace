@@ -43,7 +43,7 @@
       "name": "cpm-next",
       "source": "./cpm-next",
       "description": "Six skills for planning and building with Claude Code: party (discussion with specialist personas), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (build, verify and audit each story to a stated finish line), library (reference documents and promoted retro lessons), status (where things stand and what to run next).",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "keywords": [
         "planning",
         "party-mode",
@@ -149,7 +149,7 @@
       "name": "cpm-next-progress",
       "source": "./cpm-next-progress",
       "description": "Checks a claude.ai progress tracker for a cpm-next spec's epics against the epic docs, in the build order you set, and tells Claude which rows to update; it never writes to the tracker itself.",
-      "version": "0.3.8",
+      "version": "0.3.9",
       "keywords": [
         "cpm-next",
         "epics",
