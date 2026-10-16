@@ -22,11 +22,20 @@ type Listing = { name: string; mtimeMs: number; size: number }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
+/** Each project's docs folder: `docs`, or `docs/cpm` in a project that keeps its CPM documents there. */
+const docsFolders = new Map<string, string>()
+const docs = (root: string) => `${root}/${docsFolders.get(root) ?? 'docs'}`
+
 async function findRoot($: EngineInterface): Promise<string | null> {
   const home = await $.env.get('HOME')
   let dir = await $.session.cwd()
   for (;;) {
-    if ((await $.fs.exists(`${dir}/docs/epics`)) || (await $.fs.exists(`${dir}/docs/specifications`))) return dir
+    for (const folder of ['docs', 'docs/cpm']) {
+      if (!(await $.fs.exists(`${dir}/${folder}/epics`)) && !(await $.fs.exists(`${dir}/${folder}/specifications`))) continue
+      docsFolders.set(dir, folder)
+
+      return dir
+    }
     // The climb ends at the repo's top and never enters the home folder, so docs above a project are not taken for its own.
     if (await $.fs.exists(`${dir}/.git`)) return null
     const cut = dir.lastIndexOf('/')
@@ -43,11 +52,18 @@ async function listDocs($: EngineInterface, dir: string, pattern: RegExp): Promi
   return entries.filter(e => e.kind === 'file' && pattern.test(e.name)).sort((a, b) => a.name.localeCompare(b.name))
 }
 
-// Active and archived epics, and active specs; the signature covers all three folders.
+// Active and archived epics, and active specs; the signature covers all three folders. A `docs/cpm`
+// project may keep its archive in `docs/archive` all the same.
+async function archiveOf($: EngineInterface, root: string): Promise<string> {
+  const own = `${docs(root)}/archive/epics`
+
+  return (await $.fs.exists(own)) ? own : `${root}/docs/archive/epics`
+}
+
 async function listAll($: EngineInterface, root: string) {
-  const active = await listDocs($, `${root}/docs/epics`, EPIC_FILE)
-  const archived = await listDocs($, `${root}/docs/archive/epics`, EPIC_FILE)
-  const specs = await listDocs($, `${root}/docs/specifications`, SPEC_FILE)
+  const active = await listDocs($, `${docs(root)}/epics`, EPIC_FILE)
+  const archived = await listDocs($, await archiveOf($, root), EPIC_FILE)
+  const specs = await listDocs($, `${docs(root)}/specifications`, SPEC_FILE)
 
   return { active, archived, specs, signature: signatureOf(root, active, archived, specs) }
 }
@@ -55,10 +71,11 @@ async function listAll($: EngineInterface, root: string) {
 async function readDocs($: EngineInterface, root: string): Promise<{ files: EpicFile[]; specs: SpecFile[]; signature: string }> {
   const listed = await listAll($, root)
   const files: EpicFile[] = []
-  for (const e of listed.active) files.push({ name: e.name, text: await $.fs.read(`${root}/docs/epics/${e.name}`), isArchived: false })
-  for (const e of listed.archived) files.push({ name: e.name, text: await $.fs.read(`${root}/docs/archive/epics/${e.name}`), isArchived: true })
+  for (const e of listed.active) files.push({ name: e.name, text: await $.fs.read(`${docs(root)}/epics/${e.name}`), isArchived: false })
+  const archive = await archiveOf($, root)
+  for (const e of listed.archived) files.push({ name: e.name, text: await $.fs.read(`${archive}/${e.name}`), isArchived: true })
   const specs: SpecFile[] = []
-  for (const s of listed.specs) specs.push({ name: s.name, text: await $.fs.read(`${root}/docs/specifications/${s.name}`) })
+  for (const s of listed.specs) specs.push({ name: s.name, text: await $.fs.read(`${docs(root)}/specifications/${s.name}`), path: `${docs(root).slice(root.length + 1)}/specifications/${s.name}` })
 
   return { files, specs, signature: listed.signature }
 }
@@ -169,7 +186,7 @@ export const register: Register = on => {
 
   on('command.run', { command: 'next' }, async $ => {
     const current = await refresh($)
-    if (current === null) return { text: 'No docs/epics or docs/specifications folder in this directory or above it.' }
+    if (current === null) return { text: 'No docs/epics or docs/specifications folder (or the same under docs/cpm) in this directory or above it.' }
     await $.ui.open({ id: PANE, title: "What's next" })
 
     return { text: describePlan(current) }
@@ -224,7 +241,7 @@ export const register: Register = on => {
     const isBusy = await read($, isNoteBusy)
     const error = await read($, noteError)
 
-    if (current === null) return <Text dimColor>No docs/epics or docs/specifications folder in this directory or above it.</Text>
+    if (current === null) return <Text dimColor>No docs/epics or docs/specifications folder (or the same under docs/cpm) in this directory or above it.</Text>
     if (!hasWork(current)) return <Text dimColor>{current.repo}: no stories left and every spec has epics.</Text>
 
     const label = (s: NextStory) => `${s.epicId.split('-epic-')[0]} S${s.number}`

@@ -128,7 +128,7 @@ function effectiveStatus(story: ParsedStory): WorkStatus {
 
 const storyKey = (epicId: string, n: number) => `${epicId}#${n}`
 
-export type SpecFile = { name: string; text: string }
+export type SpecFile = { name: string; text: string; path?: string }
 
 /**
  * Specs no epic has been planned from: no cpm-next epic numbered after the spec
@@ -158,7 +158,7 @@ export function unplannedSpecs(specs: SpecFile[], epics: EpicFile[]): NextSpec[]
       id: spec.name.replace(/\.md$/, ''),
       // "# Spec: X" and "# Spec 16: X" both read as "X"; the number is already in the row label.
       title: /^#\s+(?:Spec(?:ification)?(?:\s+\d+)?:\s*)?(.+)$/im.exec(spec.text)?.[1]?.trim() ?? spec.name,
-      path: `docs/specifications/${spec.name}`,
+      path: spec.path ?? `docs/specifications/${spec.name}`,
     }))
 }
 
@@ -274,7 +274,7 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
 export function describePlan(plan: NextPlan, limit = 12): string {
   const lines: string[] = []
   if (plan.order.length === 0) {
-    lines.push(`${plan.repo}: no cpm-next stories left in docs/epics.`)
+    lines.push(`${plan.repo}: no cpm-next stories left in its epics.`)
   } else {
     lines.push(`${plan.repo}: ${plan.order.length} stories left across ${plan.epics.length} epics, in recommended order:`)
     plan.order.slice(0, limit).forEach((s, i) => {

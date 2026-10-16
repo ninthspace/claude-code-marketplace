@@ -28,11 +28,22 @@ type Check = { lines: string[]; drift: Drift[] }
 /** When a check reads the artifact: always, when a doc changed, or also when the last check left a tracker behind. */
 type When = 'now' | 'ifChanged' | 'ifChangedOrBehind'
 
+/** Each project's docs folder: `docs`, or `docs/cpm` in a project that keeps its CPM documents there. */
+const docsFolders = new Map<string, string>()
+const docs = (root: string) => `${root}/${docsFolders.get(root) ?? 'docs'}`
+/** The docs folder as a project-relative path, for messages and the page. */
+const rel = (root: string) => docsFolders.get(root) ?? 'docs'
+
 async function findRoot($: EngineInterface): Promise<string | null> {
   const home = await $.env.get('HOME')
   let dir = await $.session.cwd()
   for (;;) {
-    if (await $.fs.exists(`${dir}/docs/specifications`)) return dir
+    for (const folder of ['docs', 'docs/cpm']) {
+      if (!(await $.fs.exists(`${dir}/${folder}/specifications`))) continue
+      docsFolders.set(dir, folder)
+
+      return dir
+    }
     // The climb ends at the repo's top and never enters the home folder, so docs above a project are not taken for its own.
     if (await $.fs.exists(`${dir}/.git`)) return null
     const cut = dir.lastIndexOf('/')
@@ -52,8 +63,8 @@ const signatureOf = (...lists: Listing[][]) => lists.map(list => list.map(e => `
 
 async function readEpics($: EngineInterface, root: string): Promise<EpicFile[]> {
   const files: EpicFile[] = []
-  for (const e of await listDocs($, `${root}/docs/epics`, EPIC_FILE)) {
-    files.push({ name: e.name, text: await $.fs.read(`${root}/docs/epics/${e.name}`) })
+  for (const e of await listDocs($, `${docs(root)}/epics`, EPIC_FILE)) {
+    files.push({ name: e.name, text: await $.fs.read(`${docs(root)}/epics/${e.name}`) })
   }
 
   return files
@@ -97,7 +108,7 @@ async function saveTimes($: EngineInterface, root: string, listing: Listing[], f
 
 async function timesReportHere($: EngineInterface): Promise<string> {
   const root = await findRoot($)
-  if (root === null) return 'No docs/specifications folder in this directory or above it.'
+  if (root === null) return 'No docs/specifications or docs/cpm/specifications folder in this directory or above it.'
   await checkAll($, 'ifChanged').catch(() => undefined)
 
   return timesReport(root.split('/').filter(Boolean).at(-1) ?? root, (await $.store.get(`${TIMES}${root}`) ?? {}) as Times, await $.clock.now())
@@ -133,7 +144,7 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
     return { line }
   }
 
-  const order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
+  const order = parseBuildOrder(await $.fs.read(`${docs(root)}/specifications/${name}`))
   const today = dateOf(await $.clock.now())
   const base = { root, name, title: shortTitle(order.title) }
   const { items, missing } = buildItems(order, await epics(), today)
@@ -238,15 +249,15 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
   isChecking = true
   try {
     const root = await findRoot($)
-    const orders = root === null ? [] : await listDocs($, `${root}/docs/specifications`, ORDER_FILE)
+    const orders = root === null ? [] : await listDocs($, `${docs(root)}/specifications`, ORDER_FILE)
     if (root === null || orders.length === 0) {
-      const none = root === null ? 'No docs/specifications folder in this directory or above it.' : `No docs/specifications/NN-build-order.json in ${root}.`
+      const none = root === null ? 'No docs/specifications or docs/cpm/specifications folder in this directory or above it.' : `No ${rel(root)}/specifications/NN-build-order.json in ${root}.`
       // Outside a project with trackers, only a check asked for brings the overview page in line.
       const overview = when === 'now' ? await overviewDrift($, root ?? (await $.session.cwd()), when) : undefined
 
       return overview === undefined ? { lines: [none], drift: [] } : { lines: [none, describeDrift(overview)], drift: [overview] }
     }
-    const epicList = await listDocs($, `${root}/docs/epics`, EPIC_FILE)
+    const epicList = await listDocs($, `${docs(root)}/epics`, EPIC_FILE)
     const signature = `${root}|${signatureOf(orders, epicList)}`
     const isBehind = when === 'ifChangedOrBehind' && (await $.store.get(`behind:${root}`)) === true
     if (when !== 'now' && !isBehind && signature === (await $.store.get(`checked:${root}`))) return { lines: [], drift: [] }
@@ -310,12 +321,12 @@ async function ignoreWorkDir($: EngineInterface, root: string): Promise<boolean>
  * epic stands in for the spec, giving the title, and its `**Source spec**` line, if any, the source.
  */
 async function specless($: EngineInterface, root: string, number: string): Promise<{ name: string; text: string; path: string } | undefined> {
-  const first = (await listDocs($, `${root}/docs/epics`, EPIC_FILE)).find(e => e.name.startsWith(`${number}-`))
+  const first = (await listDocs($, `${docs(root)}/epics`, EPIC_FILE)).find(e => e.name.startsWith(`${number}-`))
   if (first === undefined) return undefined
-  const text = await $.fs.read(`${root}/docs/epics/${first.name}`)
+  const text = await $.fs.read(`${docs(root)}/epics/${first.name}`)
   const cited = /^\*\*Source spec\*\*:\s*(\S+)/m.exec(text)?.[1]
 
-  return { name: first.name, text, path: cited ?? `docs/epics/${first.name}` }
+  return { name: first.name, text, path: cited ?? `${rel(root)}/epics/${first.name}` }
 }
 
 /**
@@ -325,21 +336,21 @@ async function specless($: EngineInterface, root: string, number: string): Promi
 async function orderFileFor($: EngineInterface, root: string, arg: string): Promise<{ name: string; created?: string } | string> {
   const name = arg.split('/').at(-1) ?? arg
   if (ORDER_FILE.test(name)) {
-    return (await $.fs.exists(`${root}/docs/specifications/${name}`)) ? { name } : `${root}/docs/specifications/${name} does not exist.`
+    return (await $.fs.exists(`${docs(root)}/specifications/${name}`)) ? { name } : `${docs(root)}/specifications/${name} does not exist.`
   }
   const number = /^\d+$/.test(name) ? name.padStart(2, '0') : SPEC_FILE.exec(name)?.[1]
   if (number === undefined) return `Name a spec or a build-order file: /${COMMAND} 01, or /${COMMAND} 01-build-order.json`
 
   const orderName = `${number}-build-order.json`
-  if (await $.fs.exists(`${root}/docs/specifications/${orderName}`)) return { name: orderName }
-  const spec = (await listDocs($, `${root}/docs/specifications`, SPEC_FILE)).find(e => SPEC_FILE.exec(e.name)?.[1] === number)
+  if (await $.fs.exists(`${docs(root)}/specifications/${orderName}`)) return { name: orderName }
+  const spec = (await listDocs($, `${docs(root)}/specifications`, SPEC_FILE)).find(e => SPEC_FILE.exec(e.name)?.[1] === number)
   const source = spec !== undefined
-    ? { name: spec.name, text: await $.fs.read(`${root}/docs/specifications/${spec.name}`) }
+    ? { name: spec.name, text: await $.fs.read(`${docs(root)}/specifications/${spec.name}`), path: `${rel(root)}/specifications/${spec.name}` }
     : await specless($, root, number)
-  if (source === undefined) return `No docs/specifications/${number}-spec-*.md or docs/epics/${number}-*-epic-*.md in ${root}.`
+  if (source === undefined) return `No ${rel(root)}/specifications/${number}-spec-*.md or ${rel(root)}/epics/${number}-*-epic-*.md in ${root}.`
   const order = defaultBuildOrder(source, await readEpics($, root))
-  if (order.phases.length === 0) return `No stories in docs/epics/${number}-*-epic-*.md yet; plan the epics for ${source.name} first.`
-  await $.fs.write(`${root}/docs/specifications/${orderName}`, `${JSON.stringify(order, null, 2)}\n`)
+  if (order.phases.length === 0) return `No stories in ${rel(root)}/epics/${number}-*-epic-*.md yet; plan the epics for ${source.name} first.`
+  await $.fs.write(`${docs(root)}/specifications/${orderName}`, `${JSON.stringify(order, null, 2)}\n`)
   const stories = order.phases.reduce((n, p) => n + p.items.length, 0)
 
   return { name: orderName, created: `${stories} ${stories === 1 ? 'story' : 'stories'} in ${order.phases.length} ${order.phases.length === 1 ? 'phase' : 'phases'}, one per epic` }
@@ -351,16 +362,16 @@ async function orderFileFor($: EngineInterface, root: string, arg: string): Prom
  */
 async function prepare($: EngineInterface, arg: string): Promise<{ text: string; page?: string; url?: string }> {
   const root = await findRoot($)
-  if (root === null) return { text: 'No docs/specifications folder in this directory or above it.' }
+  if (root === null) return { text: 'No docs/specifications or docs/cpm/specifications folder in this directory or above it.' }
   const found = await orderFileFor($, root, arg.trim())
   if (typeof found === 'string') return { text: found }
   const { name } = found
-  let order = parseBuildOrder(await $.fs.read(`${root}/docs/specifications/${name}`))
+  let order = parseBuildOrder(await $.fs.read(`${docs(root)}/specifications/${name}`))
   // A deleted tracker's link is dropped, so the page is published afresh and the new link saved.
   const gone = order.artifact !== undefined && (await isGone($, order.artifact)) ? order.artifact : undefined
   if (gone !== undefined) {
-    const text = withoutArtifact(await $.fs.read(`${root}/docs/specifications/${name}`))
-    await $.fs.write(`${root}/docs/specifications/${name}`, text)
+    const text = withoutArtifact(await $.fs.read(`${docs(root)}/specifications/${name}`))
+    await $.fs.write(`${docs(root)}/specifications/${name}`, text)
     order = parseBuildOrder(text)
   }
   const repo = root.split('/').filter(Boolean).at(-1) ?? root
@@ -371,8 +382,8 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
   if (order.artifact !== undefined) return { text: `${name} already has a tracker, ${order.artifact}; its page was rewritten from the current template to ${page}.`, page, url: order.artifact }
 
   const text = [
-    ...(gone === undefined ? [] : [`Its tracker ${gone} no longer exists; its link was removed from docs/specifications/${name}.`]),
-    found.created === undefined ? `Using docs/specifications/${name}.` : `Wrote docs/specifications/${name}: ${found.created}. Edit it to change the order or phases.`,
+    ...(gone === undefined ? [] : [`Its tracker ${gone} no longer exists; its link was removed from ${rel(root)}/specifications/${name}.`]),
+    found.created === undefined ? `Using ${rel(root)}/specifications/${name}.` : `Wrote ${rel(root)}/specifications/${name}: ${found.created}. Edit it to change the order or phases.`,
     `Page written to ${page}.${isIgnored ? ` Added /${WORK_DIR} to .gitignore.` : ''}`,
   ].join('\n')
 
@@ -419,11 +430,11 @@ function askToPublish($: EngineInterface, { text, page, url }: { text: string; p
 /** The number of the repository's only spec, for a request that names none. */
 async function soleSpec($: EngineInterface): Promise<{ number: string } | string> {
   const root = await findRoot($)
-  if (root === null) return 'No docs/specifications folder in this directory or above it.'
-  const numbers = (await listDocs($, `${root}/docs/specifications`, SPEC_FILE)).map(e => SPEC_FILE.exec(e.name)?.[1] ?? '')
+  if (root === null) return 'No docs/specifications or docs/cpm/specifications folder in this directory or above it.'
+  const numbers = (await listDocs($, `${docs(root)}/specifications`, SPEC_FILE)).map(e => SPEC_FILE.exec(e.name)?.[1] ?? '')
   if (numbers.length === 1 && numbers[0] !== undefined) return { number: numbers[0] }
 
-  return numbers.length === 0 ? `No docs/specifications/NN-spec-*.md in ${root}.` : `Name the spec: ${numbers.join(', ')}.`
+  return numbers.length === 0 ? `No ${rel(root)}/specifications/NN-spec-*.md in ${root}.` : `Name the spec: ${numbers.join(', ')}.`
 }
 
 /** Answers the model's own request for a tracker: the page is written, and the result says how to publish it. */
@@ -446,7 +457,7 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
   const url = artifactUrlIn(resultText)
   const root = await findRoot($)
   if (base === undefined || url === undefined || root === null) return null
-  const path = `${root}/docs/specifications/${base}.json`
+  const path = `${docs(root)}/specifications/${base}.json`
   if (!(await $.fs.exists(path))) return null
   const text = await $.fs.read(path)
   if (parseBuildOrder(text).artifact !== undefined) return null
@@ -454,7 +465,7 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
 
   const { drift } = await checkAll($, 'now')
 
-  return [`Saved the tracker link to docs/specifications/${base}.json.`, ...(drift.length > 0 ? [modelNote(drift)] : [])].join(' ')
+  return [`Saved the tracker link to ${rel(root)}/specifications/${base}.json.`, ...(drift.length > 0 ? [modelNote(drift)] : [])].join(' ')
 }
 
 /** Drops index entries whose build-order file is gone, checks this project's trackers, and opens the overview. */
@@ -466,7 +477,8 @@ async function openOverview($: EngineInterface, withFinished: boolean): Promise<
     if (!key.startsWith(INDEX)) continue
     const path = key.slice(INDEX.length)
     const cut = path.lastIndexOf('/')
-    if (!(await $.fs.exists(`${path.slice(0, cut)}/docs/specifications/${path.slice(cut + 1)}`))) await $.store.delete(key)
+    const [dir, file] = [path.slice(0, cut), path.slice(cut + 1)]
+    if (!(await $.fs.exists(`${dir}/docs/specifications/${file}`)) && !(await $.fs.exists(`${dir}/docs/cpm/specifications/${file}`))) await $.store.delete(key)
   }
   await checkAll($, 'ifChanged').catch(() => undefined)
   const { isPlaced } = await $.ui.open({ id: OVERVIEW, title: 'Progress', closeOnEscape: true })
@@ -574,7 +586,7 @@ export const register: Register = on => {
     if (verb !== '') return { text: await prepareAndPublish($, verb) }
     // With no tracker to check and one spec to make one for, the bare command makes it.
     const root = await findRoot($)
-    const sole = root !== null && (await listDocs($, `${root}/docs/specifications`, ORDER_FILE)).length === 0 ? await soleSpec($) : ''
+    const sole = root !== null && (await listDocs($, `${docs(root)}/specifications`, ORDER_FILE)).length === 0 ? await soleSpec($) : ''
     if (typeof sole !== 'string') return { text: await prepareAndPublish($, sole.number) }
     const { lines, drift } = await checkAll($, 'now')
     // The check was asked for, so what it found is written now rather than at some later turn's end.
