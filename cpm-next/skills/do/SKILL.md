@@ -90,7 +90,7 @@ The lead merges the branches in story order with `git merge --no-ff`. After reso
 
 `--parallel check` reads only. It reports the unblocked stories in scope, the batches worktree mode would form and why any story stays out, whether the suite is isolated (citing the config lines that show it), and the setup each worktree would need.
 
-A run without `--parallel` makes the same check, without the report, whenever two or more stories become unblocked at once. If a batch qualifies, say so in one line in the same message as the next tool call, naming the stories and `/cpm-next:do {scope} --parallel`, then carry on one at a time, and repeat it under **Found** at the end of the run. Don't switch to worktree mode unasked, since it commits. Check the suite's isolation once per run, not at every batch.
+A run without `--parallel` builds stories that share neither files nor runtime state in parallel in its own checkout, as above; the flag is never needed for them. For stories that rule leaves one at a time, it makes the same check as `--parallel check`, without the report. If a batch qualifies, say so in one line in the same message as the next tool call, naming the stories, what they share, and `/cpm-next:do {scope} --parallel`, then carry on one at a time, and repeat it under **Found** at the end of the run. Don't switch to worktree mode unasked, since it commits. Check the suite's isolation once per run, not at every batch.
 
 Hand plain lookups to the `cpm-next:scout` agent: where something is defined or used, which files a change touches, what a read-only query returns. It runs on Haiku and returns only the answer, which keeps search output out of this conversation. Do the reading yourself when the answer depends on understanding the code, not finding it.
 
