@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -136,7 +136,7 @@
       "name": "cpm-next-models",
       "source": "./cpm-next-models",
       "description": "Keeps a cpm-next skill's frontmatter model and effort for every turn of its run, including your replies to its questions, and runs `do all` at high effort; released when another skill runs, you switch model or effort, or /clear.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "keywords": [
         "cpm-next",
         "model",

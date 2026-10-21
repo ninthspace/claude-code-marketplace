@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { ModelPin, PendingSkill } from '../types'
 import {
   effortFor, effortStep, floorFor, isHeldSkill, isPersonsSwitch, isStoryEffort, overrideFor, parseFrontmatter,
-  pickInstall, resolveModel, skillName, slashSkill, statusText, storyStep,
+  pickInstall, resolveModel, skillFiles, skillName, slashCommand, statusText, storyStep,
 } from './pin'
 
 const STORY_TOOL = 'set_story_effort'
@@ -21,14 +21,23 @@ async function release($: EngineInterface) {
   await setPin($, null)
 }
 
-// A skill is seen by up to three events (the typed prompt, the expansion, the Skill tool); the first one
-// to name it sets the pending skill and the rest leave it be.
+// A skill is seen by up to two events (the typed prompt, the Skill tool); the first one to name it sets
+// the pending skill and the other leaves it be.
 async function capture($: EngineInterface, name: string, args: string) {
   const skill = skillName(name)
   if (!isHeldSkill(skill)) return
   const waiting: PendingSkill = await read($, pending)
   if (waiting?.skill === skill) return
   await update($, pending, () => ({ skill, args }))
+}
+
+// A built-in such as /cost has no file and leaves the hold alone; a plugin's command always has a prefix.
+async function isSkill($: EngineInterface, name: string) {
+  if (name.includes(':')) return true
+  const roots = [await $.session.root(), await $.env.get('HOME')].filter((r): r is string => typeof r === 'string')
+  for (const path of skillFiles(name, roots)) if (await $.fs.exists(path)) return true
+
+  return false
 }
 
 // The engine doesn't pass a skill's frontmatter effort on to the request, and passes its model only in the
@@ -50,28 +59,19 @@ async function frontmatterOf($: EngineInterface, skill: string) {
 }
 
 export const register: Register = on => {
+  // classic.UserPromptExpansion and skill.prompt would serve here, but sec-default sends both past the user tier.
   on('prompt.submit', async ($, e, next) => {
-    const typed = slashSkill(e.text)
-    if (typed !== null) await capture($, typed.skill, typed.args)
-
-    return next(e)
-  })
-
-  on('classic.UserPromptExpansion', async ($, e, next) => {
-    await capture($, e.command_name, e.command_args)
-
-    return next(e)
-  })
-
-  on('skill.prompt', async ($, e, next) => {
-    if (isHeldSkill(skillName(e.skill))) await capture($, e.skill, '')
-    else await release($)
+    const typed = slashCommand(e.text)
+    if (typed === null) return next(e)
+    if (isHeldSkill(typed.skill)) await capture($, typed.skill, typed.args)
+    else if (await isSkill($, typed.skill)) await release($)
 
     return next(e)
   })
 
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
-    await capture($, e.skill, e.args ?? '')
+    if (isHeldSkill(skillName(e.skill))) await capture($, e.skill, e.args ?? '')
+    else await release($)
 
     return next(e)
   })

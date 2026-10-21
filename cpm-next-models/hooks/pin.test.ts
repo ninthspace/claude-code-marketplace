@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import {
   effortFor, effortStep, familyOf, floorFor, isHeldSkill, isPersonsSwitch, isStoryEffort, overrideFor, parseFrontmatter,
-  pickInstall, resolveModel, skillName, slashSkill, statusText, storyStep,
+  pickInstall, resolveModel, skillName, skillFiles, slashCommand, statusText, storyStep,
 } from './pin'
 
 test('every cpm-next skill is held, others are not', () => {
@@ -76,12 +76,13 @@ test('frontmatter model and effort are read from a SKILL.md', () => {
   expect(parseFrontmatter('# no frontmatter')).toEqual({})
 })
 
-test('a typed cpm-next skill is recognised with its arguments', () => {
-  expect(slashSkill('/cpm-next:do all')).toEqual({ skill: 'cpm-next:do', args: 'all' })
-  expect(slashSkill('  /cpm-next:status  ')).toEqual({ skill: 'cpm-next:status', args: '' })
-  expect(slashSkill('/cpm-next:plan add a thing\nover two lines')).toEqual({ skill: 'cpm-next:plan', args: 'add a thing\nover two lines' })
-  expect(slashSkill('/commit')).toBeNull()
-  expect(slashSkill('yes, /cpm-next:do')).toBeNull()
+test('a typed slash command is recognised with its arguments', () => {
+  expect(slashCommand('/cpm-next:do all')).toEqual({ skill: 'cpm-next:do', args: 'all' })
+  expect(slashCommand('  /cpm-next:status  ')).toEqual({ skill: 'cpm-next:status', args: '' })
+  expect(slashCommand('/cpm-next:plan add a thing\nover two lines')).toEqual({ skill: 'cpm-next:plan', args: 'add a thing\nover two lines' })
+  expect(slashCommand('/commit')).toEqual({ skill: 'commit', args: '' })
+  expect(slashCommand('yes, /cpm-next:do')).toBeNull()
+  expect(slashCommand('/Users/me/notes.md')).toBeNull()
 })
 
 test('a frontmatter model family takes the session model version', () => {
@@ -142,4 +143,11 @@ test('a story leaves the person\'s /effort, other skills and no run alone', () =
 
 test('the footer names the story when one is held', () => {
   expect(statusText({ ...DO, effort: 'low', story: '3' })).toBe('cpm-next:do · story 3 · sonnet · low')
+})
+
+test('a name without a plugin prefix is looked for as a skill or command in each root', () => {
+  expect(skillFiles('commit', ['/repo', '/home'])).toEqual([
+    '/repo/.claude/skills/commit/SKILL.md', '/repo/.claude/commands/commit.md',
+    '/home/.claude/skills/commit/SKILL.md', '/home/.claude/commands/commit.md',
+  ])
 })

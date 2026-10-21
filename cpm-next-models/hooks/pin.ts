@@ -99,9 +99,14 @@ export function parseFrontmatter(text: string): { model?: string; effort?: Effor
   return { model: get('model'), effort: LEVELS.includes(effort ?? '') ? (effort as Effort) : undefined }
 }
 
-/** `/cpm-next:do all` → `{ skill: 'cpm-next:do', args: 'all' }`; null for anything else a person types. */
-export function slashSkill(text: string): { skill: string; args: string } | null {
-  const found = /^\/(cpm-next:[\w-]+)(?:\s+([\s\S]*))?$/.exec(text.trim())
+/** Where a typed name without a plugin prefix is defined, if it is a skill or custom command rather than a built-in. */
+export function skillFiles(name: string, roots: string[]): string[] {
+  return roots.flatMap(root => [`${root}/.claude/skills/${name}/SKILL.md`, `${root}/.claude/commands/${name}.md`])
+}
+
+/** `/cpm-next:do all` → `{ skill: 'cpm-next:do', args: 'all' }`; null for a prompt that isn't a slash command. */
+export function slashCommand(text: string): { skill: string; args: string } | null {
+  const found = /^\/([\w:-]+)(?:\s+([\s\S]*))?$/.exec(text.trim())
 
   return found === null ? null : { skill: found[1] ?? '', args: found[2] ?? '' }
 }
