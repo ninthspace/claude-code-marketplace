@@ -112,6 +112,14 @@ A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts onl
 
 **Commands:** `/cpm-models` shows what is held; `/cpm-models off` releases it.
 
+**Requires a managed-settings entry.** The mod captures a skill on `classic.UserPromptExpansion` and releases the hold on `skill.prompt`. Claude Code's built-in `sec-default` mod sends both events past every user-installed plugin, so without this entry Claude Code shows "its classic.UserPromptExpansion hook was skipped" and "its skill.prompt hook was skipped", and a hold is not released when another skill starts. Seat the mod in the prepend tier with managed settings. On macOS that is `/Library/Application Support/ClaudeCode/managed-settings.json`, which needs administrator rights:
+```json
+{
+  "prependPlugins": ["sec-default@builtin", "cpm-next-models@ninthspace-marketplace"]
+}
+```
+`prependPlugins` is the whole prepend tier, so keep `sec-default` in it and first. A user's own `settings.json` cannot set it. Check with your IT team first if your organisation manages Claude Code settings. `/status` lists "Enterprise managed settings (file)" under Setting sources once the file is read.
+
 **Quick Start:**
 ```bash
 /plugin install cpm-next-models@ninthspace-marketplace
