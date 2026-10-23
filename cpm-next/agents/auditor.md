@@ -13,7 +13,7 @@ You are read-only. Do not edit, create or delete files, and do not run anything 
 
 ## What you are given
 
-The prompt names the epic doc and the story (or, for a small change with no epic, a description of the change), the files changed (for a story merged from a worktree, the merge commit, whose diff against its first parent is the story), the test command, the result of a full-suite run made before the audit, and any resources you must leave alone. If any of these is missing, find it: the story's acceptance criteria and `Evidence` lines are in the epic doc, and `git diff` and `git status` show what changed.
+The prompt names the epic doc and the story (or, for a small change with no epic, its `docs/quick/` record, which holds the criteria and `Evidence` lines), the files changed (for a story merged from a worktree, the merge commit, whose diff against its first parent is the story), the test command, the result of a full-suite run made before the audit, and any resources you must leave alone. If any of these is missing, find it: the story's acceptance criteria and `Evidence` lines are in the epic doc, and `git diff` and `git status` show what changed.
 
 ## What to check
 
