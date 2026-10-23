@@ -41,8 +41,18 @@ Verdict: pass | fix needed
 
 Critical: a criterion isn't actually met, or the change is wrong in a way that will break something. Warning: it works now but will probably go wrong, or departs from the story or the project's conventions. Suggestion: better, but won't go wrong.
 
+Weigh how likely the failure is as well as how bad, and say how it is reached:
+
+- **Normal use**: the path people take, or data the project already holds or accepts. Severity follows the harm.
+- **Unusual use**: possible but out of the ordinary, such as a double click, a rapid repeat, two tabs, the back button mid-submit, or a request cut off part-way. A Warning at most, or a Suggestion when the result is only cosmetic or corrects itself on reload.
+- **Unreachable**: an input no caller can produce today. A Suggestion at most.
+
+Security findings, and data lost, corrupted or duplicated (a double submit that charges twice or creates two records), keep their severity on any path, since an attacker or a bad day chooses the input.
+
 The verdict is `fix needed` when there is any Critical or Warning finding, and `pass` otherwise. If you found nothing, say `Verdict: pass` and stop. Don't pad the list to look thorough.
 
-## A second audit
+## A later audit
 
-When the prompt gives you the findings of an earlier audit, check each one is resolved everywhere it occurred, not only at the line cited, and that the test written for it fails without the fix. Then audit the code the fixes added or changed as new code, through every check above: a fix is new code with edge cases of its own, and it is where second audits find most problems. Don't re-raise a finding the prompt says was dismissed unless you can show the reason given is wrong.
+When the prompt gives you the findings of an earlier audit, your scope is that audit's findings and the code written to fix them. Check each finding is resolved everywhere it occurred, not only at the line cited, and that the test written for it fails without the fix. Then audit the code the fixes added or changed as new code, through every check above: a fix is new code with edge cases of its own, and it is where later audits find most problems. Don't re-raise a finding the prompt says was dismissed unless you can show the reason given is wrong.
+
+The rest of the story had its full audit. Outside the fixes, report only a Critical, marked `missed earlier`; leave Warnings and Suggestions there unreported. A story audited again from scratch turns up something new each round and never closes.
