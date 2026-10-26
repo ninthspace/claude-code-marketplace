@@ -145,6 +145,6 @@ When the epic reaches `Complete` in the loop: if the run produced observations w
 
 End every run with three headings, in this order:
 
-- **Blocked on me**: decisions, blocked stories, `**Pivot deferred**` items, anything destructive you held back from. Say "Nothing" if so.
+- **Needs you**: what won't happen unless the user acts, each line naming the action and what it unblocks. That is a decision only they can make, a blocked story and what would unblock it, a `**Pivot deferred**` item (to settle with `/cpm-next:plan`), a destructive step you held back from, and any step outside the repository the change depends on, such as a migration on a deployed database, a secret or environment value, or a service to restart. Leave out optional follow-ups, things worth a look, and anything already done; they belong under the other headings or nowhere. Say "Nothing" if so.
 - **Changed**: stories completed, the main files touched, and the test result against the baseline.
-- **Found**: anything surprising about the codebase, the plan, or the tests.
+- **Found**: anything surprising about the codebase, the plan, or the tests. Nothing here asks the user to act; an action it implies goes under **Needs you**.

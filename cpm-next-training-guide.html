@@ -1041,7 +1041,7 @@ summary: &gt;
     <h3 id="do-all">Unattended <code>all</code> runs and blocked stories</h3>
     <p>In an <code>all</code> run, or whenever you have said you won't be watching, <code>do</code> does not stop for the first two reasons above. It marks the story blocked with the reason and moves on to other unblocked work. The third reason, a destructive action or one outside the repository, always stops the run.</p>
     <p>With <code>cpm-next-models</code> installed, an <code>all</code> run is held at <code>high</code> effort, and no story in it is built below <code>high</code>, because Sonnet tends to stop and check in during long runs at <code>medium</code>. See <a href="#models">section 6</a>.</p>
-    <p>A blocked story shows in the epic doc as a <code>Not met</code> line under the criterion concerned. Every story that depends on it stays blocked. Blocked stories, <code>**Pivot deferred**</code> items and anything held back appear under <strong>Blocked on me</strong> at the end of the run, and <code>/cpm-next:status</code> lists them under <strong>Needs you</strong>.</p>
+    <p>A blocked story shows in the epic doc as a <code>Not met</code> line under the criterion concerned. Every story that depends on it stays blocked. Blocked stories, <code>**Pivot deferred**</code> items and anything held back appear under <strong>Needs you</strong> at the end of the run, and <code>/cpm-next:status</code> lists them under the same heading.</p>
 
     <h3 id="do-criterion">When a criterion looks wrong</h3>
     <p>A criterion that is hard to meet is not a criterion that is wrong. "The tests fail", "this approach didn't work" and "it's slower than the target" are reports about the implementation and never justify changing the criterion. The criterion stands, the story is marked blocked, and a <code>Not met</code> line records what was tried.</p>
@@ -1059,7 +1059,7 @@ summary: &gt;
     <p>When an epic reaches <code>Complete</code>: if the run produced observations worth carrying forward, <code>do</code> writes a short retro to <code>docs/retros/</code>; otherwise it adds <code>**Retro waived**: clean run</code> to the epic header so the epic doesn't sit waiting for a retro.</p>
     <p>Every run ends with three headings, in this order:</p>
     <ul>
-      <li><strong>Blocked on me</strong>: decisions, blocked stories, <code>**Pivot deferred**</code> items, anything destructive held back. "Nothing" if so.</li>
+      <li><strong>Needs you</strong>: only what waits on you, each line naming the action: decisions, blocked stories and what unblocks them, <code>**Pivot deferred**</code> items, anything destructive held back, and steps outside the repository such as a deployed migration or a secret. Optional follow-ups go elsewhere. "Nothing" if so.</li>
       <li><strong>Changed</strong>: stories completed, the main files touched, and the test result against the baseline.</li>
       <li><strong>Found</strong>: anything surprising about the codebase, the plan or the tests.</li>
     </ul>
@@ -1241,7 +1241,7 @@ summary: &gt;
     <h3 id="practice-habits">Habits that help</h3>
     <ul>
       <li>Run <code>/cpm-next:status</code> when you come back to a project, or watch the <code>/next</code> pane.</li>
-      <li>Read the <strong>Needs you</strong>, <strong>Blocked on me</strong> and Assumptions sections; they are where the skills put what is yours to decide.</li>
+      <li>Read the <strong>Needs you</strong> and Assumptions sections; they are where the skills put what is yours to decide.</li>
       <li>Commit when you choose to: <code>do</code> leaves commits, branches and pushes to you unless you've said otherwise.</li>
       <li>When you edit an epic by hand, keep to the contract's format so the mods and skills can still read it.</li>
       <li>Close a completed epic properly: a retro, or <code>**Retro waived**</code>. <code>status</code> reports a completed epic with neither as a gap.</li>
@@ -1289,7 +1289,7 @@ summary: &gt;
     </div></details>
 
     <details class="faq"><summary><code>do</code> stopped in an <code>all</code> run.</summary><div>
-      <p>In an <code>all</code> run only a destructive action, or one that reaches outside the repository, stops the run. The <strong>Blocked on me</strong> heading names what was held back.</p>
+      <p>In an <code>all</code> run only a destructive action, or one that reaches outside the repository, stops the run. The <strong>Needs you</strong> heading names what was held back.</p>
     </div></details>
 
     <details class="faq"><summary>I typed "exit" in a party discussion and Claude Code closed.</summary><div>
