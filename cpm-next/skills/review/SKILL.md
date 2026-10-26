@@ -54,3 +54,5 @@ End with three headings:
 - **Needs you**: findings waiting on a decision, Critical first. Say "Nothing" if so.
 - **Fixed**: one line per change made to an epic.
 - **Next**: `/cpm-next:do {epic}` when it's ready, or `/cpm-next:plan {spec}` when a finding reaches back into the spec.
+
+Then take the **Needs you** findings one at a time, Critical first. For each, say in a few lines what it is and where, what each way of settling it leads to, and which you recommend and why. Ask with one AskUserQuestion call holding that one question, your recommendation as the first option and `Leave it for now` as the last, and act on the answer before raising the next finding: apply the fix to the `Pending` story or add a new story, with an `**Amended**` line citing the review and the decision, and update the finding's Remediation entry. A finding that reaches back into the spec is settled by `/cpm-next:plan`; recommend it and leave the spec alone. Once the last finding is settled, restate **Fixed** and **Next** if the answers changed them.

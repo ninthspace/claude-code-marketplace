@@ -148,3 +148,12 @@ End every run with three headings, in this order:
 - **Needs you**: what won't happen unless the user acts, each line naming the action and what it unblocks. That is a decision only they can make, a blocked story and what would unblock it, a `**Pivot deferred**` item (to settle with `/cpm-next:plan`), a destructive step you held back from, and any step outside the repository the change depends on, such as a migration on a deployed database, a secret or environment value, or a service to restart. Leave out optional follow-ups, things worth a look, and anything already done; they belong under the other headings or nowhere. Say "Nothing" if so.
 - **Changed**: stories completed, the main files touched, and the test result against the baseline.
 - **Found**: anything surprising about the codebase, the plan, or the tests. Nothing here asks the user to act; an action it implies goes under **Needs you**.
+
+Then take the **Needs you** items one at a time, the one blocking most work first. For each, say in a few lines what it is and where (`file:line`, or the epic and story), what each way of settling it leads to, and which you recommend and why. Ask with one AskUserQuestion call holding that one question, your recommendation as the first option and `Leave it for now` as the last, and act on the answer before raising the next item:
+
+- a criterion the user changes: amend it with an `**Amended**` line citing their decision, and clear its `Not met` line;
+- a destructive step they approve: carry it out;
+- a step outside the repository: give the exact steps, and ask only when what you do next depends on it being done;
+- a `**Pivot deferred**` item: recommend `/cpm-next:plan` and leave the upstream document to it.
+
+An item left for now stays recorded where it is. Stories the answers unblock are built through the loop once the last item is settled, and that run ends with the three headings again.

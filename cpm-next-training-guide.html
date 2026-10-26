@@ -775,7 +775,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
         <li>A change of direction is an amendment in place with an <code>**Amended**</code> line, carried down to every affected <code>Pending</code> story. A <code>Complete</code> story is never rewritten; a new one is added. Every <code>**Pivot deferred**</code> line pointing at a file it amends is resolved and removed.</li>
         <li>Conflicts between documents, or between documents and code, are reported with both sources cited.</li>
       </ul>
-      <p>The run ends with three headings: <strong>Needs you</strong> (open decisions and the assumptions most worth checking), <strong>Written</strong> (each path, one line each) and <strong>Next</strong> (normally <code>/cpm-next:do {first epic}</code> or <code>/cpm-next:do all</code>, with <code>/cpm-next:review {epic}</code> first when an epic is large, touches unfamiliar code, or is about to run unattended).</p>
+      <p>The run ends with three headings: <strong>Needs you</strong> (open decisions and the assumptions most worth checking), <strong>Written</strong> (each path, one line each) and <strong>Next</strong> (normally <code>/cpm-next:do {first epic}</code> or <code>/cpm-next:do all</code>, with <code>/cpm-next:review {epic}</code> first when an epic is large, touches unfamiliar code, or is about to run unattended). It then takes you through each <strong>Needs you</strong> item one at a time, with a recommendation, and acts on your answer before the next.</p>
       <h4>Typical invocations</h4>
 <pre><code>/cpm-next:plan a CSV export for the loans report
 /cpm-next:plan docs/discussions/05-discussion-export-queueing.md
@@ -803,7 +803,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
         <dt>Finish line</dt>
         <dd>A review record exists for the scope, every Critical and Warning finding is fixed or listed under <strong>Needs you</strong>, and each epic with Pending stories is at least as ready for <code>do</code> as before.</dd>
         <dt>What it asks you</dt>
-        <dd>Nothing during the run. It ends with <strong>Needs you</strong> (Critical first, or "Nothing"), <strong>Fixed</strong> (one line per change) and <strong>Next</strong> (<code>/cpm-next:do {epic}</code>, or <code>/cpm-next:plan {spec}</code> when a finding reaches back into the spec).</dd>
+        <dd>Nothing during the run. It ends with <strong>Needs you</strong> (Critical first, or "Nothing"), <strong>Fixed</strong> (one line per change) and <strong>Next</strong> (<code>/cpm-next:do {epic}</code>, or <code>/cpm-next:plan {spec}</code> when a finding reaches back into the spec). It then takes you through each <strong>Needs you</strong> item one at a time, with a recommendation, and acts on your answer before the next.</dd>
       </dl>
       <h4>Typical invocations</h4>
 <pre><code>/cpm-next:review docs/epics/04-01-epic-loans-csv-export.md
@@ -935,7 +935,7 @@ summary: &gt;
         <dt>What it writes</dt>
         <dd>Nothing.</dd>
         <dt>Finish line</dt>
-        <dd>A one-screen report: <strong>Where it stands</strong> (prose, in-flight work first), <strong>Needs you</strong> (each item with its path; omitted when empty), and <strong>Next</strong> (the commands worth running, most useful first). With no CPM artefacts it says so and suggests <code>/cpm-next:party</code> or <code>/cpm-next:plan</code>.</dd>
+        <dd>A one-screen report: <strong>Where it stands</strong> (prose, in-flight work first), <strong>Needs you</strong> (each item with its path and a recommendation; omitted when empty), and <strong>Next</strong> (the commands worth running, most useful first). With no CPM artefacts it says so and suggests <code>/cpm-next:party</code> or <code>/cpm-next:plan</code>.</dd>
         <dt>What it asks you</dt>
         <dd>Nothing. A path narrows the report to that artefact; a question shapes what it leads with.</dd>
       </dl>
@@ -1059,7 +1059,7 @@ summary: &gt;
     <p>When an epic reaches <code>Complete</code>: if the run produced observations worth carrying forward, <code>do</code> writes a short retro to <code>docs/retros/</code>; otherwise it adds <code>**Retro waived**: clean run</code> to the epic header so the epic doesn't sit waiting for a retro.</p>
     <p>Every run ends with three headings, in this order:</p>
     <ul>
-      <li><strong>Needs you</strong>: only what waits on you, each line naming the action: decisions, blocked stories and what unblocks them, <code>**Pivot deferred**</code> items, anything destructive held back, and steps outside the repository such as a deployed migration or a secret. Optional follow-ups go elsewhere. "Nothing" if so.</li>
+      <li><strong>Needs you</strong>: only what waits on you, each line naming the action: decisions, blocked stories and what unblocks them, <code>**Pivot deferred**</code> items, anything destructive held back, and steps outside the repository such as a deployed migration or a secret. Optional follow-ups go elsewhere. "Nothing" if so. The run then takes you through each item one at a time, with a recommendation, and acts on your answer before the next.</li>
       <li><strong>Changed</strong>: stories completed, the main files touched, and the test result against the baseline.</li>
       <li><strong>Found</strong>: anything surprising about the codebase, the plan or the tests.</li>
     </ul>

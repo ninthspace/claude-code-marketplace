@@ -67,3 +67,5 @@ End with three short headings:
 - **Needs you**: open decisions and the assumptions most worth checking, first.
 - **Written**: each path, one line on what it holds.
 - **Next**: normally `/cpm-next:do {first epic}`, or `/cpm-next:do all` when the epics are ready to run unattended. Suggest `/cpm-next:review {epic}` first when an epic is large, touches unfamiliar code, or is about to run unattended.
+
+Then take the **Needs you** items one at a time, in the order listed. For each, say in a few lines what it is and which document and section it touches, what each answer would change, and which you recommend and why. Ask with one AskUserQuestion call holding that one question, your recommendation as the first option and `Leave it for now` as the last, and act on the answer before raising the next item: amend the document it concerns, and the `Pending` stories it reaches, with an `**Amended**` line where the document existed before this run. A confirmed assumption needs no edit. Once the last item is settled, restate **Next** if the answers changed it.
