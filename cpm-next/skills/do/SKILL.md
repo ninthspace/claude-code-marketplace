@@ -1,6 +1,6 @@
 ---
 name: do
-description: Build from CPM epic documents until every story in scope is Complete and the tests pass — one story, one epic, or all remaining epics unattended — or carry out a small change directly when there is no epic. Picks the next unblocked work, implements it, verifies each acceptance criterion with evidence, and keeps the epic doc as the live task list. Use whenever the user wants planned work built, continued or finished, or a small well-defined change made. Triggers on "/cpm-next:do".
+description: Build from CPM epic documents until every story in scope is Complete and the tests pass — one story, one epic, one spec's epics or all remaining epics unattended — or carry out a small change directly when there is no epic. Picks the next unblocked work, implements it, verifies each acceptance criterion with evidence, and keeps the epic doc as the live task list. Use whenever the user wants planned work built, continued or finished, or a small well-defined change made. Triggers on "/cpm-next:do".
 model: sonnet
 effort: medium
 ---
@@ -20,6 +20,7 @@ Read `$ARGUMENTS`:
 | epic path | that epic | all its stories are Complete |
 | story or task ID (`3`, `2.1`) | that item, in the epic resolved below | that item is Complete |
 | `all` | every unfinished, unretired epic, in dependency order | no unblocked story remains |
+| `all {spec}` (`all 43`) | every unfinished, unretired epic whose prefix starts with that spec number, in dependency order; stop before building if there is none | no unblocked story remains in those epics |
 | a description of a small change | no epic | the change works and is tested |
 | nothing | the lowest-numbered In Progress epic, else the lowest-numbered epic with nothing started | that epic's stories are Complete |
 
@@ -123,7 +124,7 @@ Stop and ask only when:
 - an acceptance criterion contradicts reality and resolving it would change scope (below);
 - the next action is destructive or reaches outside this repository: deleting data, rewriting history, touching shared infrastructure.
 
-For an `all` run, or whenever the user has said they won't be watching, don't stop for the first two. Mark the story blocked with the reason, and move on to other unblocked work. The third always stops the run.
+For an `all` run, with or without a spec, or whenever the user has said they won't be watching, don't stop for the first two. Mark the story blocked with the reason, and move on to other unblocked work. The third always stops the run.
 
 When the user is working alongside you (a single story or task), open with a one-line plan and let them redirect between stories if they choose. The four rules above still apply within a story.
 

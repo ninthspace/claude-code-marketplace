@@ -107,6 +107,8 @@ const DO = { skill: 'cpm-next:do', model: 'claude-sonnet-5-5', effort: 'medium' 
 test('do all keeps high as its floor; other runs have none', () => {
   expect(floorFor('cpm-next:do', 'all')).toBe('high')
   expect(floorFor('/cpm-next:do', ' ALL epics')).toBe('high')
+  expect(floorFor('cpm-next:do', 'all 43')).toBe('high')
+  expect(floorFor('cpm-next:do', 'all 43 --parallel')).toBe('high')
   expect(floorFor('cpm-next:do', '3')).toBeUndefined()
   expect(floorFor('cpm-next:plan', 'all')).toBeUndefined()
 })
