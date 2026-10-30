@@ -32,7 +32,8 @@ The first token of a `**Status**:` value is what tools read. Anything after ` �
 - Stories and tasks: `Pending`, `In Progress`, `Complete`.
 - Epics: those three, derived from their stories, plus the user-set terminal values `Superseded` and `Withdrawn`. Never set the terminal values yourself.
 - Read `Done` as `Complete`; always write `Complete`.
-- A story is unblocked when its `**Blocked by**` is `—` or every item it names is `Complete`. A `Superseded` or `Withdrawn` epic never satisfies a dependency.
+- A story `do` has to stop on (a `Not met` line, an audit finding left unresolved, a failure it can't explain) is marked blocked: it keeps its status and adds the note ` — blocked: {reason}`, so tools still read the first token. The note comes off when the user settles what blocked the story and nothing else still blocks it; `do` then resumes the story. A story waiting on the user is not blocked.
+- A story is unblocked when its `**Blocked by**` is `—` or every item it names is `Complete`, and every item its epic's `**Blocked by**` names is `Complete`. A `Superseded` or `Withdrawn` epic never satisfies a dependency.
 
 ## Brief
 
@@ -67,7 +68,7 @@ Omit a section that would only contain filler. Keep Assumptions: it is where any
 
 ## Functional Requirements
 ### Must Have
-- **FR1**: {requirement} — AC: {testable criterion} `[unit|feature|integration|manual]`
+- **FR1**: {requirement} — AC: {testable criterion} `[unit|feature|integration|browser|manual|user]`
 ### Should Have
 ### Could Have
 ### Won't Have (this iteration)
@@ -88,6 +89,8 @@ Omit a section that would only contain filler. Keep Assumptions: it is where any
 
 ## Assumptions
 ```
+
+`[browser]` marks a criterion proved only by a rendered page. `[manual]` marks a step `do` performs in the session outside the test suite. `[user]` marks one only the user can prove: a production run, a deploy, a sign-off, a third-party account.
 
 Requirement labels (`FR3`, `NFR2`, `AD1`) are stable identifiers. When amending, add new numbers rather than renumbering.
 
@@ -131,16 +134,23 @@ Stories are numbered from 1 within each epic. Tasks use `{story}.{seq}`. Intra-e
 ```markdown
 **Acceptance Criteria**:
 - {criterion} `[tag]`
-  - Evidence: {test name and command, file:line, or the manual step taken and what was observed}
+  - Evidence: {test name, file:line} ({command}) — red: {failure text, shortened} with {lines undone | mutation of {file:line}: {change}}; green after restore
+- {criterion} `[tag]`
+  - Evidence: {proof} — red: n/a — {manual | browser-observed | static}
+- {criterion} `[user]`
+  - Evidence (user, {YYYY-MM-DD}): {what the user reported} — red: n/a — user
 - {criterion} `[tag]`
   - Not met: {what was tried and why it fell short}
 ```
 
-The criterion line itself is never edited to record verification, so its text stays comparable with coverage matrices and earlier readings. A story is `Complete` only when every criterion has an `Evidence` line; a `Not met` line leaves it blocked. Read a legacy story-level `**Evidence**:` field as valid input, but don't write one.
+A test-proven criterion's evidence is incomplete without its red result. Each `n/a` reason fits particular tags: `manual` a `[manual]` criterion, `static` a `[manual]` criterion proven by reading code or by `grep` with no test (and an untagged one proven that way), `user` a `[user]` criterion or a criterion whose `Evidence` line is in the `Evidence (user, {YYYY-MM-DD}):` form, which is the only form that carries it, `browser-observed` a `[browser]` criterion checked with claude-in-chrome. A criterion a test proves takes no `n/a`. The fit is checked only on tagged criteria.
+
+The criterion line itself is never edited to record verification, so its text stays comparable with coverage matrices and earlier readings. A story is `Complete` only when every criterion has an `Evidence` line; a `Not met` line leaves it blocked. A story that is unblocked, is not marked blocked, and has at least one criterion lacking `Evidence`, every such criterion being `[user]` or treated as `[user]` by `do`, is waiting on the user: it keeps its status, and `do` does not pick it. Read a legacy story-level `**Evidence**:` field as valid input, but don't write one.
 
 ### Fields `do` may add to a story
 
 - `**Retro**: {an observation worth carrying into future work}`
+- `**Scratch**: {absolute path}` while a red is being taken, naming the directory that holds the copies of the files being changed; removed once they are restored.
 - `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes.
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.
 - `**Amended**: {what changed} ({YYYY-MM-DD}) — cited: {file:line | FRn | conflicting criterion}`
@@ -148,6 +158,7 @@ The criterion line itself is never edited to record verification, so its text st
 
 ### Fields on the epic header
 
+- `**Lessons**: {lesson reference} (Story {N}), {lesson reference} (build), …` names the library lessons and retro observations that bear on the epic. Optional; omitted when none bears. A lesson reference is one of `{library path} → "{heading, verbatim}"`, `{library path} → amendment from {retro path} → "{opening words of the observation}"` or `{retro path} → "{opening words of the observation}"`. `(Story {N})` marks a lesson a criterion of that story reflects, listed once per such story; `(build)` one about how to build, which no criterion needs.
 - `**Retro waived**: {reason} ({YYYY-MM-DD})` marks a completed epic whose run produced nothing worth a retro.
 
 ## Retro
@@ -171,6 +182,8 @@ The criterion line itself is never edited to record verification, so its text st
 Categories are v3's seven, used only when they have entries: Smooth Deliveries, Scope Surprises, Criteria Gaps, Complexity Underestimates, Codebase Discoveries, Testing Gaps, Patterns Worth Reusing.
 
 An observation that has been promoted to the library, or has stopped being true, is retired in place rather than deleted. Append a marker to its bullet: `**Retired {YYYY-MM-DD}**: {reason, or "promoted to {library path}"}`. Every skill skips a retired observation when reading retros for context. Removing the marker restores it.
+
+An observation, a story `**Retro**` line or a quick-record observation whose failure an earlier observation (retired ones included) or a library lesson already describes carries `**Recurrence**: {lesson reference}` in its bullet, using the lesson reference forms under **Fields on the epic header**.
 
 ## Review
 
@@ -231,7 +244,7 @@ A lesson learned from a retro reaches the library in one of two ways. If it chan
 ```markdown
 ## Amendment — {YYYY-MM-DD} (via retro)
 
-**Source**: {retro path}
+**Source**: {retro path} → {Category} → "{observation text, verbatim}"
 **Category**: {observation category}
 
 {what was learned and what should change}

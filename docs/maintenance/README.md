@@ -49,3 +49,20 @@ grep -i 'hooks module cpm-next-progress@inline' /tmp/d.txt   # "loaded", or "fai
 **What asserts it.** `cpm-next-progress/hooks/progress.test.ts` covers `parseDocs`, `isMissingArtifact` and
 `artifactUrlIn` against the formats above; nothing asserts the harness still prints them. Nothing
 automated covers older engines.
+
+---
+
+## `cpm-next` ↔ claude-in-chrome, project files and the mods — what `do` reads and what reads it
+
+**The record.** None of this is asserted anywhere; each item is a dependency `do` or a mod has on something outside the plugin.
+
+- **claude-in-chrome tool names.** `do` (step 3, `[browser]` criteria) loads the claude-in-chrome tools with `ToolSearch` and lists the connected browsers, then drives the browser with whichever of them the session exposes (`mcp__claude-in-chrome__list_connected_browsers`, `navigate`, `get_page_text`, `read_page`, `tabs_context_mcp`, `tabs_create_mcp`). The skill names no tool beyond "claude-in-chrome", so a rename or a change in how the tools are loaded breaks the fallback without an error. An unattended check can stall on a site-permission prompt, which the once-per-run connection check does not detect.
+- **`APP_URL` and the host rule.** `do` reads `APP_URL` from the project's `.env` and accepts only a `localhost`, `127.0.0.1` or `.test` host, because a "development" URL can be deployed and hold real data.
+- **Browser test tool package names.** `do` detects `laravel/dusk`, `pestphp/pest-plugin-browser` and `@playwright/test` in a project's manifest. A new tool is not detected until the list in `cpm-next/skills/do/SKILL.md` step 3 is extended.
+- **Scratch location.** The run directory is under the session's scratchpad, with `mktemp -d` as the fallback; both are cleared by the machine, which is why a stopped red's `**Scratch**` directory may be gone on resume.
+- **Waiting stories in the mods.** `whats-next` (`whats-next/hooks/plan.ts`, `register.tsx`) and `cpm-next-progress` choose the next work by `**Status**` alone. A story waiting on the user keeps its status, so both show it as next or in progress; the mods are unchanged on purpose.
+- **The blocked note.** `do` marks a blocked story by keeping its status and adding ` — blocked: {reason}`. Both mods' `normaliseStatus` (`whats-next/hooks/plan.ts`, `cpm-next-progress/hooks/progress.ts`) match the status by prefix, so `In Progress — blocked: …` reads as In Progress and puts the story first in `whats-next`'s order; a bare `Blocked` would read as Pending.
+- **Contract strings a mod may later parse.** `red:` and `green after restore` in `Evidence` lines, `Evidence (user,`, `**Lessons**` and `**Scratch**` in epics and stories, `**Recurrence**` in retros.
+
+**What asserts it.** Nothing automated does. `claude plugin validate cpm-next` checks the plugin's own files, and the mods' suites (`claude plugin test cpm-next-models`, `cpm-next-progress`, `whats-next`) cover their own parsers, not these dependencies.
+

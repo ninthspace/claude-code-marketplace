@@ -7,35 +7,30 @@ effort: medium
 
 # Party
 
-Bring a team of personas into one conversation so the user hears real disagreement before deciding. This is the divergent part of the method: its job is to widen the options and sharpen the trade-offs. Converging into requirements is `plan`'s job.
+Bring a team of personas into one conversation so the user hears real disagreement before deciding. Party widens the options and makes the trade-offs explicit; converging them into requirements is `plan`'s job.
 
-Artefact formats and paths are in `shared/artifacts.md` at the plugin root, two levels above this skill's directory.
+Artefact formats, paths and numbering are in `shared/artifacts.md` at the plugin root, two levels above this skill's directory.
 
 ## Starting
 
 - Load personas from `docs/agents/roster.yaml` if it exists, otherwise from `agents/roster.yaml` at the plugin root. Draw each voice only from the traits its roster entry defines.
-- `$ARGUMENTS` may be a topic, a file path, a URL, or a persona's name. Read files and fetch URLs. A lone persona name (or "consult {name}") starts a one-to-one: that persona leads every turn, and others join only when the user invites them.
-- Before the first round, look at what the project already has: `docs/` artefacts and, when the topic touches code, the code itself. The team should argue from the actual state of the project, not a generic one.
-- Create the discussion record at once (numbering per the contract) and introduce the roster in one compact line. If there's a topic, go straight into the first round.
+- `$ARGUMENTS` may be a topic, a file path or URL to read, or a persona's name. A lone persona name (or "consult {name}") starts a one-to-one: that persona leads every turn, and others join only when the user invites them.
+- The team argues from the project's actual state, not a generic one. Before the first round, look at the `docs/` artefacts and, when the topic touches code, the code. During the discussion, look up anything the code or docs can answer before a persona speaks; ask the user only about intent, priorities and preferences.
+- Create the record `docs/discussions/{nn}-discussion-{slug}.md` at once, numbered per the contract, and introduce the roster in one compact line. If there's a topic, go straight into the first round.
 
 ## Each round
 
-Pick the two or three personas whose expertise the current point needs most, favouring anyone who hasn't spoken for a while. A persona the user names always speaks.
+Pick the two or three personas whose expertise the current point needs most, favouring anyone who hasn't spoken for a while; a persona the user names always speaks. Two distinct views are worth more than three similar ones.
 
-Format each contribution as `{icon} **{displayName}**: {response}`. What makes a round worth reading:
+Each contribution is `{icon} **{displayName}**: {response}`, a few sentences long. Every persona recommends something rather than only observing. Personas respond to each other by name, and genuine disagreement is left standing rather than smoothed into consensus.
 
-- Every persona recommends something. Observations without a recommendation are half an answer.
-- Personas respond to each other by name, and genuine disagreement is left standing rather than smoothed into consensus.
-- Anything discoverable in the code or docs is looked up before anyone speaks. Questions to the user are only for intent, priorities and preferences.
-- A few sentences each. Two sharp, distinct views beat three similar ones.
+Only once the discussion has converged, or split into two clear paths, say so in one line after the round: `💡 **The team recommends**: …`, or `💡 **Two paths**: …` naming who backs each.
 
-When the discussion has visibly landed, say so in one line after the round: `💡 **The team recommends**: …`, or `💡 **Two paths**: …` naming who backs each. Don't signal convergence before it has happened.
-
-End each round with: *Type **wrap up** to finish, or keep going.* ("exit" and "quit" close Claude Code itself.)
+End each round with *Type **wrap up** to finish, or keep going.* Not "exit" or "quit", which close Claude Code itself.
 
 ## The record is the state
 
-Update the discussion record every few substantive exchanges, not just at the end. It is what survives context compaction and what `plan` reads later, so write it for a reader who wasn't there:
+Update the record every few substantive exchanges, not only at the end. It is what survives context compaction and what `plan` reads later, so write it for a reader who wasn't there:
 
 ```markdown
 # Discussion: {Topic}
@@ -57,4 +52,4 @@ If a session resumes and finds a record with `**Status**: In progress`, carry on
 
 ## Finishing
 
-On "wrap up", "done" or similar: finalise the record, set its status to `Concluded`, and give the path. Then name the natural next move in one line, usually `/cpm-next:plan {record path}`, or say nothing further if the discussion was exploratory.
+On "wrap up", "done" or similar: finalise the record, set its status to `Concluded`, and give the path. Then name the next move in one line, usually `/cpm-next:plan {record path}`, or nothing further if the discussion was exploratory.
