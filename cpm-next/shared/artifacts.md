@@ -6,15 +6,15 @@ The skills in this plugin keep their procedures short and their data strict. Thi
 
 | Artefact | Path | Written by |
 |---|---|---|
-| Discussion | `docs/discussions/{nn}-discussion-{slug}.md` | party |
+| Discussion | `docs/discussions/{nn}-discussion-{slug}.md` | party; library sweep |
 | Brief | `docs/briefs/{nn}-brief-{slug}.md` | plan |
 | ADR (only for decisions that outlive one spec) | `docs/architecture/{nn}-adr-{slug}.md` | plan |
 | Spec | `docs/specifications/{nn}-spec-{slug}.md` | plan |
-| Epic | `docs/epics/{parent}-{seq}-epic-{slug}.md` | plan (structure), do (status) |
-| Retro | `docs/retros/{nn}-retro-{slug}.md` | do; library marks observations retired |
+| Epic | `docs/epics/{parent}-{seq}-epic-{slug}.md` | plan (structure), do (status, signals), library (signal marks) |
+| Retro (legacy) | `docs/retros/{nn}-retro-{slug}.md` | no skill writes one; library reads them and marks observations retired |
 | Review | `docs/reviews/{nn}-review-{slug}.md` | review |
-| Quick change record | `docs/quick/{nn}-quick-{slug}.md` | do |
-| Reference library | `docs/library/*.md` | library, or the user; every skill reads it |
+| Quick change record | `docs/quick/{nn}-quick-{slug}.md` | do; library (signal marks) |
+| Reference library | `docs/library/*.md` | library, the user, or do (`lessons-learned.md` entries); every skill reads it |
 | Persona roster override | `docs/agents/roster.yaml` | the user; replaces the plugin default entirely |
 
 Read all of these as context whenever they bear on the work. Files from CPM v3, including legacy flat epics (`{nn}-epic-{slug}.md`) and coverage matrices (`*-coverage-*.md`), are valid input. This plugin does not create coverage matrices; the `**Satisfies**` field on each story carries the traceability instead.
@@ -149,7 +149,7 @@ The criterion line itself is never edited to record verification, so its text st
 
 ### Fields `do` may add to a story
 
-- `**Retro**: {an observation worth carrying into future work}`
+- `**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved})`, also in a `docs/quick/` record; see **Signals**.
 - `**Scratch**: {absolute path}` while a red is being taken, naming the directory that holds the copies of the files being changed; removed once they are restored.
 - `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes.
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.
@@ -158,32 +158,24 @@ The criterion line itself is never edited to record verification, so its text st
 
 ### Fields on the epic header
 
-- `**Lessons**: {lesson reference} (Story {N}), {lesson reference} (build), …` names the library lessons and retro observations that bear on the epic. Optional; omitted when none bears. A lesson reference is one of `{library path} → "{heading, verbatim}"`, `{library path} → amendment from {retro path} → "{opening words of the observation}"` or `{retro path} → "{opening words of the observation}"`. `(Story {N})` marks a lesson a criterion of that story reflects, listed once per such story; `(build)` one about how to build, which no criterion needs.
-- `**Retro waived**: {reason} ({YYYY-MM-DD})` marks a completed epic whose run produced nothing worth a retro.
+- `**Lessons**: {lesson reference} (Story {N}), {lesson reference} (build), …` names the library lessons, signals and retro observations that bear on the epic. Optional; omitted when none bears. A lesson reference is one of `{library path} → "{heading, verbatim}"`, `{library path} → amendment {class slug} ({YYYY-MM-DD})`, `{library path} → amendment from {retro path} → "{opening words of the observation}"` (an amendment with no `**Class**`), `{retro path} → "{opening words of the observation}"` or a signal reference. `(Story {N})` marks a lesson a criterion of that story reflects, listed once per such story; `(build)` one about how to build, which no criterion needs.
 
-## Retro
+## Signals
 
-```markdown
-# Retro: {Epic or change title}
+A signal records a failure `do` found, so that the second occurrence can be recognised. It sits on the story, or in the `docs/quick/` record, where the failure happened:
 
-**Date**: {YYYY-MM-DD}
-**Source**: {epic or quick record path}
-**Stories**: {completed}/{total} complete
+`**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved}){ — recurs: {reference} ({why it matches})}{ — raised {YYYY-MM-DD}}{ — promoted {YYYY-MM-DD}}{ — declined {YYYY-MM-DD}}`
 
-## Summary
+- `project` means the cause is in this codebase; `process` means a cpm-next rule could have prevented it, and the parenthesis then names the cpm-next file and step.
+- A class slug is kebab-case and names the kind of failure, not the instance. Reuse a slug already in use, a library lesson's `**Class**` or a seed before making one; use a narrower slug when one class holds two distinct rules. Seeds: `check-cannot-fail`, `shared-state-collision`, `unprovable-in-session`, `instance-not-rule`, `spec-drift`, `fix-not-carried-through`, `definition-in-two-places`.
+- A signal reference is `{epic path} → Story {N} → {slug}` or `{quick path} → {slug}`. The `recurs` reference is any lesson reference form under **Fields on the epic header**, or a signal reference.
+- `raised` marks a signal listed as a promotion candidate; `promoted` one written to the library; `declined` one the user refused. A signal matching a declined one is declined too.
 
-## Observations
-### {Category}
-- {observation}: {what it means for the next piece of work}
+`do`, `plan` and `review` read library lessons, signals that recur and unretired legacy retro observations. A signal that never recurs is never read as context or reported.
 
-## Recommendations
-```
+## Retro (legacy)
 
-Categories are v3's seven, used only when they have entries: Smooth Deliveries, Scope Surprises, Criteria Gaps, Complexity Underestimates, Codebase Discoveries, Testing Gaps, Patterns Worth Reusing.
-
-An observation that has been promoted to the library, or has stopped being true, is retired in place rather than deleted. Append a marker to its bullet: `**Retired {YYYY-MM-DD}**: {reason, or "promoted to {library path}"}`. Every skill skips a retired observation when reading retros for context. Removing the marker restores it.
-
-An observation, a story `**Retro**` line or a quick-record observation whose failure an earlier observation (retired ones included) or a library lesson already describes carries `**Recurrence**: {lesson reference}` in its bullet, using the lesson reference forms under **Fields on the epic header**.
+Retros in `docs/retros/` are legacy input that no skill writes, and `library` defines their format, reads them and marks their observations retired.
 
 ## Review
 
@@ -239,29 +231,30 @@ All six fields are required. Filenames are kebab-case with no number prefix.
 
 Combine rows freely; an API contract is usually `spec`, `epics`, `do`.
 
-A lesson learned from a retro reaches the library in one of two ways. If it changes what an existing document says, it is appended to that document as an amendment block, which `library consolidate` later folds into the body:
+A lesson reaches the library as an entry in `docs/library/lessons-learned.md`, written by `do` when the user accepts a recurring `project` signal, or by `library learn`; or, when it changes what an existing document says, as an amendment block appended to that document by `library learn`, which `library consolidate` later folds into the body:
 
 ```markdown
-## Amendment — {YYYY-MM-DD} (via retro)
+## Amendment — {YYYY-MM-DD}
 
-**Source**: {retro path} → {Category} → "{observation text, verbatim}"
-**Category**: {observation category}
+**Source**: {signal references, or {retro path} → {Category} → "{observation text, verbatim}"}
+**Class**: {slug}
 
-{what was learned and what should change}
+{The rule, how a criterion or check shows it holds, and the layer that owns it; what should change in this document.}
 ```
 
-If no document covers it, it becomes an entry in `docs/library/lessons-learned.md`. That file has one front-matter block, titled `Promoted Retro Lessons`, whose `scope` is the union of its entries' scopes. Entries are appended and never rewritten:
+`lessons-learned.md` has one front-matter block, titled `Promoted Lessons` (an existing `Promoted Retro Lessons` title stays), whose `scope` is the union of its entries' scopes. Entries are appended and never rewritten:
 
 ```markdown
 ## {Lesson title}
 **Promoted**: {YYYY-MM-DD}
-**Source**: {retro path} → {Category} → "{observation text, verbatim}"
+**Class**: {slug}
+**Source**: {signal references, or {retro path} → {Category} → "{observation text, verbatim}"}
 **Scope**: {scope values for this lesson}
 
-{The lesson, written to stand on its own.}
+{The rule, how a criterion or check shows it holds, and the layer that owns it, written to stand on its own.}
 ```
 
-Either way, `last-reviewed` in the document's front-matter moves to today. The `**Source**` line identifies the lesson, so a lesson whose source already appears there is never promoted a second time.
+Either way, `last-reviewed` in the document's front-matter moves to today. A lesson whose `**Class**` is already in the library and states the same rule is never promoted a second time, confirmed by reading; a lesson with no `**Class**` that describes the same rule counts as a match.
 
 ## Amending an existing artefact
 

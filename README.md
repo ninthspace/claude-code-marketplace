@@ -85,7 +85,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 
 **Plan and build with six skills: party, plan, review, do, library, status**
 
-The skills read and write Markdown artefacts under `docs/`: `discussions/`, `briefs/`, `architecture/`, `specifications/`, `epics/`, `reviews/`, `retros/`, `quick/` and `library/`. The artefacts are the only state; there are no progress files to clean up. A typical path:
+The skills read and write Markdown artefacts under `docs/`: `discussions/`, `briefs/`, `architecture/`, `specifications/`, `epics/`, `reviews/`, `quick/` and `library/`, with legacy `retros/` read by `library`. The artefacts are the only state; there are no progress files to clean up. A typical path:
 
 1. `/cpm-next:party` to talk an idea through (optional).
 2. `/cpm-next:plan` to write the brief, spec and epics. It reads what exists, asks its questions in one batch, and fills only the gaps. In a brownfield project it grounds every requirement in the current code.

@@ -22,7 +22,7 @@ Done when a review record exists for the scope, every Critical and Warning findi
 
 ## 1. Gather context
 
-Read the epics, each epic's source spec, the ADRs, `docs/library/`, and retro observations not marked `**Retired`. In a brownfield project, also read the code the stories touch: a story that contradicts the code is the costliest thing a review can miss.
+Read the epics, each epic's source spec, the ADRs, `docs/library/`, recurring signals, and retro observations not marked `**Retired`. In a brownfield project, also read the code the stories touch: a story that contradicts the code is the costliest thing a review can miss.
 
 ## 2. Review independently
 
@@ -31,13 +31,14 @@ Load personas from `docs/agents/roster.yaml`, or the plugin's `agents/roster.yam
 Give each persona its own subagent, all started in parallel on the `opus` model, with the epic, the context above and its roster entry, but none of this conversation or of the reasoning behind the plan: the point is a view that doesn't share the author's assumptions. Weighing and fixing stay with you. Tell each to report every problem its role notices, tagged with a severity and a Story, criterion or task reference, without trimming its list: selection happens afterwards. Ask them to check, among whatever else they notice:
 
 - criteria that `do` couldn't verify, or that different builders would read differently. Accept a `[user]` criterion written with its exact steps and observation in the spec's final user-checks epic, or in a `00-` epic's final story that no other story names in `**Blocked by**`. Flag a `[user]` criterion anywhere else, a user-checks epic not blocked by the epics (or a `00-` final story not blocked by the stories) whose work its criteria check, any epic that names the user-checks epic in `**Blocked by**`, and any criterion that combines two kinds of proof;
+- criteria that name one instance where their requirement covers every case ("the January export streams its rows" where every export must), and a regression criterion with no criterion for its rule beside it, not counting a control's inputs, the members a set must contain, or a `[user]` check's steps;
 - outcomes, error states or edge cases with no criterion;
 - work that looks simple and isn't, given the actual code;
 - `**Blocked by**` lines that are missing, circular or unnecessary, and stories that share files or state but could be run in parallel;
 - Must Have requirements that no story's `**Satisfies**` names, and `**Satisfies**` lines naming requirements that don't exist;
 - stories that contradict an ADR, the library or the code.
 
-Give the lesson check to one persona only, adding none for it: the Test Engineer or QA when one is picked, otherwise the persona asking "can we build it like this?". It checks each `(Story {N})` entry on the epic's `**Lessons**` line against a criterion in that story; when the epic has no `**Lessons**` line, it finds the library lessons and unretired retro observations that bear on the epic. A bearing lesson no criterion reflects is a Warning; a `(build)` entry needs no criterion.
+Give the lesson check to one persona only, adding none for it: the Test Engineer or QA when one is picked, otherwise the persona asking "can we build it like this?". It checks each `(Story {N})` entry on the epic's `**Lessons**` line against a criterion in that story; when the epic has no `**Lessons**` line, it finds the library lessons, recurring signals and unretired retro observations that bear on the epic. An entry may be a lesson or a signal reference. A bearing lesson no criterion reflects is a Warning; a `(build)` entry needs no criterion.
 
 ## 3. Weigh and fix
 

@@ -17,6 +17,7 @@ These checks are carried out by the user after release. `do` writes no `Evidence
 **Acceptance Criteria**:
 
 - The user commits and pushes the release to `main`, then confirms that `.git/plugin-update.log` records the cpm-next update and `claude plugin list` shows cpm-next 0.9.0, and starts a new session in the other project. The observation is the version shown `[user]`
+  - Evidence (user, 2026-10-30): confirmed after the push that `.git/plugin-update.log` records "updated from 0.8.8 to 0.9.0" and `claude plugin list` shows cpm-next 0.9.0 enabled at user scope — red: n/a — user
 - In another project, the user runs `/cpm-next:do add a test that the {model} list is empty when no {model} exists, asserting an empty collection against an empty collection`. The run either records a red result from a real failing assertion after strengthening the test, or the auditor reports the missing or implausible red as a Warning. The observation is the `Evidence` line and audit verdict in that project's quick record `[user]`
 - In a project with a page and no browser test tool, with its local server running, the user runs `do` on a story with a `[browser]` criterion. Its `Evidence` line names a `localhost`, `127.0.0.1` or `.test` URL, the steps, and an excerpt of the page text `[user]`
 

@@ -17,7 +17,7 @@ Each subagent's prompt adds:
 
 - Set up the worktree first. Install dependencies from the lock file (`composer install`, `npm ci`); never symlink `vendor/` or `node_modules/`, since Composer's autoloader would then load the lead's code. Copy from the lead's checkout the gitignored files its tests need (`.env`, local settings), pointed at test resources.
 - Start no server, run no migrations or seeders against a real database, call no real service, and leave the epic doc alone.
-- Commit the story on the worktree's branch, and report the branch, the files changed, the tests run with their output, what proves each criterion, and the red for each test-proven one. The lead writes the `Evidence` lines.
+- Commit the story on the worktree's branch, and report the branch, the files changed, the tests run with their output, what proves each criterion, the red for each test-proven one, and the failures it met (a test failing for a reason it can't explain, a criterion it can't meet, a wording fix it made), for the lead to record as signals. The lead writes the `Evidence` lines.
 
 The lead merges the branches in story order with `git merge --no-ff`, so each story's merge commit, against its first parent, is that story alone for its audit. After resolving a conflict, it runs both stories' tests again, then the full suite once. It removes each worktree and its branch once the story is merged.
 
