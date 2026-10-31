@@ -1,7 +1,8 @@
 {
   "name": "cpm-next",
   "description": "Six skills for planning and building with Claude Code: party (discussion with specialist personas), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (build, verify and audit each story to a stated finish line), library (reference documents, promoted recurring lessons and a cross-repository sweep), status (where things stand and what to run next), and a commit guard that refuses a git commit while a red pass is open.",
-  "version": "0.11.0",
+  "version": "0.12.0",
+  "repository": "https://github.com/ninthspace/claude-code-marketplace",
   "author": {
     "name": "Chris Aves"
   },

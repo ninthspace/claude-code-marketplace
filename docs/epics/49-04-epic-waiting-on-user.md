@@ -14,7 +14,7 @@
 **Satisfies**: FR9  
 **Inline change**: criterion 4 names the fixture files as the modules `fixtures/waiting.ts` in each mod, with the verdicts as `EXPECTED` in the module, in place of directories `fixtures/waiting/` holding a file per story (2026-10-31)  
 **Signal**: spec-drift — project — the criterion named fixture directories where the files written are one module per mod (docs/epics/49-04-epic-waiting-on-user.md, Story 1, audit round 1)  
-**Signal**: fix-not-carried-through — project — the waiting rule gained the `Waiting on user:` line but the same bullet's sentence about reporting steps still named only `[user]` criteria (`cpm-next/skills/status/SKILL.md:21`, audit round 1)
+**Signal**: fix-not-carried-through — project — the waiting rule gained the `Waiting on user:` line but the same bullet's sentence about reporting steps still named only `[user]` criteria (`cpm-next/skills/status/SKILL.md:21`, audit round 1) — promoted 2026-10-31
 
 **Acceptance Criteria**:
 
@@ -72,7 +72,7 @@
 **Satisfies**: FR11  
 **Amended**: criterion 3 is split in two: the functions that build the band, the heading and the `/next` text are `[unit]`, and the JSX that draws them, with the pane's 'Waiting on you' list, is `[manual]` (2026-10-31) — cited: `whats-next/.claude-plugin/types/claude-code/index.d.ts:14213-14228` (the test kit mocks only the clock, the store and the environment, so a pane cannot be mounted with a plan in the `plan` atom) and the `[user]` check in docs/epics/49-07-epic-user-checks.md  
 **Pivot deferred**: FR11's "`hasWork`, the `/next` text, the band and the pane show the group when it is the only thing left" as a `[unit]` test → docs/specifications/49-spec-cheaper-red-first-evidence.md (Story 3, 2026-10-31) — cited: `whats-next/.claude-plugin/types/claude-code/index.d.ts:14213-14228`  
-**Signal**: fix-not-carried-through — project — the shape fix covered the signature that `refresh` compares, while the band and pane read the saved plan without it (`whats-next/hooks/register.tsx`, final audit)
+**Signal**: fix-not-carried-through — project — the shape fix covered the signature that `refresh` compares, while the band and pane read the saved plan without it (`whats-next/hooks/register.tsx`, final audit) — promoted 2026-10-31
 
 **Acceptance Criteria**:
 

@@ -16,6 +16,7 @@ The skills in this plugin keep their procedures short and their data strict. Thi
 | Quick change record | `docs/quick/{nn}-quick-{slug}.md` | do; library (signal marks) |
 | Reference library | `docs/library/*.md` | library, the user, or do (`lessons-learned.md` entries); every skill reads it |
 | Persona roster override | `docs/agents/roster.yaml` | the user; replaces the plugin default entirely |
+| Fixed-in list | `shared/fixed.md` at the plugin root | the maintainer, with each release that fixes a `process` failure; library reads it |
 
 Read all of these as context whenever they bear on the work. Files from CPM v3, including legacy flat epics (`{nn}-epic-{slug}.md`) and coverage matrices (`*-coverage-*.md`), are valid input. This plugin does not create coverage matrices; the `**Satisfies**` field on each story carries the traceability instead.
 
@@ -172,9 +173,16 @@ The criterion line itself is never edited to record verification, so its text st
 
 A signal records a failure `do` found, so that the second occurrence can be recognised. It sits on the story, or in the `docs/quick/` record, where the failure happened:
 
-`**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved}){ — recurs: {reference} ({why it matches})}{ — raised {YYYY-MM-DD}}{ — promoted {YYYY-MM-DD}}{ — declined {YYYY-MM-DD}}`
+`**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved}){ — cpm-next {version}}{ — recurs: {reference} ({why it matches})}{ — raised {YYYY-MM-DD}}{ — promoted {YYYY-MM-DD}}{ — declined {YYYY-MM-DD}}`
 
-- `project` means the cause is in this codebase; `process` means a cpm-next rule could have prevented it, and the parenthesis then names the cpm-next file and step.
+A `process` signal ends its description with the version, a `project` signal does not:
+
+```markdown
+**Signal**: check-cannot-fail — process — a must-not criterion passed with its control removed (cpm-next/skills/plan/SKILL.md Epics) — cpm-next 0.11.0
+**Signal**: spec-drift — project — the criterion named a file the spec never listed (src/Exports/Report.php)
+```
+
+- `project` means the cause is in this codebase; `process` means a cpm-next rule could have prevented it, and the parenthesis then names the cpm-next file and step. A `process` signal also carries ` — cpm-next {version}`, the `version` in the installed plugin's `.claude-plugin/plugin.json`, so a report can tell a failure a later release fixed from one still open; a `project` signal carries none.
 - A class slug is kebab-case and names the kind of failure, not the instance. Reuse a slug already in use, a library lesson's `**Class**` or a seed before making one; use a narrower slug when one class holds two distinct rules. Seeds: `check-cannot-fail`, `shared-state-collision`, `unprovable-in-session`, `instance-not-rule`, `spec-drift`, `fix-not-carried-through`, `definition-in-two-places`.
 - A signal reference is `{epic path} → Story {N} → {slug}` or `{quick path} → {slug}`. The `recurs` reference is any lesson reference form under **Fields on the epic header**, or a signal reference.
 - `raised` marks a signal listed as a promotion candidate; `promoted` one written to the library; `declined` one the user refused. A signal matching a declined one is declined too.

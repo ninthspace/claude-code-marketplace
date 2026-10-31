@@ -14,7 +14,7 @@
 **Amended**: the last criterion adds the `tsc` result and its two known errors (2026-10-31) — cited: `cpm-next-progress/hooks/register.ts:551` and `:557` (`isDeferred` is not in `ToolSpec` of the types laid for the installed engine), in lines this spec did not change  
 **Pivot deferred**: reword NFR3's "`tsc -p` passes for `cpm-next`, `whats-next` and `cpm-next-progress` once their types are laid" to allow the two `isDeferred` errors in `cpm-next-progress/hooks/register.ts` that this spec did not change → docs/specifications/49-spec-cheaper-red-first-evidence.md (Story 1, 2026-10-31) — cited: `cpm-next-progress/hooks/register.ts:551` and `:557`
 **Signal**: spec-drift — project — the criteria listed no `tsc` check for NFR3, whose clause the cpm-next-progress types cannot meet (`cpm-next-progress/hooks/register.ts:551`, audit round 1)  
-**Signal**: fix-not-carried-through — project — the root README's What's Next section was left describing the old pane, band, order and reads (`README.md:205-228`, audit rounds 1 and 2)
+**Signal**: fix-not-carried-through — project — the root README's What's Next section was left describing the old pane, band, order and reads (`README.md:205-228`, audit rounds 1 and 2) — promoted 2026-10-31
 
 **Acceptance Criteria**:
 

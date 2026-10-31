@@ -5,7 +5,7 @@
 
 **Type**: coding-standards  
 **Source**: docs/cpm/library/lessons-learned.md — carried over from CPM at the 2026-08-16 migration, with its amendment blocks folded into the body  
-**Scope**: do  
+**Scope**: do, plan  
 
 ## Reach for it before assuming the surface has it
 
@@ -136,3 +136,13 @@ The one-of-a-kind fixture is the normal case early in an epic, which is what mak
 **The question is not "did I assert it" but "could this corpus have told me if it were false".** A mutation answers that and a reading does not, and the two failures are indistinguishable from a passing run.
 
 **And following the rule is not satisfying it.** Both of these came out of a run that had adopted the relevant lesson at its own retro gate and written the tests with it in hand. Adoption is not compliance, and nothing in a green suite tells them apart.
+
+## A fix lands at one place; the same fault stays at its neighbours
+**Promoted**: 2026-10-31
+**Class**: fix-not-carried-through
+**Source**: docs/epics/49-04-epic-waiting-on-user.md, docs/epics/49-06-epic-release.md, docs/epics/50-03-epic-release.md (`fix-not-carried-through` signals)
+**Scope**: plan, do
+
+An edit is made at the line a requirement names while the same fact stays stated, in the old form, in the next bullet of the same passage, in a README, a guide, a second file or a second reader of the same data. Four stories in two specs closed with this fault, each found only by an audit.
+
+Before a story goes to audit, search the repository for the old wording and for every place that restates the changed fact (skills, the contract, READMEs, the training and onboarding guides, tests that quote it), and change or justify each. `plan` writes the criterion over the rule ("every passage that states the signal form shows the version segment"), not over the one line the requirement cites, so the places are listed in the criterion; the auditor reads the diff against that list. Owned by `plan` for the criterion and `do` for the search.
