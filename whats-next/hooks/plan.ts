@@ -1,17 +1,25 @@
-import type { NextEpic, NextPlan, NextSpec, NextStory, NextTask, WorkStatus } from '../types'
+import type { NextEpic, NextPlan, NextSpec, NextStory, NextTask, NextWaiting, WorkStatus } from '../types'
 
 // Reads cpm-next epic docs (shared/artifacts.md in the plugin) tolerantly:
 // field case, trailing hard-break spaces and "Done" for "Complete" all pass.
 
 export type EpicFile = { name: string; text: string; isArchived: boolean }
 
-type ParsedStory = {
+/** One acceptance criterion as the contract (`shared/artifacts.md`) has tools read it. */
+export type ParsedCriterion = { text: string; tag: string; hasEvidence: boolean; hasNotMet: boolean; hasWaitingLine: boolean }
+
+export type ParsedStory = {
   number: number
   title: string
   status: WorkStatus
   blockedBy: string[]
   tasks: NextTask[]
   text: string
+  /** The status carries a ` — blocked:` note. */
+  isBlockedNote: boolean
+  criteria: ParsedCriterion[]
+  /** A legacy story-level `**Evidence**:` field, which counts as evidence for every criterion. */
+  hasLegacyEvidence: boolean
 }
 
 type ParsedEpic = {
@@ -25,6 +33,14 @@ type ParsedEpic = {
 }
 
 const FIELD = /^\*\*([A-Za-z ]+)\*\*:\s*(.*?)\s*$/
+
+/** A criterion's text without its trailing tag, and the tag: the last backticked word, when it is a bracketed one. */
+export function splitTag(raw: string): { text: string; tag: string } {
+  const last = [...raw.matchAll(/`([^`]*)`/g)].at(-1)
+  const tag = last?.[1] !== undefined && /^\[[\w-]+\]$/.test(last[1]) ? last[1].slice(1, -1).toLowerCase() : ''
+
+  return { text: tag === '' ? raw.trim() : raw.replace(/\s*`\[[\w-]+\]`\s*$/, '').trim(), tag }
+}
 
 export function normaliseStatus(raw: string | undefined): WorkStatus {
   const value = (raw ?? '').trim().toLowerCase()
@@ -70,6 +86,8 @@ export function parseEpic(file: EpicFile): ParsedEpic {
   }
   let story: (ParsedStory & { hasNumber: boolean }) | null = null
   let task: (NextTask & { hasId: boolean }) | null = null
+  let criterion: ParsedCriterion | null = null
+  let inCriteria = false
   const stories: (ParsedStory & { hasNumber: boolean })[] = []
 
   for (const line of file.text.split(/\r?\n/)) {
@@ -79,14 +97,40 @@ export function parseEpic(file: EpicFile): ParsedEpic {
     }
     if (line.startsWith('## ')) {
       task = null
-      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', blockedBy: [], tasks: [], text: '', hasNumber: false }
+      criterion = null
+      inCriteria = false
+      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', blockedBy: [], tasks: [], text: '', isBlockedNote: false, criteria: [], hasLegacyEvidence: false, hasNumber: false }
       stories.push(story)
     }
     if (story !== null) story.text += `${line}\n`
     if (line.startsWith('### ') && story !== null) {
+      criterion = null
+      inCriteria = false
       task = { id: '', title: line.slice(4).trim(), status: 'Pending', hasId: false }
       story.tasks.push(task)
       continue
+    }
+    if (story !== null && task === null) {
+      if (/^\*\*Acceptance Criteria\*\*:/i.test(line)) { inCriteria = true; continue }
+      if (inCriteria) {
+        if (line.startsWith('- ')) {
+          criterion = { ...splitTag(line.slice(2)), hasEvidence: false, hasNotMet: false, hasWaitingLine: false }
+          story.criteria.push(criterion)
+          continue
+        }
+        if (criterion !== null && /^\s+-\s+/.test(line)) {
+          if (/^\s+-\s+Evidence\b/i.test(line)) criterion.hasEvidence = true
+          else if (/^\s+-\s+Not met:/i.test(line)) criterion.hasNotMet = true
+          else if (/^\s+-\s+Waiting on user:/i.test(line)) criterion.hasWaitingLine = true
+          continue
+        }
+        // An indented line that is not a sub-bullet continues the criterion, so its last backticked word is the tag.
+        if (criterion !== null && /^\s+\S/.test(line)) {
+          Object.assign(criterion, splitTag(`${criterion.text}${criterion.tag === '' ? '' : ` \`[${criterion.tag}]\``} ${line.trim()}`))
+          continue
+        }
+        if (line.startsWith('---')) inCriteria = false
+      }
     }
 
     const field = FIELD.exec(line)
@@ -99,8 +143,9 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       if (name === 'status') task.status = normaliseStatus(value)
     } else if (story !== null) {
       if (name === 'story') { story.number = Number.parseInt(value, 10); story.hasNumber = true }
-      if (name === 'status') story.status = normaliseStatus(value)
+      if (name === 'status') { story.status = normaliseStatus(value); story.isBlockedNote = /—\s*blocked:/i.test(value) }
       if (name === 'blocked by') story.blockedBy = parseBlockers(value)
+      if (name === 'evidence') story.hasLegacyEvidence = true
     } else {
       if (name === 'status') epic.status = normaliseStatus(value)
       if (name === 'blocked by') epic.blockedBy = parseBlockers(value)
@@ -127,6 +172,18 @@ function effectiveStatus(story: ParsedStory): WorkStatus {
 }
 
 const storyKey = (epicId: string, n: number) => `${epicId}#${n}`
+
+/**
+ * A story waits on the user (the contract's rule, as `status` applies it) when it is not marked blocked, no
+ * criterion has a `Not met` line, at least one criterion lacks Evidence, and every such criterion is tagged
+ * `[user]` or carries a `- Waiting on user:` line. Its blockers are the caller's to check.
+ */
+export function isWaitingOnUser(story: ParsedStory): boolean {
+  if (story.isBlockedNote || story.hasLegacyEvidence || story.criteria.some(c => c.hasNotMet)) return false
+  const unproven = story.criteria.filter(c => !c.hasEvidence)
+
+  return unproven.length > 0 && unproven.every(c => c.tag === 'user' || c.hasWaitingLine)
+}
 
 export type SpecFile = { name: string; text: string; path?: string }
 
@@ -195,7 +252,7 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
 
   type Candidate = { epic: ParsedEpic; story: ParsedStory; status: WorkStatus }
   const open = epics.filter(e => !e.isArchived && !isTerminal(e) && e.status !== 'Complete')
-  let remaining: Candidate[] = open.flatMap(epic =>
+  const candidates: Candidate[] = open.flatMap(epic =>
     epic.stories
       .filter(story => !done.has(storyKey(epic.id, story.number)))
       .map(story => ({ epic, story, status: effectiveStatus(story) })),
@@ -205,6 +262,23 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
   const waitsOnNow = (c: Candidate, finished: Set<string>) => [
     ...new Set([...outstanding(c.epic, c.epic.blockedBy, finished), ...outstanding(c.epic, c.story.blockedBy, finished)]),
   ]
+
+  // Stories only the user can finish are not work to build: they leave the order and are listed apart.
+  const waitingStories = candidates.filter(c => waitsOnNow(c, done).length === 0 && isWaitingOnUser(c.story))
+  const waitingKeys = new Set(waitingStories.map(c => storyKey(c.epic.id, c.story.number)))
+  let remaining: Candidate[] = candidates.filter(c => !waitingKeys.has(storyKey(c.epic.id, c.story.number)))
+
+  // Whether a dependency token as written in the epic doc names a story waiting on the user, or an epic whose
+  // only stories left are such stories.
+  const namesWaiting = (epic: ParsedEpic, token: string): boolean => {
+    const story = /^story\s+(\d+)$/i.exec(token)
+    if (story !== null) return waitingKeys.has(storyKey(epic.id, Number(story[1])))
+    const target = findEpic(token)
+
+    const left = candidates.filter(c => c.epic === target)
+
+    return target !== undefined && left.length > 0 && left.every(c => waitingKeys.has(storyKey(c.epic.id, c.story.number)))
+  }
 
   const toStory = (c: Candidate): NextStory => {
     const waitsOn = waitsOnNow(c, done)
@@ -218,6 +292,7 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
       status: c.status,
       isReady: waitsOn.length === 0,
       waitsOn,
+      waitsOnChecks: waitsOn.filter(token => namesWaiting(c.epic, token)),
       tasksDone: c.story.tasks.filter(t => t.status === 'Complete').length,
       tasksTotal: c.story.tasks.length,
       nextTask,
@@ -248,7 +323,7 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
     simulated.add(storyKey(pick.epic.id, pick.story.number))
     remaining = remaining.filter(c => c !== pick)
   }
-  // Whatever is left can never become ready from the docs alone (a cycle or an unknown dependency).
+  // Whatever is left can never become ready from the docs alone: a cycle, an unknown dependency, or a story that waits on the user's check.
   order.push(...remaining.sort(rank).map(toStory))
 
   const nextEpics: NextEpic[] = open.map(epic => ({
@@ -265,6 +340,13 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
     repo: root.split('/').filter(Boolean).at(-1) ?? root,
     epics: nextEpics,
     order,
+    waiting: waitingStories.map((c): NextWaiting => ({
+      epicId: c.epic.id,
+      epicTitle: c.epic.title,
+      number: c.story.number,
+      title: c.story.title,
+      checks: c.story.criteria.filter(k => !k.hasEvidence).map(k => k.text),
+    })),
     specs: unplannedSpecs(specs, files),
     signature,
   }
@@ -274,15 +356,22 @@ export function buildPlan(root: string, files: EpicFile[], signature: string, sp
 export function describePlan(plan: NextPlan, limit = 12): string {
   const lines: string[] = []
   if (plan.order.length === 0) {
-    lines.push(`${plan.repo}: no cpm-next stories left in its epics.`)
+    lines.push(plan.waiting.length === 0 ? `${plan.repo}: no cpm-next stories left in its epics.` : `${plan.repo}: no stories left to build.`)
   } else {
-    lines.push(`${plan.repo}: ${plan.order.length} stories left across ${plan.epics.length} epics, in recommended order:`)
+    lines.push(`${plan.repo}: ${plan.order.length} stories left across ${new Set(plan.order.map(s => s.epicId)).size} epics, in recommended order:`)
     plan.order.slice(0, limit).forEach((s, i) => {
-      const state = s.status === 'In Progress' ? 'in progress' : s.isReady ? 'ready' : `waits on ${s.waitsOn.join(', ')}`
+      const state = s.status === 'In Progress' ? 'in progress' : s.isReady ? 'ready' : `waits on ${s.waitsOn.map(t => (s.waitsOnChecks.includes(t) ? `${t} (your check)` : t)).join(', ')}`
       const next = s.nextTask === null ? '' : ` — next task ${s.nextTask.id} ${s.nextTask.title}`
       lines.push(`${i + 1}. ${s.epicId} Story ${s.number}: ${s.title} (${state}; ${s.tasksDone}/${s.tasksTotal} tasks)${next}`)
     })
     if (plan.order.length > limit) lines.push(`… and ${plan.order.length - limit} more.`)
+  }
+  if (plan.waiting.length > 0) {
+    lines.push('', `Waiting on you (${plan.waiting.length}):`)
+    for (const w of plan.waiting) {
+      lines.push(`- ${w.epicId.split('-epic-')[0]} Story ${w.number}: ${w.title}`)
+      for (const check of w.checks) lines.push(`  - ${check}`)
+    }
   }
   if (plan.specs.length > 0) {
     lines.push('', `Specs with no epics yet (plan them with /cpm-next:plan <path>):`)
@@ -292,10 +381,38 @@ export function describePlan(plan: NextPlan, limit = 12): string {
   return lines.join('\n')
 }
 
-/** True when there is anything to show: stories left or specs not yet planned. */
-export const hasWork = (plan: NextPlan) => plan.order.length > 0 || plan.specs.length > 0
+/** True when there is anything to show: stories left, stories waiting on the user, or specs not yet planned. */
+export const hasWork = (plan: NextPlan) => plan.order.length > 0 || plan.specs.length > 0 || plan.waiting.length > 0
 
 /** The markdown of one story, for the AI note's context. */
 export function storyText(file: EpicFile, number: number): string {
   return parseEpic(file).stories.find(s => s.number === number)?.text ?? ''
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/** A dependency token as the band and pane write it: "Story 2" → "S2", "Epic 34-01-epic-x" → "34-01". */
+export const shortToken = (token: string) => token.replace(/^story\s+(\d+)$/i, 'S$1').replace(/^epic\s+/i, '').replace(/-epic-.*$/, '')
+
+/** "after S1 (your check), S3": what is outstanding, the dependencies that are the user's checks marked as such. */
+export const afterLabel = (tokens: string[], checks: string[] = []) =>
+  `after ${[...new Set(tokens.map(t => shortToken(t) + (checks.includes(t) ? ' (your check)' : '')))].join(', ')}`
+
+/** What the band shows when nothing is left to build but stories wait on the user; undefined otherwise. */
+export function waitingBand(plan: NextPlan): { label: string; title: string; count: number } | undefined {
+  const first = plan.waiting[0]
+  if (plan.order.length > 0 || first === undefined) return undefined
+
+  return { label: `${first.epicId.split('-epic-')[0]} S${first.number}`, title: first.title, count: plan.waiting.length }
+}
+
+/** The pane's heading line: stories and epics left to build, stories waiting on the user, and specs without epics. */
+export function summaryOf(plan: NextPlan): string {
+  const epicsLeft = new Set(plan.order.map(s => s.epicId)).size
+
+  return [
+    plan.order.length > 0 ? `${plural(plan.order.length, 'story', 'stories')} · ${plural(epicsLeft, 'epic', 'epics')} left` : '',
+    plan.waiting.length > 0 ? `${plan.waiting.length} waiting on you` : '',
+    plan.specs.length > 0 ? `${plural(plan.specs.length, 'spec', 'specs')} without epics` : '',
+  ].filter(Boolean).join(' · ')
 }

@@ -48,13 +48,38 @@ export type TrackerItem = {
 /** The `meta/tracker` document. */
 export type TrackerMeta = { title: string; spec: string; updated: string; decisions: string[] }
 
-export type EpicFile = { name: string; text: string }
+/** An epic doc; `archived` marks one read from `docs/archive/epics`, which only satisfies other epics' blockers. */
+export type EpicFile = { name: string; text: string; archived?: boolean }
 
 type ParsedTask = { id: string; title: string; status: WorkStatus }
-export type ParsedStory = { number: number; title: string; status: WorkStatus; effort: string; blockedBy: string[]; tasks: ParsedTask[] }
+
+/** One acceptance criterion as the contract (`shared/artifacts.md`) has tools read it. */
+export type ParsedCriterion = { tag: string; hasEvidence: boolean; hasNotMet: boolean; hasWaitingLine: boolean }
+
+export type ParsedStory = {
+  number: number
+  title: string
+  status: WorkStatus
+  effort: string
+  blockedBy: string[]
+  tasks: ParsedTask[]
+  /** The status carries a ` — blocked:` note. */
+  isBlockedNote: boolean
+  criteria: ParsedCriterion[]
+  /** A legacy story-level `**Evidence**:` field, which counts as evidence for every criterion. */
+  hasLegacyEvidence: boolean
+}
 export type ParsedEpic = { id: string; short: string; title: string; status: WorkStatus; blockedBy: string[]; stories: ParsedStory[] }
 
 const FIELD = /^\*\*([A-Za-z ]+)\*\*:\s*(.*?)\s*$/
+
+/** The last backticked word of a criterion's text, when it is a bracketed tag: `[user]` → "user". */
+export function criterionTag(text: string): string {
+  const spans = [...text.matchAll(/`([^`]*)`/g)]
+  const last = spans.at(-1)?.[1] ?? ''
+
+  return /^\[[\w-]+\]$/.test(last) ? last.slice(1, -1).toLowerCase() : ''
+}
 
 export function normaliseStatus(raw: string | undefined): WorkStatus {
   const value = (raw ?? '').trim().toLowerCase()
@@ -81,6 +106,8 @@ export function parseEpic(file: EpicFile): ParsedEpic {
   const stories: (ParsedStory & { hasNumber: boolean })[] = []
   let story: (ParsedStory & { hasNumber: boolean }) | null = null
   let task: (ParsedTask & { hasId: boolean }) | null = null
+  let criterion: ParsedCriterion | null = null
+  let criteria = false
   const tasks = new Map<ParsedStory, (ParsedTask & { hasId: boolean })[]>()
 
   for (const line of file.text.split(/\r?\n/)) {
@@ -90,15 +117,42 @@ export function parseEpic(file: EpicFile): ParsedEpic {
     }
     if (line.startsWith('## ')) {
       task = null
-      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', effort: '', blockedBy: [], tasks: [], hasNumber: false }
+      criterion = null
+      criteria = false
+      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', effort: '', blockedBy: [], tasks: [], isBlockedNote: false, criteria: [], hasLegacyEvidence: false, hasNumber: false }
       stories.push(story)
       tasks.set(story, [])
       continue
     }
     if (line.startsWith('### ') && story !== null) {
+      criterion = null
+      criteria = false
       task = { id: '', title: line.slice(4).trim(), status: 'Pending', hasId: false }
       tasks.get(story)?.push(task)
       continue
+    }
+    if (story !== null && task === null) {
+      if (/^\*\*Acceptance Criteria\*\*:/i.test(line)) { criteria = true; continue }
+      if (criteria) {
+        if (line.startsWith('- ')) {
+          criterion = { tag: criterionTag(line), hasEvidence: false, hasNotMet: false, hasWaitingLine: false }
+          story.criteria.push(criterion)
+          continue
+        }
+        if (criterion !== null && /^\s+-\s+/.test(line)) {
+          if (/^\s+-\s+Evidence\b/i.test(line)) criterion.hasEvidence = true
+          else if (/^\s+-\s+Not met:/i.test(line)) criterion.hasNotMet = true
+          else if (/^\s+-\s+Waiting on user:/i.test(line)) criterion.hasWaitingLine = true
+          continue
+        }
+        // An indented line that is not a sub-bullet continues the criterion, so its last backticked word is the tag.
+        if (criterion !== null && /^\s+\S/.test(line)) {
+          const tag = criterionTag(line)
+          if (tag !== '') criterion.tag = tag
+          continue
+        }
+        if (line.startsWith('---')) criteria = false
+      }
     }
     const field = FIELD.exec(line)
     if (field === null) continue
@@ -110,9 +164,10 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       if (name === 'status') task.status = normaliseStatus(value)
     } else if (story !== null) {
       if (name === 'story') { story.number = Number.parseInt(value, 10); story.hasNumber = true }
-      if (name === 'status') story.status = normaliseStatus(value)
+      if (name === 'status') { story.status = normaliseStatus(value); story.isBlockedNote = /—\s*blocked:/i.test(value) }
       if (name === 'blocked by') story.blockedBy = parseBlockers(value)
       if (name === 'effort') story.effort = value.trim().toLowerCase()
+      if (name === 'evidence') story.hasLegacyEvidence = true
     } else {
       if (name === 'status') epic.status = normaliseStatus(value)
       if (name === 'blocked by') epic.blockedBy = parseBlockers(value)
@@ -128,6 +183,9 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       status: s.status,
       effort: s.effort,
       blockedBy: s.blockedBy,
+      isBlockedNote: s.isBlockedNote,
+      criteria: s.criteria,
+      hasLegacyEvidence: s.hasLegacyEvidence,
       tasks: (tasks.get(s) ?? []).filter(t => t.hasId).map(({ id, title, status }) => ({ id, title, status })),
     }))
 
@@ -139,6 +197,18 @@ export function storyStatus(story: ParsedStory, epic: ParsedEpic): WorkStatus {
   const isStarted = story.tasks.some(t => t.status !== 'Pending')
 
   return story.status === 'In Progress' || isStarted ? 'In Progress' : 'Pending'
+}
+
+/**
+ * A story waits on the user (the contract's rule, as `status` applies it) when it is not marked blocked, no
+ * criterion has a `Not met` line, at least one criterion lacks Evidence, and every such criterion is tagged
+ * `[user]` or carries a `- Waiting on user:` line. Its blockers are the caller's to check.
+ */
+export function isWaitingOnUser(story: ParsedStory): boolean {
+  if (story.isBlockedNote || story.hasLegacyEvidence || story.criteria.some(c => c.hasNotMet)) return false
+  const unproven = story.criteria.filter(c => !c.hasEvidence)
+
+  return unproven.length > 0 && unproven.every(c => c.tag === 'user' || c.hasWaitingLine)
 }
 
 function findEpic(epics: ParsedEpic[], ref: string): ParsedEpic | undefined {
@@ -170,7 +240,9 @@ function outstanding(epics: ParsedEpic[], epic: ParsedEpic, tokens: string[]): s
 
 /** The tracker rows for a build order, in build order. Items naming an epic, story or task that does not exist are skipped and reported. */
 export function buildItems(order: BuildOrder, files: EpicFile[], today: string): { items: Map<string, TrackerItem>; missing: string[] } {
-  const epics = files.map(parseEpic)
+  const epics = files.filter(f => f.archived !== true).map(parseEpic)
+  // An epic finished and archived still satisfies the blockers of the epics that name it.
+  const known = [...epics, ...files.filter(f => f.archived === true).map(parseEpic)]
   const items = new Map<string, TrackerItem>()
   const missing: string[] = []
   let seq = 0
@@ -186,7 +258,8 @@ export function buildItems(order: BuildOrder, files: EpicFile[], today: string):
         continue
       }
 
-      const blockers = [...new Set([...outstanding(epics, epic, epic.blockedBy), ...outstanding(epics, epic, story.blockedBy)])]
+      const blockers = [...new Set([...outstanding(known, epic, epic.blockedBy), ...outstanding(known, epic, story.blockedBy)])]
+      const isUserWait = task === undefined && blockers.length === 0 && isWaitingOnUser(story)
       let status: WorkStatus
       if (task !== undefined) {
         status = storyStatus(story, epic) === 'Complete' ? 'Complete' : task.status
@@ -209,7 +282,7 @@ export function buildItems(order: BuildOrder, files: EpicFile[], today: string):
         epic: epic.short,
         story: task === undefined ? `S${story.number}` : `T${task.id}`,
         title: task === undefined ? story.title : task.title,
-        status: trackerStatus(status, entry.waitingOn),
+        status: trackerStatus(status, entry.waitingOn !== undefined || isUserWait),
         blockedBy: status === 'Complete' ? '' : blockers.join('; '),
         note: entry.note ?? '',
         updated: today,
@@ -295,10 +368,10 @@ export function isMissingArtifact(message: string): boolean {
   return /no such artifact|HTTP 404/i.test(message)
 }
 
-function trackerStatus(status: WorkStatus, waitingOn: string | undefined): TrackerStatus {
+function trackerStatus(status: WorkStatus, isWaiting: boolean): TrackerStatus {
   if (status === 'Complete') return 'Complete'
+  if (isWaiting) return 'Waiting on input'
   if (status === 'In Progress') return 'In progress'
-  if (waitingOn !== undefined) return 'Waiting on input'
   return 'Pending'
 }
 

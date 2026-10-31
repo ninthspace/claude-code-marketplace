@@ -1,6 +1,6 @@
 # Worktree mode
 
-Read by `do` when it runs with `--parallel` or `--parallel check`, or when unblocked stories that share files or runtime state are waiting to be built. `SKILL.md` beside this file defines the terms used here (the isolated suite, the red, the builder directory).
+Read by `do` when it runs with `--parallel` or `--parallel check`, or when unblocked stories that share files or runtime state are waiting to be built. `SKILL.md` beside this file defines the terms used here (the isolated suite, the red pass).
 
 With `--parallel`, unblocked stories are built together even when they share files, each subagent in its own git worktree (the Agent tool's `isolation: "worktree"`), merged by the lead. Worktrees isolate files, not the running app, its domains, real databases, webhooks or third-party services, so these stories still run one at a time, after the batch:
 
@@ -17,6 +17,7 @@ Each subagent's prompt adds:
 
 - Set up the worktree first. Install dependencies from the lock file (`composer install`, `npm ci`); never symlink `vendor/` or `node_modules/`, since Composer's autoloader would then load the lead's code. Copy from the lead's checkout the gitignored files its tests need (`.env`, local settings), pointed at test resources.
 - Start no server, run no migrations or seeders against a real database, call no real service, and leave the epic doc alone.
+- When the worktree's test results count (above), take the story's red pass (step 4) before committing: its directory is at the same path in the main repository's common directory, with the worktree in its `tree` file, and it is gone when the commit is made. Otherwise write code only; the lead takes the pass after merging.
 - Commit the story on the worktree's branch, and report the branch, the files changed, the tests run with their output, what proves each criterion, the red for each test-proven one, and the failures it met (a test failing for a reason it can't explain, a criterion it can't meet, a wording fix it made), for the lead to record as signals. The lead writes the `Evidence` lines.
 
 The lead merges the branches in story order with `git merge --no-ff`, so each story's merge commit, against its first parent, is that story alone for its audit. After resolving a conflict, it runs both stories' tests again, then the full suite once. It removes each worktree and its branch once the story is merged.

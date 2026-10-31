@@ -210,8 +210,9 @@
       <li>The artefacts it writes in <code>docs/</code></li>
       <li>Installing the full set, and setting up a project</li>
       <li>A first walkthrough: plan, review, do one story, status</li>
-      <li>Unattended runs, story effort, the two agents, staying up to date</li>
+      <li>Unattended runs, checks only you can make, how it learns, story effort, the two agents, staying up to date</li>
     </ul>
+    <p class="dim small">Covers cpm-next 0.11.0, cpm-next-models 0.3.2, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
   </div>
 </section>
@@ -244,7 +245,7 @@
           <tr><td><code>/cpm-next:plan</code></td><td>Writes whatever is missing of brief, spec and epics, from whatever already exists</td><td>The artefacts down to the epics exist and trace upward</td></tr>
           <tr><td><code>/cpm-next:review</code></td><td>Independent challenge of the epics before they are built</td><td>Critical and Warning findings are fixed or waiting on you</td></tr>
           <tr><td><code>/cpm-next:do</code></td><td>Builds stories, verifies each acceptance criterion with evidence, and has each story audited</td><td>Every story in scope is Complete and the tests pass</td></tr>
-          <tr><td><code>/cpm-next:library</code></td><td>Curates reference documents in <code>docs/library/</code> that planning and building read</td><td>Documents carry complete front-matter</td></tr>
+          <tr><td><code>/cpm-next:library</code></td><td>Curates reference documents in <code>docs/library/</code> that planning and building read, and promotes failures that recur into lessons</td><td>Documents carry complete front-matter, and the lessons you chose are promoted</td></tr>
           <tr><td><code>/cpm-next:status</code></td><td>Read-only report of where things stand and the next command to run</td><td>Nothing is written</td></tr>
         </tbody>
       </table>
@@ -273,8 +274,7 @@
         <ul class="bullets">
           <li><code>docs/architecture/</code> ADRs, only for decisions that outlive one spec</li>
           <li><code>docs/reviews/</code> review records</li>
-          <li><code>docs/retros/</code> retros written by <code>do</code></li>
-          <li><code>docs/quick/</code> records of small changes made without an epic</li>
+          <li><code>docs/quick/</code> records of small changes made without an epic, with their acceptance criteria written before any code</li>
           <li><code>docs/library/</code> reference documents every skill reads</li>
         </ul>
       </div>
@@ -302,6 +302,7 @@
 **Date**: 2026-10-08
 **Status**: Pending
 **Blocked by**: —
+**Lessons**: docs/library/lessons-learned.md → "Exports stream their rows" (build)
 
 <span class="k">## Export the filtered report as CSV</span>
 **Story**: 1
@@ -328,7 +329,8 @@
 **Satisfies**: FR3
 **Effort**: low
 **Model**: haiku</code></pre>
-    <p class="small dim">Status values: <code>Pending</code>, <code>In Progress</code>, <code>Complete</code>. Epics may also be <code>Superseded</code> or <code>Withdrawn</code>, which only you set. A story is unblocked when its <code>**Blocked by**</code> is <code>—</code> or everything it names is <code>Complete</code>. A dependency on another epic names it by filename prefix, for example <code>Epic 28-01-epic-setup</code>.</p>
+    <p class="small dim">Status values: <code>Pending</code>, <code>In Progress</code>, <code>Complete</code>. Epics may also be <code>Superseded</code> or <code>Withdrawn</code>, which only you set. A story is unblocked when everything its own and its epic's <code>**Blocked by**</code> name is <code>Complete</code> (or the field is <code>—</code>); <code>do</code> also waits until each blocking story has its <code>**Audit**</code> line. A dependency on another epic names it by filename prefix, for example <code>Epic 28-01-epic-setup</code>.</p>
+    <p class="small dim">Each criterion's tag says who or what proves it: <code>[unit]</code>, <code>[feature]</code> and <code>[integration]</code> a test, <code>[browser]</code> a rendered page, <code>[manual]</code> a step <code>do</code> carries out, <code>[user]</code> only you (a deploy, a production run, a sign-off). A criterion saying what must not happen names its own control, so it fails if the feature does nothing. <code>**Lessons**</code> names the library lessons and recurring failures the criteria reflect.</p>
   </div>
 </section>
 
@@ -346,15 +348,18 @@
 
 **Acceptance Criteria**:
 - The export contains exactly the rows the report's current filters show `[feature]`
-  <span class="ok">- Evidence: tests/Feature/LoansCsvExportTest.php "exports only filtered rows", php artisan test --filter=LoansCsvExportTest, 4 passed</span>
+  <span class="ok">- Evidence: "exports only filtered rows", tests/Feature/LoansCsvExportTest.php:24 — red: Failed asserting that 5 matches expected 3. with mutation of app/Http/Controllers/LoansExportController.php:31: filter scope removed</span>
 - A user without the reports permission receives a 403 response `[feature]`
-  <span class="ok">- Evidence: tests/Feature/LoansCsvExportTest.php "forbids users without the reports permission", same run</span>
+  <span class="ok">- Evidence: "forbids users without the reports permission", tests/Feature/LoansCsvExportTest.php:41 — red: Expected response status code [403] but received 200. with lines undone in routes/web.php:58</span>
 
+<span class="ok">**Signal**: unbounded-query — project — export loaded every loan before filtering (LoansExportController.php:28, audit check 2)</span>
 <span class="ok">**Audit**: pass (2026-10-08), 2 findings fixed</span></code></pre>
     <ul class="bullets">
-      <li>Each criterion gets its own indented <code>Evidence</code> line: a test name and command, a <code>file:line</code>, or the manual step taken and what was seen.</li>
-      <li>The criterion line itself is never edited.</li>
+      <li>Each criterion gets its own indented <code>Evidence</code> line: a test and its <code>file:line</code>, or the manual step taken and what was seen. The criterion line itself is never edited.</li>
+      <li><b>Red first.</b> A test-proven criterion also records its red: the failure the test gave when <code>do</code> undid or mutated the code it covers. A test that passes for an unrelated reason shows up. A criterion no test proves records <code>red: n/a — manual</code>, <code>browser-observed</code> or <code>static</code>; one that keeps existing behaviour, proved by an unchanged test, records <code>red: n/a — existing (reaches {file:line})</code>.</li>
+      <li>A <code>[user]</code> criterion's line, <code>Evidence (user, {date}): …</code>, is written only from your answer. Until then it may carry <code>- Waiting on user: {steps}</code>.</li>
       <li>A story is <code>Complete</code> only when every criterion has an <code>Evidence</code> line. A <code>Not met</code> line leaves it blocked.</li>
+      <li><code>**Signal**</code> records a failure <code>do</code> found (here, an audit finding that held), so a second occurrence can be recognised.</li>
       <li><code>**Audit**</code> is written in the same edit that closes the story. If the auditor is unavailable it reads <code>**Audit**: skipped — auditor unavailable</code>.</li>
     </ul>
   </div>
@@ -388,10 +393,10 @@
       <table>
         <thead><tr><th>Plugin</th><th>Adds</th><th>Without it</th></tr></thead>
         <tbody>
-          <tr><td><code>cpm-next</code></td><td>The six skills, the auditor and scout agents</td><td>Required</td></tr>
+          <tr><td><code>cpm-next</code></td><td>The six skills, the auditor and scout agents, and a commit guard</td><td>Required</td></tr>
           <tr><td><code>cpm-next-models</code></td><td>Holds each skill's model and effort for its whole run; builds each story at its own effort</td><td>A skill's model and effort last only for the turn that invoked it; later turns of a <code>do</code> run fall back to the session model</td></tr>
-          <tr><td><code>cpm-next-progress</code></td><td><code>/progress-tracker</code>, a claude.ai tracker for a spec's epics</td><td>No shareable progress page; read the epic docs or run <code>/cpm-next:status</code></td></tr>
-          <tr><td><code>whats-next</code></td><td><code>/next</code>, a live pane of the work left in the repository</td><td>No live pane; run <code>/cpm-next:status</code></td></tr>
+          <tr><td><code>cpm-next-progress</code></td><td><code>/progress-tracker</code>, a claude.ai tracker for a spec's epics, and an overview of every project's</td><td>No shareable progress page; read the epic docs or run <code>/cpm-next:status</code></td></tr>
+          <tr><td><code>whats-next</code></td><td><code>/next</code>, a live pane of the work left in the repository, with stories waiting on you listed apart</td><td>No live pane; run <code>/cpm-next:status</code></td></tr>
           <tr><td><code>plugin-sync</code></td><td>Reloads open sessions when a plugin from this marketplace is updated</td><td>After an update, run <code>/reload-plugins</code> in each open session</td></tr>
         </tbody>
       </table>
@@ -413,16 +418,16 @@
         <ol class="steps">
           <li>Writes <code>docs/specifications/01-build-order.json</code> from the spec's epics, if it does not exist yet.</li>
           <li>Writes the page to <code>.claude/cpm-next-progress/</code> and adds that folder to <code>.gitignore</code>.</li>
-          <li>You ask Claude to publish the page. It becomes a private claude.ai artifact.</li>
-          <li>The mod saves the link in the build-order file and keeps the table in step with the epic docs from then on.</li>
+          <li>The mod asks Claude to publish the page. It becomes a private claude.ai artifact.</li>
+          <li>The mod saves the link in the build-order file and keeps the table in step with the epic docs from then on. A story waiting on your check shows as <b>Waiting on input</b>.</li>
         </ol>
-        <p class="small dim">Edit the build-order file to reorder, regroup, split a story into tasks, or add <code>waitingOn</code>. <code>/progress-tracker</code> on its own checks every tracker and prints what differs.</p>
+        <p class="small dim">Edit the build-order file to reorder, regroup, split a story into tasks, or add <code>waitingOn</code>. <code>/progress-tracker</code> on its own checks every tracker and prints what differs; <code>/progress-tracker all</code> shows every project's trackers.</p>
       </div>
       <div class="card">
         <h3><code>/next</code></h3>
         <p>No setup. The mod reads <code>docs/epics/</code> and <code>docs/specifications/</code> directly, with no model calls.</p>
         <ul class="bullets">
-          <li>The pane lists every story not yet <code>Complete</code>, in build order, and every spec with no epics yet.</li>
+          <li>The pane lists every story not yet <code>Complete</code>, in build order, and every spec with no epics yet. Stories only you can finish are listed apart under <b>Waiting on you</b>, and never offered as next.</li>
           <li>It opens by itself in a repository with work left when the terminal is at least 144 columns wide. <code>/next</code> opens it at any width and prints the list into the conversation.</li>
           <li>A band above the prompt shows the next story, its next task, and how many stories are left.</li>
           <li><b>Ask Claude</b> (hotkey <code>a</code>) asks Sonnet for a short note on what to do next.</li>
@@ -442,7 +447,8 @@
       <li><b>Takes stock.</b> Reads <code>docs/</code>, <code>README.md</code>, <code>CLAUDE.md</code> and, in a brownfield project, the code and test setup. It says what exists, what is missing and what this run will produce, then carries on.</li>
       <li><b>Asks once.</b> Questions only you can answer, which would change scope, cost or a hard-to-reverse choice, come in one batch of up to four, each with a recommended default. Everything else it decides and records under Assumptions.</li>
       <li><b>Writes what is missing.</b> Brief if needed, then the spec (MoSCoW requirements with labels such as <code>FR1</code>, measurable NFRs, decisions, scope, testing strategy), then epics. A non-trivial spec goes through a challenge pass by two or three personas first.</li>
-      <li><b>Finishes</b> with three headings: <b>Needs you</b>, <b>Written</b> and <b>Next</b>.</li>
+      <li><b>Applies what the project has learned.</b> Library lessons and recurring failures that bear on an epic are written into its criteria and named in its <code>**Lessons**</code> line. Criteria are tagged by who proves them, and a spec's <code>[user]</code> checks go in one final user-checks epic, so no other work waits on you.</li>
+      <li><b>Finishes</b> with three headings: <b>Needs you</b>, <b>Written</b> and <b>Next</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation.</li>
     </ol>
     <p class="small dim">To talk an idea through first, run <code>/cpm-next:party {topic}</code>, type <b>wrap up</b> when done, then <code>/cpm-next:plan {record path}</code>. Do not type "exit" or "quit": those close Claude Code itself.</p>
   </div>
@@ -457,7 +463,7 @@
     <ul class="bullets">
       <li>Three roster personas, each in its own subagent on Opus, read the epic independently. They get none of the conversation that produced the plan.</li>
       <li>They look for criteria <code>do</code> could not verify, missing edge cases, work that looks simple and is not, wrong <code>**Blocked by**</code> lines, Must Have requirements no story covers, and conflicts with ADRs, the library or the code.</li>
-      <li>Critical and Warning findings with a clear fix are fixed in <code>Pending</code> stories, with an <code>**Amended**</code> line. Findings that would change scope go to <b>Needs you</b>, unfixed.</li>
+      <li>Critical and Warning findings with a clear fix are fixed in <code>Pending</code> stories, with an <code>**Amended**</code> line. Findings that would change scope go to <b>Needs you</b>, unfixed, and it then takes you through them one at a time, with a recommendation.</li>
       <li>A review record is written to <code>docs/reviews/</code>.</li>
     </ul>
     <div class="table-wrap">
@@ -482,14 +488,16 @@
 <pre><code>/cpm-next:do 1</code></pre>
     <p class="small dim">With a story number and no epic, <code>do</code> uses the lowest-numbered In Progress epic, else the lowest-numbered epic with nothing started.</p>
     <ol class="steps">
-      <li>Before the first story it reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the suite to record a baseline.</li>
+      <li>Before the first story it restores any files a stopped red pass left, reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the suite to record a baseline. If a <code>[browser]</code> criterion cannot be checked (no connected browser, no app answering at a local <code>APP_URL</code>), it says so in its first message.</li>
       <li>Sets the story <code>In Progress</code> and, with <code>cpm-next-models</code>, sets the story's effort.</li>
       <li>Builds it task by task, following the project's existing conventions.</li>
-      <li>Verifies every acceptance criterion and writes an <code>Evidence</code> line under each.</li>
-      <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes Critical and Warning findings and audits once more.</li>
+      <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the full suite.</li>
+      <li>Takes the reds in one <b>red pass</b>: copies each file it will change to <code>.git/cpm-next/scratch/</code>, undoes or mutates the code each cited test covers, runs that test and notes its failure, copies the files back and checks a manifest shows every file restored. Then it writes the <code>Evidence</code> lines.</li>
+      <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes every Critical and Warning finding and audits again, scoped to those findings and the fix code. A third audit runs only when the second finds a Critical; a story still failing is marked blocked.</li>
       <li>Closes the story in the same edit as its <code>**Audit**</code> line.</li>
     </ol>
-    <p>The run ends with <b>Needs you</b>, <b>Changed</b> and <b>Found</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation. Commits, branches and pushes are left to you.</p>
+    <p>Stories unblocked together that share no files or state are built in parallel, one subagent each; <code>--parallel</code> is only for stories that do share files, building each in its own git worktree and committing locally. A story whose open criteria are all <code>[user]</code> checks is skipped and listed under <b>Needs you</b>.</p>
+    <p>The run ends with <b>Needs you</b> (only what waits on you, each line naming the action and what it unblocks), <b>Changed</b> and <b>Found</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation. Commits, branches and pushes are left to you; while a red pass is open, a <code>git commit</code> run through Claude is refused.</p>
   </div>
 </section>
 
@@ -502,10 +510,10 @@
     <p>A read-only, one-screen report from <code>docs/</code> and git. Nothing is written.</p>
     <div class="grid three">
       <div class="card"><h3>Where it stands</h3><p>What the project is, what has been built, recent work, and what is in flight.</p></div>
-      <div class="card"><h3>Needs you</h3><p><code>**Pivot deferred**</code> lines, stories blocked by a <code>Not met</code> criterion, open discussions, and suspect records such as a <code>Complete</code> story with a criterion that has no evidence.</p></div>
+      <div class="card"><h3>Needs you</h3><p><code>**Pivot deferred**</code> lines, blocked stories with their reason, stories waiting on your check with their steps, lessons waiting for your yes or no, open discussions, and suspect records such as a <code>Complete</code> story with a criterion that has no evidence. Each comes with a recommendation.</p></div>
       <div class="card"><h3>Next</h3><p>The commands worth running, most useful first.</p></div>
     </div>
-    <p>Then finish the epic: <code>/cpm-next:do docs/epics/01-01-epic-loans-csv-export.md</code>. When the epic reaches <code>Complete</code>, <code>do</code> writes a short retro to <code>docs/retros/</code>, or adds <code>**Retro waived**: clean run</code> to the epic header.</p>
+    <p>Then finish the epic: <code>/cpm-next:do docs/epics/01-01-epic-loans-csv-export.md</code>.</p>
   </div>
 </section>
 
@@ -514,7 +522,7 @@
   <div class="slide-inner">
     <div class="tag">Unattended runs</div>
     <h2><code>/cpm-next:do all</code></h2>
-    <p>Runs every unfinished epic in dependency order. It is done when no unblocked story remains, and the full suite passes or any failures were failing before the run.</p>
+    <p>Runs every unfinished epic in dependency order; <code>/cpm-next:do all 01</code> runs only spec 01's epics. It is done when no unblocked story remains, and the full suite passes or any failures were failing before the run. Stories waiting on your check count as done; their steps wait under <b>Needs you</b>, and a <code>[user]</code> criterion is never marked met in a run with no one present.</p>
     <div class="grid">
       <div class="card">
         <h3>What it does not stop for</h3>
@@ -522,14 +530,16 @@
           <li>A test failure it cannot explain.</li>
           <li>A criterion that contradicts reality, where fixing it would change scope.</li>
         </ul>
-        <p>For these it marks the story blocked with the reason and moves on to other unblocked work.</p>
+        <p>For these it marks the story blocked with the reason and a <code>**Signal**</code>, and moves on to other unblocked work.</p>
         <h3 style="margin-top:12px">What always stops it</h3>
         <p>A destructive action, or one that reaches outside the repository: deleting data, rewriting history, touching shared infrastructure.</p>
       </div>
       <div class="card">
         <h3>What "blocked" means</h3>
-        <p>The story has a <code>Not met</code> line under a criterion, saying what was tried:</p>
-<pre><code>- Exports of 50,000 rows stay under 64 MB peak memory `[feature]`
+        <p>The story keeps its status with a <code>— blocked:</code> note, and has a <code>Not met</code> line under the criterion, saying what was tried:</p>
+<pre><code>**Status**: In Progress — blocked: peak memory over limit
+...
+- Exports of 50,000 rows stay under 64 MB peak memory `[feature]`
   <span class="no">- Not met: streamed with a cursor; peak was 180 MB in the
     seeded test; cause not found</span></code></pre>
         <p>Stories that depend on it stay blocked, because it is not <code>Complete</code>. <code>/cpm-next:status</code> lists it under <b>Needs you</b>.</p>
@@ -540,6 +550,34 @@
 </section>
 
 <!-- 15 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="tag">Your checks, and what it learns</div>
+    <h2>Work that waits on you, and failures seen twice</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Waiting on you</h3>
+        <ul class="bullets">
+          <li>A <code>[user]</code> criterion, or one <code>do</code> cannot carry out in the session (a deploy, a production run, a sign-off), is left for you. Its story is skipped rather than blocked, and its steps go under <b>Needs you</b>.</li>
+          <li>When you report the result, <code>do</code> writes <code>Evidence (user, {date}): …</code> from your answer, then audits and closes the story.</li>
+          <li>A <code>[browser]</code> check that cannot run (no connected browser, no app at a local <code>APP_URL</code>, no login session) is said at the start. At the end you get one question: fix the environment so <code>do</code> runs them all, or report the results yourself.</li>
+          <li><code>/next</code> lists these stories apart; the progress tracker shows them as <b>Waiting on input</b>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>How it learns</h3>
+        <ul class="bullets">
+          <li><code>do</code> writes a <code>**Signal**</code> when an audit finding holds, a story is blocked, or a criterion is amended: a class slug, and whether the cause is the <code>project</code> or the cpm-next <code>process</code>.</li>
+          <li>A one-off is never reported. When a <code>project</code> signal matches one in another epic, it becomes a promotion candidate under <b>Needs you</b>: a yes writes a lesson to <code>docs/library/lessons-learned.md</code>, which <code>plan</code> applies from then on.</li>
+          <li><code>/cpm-next:library learn</code> promotes in batches. <code>/cpm-next:library sweep</code> reads the repositories listed in <code>~/.claude/cpm-next/repos.txt</code> and reports <code>process</code> failures found in two or more, as candidates for a plugin change.</li>
+        </ul>
+        <p class="small dim">No skill writes retros. An older project's <code>docs/retros/</code> is read as legacy input until <code>library learn</code> retires its observations.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 -->
 <section class="slide">
   <div class="slide-inner">
     <div class="tag">Story effort and model</div>
@@ -569,7 +607,7 @@
   </div>
 </section>
 
-<!-- 16 -->
+<!-- 17 -->
 <section class="slide">
   <div class="slide-inner">
     <div class="tag">Agents</div>
@@ -579,13 +617,13 @@
         <h3><code>auditor</code> · Opus · read-only</h3>
         <p>Started by <code>do</code> before each story, or small change, is closed. It gets none of the builder's conversation and checks what is on disk.</p>
         <ul class="bullets">
-          <li>Each criterion against its evidence, re-running the tests the evidence names.</li>
+          <li>Each criterion against its evidence, reading the cited tests and their recorded reds against the full-suite result <code>do</code> gives it, rather than re-running them.</li>
           <li>The diff for defects, security problems, data loss and queries whose memory grows with the data.</li>
           <li>Scope creep, and anything the story asked for that is missing.</li>
           <li>Departures from <code>CLAUDE.md</code>, the library and existing patterns.</li>
-          <li>Tests that assert nothing, or were weakened or skipped.</li>
+          <li>Tests that assert nothing, or were weakened or skipped; a missing or implausible red.</li>
         </ul>
-        <p class="small dim">Returns <code>Verdict: pass</code> or <code>fix needed</code>. Any Critical or Warning finding means <code>fix needed</code>. It never edits files.</p>
+        <p class="small dim">Returns <code>Verdict: pass</code> or <code>fix needed</code>. Any Critical or Warning finding means <code>fix needed</code>. Severity weighs how likely a failure is: unusual use (a double click, two tabs) is a Warning at most, an unreachable input a Suggestion, except for security and lost or duplicated data. A later audit checks only the earlier findings and the fix code. It runs tests only when the suite is isolated or <code>do</code> says it is free, and never edits files.</p>
       </div>
       <div class="card">
         <h3><code>scout</code> · Haiku · read-only</h3>
@@ -601,7 +639,7 @@
   </div>
 </section>
 
-<!-- 17 -->
+<!-- 18 -->
 <section class="slide">
   <div class="slide-inner">
     <div class="tag">Keeping up to date</div>
@@ -617,7 +655,7 @@ claude plugin update cpm-next@ninthspace-marketplace   <span class="c"># and eac
   </div>
 </section>
 
-<!-- 18 -->
+<!-- 19 -->
 <section class="slide">
   <div class="slide-inner">
     <div class="tag">Cheat sheet</div>
@@ -634,7 +672,9 @@ claude plugin update cpm-next@ninthspace-marketplace   <span class="c"># and eac
 /cpm-next:do 3                    <span class="c"># one story (or task 2.1)</span>
 /cpm-next:do {epic path}          <span class="c"># one epic</span>
 /cpm-next:do all                  <span class="c"># everything, unattended</span>
-/cpm-next:do {small change}       <span class="c"># no epic; writes docs/quick/</span>
+/cpm-next:do all 01               <span class="c"># spec 01's epics, unattended</span>
+/cpm-next:do {epic} --parallel    <span class="c"># worktrees for stories sharing files</span>
+/cpm-next:do {small change}       <span class="c"># no epic; criteria in docs/quick/ first</span>
 
 <span class="c"># Read</span>
 /cpm-next:status</code></pre>
@@ -642,13 +682,16 @@ claude plugin update cpm-next@ninthspace-marketplace   <span class="c"># and eac
       <div class="card">
 <pre><code><span class="c"># Library</span>
 /cpm-next:library {path|URL}      <span class="c"># import</span>
-/cpm-next:library learn           <span class="c"># promote retro lessons</span>
+/cpm-next:library learn           <span class="c"># promote recurring signals</span>
+/cpm-next:library sweep           <span class="c"># process failures across repos</span>
+/cpm-next:library sweep add {path}
 /cpm-next:library consolidate     <span class="c"># back-fill front-matter</span>
 /cpm-next:library consolidate {path}
 
 <span class="c"># Mods</span>
-/progress-tracker 01              <span class="c"># then ask Claude to publish</span>
+/progress-tracker 01              <span class="c"># Claude then publishes it</span>
 /progress-tracker                 <span class="c"># check every tracker</span>
+/progress-tracker all             <span class="c"># every project's trackers</span>
 /next                             <span class="c"># open the pane</span>
 /cpm-models                       <span class="c"># show held model/effort</span>
 /cpm-models off                   <span class="c"># release it</span>

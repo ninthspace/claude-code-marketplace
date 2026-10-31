@@ -66,6 +66,11 @@ async function readEpics($: EngineInterface, root: string): Promise<EpicFile[]> 
   for (const e of await listDocs($, `${docs(root)}/epics`, EPIC_FILE)) {
     files.push({ name: e.name, text: await $.fs.read(`${docs(root)}/epics/${e.name}`) })
   }
+  // Archived epics only satisfy the blockers of live ones; a project planned under docs/cpm may keep its archive in docs/.
+  const archive = (await $.fs.exists(`${docs(root)}/archive/epics`)) ? `${docs(root)}/archive/epics` : `${root}/docs/archive/epics`
+  for (const e of await listDocs($, archive, EPIC_FILE)) {
+    if (!files.some(f => f.name === e.name)) files.push({ name: e.name, text: await $.fs.read(`${archive}/${e.name}`), archived: true })
+  }
 
   return files
 }
@@ -101,7 +106,7 @@ const INDEX = 'index:'
 
 /** Records the stories that started or finished since the last check of this project's epic docs. */
 async function saveTimes($: EngineInterface, root: string, listing: Listing[], files: EpicFile[]) {
-  const stamped = files.map(file => ({ ...file, mtimeMs: listing.find(e => e.name === file.name)?.mtimeMs ?? 0 }))
+  const stamped = files.filter(file => file.archived !== true).map(file => ({ ...file, mtimeMs: listing.find(e => e.name === file.name)?.mtimeMs ?? 0 }))
   const before = (await $.store.get(`${TIMES}${root}`) ?? {}) as Times
   await $.store.set(`${TIMES}${root}`, recordTimes(before, observe(stamped)))
 }
@@ -348,7 +353,7 @@ async function orderFileFor($: EngineInterface, root: string, arg: string): Prom
     ? { name: spec.name, text: await $.fs.read(`${docs(root)}/specifications/${spec.name}`), path: `${rel(root)}/specifications/${spec.name}` }
     : await specless($, root, number)
   if (source === undefined) return `No ${rel(root)}/specifications/${number}-spec-*.md or ${rel(root)}/epics/${number}-*-epic-*.md in ${root}.`
-  const order = defaultBuildOrder(source, await readEpics($, root))
+  const order = defaultBuildOrder(source, (await readEpics($, root)).filter(file => file.archived !== true))
   if (order.phases.length === 0) return `No stories in ${rel(root)}/epics/${number}-*-epic-*.md yet; plan the epics for ${source.name} first.`
   await $.fs.write(`${docs(root)}/specifications/${orderName}`, `${JSON.stringify(order, null, 2)}\n`)
   const stories = order.phases.reduce((n, p) => n + p.items.length, 0)

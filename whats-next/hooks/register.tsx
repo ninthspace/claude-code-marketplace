@@ -2,14 +2,15 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { NextNote, NextPlan, NextStory } from '../types'
-import { buildPlan, describePlan, hasWork, storyText } from './plan'
+import { afterLabel, buildPlan, describePlan, hasWork, storyText, summaryOf, waitingBand } from './plan'
 import type { EpicFile, SpecFile } from './plan'
 
 const PANE = 'whats-next'
 const POLL_MS = 3000
 const NOTE_MODEL = 'sonnet'
+const PLAN_SHAPE = 'plan-2'
 
-const plan = atom({ plugin: 'whats-next', key: 'plan' } as const, null)
+const plan = atom({ plugin: 'whats-next', key: 'plan' } as const, null, { shape: PLAN_SHAPE })
 const note = atom({ plugin: 'whats-next', key: 'note' } as const, null)
 const isNoteBusy = atom({ plugin: 'whats-next', key: 'isNoteBusy' } as const, false)
 const noteError = atom({ plugin: 'whats-next', key: 'noteError' } as const, null)
@@ -20,7 +21,6 @@ const WRITING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Ba
 
 type Listing = { name: string; mtimeMs: number; size: number }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 /** Each project's docs folder: `docs`, or `docs/cpm` in a project that keeps its CPM documents there. */
 const docsFolders = new Map<string, string>()
@@ -145,7 +145,9 @@ async function askForNote($: EngineInterface) {
         'dependency to watch. Write literally: no preamble, no metaphor, no closing line.',
       prompt: focus.length > 0
         ? `${describePlan(current, 20)}\n\nThe first stories in full:\n\n${focus.join('\n\n')}`
-        : `${describePlan(current, 20)}\n\nNo stories are left; say which spec to plan into epics first and why.`,
+        : current.waiting.length > 0
+          ? `${describePlan(current, 20)}\n\nNo stories are left to build; say what the user should do about the stories waiting on them, first one first.`
+          : `${describePlan(current, 20)}\n\nNo stories are left; say which spec to plan into epics first and why.`,
     })
     if (result.isAnswered) {
       const saved: NextNote = { root: current.root, signature: current.signature, text: result.text.trim(), at: await $.clock.now() }
@@ -204,8 +206,22 @@ export const register: Register = on => {
     const current = await read($, plan)
     const first = current?.order[0]
     const spec = current?.specs[0]
-    if (e.props.hasSurvey || current === null || (first === undefined && spec === undefined)) return next(e)
+    if (e.props.hasSurvey || current === null || !hasWork(current)) return next(e)
     const { Box, Text } = $.ui.resolve(e)
+
+    const band = waitingBand(current)
+    if (band !== undefined) {
+      return (
+        <Box>
+          <Text wrap="truncate-end">
+            <Text color="magenta">Waiting on you </Text>
+            <Text bold>{band.label}</Text>
+            <Text> {band.title}</Text>
+            <Text dimColor>  ({band.count} waiting · /next)</Text>
+          </Text>
+        </Box>
+      )
+    }
 
     if (first === undefined && spec !== undefined) {
       return (
@@ -247,20 +263,12 @@ export const register: Register = on => {
     const label = (s: NextStory) => `${s.epicId.split('-epic-')[0]} S${s.number}`
     // "Epic 34-01-epic-coupons-overview" reads as "34-01" and "Story 2" as "S2", matching the row labels;
     // an epic named by both the epic and the story appears once.
-    const after = (tokens: string[]) => {
-      const short = tokens.map(t => t.replace(/^story\s+(\d+)$/i, 'S$1').replace(/^epic\s+/i, '').replace(/-epic-.*$/, ''))
-
-      return `after ${[...new Set(short)].join(', ')}`
-    }
-    const stateOf = (s: NextStory) => (s.status === 'In Progress' ? 'doing' : s.isReady ? 'ready' : after(s.waitsOn))
+    const after = afterLabel
+    const stateOf = (s: NextStory) => (s.status === 'In Progress' ? 'doing' : s.isReady ? 'ready' : after(s.waitsOn, s.waitsOnChecks))
     const colourOf = (s: NextStory) => (s.status === 'In Progress' ? 'yellow' : s.isReady ? 'green' : 'red')
     const first = current.order[0]
     const isStale = saved !== null && saved.signature !== current.signature
-    const specCount = `${current.specs.length} ${current.specs.length === 1 ? 'spec' : 'specs'} without epics`
-    const summary = [
-      current.order.length > 0 ? `${plural(current.order.length, 'story', 'stories')} · ${plural(current.epics.length, 'epic', 'epics')} left` : '',
-      current.specs.length > 0 ? specCount : '',
-    ].filter(Boolean).join(' · ')
+    const summary = summaryOf(current)
 
     return (
       <Box flexDirection="column">
@@ -289,6 +297,18 @@ export const register: Register = on => {
                 {epic.id.split('-epic-')[0]} {epic.title}  <Text dimColor>{epic.storiesDone}/{epic.storiesTotal} stories</Text>
                 {epic.waitsOn.length > 0 && <Text color="red">  {after(epic.waitsOn)}</Text>}
               </Text>
+            ))}
+            <Text> </Text>
+          </Box>
+        )}
+        {current.waiting.length > 0 && (
+          <Box flexDirection="column">
+            <Text color="magenta" bold>Waiting on you</Text>
+            {current.waiting.map(w => (
+              <Box flexDirection="column">
+                <Text wrap="truncate-end">{w.epicId.split('-epic-')[0]} S{w.number} {w.title}</Text>
+                {w.checks.map(check => <Text wrap="truncate-end" dimColor>  {check}</Text>)}
+              </Box>
             ))}
             <Text> </Text>
           </Box>

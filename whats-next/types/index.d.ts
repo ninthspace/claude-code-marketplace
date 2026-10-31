@@ -12,10 +12,15 @@ export type NextStory = {
   isReady: boolean
   /** Dependencies not yet Complete, as written in the epic doc. */
   waitsOn: string[]
+  /** The part of `waitsOn` that names a story waiting on the user, or an epic holding one. */
+  waitsOnChecks: string[]
   tasksDone: number
   tasksTotal: number
   nextTask: NextTask | null
 }
+
+/** A story only the user can finish: every criterion still unproven is a check for them. */
+export type NextWaiting = { epicId: string; epicTitle: string; number: number; title: string; checks: string[] }
 
 export type NextEpic = {
   id: string
@@ -36,6 +41,8 @@ export type NextPlan = {
   epics: NextEpic[]
   /** Every story left, in recommended order of execution. */
   order: NextStory[]
+  /** Stories waiting on the user, in epic and story order; none is in `order`. */
+  waiting: NextWaiting[]
   /** Specs with no epics yet, in number order. */
   specs: NextSpec[]
   signature: string
@@ -46,7 +53,8 @@ export type NextNote = { root: string; signature: string; text: string; at: numb
 declare module 'claude-code' {
   interface PluginState {
     'whats-next': {
-      plan: NextPlan | null
+      /** Kept under a shape tag: a plan written by code of another shape reads as absent, and is rebuilt. */
+      plan: Shaped<NextPlan | null>
       note: NextNote | null
       isNoteBusy: boolean
       noteError: string | null

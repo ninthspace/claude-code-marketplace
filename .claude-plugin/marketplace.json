@@ -1,7 +1,7 @@
 {
   "name": "ninthspace-marketplace",
   "description": "A comprehensive marketplace for my development tools",
-  "version": "4.0.5",
+  "version": "4.0.6",
   "owner": {
     "name": "Chris Aves",
     "email": "chris@chrisaves.com"
@@ -42,8 +42,8 @@
     {
       "name": "cpm-next",
       "source": "./cpm-next",
-      "description": "Six skills for planning and building with Claude Code: party (discussion with specialist personas), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (build, verify and audit each story to a stated finish line), library (reference documents, promoted recurring lessons and a cross-repository sweep), status (where things stand and what to run next).",
-      "version": "0.10.0",
+      "description": "Six skills for planning and building with Claude Code: party (discussion with specialist personas), plan (brief, spec and epics from whatever already exists), review (independent challenge of the epics), do (build, verify and audit each story to a stated finish line), library (reference documents, promoted recurring lessons and a cross-repository sweep), status (where things stand and what to run next), and a commit guard that refuses a git commit while a red pass is open.",
+      "version": "0.11.0",
       "keywords": [
         "planning",
         "party-mode",
@@ -94,7 +94,7 @@
       "name": "whats-next",
       "source": "./whats-next",
       "description": "Live pane and band showing the work left in the current repo's cpm-next epics (docs/epics), in recommended order of execution, with an on-demand next-steps note from Claude.",
-      "version": "0.2.4",
+      "version": "0.3.0",
       "keywords": [
         "cpm-next",
         "planning",
@@ -149,7 +149,7 @@
       "name": "cpm-next-progress",
       "source": "./cpm-next-progress",
       "description": "Keeps a claude.ai progress tracker for each cpm-next spec in step with its epic docs, in the build order you set, and shows every project's trackers at a glance in a pane and on an overview page, and times each story so it can say how long the next one should take; it tells Claude which rows to write and never writes to a page itself.",
-      "version": "0.7.2",
+      "version": "0.8.0",
       "keywords": [
         "cpm-next",
         "epics",

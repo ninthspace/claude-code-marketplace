@@ -222,7 +222,8 @@
     <div class="label">Introduction</div>
     <h1>cpm-next</h1>
     <p class="lead">A planning and building method for Claude Code. It turns an idea into working, tested code through a short chain of documents kept in the repository.</p>
-    <p class="dim small" style="margin-top:28px">Use the arrow keys or space to move between slides. On a touch screen, swipe or use the buttons below.</p>
+    <p class="dim small" style="margin-top:28px">Describes cpm-next 0.11.0, with the mods cpm-next-models 0.3.2, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
+    <p class="dim small">Use the arrow keys or space to move between slides. On a touch screen, swipe or use the buttons below.</p>
   </div>
 </section>
 
@@ -256,17 +257,17 @@
     <h2>Six skills and a set of Markdown documents</h2>
     <ul class="plain">
       <li>cpm-next is a Claude Code plugin. You run its skills as slash commands, such as <code>/cpm-next:plan</code>.</li>
-      <li>The skills read and write Markdown files under <code>docs/</code> in your repository: discussions, briefs, specs, epics, reviews, retros and quick-change records.</li>
+      <li>The skills read and write Markdown files under <code>docs/</code> in your repository: discussions, briefs, specs, epics, reviews, quick-change records and the library.</li>
       <li>Those files are the only state. There are no progress files to clean up.</li>
       <li>Each skill states what "done" means and when to stop. How to get there is left to the model.</li>
-      <li>Four optional mods add model and effort control, a progress page, a live pane of remaining work, and automatic reloads after updates.</li>
+      <li>It ships a commit guard. Four optional mods add model and effort control, a progress page, a live pane of remaining work, and automatic reloads after updates.</li>
     </ul>
     <h3 style="margin-top:22px">A typical path</h3>
     <div class="grid g3" style="margin-top:8px">
       <div class="card"><p><span class="tag">optional</span></p><p><code>/cpm-next:party</code> to talk an idea through.</p></div>
       <div class="card"><p><span class="tag ok">core</span></p><p><code>/cpm-next:plan</code> to write the brief, spec and epics.</p></div>
       <div class="card"><p><span class="tag">optional</span></p><p><code>/cpm-next:review</code> before a large or risky epic.</p></div>
-      <div class="card"><p><span class="tag ok">core</span></p><p><code>/cpm-next:do</code> to build one story, one epic, or <code>all</code>.</p></div>
+      <div class="card"><p><span class="tag ok">core</span></p><p><code>/cpm-next:do</code> to build a story, an epic, one spec's epics (<code>all 43</code>) or <code>all</code>, or a small change you describe.</p></div>
       <div class="card"><p><span class="tag">any time</span></p><p><code>/cpm-next:status</code> when you return to the project.</p></div>
       <div class="card"><p><span class="tag">any time</span></p><p><code>/cpm-next:library</code> to add reference documents.</p></div>
     </div>
@@ -286,7 +287,7 @@
       </div>
       <div class="card acc">
         <h3><code>plan</code></h3>
-        <p>Writes whatever is missing of brief, spec and epics, from whatever already exists.</p>
+        <p>Writes whatever is missing of brief, spec and epics, from whatever already exists, applying the library's lessons.</p>
         <p class="done"><strong>Finished when</strong> the artefacts down to the epics exist and trace upward.</p>
       </div>
       <div class="card acc">
@@ -297,12 +298,12 @@
       <div class="card ok">
         <h3><code>do</code></h3>
         <p>Builds stories, verifies each acceptance criterion with evidence, and has each story audited.</p>
-        <p class="done"><strong>Finished when</strong> every story in scope is Complete and the test suite is no worse than its baseline.</p>
+        <p class="done"><strong>Finished when</strong> every story in scope is Complete or waiting on you, and the test suite is no worse than its baseline.</p>
       </div>
       <div class="card">
         <h3><code>library</code></h3>
-        <p>Curates reference documents in <code>docs/library/</code> that planning and building read.</p>
-        <p class="done"><strong>Finished when</strong> the documents carry complete front-matter.</p>
+        <p>Curates reference documents in <code>docs/library/</code> that planning and building read. <code>learn</code> promotes lessons; <code>sweep</code> looks across repositories.</p>
+        <p class="done"><strong>Finished when</strong> the documents carry complete front-matter and the lessons you chose are promoted.</p>
       </div>
       <div class="card">
         <h3><code>status</code></h3>
@@ -318,7 +319,7 @@
   <div class="slide-inner">
     <div class="label">Artefacts are the state</div>
     <h2>Everything lives in <code>docs/</code></h2>
-    <div class="chain" role="img" aria-label="Discussion, then brief, then spec, then epics, then retro or quick record">
+    <div class="chain" role="img" aria-label="Discussion, then brief, then spec, then epics, then lessons in the library">
       <div class="node"><div class="t">Discussion</div><div class="p">docs/discussions/</div><div class="w">party</div></div>
       <div class="arrow" aria-hidden="true">&rarr;</div>
       <div class="node"><div class="t">Brief</div><div class="p">docs/briefs/</div><div class="w">plan</div></div>
@@ -327,11 +328,11 @@
       <div class="arrow" aria-hidden="true">&rarr;</div>
       <div class="node"><div class="t">Epics</div><div class="p">docs/epics/</div><div class="w">plan writes, do updates</div></div>
       <div class="arrow" aria-hidden="true">&rarr;</div>
-      <div class="node"><div class="t">Retro</div><div class="p">docs/retros/</div><div class="w">do</div></div>
+      <div class="node"><div class="t">Lessons</div><div class="p">docs/library/</div><div class="w">promoted from signals</div></div>
     </div>
     <div class="side-row">
       <div class="card"><h3>Reviews</h3><p><code>docs/reviews/</code>, written by <code>review</code>.</p></div>
-      <div class="card"><h3>Quick changes</h3><p><code>docs/quick/</code>, written by <code>do</code> for a small change with no epic.</p></div>
+      <div class="card"><h3>Quick changes</h3><p><code>docs/quick/</code>, written by <code>do</code> before any code: criteria for a small change with no epic.</p></div>
       <div class="card"><h3>Library</h3><p><code>docs/library/</code>. Every skill reads it.</p></div>
     </div>
     <ul class="plain" style="margin-top:16px">
@@ -350,7 +351,7 @@
     <div class="grid g2">
       <div class="card acc">
         <h3>1. Take stock</h3>
-        <p>Reads <code>docs/</code>, other planning material such as a PRD or README, and in an existing codebase the code itself. It then says what exists, what is missing and what this run will produce.</p>
+        <p>Reads <code>docs/</code>, other planning material such as a PRD or README, and in an existing codebase the code itself, along with the library's lessons and any failure that has recurred. It then says what exists, what is missing and what this run will produce.</p>
       </div>
       <div class="card acc">
         <h3>2. Ask once</h3>
@@ -362,10 +363,10 @@
       </div>
       <div class="card acc">
         <h3>4. Write only what is missing</h3>
-        <p>A brief, a spec with MoSCoW requirements and measurable non-functional requirements, then epics. A change of direction is an amendment to the existing file.</p>
+        <p>A brief, a spec with MoSCoW requirements and measurable non-functional requirements, then epics, naming the lessons each applies on a <code>**Lessons**</code> line. A change of direction is an amendment to the existing file.</p>
       </div>
     </div>
-    <div class="note"><strong>plan is done when</strong> every Must Have requirement is covered by at least one story, every acceptance criterion can be checked by a test or a concrete manual step, and no decision you still have to make is hidden inside a story.</div>
+    <div class="note"><strong>plan is done when</strong> every Must Have requirement is covered by at least one story, every acceptance criterion can be checked by a test or a concrete manual step, or is a check only you can make written with its exact steps, and no decision you still have to make is hidden inside a story.</div>
   </div>
 </section>
 
@@ -385,19 +386,22 @@
 <span class="k">**Acceptance Criteria**</span>:
 - The export includes every loan in
   the selected range `[feature]`
-  <span class="e">- Evidence: {test name and command}</span>
-- {next criterion} `[manual]`
-  <span class="e">- Evidence: {manual step taken and
-    what was observed}</span>
+  <span class="e">- Evidence: {test, file:line}
+    — red: {failure it gave} with
+    {lines undone in file:lines}</span>
+- The report page offers the download
+  `[browser]`
+  <span class="e">- Evidence: {local URL, steps, page
+    excerpt} — red: n/a — browser-observed</span>
 
 <span class="k">**Audit**</span>: pass ({date})</pre>
       <div>
         <ul class="plain">
           <li><strong>Status</strong> is one of Pending, In Progress or Complete. Tools read it.</li>
-          <li><strong>Blocked by</strong> names real ordering constraints. Unblocked stories that share no files or runtime state are built in parallel.</li>
+          <li><strong>Blocked by</strong> names real ordering constraints. A story starts only once its blockers are Complete and audited.</li>
           <li><strong>Satisfies</strong> links the story to spec requirements.</li>
-          <li><strong>Acceptance criteria</strong> each carry a tag: unit, feature, integration or manual.</li>
-          <li><strong>Evidence</strong> sits directly under the criterion it proves.</li>
+          <li><strong>Acceptance criteria</strong> each carry a tag naming who or what proves them: unit, feature, integration, browser, manual or user.</li>
+          <li><strong>Evidence</strong> sits directly under the criterion it proves. A test-proven one records the failure the test gave with the code undone.</li>
         </ul>
         <p class="dim small" style="margin-top:10px">The story and criterion text come from Starling Library, an imaginary lending-library app; the field names and layout are the real format.</p>
       </div>
@@ -405,13 +409,44 @@
   </div>
 </section>
 
-<!-- 8. Story loop -->
+<!-- 8. Who proves each criterion -->
 <section class="slide" aria-label="Slide 8">
+  <div class="slide-inner">
+    <div class="label">Who proves it</div>
+    <h2>Each criterion is tagged by who or what can prove it</h2>
+    <div class="grid g2">
+      <div class="card ok">
+        <h3><code>[unit]</code> <code>[feature]</code> <code>[integration]</code></h3>
+        <p>A test in the project's suite, with the failure it gave when the code was undone.</p>
+      </div>
+      <div class="card acc">
+        <h3><code>[manual]</code></h3>
+        <p>A step do carries out in the session outside the suite, recorded with what it saw.</p>
+      </div>
+      <div class="card acc">
+        <h3><code>[browser]</code></h3>
+        <p>A rendered page. do uses the repo's own browser tests if it has them, otherwise claude-in-chrome against a local <code>APP_URL</code> and your existing login. It starts no server and enters no credentials.</p>
+      </div>
+      <div class="card warn">
+        <h3><code>[user]</code></h3>
+        <p>Only you can prove it: a deploy, a production run, a sign-off. Its Evidence is written only from your answer, dated.</p>
+      </div>
+    </div>
+    <ul class="plain" style="margin-top:14px">
+      <li>plan puts a spec's <code>[user]</code> checks in one final user-checks epic that no other epic waits on.</li>
+      <li>A story left waiting only on you is skipped, not blocked. do builds the rest, lists your steps under Needs you, and finishes the story once you answer.</li>
+      <li>If a browser check cannot run (no local app, no browser, no login), do says so in its first message and asks once before building.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9. Story loop -->
+<section class="slide" aria-label="Slide 9">
   <div class="slide-inner">
     <div class="label">Building</div>
     <h2>How do builds one story</h2>
     <div class="two-col">
-      <svg class="diagram" viewBox="0 0 420 470" role="img" aria-label="Story loop: start, build, evidence, audit, then close or fix and audit once more">
+      <svg class="diagram" viewBox="0 0 420 552" role="img" aria-label="Story loop: start, build, evidence, full suite and red pass, audit, then close, or fix and audit the fixes">
         <defs>
           <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" class="ah"/>
@@ -419,50 +454,57 @@
         </defs>
         <rect class="box" x="10" y="10" width="240" height="56" rx="8"/>
         <text class="tx-b" x="24" y="34">1. Start</text>
-        <text class="tx-d" x="24" y="54">In Progress; set the story's effort</text>
+        <text class="tx-d" x="24" y="54">blockers audited; set its effort</text>
 
-        <rect class="box" x="10" y="96" width="240" height="56" rx="8"/>
-        <text class="tx-b" x="24" y="120">2. Build, task by task</text>
-        <text class="tx-d" x="24" y="140">following project conventions</text>
+        <rect class="box" x="10" y="92" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="116">2. Build, task by task</text>
+        <text class="tx-d" x="24" y="136">following project conventions</text>
 
-        <rect class="box-acc" x="10" y="182" width="240" height="56" rx="8"/>
-        <text class="tx-b" x="24" y="206">3. Verify each criterion</text>
-        <text class="tx-d" x="24" y="226">write an Evidence line under it</text>
+        <rect class="box-acc" x="10" y="174" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="198">3. Verify each criterion</text>
+        <text class="tx-d" x="24" y="218">write an Evidence line under it</text>
 
-        <rect class="box-warn" x="10" y="268" width="240" height="56" rx="8"/>
-        <text class="tx-b" x="24" y="292">4. Opus auditor</text>
-        <text class="tx-d" x="24" y="312">verdict: pass or fix needed</text>
+        <rect class="box-acc" x="10" y="256" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="280">4. Suite, then red pass</text>
+        <text class="tx-d" x="24" y="300">each cited test seen to fail</text>
 
-        <rect class="box-ok" x="10" y="370" width="240" height="56" rx="8"/>
-        <text class="tx-b" x="24" y="394">5. Close in one edit</text>
-        <text class="tx-d" x="24" y="414">Complete, with an Audit line</text>
+        <rect class="box-warn" x="10" y="338" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="362">5. Opus auditor</text>
+        <text class="tx-d" x="24" y="382">verdict: pass or fix needed</text>
 
-        <rect class="box" x="276" y="250" width="134" height="92" rx="8"/>
-        <text class="tx-b" x="288" y="272">Fix needed</text>
-        <text class="tx-d" x="288" y="292">fix at high effort,</text>
-        <text class="tx-d" x="288" y="310">update evidence,</text>
-        <text class="tx-d" x="288" y="328">audit once more</text>
+        <rect class="box-ok" x="10" y="440" width="240" height="56" rx="8"/>
+        <text class="tx-b" x="24" y="464">6. Close in one edit</text>
+        <text class="tx-d" x="24" y="484">Complete, with an Audit line</text>
 
-        <rect class="box-stop" x="276" y="370" width="134" height="56" rx="8"/>
-        <text class="tx-b" x="288" y="394">Fails again</text>
-        <text class="tx-d" x="288" y="414">Not met; blocked</text>
+        <rect class="box" x="276" y="320" width="134" height="92" rx="8"/>
+        <text class="tx-b" x="288" y="342">Fix needed</text>
+        <text class="tx-d" x="288" y="362">fix at high effort,</text>
+        <text class="tx-d" x="288" y="380">test and red each,</text>
+        <text class="tx-d" x="288" y="398">audit the fixes</text>
 
-        <line class="ln" x1="130" y1="66" x2="130" y2="94" marker-end="url(#ah)"/>
-        <line class="ln" x1="130" y1="152" x2="130" y2="180" marker-end="url(#ah)"/>
-        <line class="ln" x1="130" y1="238" x2="130" y2="266" marker-end="url(#ah)"/>
-        <line class="ln" x1="130" y1="324" x2="130" y2="368" marker-end="url(#ah)"/>
-        <text class="tx-d" x="138" y="352">pass</text>
-        <line class="ln" x1="250" y1="290" x2="274" y2="290" marker-end="url(#ah)"/>
-        <path class="ln" d="M343,342 L343,368" marker-end="url(#ah)"/>
-        <path class="ln" d="M276,320 L253,320" marker-end="url(#ah)"/>
-        <text class="tx-d" x="10" y="456">After closing, do re-reads the story before the next one.</text>
+        <rect class="box-stop" x="276" y="440" width="134" height="56" rx="8"/>
+        <text class="tx-b" x="288" y="464">Still failing</text>
+        <text class="tx-d" x="288" y="484">Not met; blocked</text>
+
+        <line class="ln" x1="130" y1="66" x2="130" y2="90" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="148" x2="130" y2="172" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="230" x2="130" y2="254" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="312" x2="130" y2="336" marker-end="url(#ah)"/>
+        <line class="ln" x1="130" y1="394" x2="130" y2="438" marker-end="url(#ah)"/>
+        <text class="tx-d" x="138" y="422">pass</text>
+        <line class="ln" x1="250" y1="360" x2="274" y2="360" marker-end="url(#ah)"/>
+        <path class="ln" d="M343,412 L343,438" marker-end="url(#ah)"/>
+        <path class="ln" d="M276,390 L253,390" marker-end="url(#ah)"/>
+        <text class="tx-d" x="10" y="526">A Critical in the second audit gets a third; never a fourth.</text>
+        <text class="tx-d" x="10" y="546">After closing, do re-reads the story before the next one.</text>
       </svg>
       <div>
         <ul class="plain">
           <li>A criterion without its own Evidence line is not met.</li>
-          <li>Evidence is a test name and command, a <code>file:line</code>, or the manual step taken and what was observed.</li>
-          <li>The auditor's Critical and Warning findings are fixed; suggestions are not.</li>
-          <li>A story that fails the second audit is blocked, with each unresolved finding recorded.</li>
+          <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the full suite, then the reds.</li>
+          <li>Critical and Warning findings are fixed wherever the mistake occurs, each with a test; suggestions are not.</li>
+          <li>A later audit checks only the earlier findings and the fix code. A story still failing the last audit is blocked, with each unresolved finding recorded.</li>
+          <li>Stories that share no files or runtime state are built in parallel. <code>--parallel</code> gives stories that share files their own git worktrees.</li>
           <li>At the end of the run the full suite must pass, or any failures must have been failing before the run started.</li>
         </ul>
       </div>
@@ -470,8 +512,39 @@
   </div>
 </section>
 
-<!-- 9. Auditor -->
-<section class="slide" aria-label="Slide 9">
+<!-- 10. Red-first evidence -->
+<section class="slide" aria-label="Slide 10">
+  <div class="slide-inner">
+    <div class="label">Red-first evidence</div>
+    <h2>A test counts only once it has been seen to fail</h2>
+    <div class="two-col">
+      <pre>- Overdue loans are flagged `[feature]`
+  <span class="e">- Evidence: flags overdue loans,
+    tests/Feature/ExportTest.php:42
+    — red: Failed asserting that false
+    is true with lines undone in
+    app/Exports/LoanExport.php:31-34</span>
+- Existing columns keep their order
+  `[feature]`
+  <span class="e">- Evidence: keeps column order,
+    tests/Feature/ExportTest.php:18
+    — red: n/a — existing (reaches
+    app/Exports/LoanExport.php:27)</span></pre>
+      <div>
+        <ul class="plain">
+          <li>Once the suite passes, do takes all of a story's reds in one pass: undo the lines a test covers, or mutate one, and run that test.</li>
+          <li>The failure must come from the cited assertion. A missing class or route is an error, not a red.</li>
+          <li>Files are copied to <code>.git/cpm-next/scratch/</code> first and copied back, never reset with git. A manifest checked before and after shows every file came back, so nothing is re-run.</li>
+          <li>Behaviour the code already had, proved by an unchanged test, records <code>existing</code> instead.</li>
+          <li>While a pass is open, a commit guard refuses <code>git commit</code>. The next run restores a stopped pass first.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. Auditor -->
+<section class="slide" aria-label="Slide 11">
   <div class="slide-inner">
     <div class="label">Independent audit</div>
     <h2>A second model checks every story before it closes</h2>
@@ -480,29 +553,30 @@
       <div class="card">
         <h3>What it checks</h3>
         <ul class="plain">
-          <li>Each criterion against its evidence, re-running the cited tests</li>
+          <li>Each criterion against its evidence, reading the cited tests and their recorded reds</li>
           <li>The diff for defects, including security problems and data loss</li>
           <li>Scope: changes nobody asked for, and anything missing</li>
           <li>Departures from the project's conventions</li>
-          <li>Tests that assert nothing, or were weakened or skipped</li>
+          <li>Tests that could not fail, a missing or wrong red, or tests weakened or skipped</li>
         </ul>
       </div>
       <div class="card">
         <h3>How it is limited</h3>
         <ul class="plain">
           <li>Read-only. It never edits files.</li>
-          <li>It may run the project's tests, but nothing that changes state outside them.</li>
+          <li>It runs tests or probes only when the suite is isolated or do says it is free, and nothing that changes state outside them.</li>
           <li>It reports what it can show, not what might be true.</li>
           <li>The result is recorded on the story, for example <code>**Audit**: pass ({date}), 2 findings fixed</code>.</li>
         </ul>
       </div>
     </div>
-    <p class="dim small" style="margin-top:14px">Small changes made without an epic are audited the same way and recorded in <code>docs/quick/</code>.</p>
+    <div class="note"><strong>Severity weighs likelihood.</strong> A failure from normal use is rated by its harm; unusual use (a double click, two tabs) is a Warning at most; an input no caller can produce is a Suggestion. Security problems and lost or duplicated data keep their severity.</div>
+    <p class="dim small" style="margin-top:14px">A small change made without an epic is audited the same way, against the criteria in its <code>docs/quick/</code> record.</p>
   </div>
 </section>
 
-<!-- 10. Models -->
-<section class="slide" aria-label="Slide 10">
+<!-- 12. Models -->
+<section class="slide" aria-label="Slide 12">
   <div class="slide-inner">
     <div class="label">Models by role</div>
     <h2>Each job runs on a chosen model</h2>
@@ -536,8 +610,8 @@
   </div>
 </section>
 
-<!-- 11. Questions and stops -->
-<section class="slide" aria-label="Slide 11">
+<!-- 13. Questions and stops -->
+<section class="slide" aria-label="Slide 13">
   <div class="slide-inner">
     <div class="label">When you are asked</div>
     <h2>do keeps going unless it has to stop</h2>
@@ -554,15 +628,15 @@
         <h3>Otherwise it keeps going</h3>
         <ul class="plain">
           <li>No pauses to summarise progress, offer to carry on, or report that a story finished.</li>
-          <li>In an unattended <code>do all</code> run, the first two cases mark the story blocked and work moves on. A destructive action always stops the run.</li>
-          <li>Commits, branches and pushes are left to you.</li>
+          <li>In an unattended <code>do all</code> or <code>do all {spec}</code> run, the first two cases mark the story blocked and work moves on. A destructive action always stops the run.</li>
+          <li>Commits, branches and pushes are left to you. Only <code>--parallel</code> commits and merges, locally, and never pushes.</li>
         </ul>
       </div>
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="card">
-        <h3>Elsewhere</h3>
-        <p><code>plan</code> asks its questions once, in one batch. <code>party</code> asks you only about intent, priorities and preferences. <code>review</code> lists findings that need a decision under "Needs you".</p>
+        <h3>Needs you, one item at a time</h3>
+        <p><code>plan</code>, <code>review</code> and <code>do</code> end by taking you through each Needs you item: what it is, what each answer leads to, and a recommendation first, with "Leave it for now" last. Each answer is acted on before the next item.</p>
       </div>
       <div class="card">
         <h3>A hard criterion is not a wrong one</h3>
@@ -572,8 +646,8 @@
   </div>
 </section>
 
-<!-- 12. Progress visibility -->
-<section class="slide" aria-label="Slide 12">
+<!-- 14. Progress visibility -->
+<section class="slide" aria-label="Slide 14">
   <div class="slide-inner">
     <div class="label">Seeing progress</div>
     <h2>Three ways to see where the work stands</h2>
@@ -584,19 +658,43 @@
       </div>
       <div class="card acc">
         <h3><code>/next</code></h3>
-        <p>From the <code>whats-next</code> mod. A live pane listing every story not yet Complete, in build order, and each spec with no epics yet. It reads the files directly, with no model calls.</p>
+        <p>From the <code>whats-next</code> mod. A live pane listing every story not yet Complete, in build order, and each spec with no epics yet. Stories waiting on you are listed apart and never offered as next. It reads the files directly, with no model calls.</p>
       </div>
       <div class="card acc">
         <h3><code>/progress-tracker</code></h3>
-        <p>From the <code>cpm-next-progress</code> mod. A private claude.ai page showing a spec's stories as a table grouped by phase. The mod keeps it in step with the epic docs. Anyone it is shared with can read it.</p>
+        <p>From the <code>cpm-next-progress</code> mod. A private claude.ai page showing a spec's stories as a table grouped by phase, with a story waiting on your check shown as Waiting on input. The mod keeps it in step with the epic docs. Anyone it is shared with can read it.</p>
       </div>
     </div>
     <div class="note"><strong>Every do run ends with three headings:</strong> Needs you (what waits on your action or decision), Changed (stories completed, files touched, test result against the baseline) and Found (anything surprising).</div>
   </div>
 </section>
 
-<!-- 13. Close -->
-<section class="slide" aria-label="Slide 13">
+<!-- 15. Learning -->
+<section class="slide" aria-label="Slide 15">
+  <div class="slide-inner">
+    <div class="label">How it learns</div>
+    <h2>A failure seen twice becomes a lesson</h2>
+    <div class="chain" role="img" aria-label="Signal, then recurrence, then promotion candidate, then library lesson, then applied by plan">
+      <div class="node"><div class="t">Signal</div><div class="p">**Signal** on the story</div><div class="w">do, when a finding holds or a story blocks</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Recurs</div><div class="p">— recurs:</div><div class="w">same class in another epic</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Candidate</div><div class="p">Needs you</div><div class="w">raised once; you say yes or no</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Lesson</div><div class="p">lessons-learned.md</div><div class="w">a rule with its check</div></div>
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+      <div class="node"><div class="t">Applied</div><div class="p">**Lessons** line</div><div class="w">plan writes it into criteria; review checks</div></div>
+    </div>
+    <div class="grid g3">
+      <div class="card"><h3>One-offs stay quiet</h3><p>A signal that never recurs is never promoted or asked about. Nothing is written when an epic finishes.</p></div>
+      <div class="card"><h3><code>library learn</code></h3><p>Promotes recurring signals, and observations in legacy retros, in one batch.</p></div>
+      <div class="card"><h3><code>library sweep</code></h3><p>Reads the repositories you list for failures a cpm-next rule could have prevented, and reports those found in two or more.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 16. Close -->
+<section class="slide" aria-label="Slide 16">
   <div class="slide-inner">
     <div class="label">Next steps</div>
     <h2>Where to go from here</h2>
@@ -613,9 +711,10 @@
     <h3 style="margin-top:26px">In summary</h3>
     <ul class="plain">
       <li>The plan is written down in <code>docs/</code>, and those files are the only state.</li>
-      <li>Every story has acceptance criteria, and every criterion gets its own evidence.</li>
+      <li>Every story has acceptance criteria, and every criterion gets its own evidence. A test counts only once it has been seen to fail.</li>
       <li>Opus plans, reviews and audits; Sonnet builds; Haiku looks things up and reports status.</li>
-      <li>do stops for unexplained failures, scope changes and destructive actions, and otherwise keeps going.</li>
+      <li>do stops for unexplained failures, scope changes and destructive actions, and otherwise keeps going. What waits on you is taken one item at a time.</li>
+      <li>A failure seen twice can become a lesson that the next plan applies.</li>
     </ul>
     <p class="dim small" style="margin-top:14px">Both files are in the same folder as this deck.</p>
   </div>
@@ -624,7 +723,7 @@
 </main>
 <nav class="nav" aria-label="Slide navigation">
   <button id="prev" type="button" aria-label="Previous slide">&larr; Back</button>
-  <span class="counter" id="counter" aria-live="polite">1 / 13</span>
+  <span class="counter" id="counter" aria-live="polite">1 / 16</span>
   <span class="hint">Arrow keys or space</span>
   <button id="next" type="button" aria-label="Next slide">Next &rarr;</button>
 </nav>

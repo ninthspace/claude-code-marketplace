@@ -134,23 +134,31 @@ Stories are numbered from 1 within each epic. Tasks use `{story}.{seq}`. Intra-e
 ```markdown
 **Acceptance Criteria**:
 - {criterion} `[tag]`
-  - Evidence: {test name, file:line} ({command}) — red: {failure text, shortened} with {lines undone | mutation of {file:line}: {change}}; green after restore
+  - Evidence: {test name, file:line}{ ({command})} — red: {message} with {lines undone in {file:lines} | mutation of {file:line}: {change}}
 - {criterion} `[tag]`
-  - Evidence: {proof} — red: n/a — {manual | browser-observed | static}
+  - Evidence: {proof} — red: n/a — {manual | browser-observed | static | existing (reaches {file:line})}
 - {criterion} `[user]`
   - Evidence (user, {YYYY-MM-DD}): {what the user reported} — red: n/a — user
 - {criterion} `[tag]`
   - Not met: {what was tried and why it fell short}
+- {criterion} `[tag]`
+  - Waiting on user: {the steps the user carries out}
 ```
 
-A test-proven criterion's evidence is incomplete without its red result. Each `n/a` reason fits particular tags: `manual` a `[manual]` criterion, `static` a `[manual]` criterion proven by reading code or by `grep` with no test (and an untagged one proven that way), `user` a `[user]` criterion or a criterion whose `Evidence` line is in the `Evidence (user, {YYYY-MM-DD}):` form, which is the only form that carries it, `browser-observed` a `[browser]` criterion checked with claude-in-chrome. A criterion a test proves takes no `n/a`. The fit is checked only on tagged criteria.
+A test-proven criterion's evidence is incomplete without its red result, or an `existing` reason. `{message}` is the first line of the failure message, or for a multi-line diff the first line that names the expected and actual values. The command is left out when it is the project's test command run on the named test. Each `n/a` reason fits particular tags: `manual` a `[manual]` criterion, `static` a `[manual]` criterion proven by reading code or by `grep` with no test (and an untagged one proven that way), `user` a `[user]` criterion or a criterion whose `Evidence` line is in the `Evidence (user, {YYYY-MM-DD}):` form, which is the only form that carries it, `browser-observed` a `[browser]` criterion checked with claude-in-chrome, and `existing` as the next paragraph defines it. The fit is checked only on tagged criteria; `existing` is judged on every criterion, and its misuse, whatever the tag, is a Warning, not the Critical that an `n/a` reason misfitting its tag is.
+
+`existing`, written `red: n/a — existing (reaches {file:line})`, fits a test-proven criterion (a tag the project's Testing Strategy maps to a suite, or untagged and proved by a test) that keeps behaviour the code already had and names no control. Its test's own body must be unchanged in the story's diff and must have passed in the baseline, and `{file:line}` is a line the story changed that the test executes. A criterion names a control when it is a must-not, must-not-change or never criterion under `plan`'s rule, or its text says `control`. A criterion a test proves takes no other `n/a`. An `existing` reason on a criterion for new behaviour, on one naming a control, on a test whose body the story changed, or naming a line the test does not execute is a finding.
+
+`- Waiting on user:` marks a criterion `do` treats as `[user]` though it is not tagged so (a browser check with no server or browser, a deploy); `do` writes it under that criterion and removes it when it writes the criterion's `Evidence` line.
+
+How a tool reads a story's criteria: a criterion is a `- ` line under `**Acceptance Criteria**:`, continued on indented lines that are not sub-bullets; its tag is the last backticked word in it; its indented `- Evidence`, `- Evidence (user, …)`, `- Not met:` and `- Waiting on user:` lines belong to it; and a legacy story-level `**Evidence**:` field counts as evidence for every criterion of the story.
 
 The criterion line itself is never edited to record verification, so its text stays comparable with coverage matrices and earlier readings. A story is `Complete` only when every criterion has an `Evidence` line; a `Not met` line leaves it blocked. A story that is unblocked, is not marked blocked, and has at least one criterion lacking `Evidence`, every such criterion being `[user]` or treated as `[user]` by `do`, is waiting on the user: it keeps its status, and `do` does not pick it. Read a legacy story-level `**Evidence**:` field as valid input, but don't write one.
 
 ### Fields `do` may add to a story
 
 - `**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved})`, also in a `docs/quick/` record; see **Signals**.
-- `**Scratch**: {absolute path}` while a red is being taken, naming the directory that holds the copies of the files being changed; removed once they are restored.
+- `**Scratch**: {absolute path}` while a red pass runs, naming `{absolute git common dir}/cpm-next/scratch/{epic file stem}-{story}/` (or `quick-{nn}/`), the directory that holds the copies of the files being changed, a `manifest` of the working tree's changed paths with their blob hashes, and a `tree` file naming the checkout the pass runs in; the line and the directory are removed once the files are restored and the manifest compared.
 - `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes.
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.
 - `**Amended**: {what changed} ({YYYY-MM-DD}) — cited: {file:line | FRn | conflicting criterion}`
