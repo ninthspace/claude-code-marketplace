@@ -110,7 +110,7 @@ The skills read and write Markdown artefacts under `docs/`: `discussions/`, `bri
 
 **Holds each cpm-next skill's model and effort for its whole run**
 
-A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts only for the turn that invoked it. This mod keeps them for every later turn of the run, including your replies to the skill's questions, until another skill runs, you switch model or effort yourself, or `/clear`. It runs `do all` at `high` effort, and gives `/cpm-next:do` a `set_story_effort` tool so each story is built at its own `**Effort**`, never below `high` in a `do all` run. The footer shows what is held, for example `cpm-next:do · story 3 · sonnet · low`.
+A Claude Code mod. A skill's `model` and `effort` frontmatter normally lasts only for the turn that invoked it. This mod keeps them for every later turn of the run, including your replies to the skill's questions, until you run another skill, switch model or effort yourself, or `/clear`. A skill Claude loads during the run, such as one for publishing a page, leaves the hold in place. It runs `do all` at `high` effort, and gives `/cpm-next:do` a `set_story_effort` tool so each story is built at its own `**Effort**`, never below `high` in a `do all` run. The footer shows what is held, for example `cpm-next:do · story 3 · sonnet · low`.
 
 **Commands:** `/cpm-models` shows what is held; `/cpm-models off` releases it.
 
