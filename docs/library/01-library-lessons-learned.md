@@ -5,7 +5,7 @@
 
 **Type**: coding-standards  
 **Source**: docs/cpm/library/lessons-learned.md — carried over from CPM at the 2026-08-16 migration, with its amendment blocks folded into the body  
-**Scope**: do, plan  
+**Scope**: do, plan, review  
 
 ## Reach for it before assuming the surface has it
 
@@ -146,3 +146,13 @@ The one-of-a-kind fixture is the normal case early in an epic, which is what mak
 An edit is made at the line a requirement names while the same fact stays stated, in the old form, in the next bullet of the same passage, in a README, a guide, a second file or a second reader of the same data. Four stories in two specs closed with this fault, each found only by an audit.
 
 Before a story goes to audit, search the repository for the old wording and for every place that restates the changed fact (skills, the contract, READMEs, the training and onboarding guides, tests that quote it), and change or justify each. `plan` writes the criterion over the rule ("every passage that states the signal form shows the version segment"), not over the one line the requirement cites, so the places are listed in the criterion; the auditor reads the diff against that list. Owned by `plan` for the criterion and `do` for the search.
+
+## A criterion that needs an observation the session cannot make is a `[user]` check
+**Promoted**: 2026-11-09
+**Class**: unprovable-in-session
+**Source**: docs/epics/49-03-epic-commit-guard.md, docs/epics/51-02-epic-release.md (`unprovable-in-session` signals)
+**Scope**: plan, review
+
+A story's criterion sometimes needs a fact the session cannot observe: what the engine reports for a subagent's own commit, how a local HTML page renders when the browser tool cannot open `file://`, a live service's response. Written as an ordinary build criterion it blocks the story or leaves it waiting on the user for something trivial.
+
+`plan` writes such a criterion as `[user]`, with the exact steps and the observation that proves it, in the spec's final user-checks epic, and does not make a build story's closing depend on it; where the observation is trivial or evident from the code, it is dropped or proved statically (a length comparison, a grep) instead. `review` flags a criterion in a build story that no tool in the session can check. Owned by `plan` for the criterion and `review` for the check.

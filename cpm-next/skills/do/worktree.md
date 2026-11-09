@@ -11,15 +11,16 @@ With `--parallel`, unblocked stories are built together even when they share fil
 
 Run at most three at once. A worktree starts from the last commit, so commit the run's own work before each fan-out. If the tree holds changes this run didn't make, don't use worktree mode: say so, and build one at a time.
 
-A worktree's test results count only if the suite is isolated (see **Scratch directories and isolation**), outbound HTTP is faked with stray requests prevented (`Http::preventStrayRequests()`), queues and mail are faked, and no build output the checkout lacks is needed (in Laravel, Vite's manifest, unless tests call `withoutVite()`). Otherwise the subagents write code only, and the lead runs each story's tests after merging it.
+A worktree's test results count only if the suite is isolated (see **Scratch directories and isolation**), outbound HTTP is faked with stray requests prevented (`Http::preventStrayRequests()`), queues and mail are faked, and no build output the checkout lacks is needed (in Laravel, Vite's manifest, unless tests call `withoutVite()`). Otherwise the subagents write code only, and the lead makes the batch's run after merging (a union of targeted sets, or the full suite as `SKILL.md`'s parallel rules give).
 
 Each subagent's prompt adds:
 
+- Read the contract and `shared/test-runs.md` (the lead gives their absolute paths) to find the story's targeted set and whether its story must run full; a story that must run full leaves its run and its red pass to the lead, after the batch run.
 - Set up the worktree first. Install dependencies from the lock file (`composer install`, `npm ci`); never symlink `vendor/` or `node_modules/`, since Composer's autoloader would then load the lead's code. Copy from the lead's checkout the gitignored files its tests need (`.env`, local settings), pointed at test resources.
 - Start no server, run no migrations or seeders against a real database, call no real service, and leave the epic doc alone.
 - When the worktree's test results count (above), take the story's red pass (step 4) before committing: its directory is at the same path in the main repository's common directory, with the worktree in its `tree` file, and it is gone when the commit is made. Otherwise write code only; the lead takes the pass after merging.
 - Commit the story on the worktree's branch, and report the branch, the files changed, the tests run with their output, what proves each criterion, the red for each test-proven one, and the failures it met (a test failing for a reason it can't explain, a criterion it can't meet, a wording fix it made), for the lead to record as signals. The lead writes the `Evidence` lines.
 
-The lead merges the branches in story order with `git merge --no-ff`, so each story's merge commit, against its first parent, is that story alone for its audit. After resolving a conflict, it runs both stories' tests again, then the full suite once. It removes each worktree and its branch once the story is merged.
+The lead merges the branches in story order with `git merge --no-ff`, so each story's merge commit, against its first parent, is that story alone for its audit. After resolving a conflict, it runs both stories' targeted sets again, then the full suite once as the batch's run (`merge conflict`). The lead's run after merging is the batch run `SKILL.md`'s parallel rules give, and it is the one handed to each audit. It removes each worktree and its branch once the story is merged.
 
 `--parallel check` builds nothing and writes nothing. It reports the unblocked stories in scope, the batches worktree mode would form and why any story stays out, whether the suite is isolated (citing the config lines that show it), and the setup each worktree would need.

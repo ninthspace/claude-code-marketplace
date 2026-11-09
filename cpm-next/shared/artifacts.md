@@ -17,6 +17,7 @@ The skills in this plugin keep their procedures short and their data strict. Thi
 | Reference library | `docs/library/*.md` | library, the user, or do (`lessons-learned.md` entries); every skill reads it |
 | Persona roster override | `docs/agents/roster.yaml` | the user; replaces the plugin default entirely |
 | Fixed-in list | `shared/fixed.md` at the plugin root | the maintainer, with each release that fixes a `process` failure; library reads it |
+| Test-run rules | `shared/test-runs.md` at the plugin root | the maintainer; `do` and the auditor read it |
 
 Read all of these as context whenever they bear on the work. Files from CPM v3, including legacy flat epics (`{nn}-epic-{slug}.md`) and coverage matrices (`*-coverage-*.md`), are valid input. This plugin does not create coverage matrices; the `**Satisfies**` field on each story carries the traceability instead.
 
@@ -159,6 +160,7 @@ The criterion line itself is never edited to record verification, so its text st
 ### Fields `do` may add to a story
 
 - `**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved})`, also in a `docs/quick/` record; see **Signals**.
+- `**Test run**: {n} ({f} full, {t} targeted) — {full | targeted | none} — {command}: {passed} passed, {failed} failed — tree {hash} — {reason, or the changed file → tests that run it; …}`, also in a `docs/quick/` record. One line in the story's header block, before `**Acceptance Criteria**`, with no sub-bullets, rewritten on every test run by `do` (not by a red pass or an auditor probe) and describing the run the next audit is handed. `{n}` counts the story's runs, `{f}` and `{t}` its full and targeted runs; `{failed}` counts failures and errors; a run of zero tests is not a pass; a run over several test runners gives a command and counts for each; `none` (no non-exempt file changed) keeps `{n} ({f} full, {t} targeted)` unchanged (`0 (0 full, 0 targeted)` for a story with no earlier line) and carries no command, pass/fail counts or hash. The rules for the run, the reasons and `{hash}` are in `shared/test-runs.md`.
 - `**Scratch**: {absolute path}` while a red pass runs, naming `{absolute git common dir}/cpm-next/scratch/{epic file stem}-{story}/` (or `quick-{nn}/`), the directory that holds the copies of the files being changed, a `manifest` of the working tree's changed paths with their blob hashes, and a `tree` file naming the checkout the pass runs in; the line and the directory are removed once the files are restored and the manifest compared.
 - `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes.
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.

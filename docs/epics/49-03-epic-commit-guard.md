@@ -15,7 +15,7 @@
 **Satisfies**: FR5, NFR3, NFR4  
 **Effort**: high  
 **Signal**: fix-introduced-defect — project — a fix for quoted commit options (`ARG`) made the commit pattern backtrack exponentially on about 20 quoted options (`cpm-next/hooks/guard.ts:14`, second audit, Warning)  
-**Signal**: unprovable-in-session — project — the guard takes the checkout from `$.session.cwd()`, and the engine documents no directory per subagent loop, so a worktree subagent's own commit is not shown to be checked (`cpm-next/hooks/register.ts`, audit round 1 of this story)  
+**Signal**: unprovable-in-session — project — the guard takes the checkout from `$.session.cwd()`, and the engine documents no directory per subagent loop, so a worktree subagent's own commit is not shown to be checked (`cpm-next/hooks/register.ts`, audit round 1 of this story) — promoted 2026-11-09  
 **Pivot deferred**: FR5's "by the main session or a subagent" holds only if the engine reports a worktree subagent's directory, which nothing in the declarations shows; word it as the main session's checkout, with a worktree subagent covered by `worktree.md`'s rule to commit only after its pass directory is gone → docs/specifications/49-spec-cheaper-red-first-evidence.md (Story 1, 2026-10-31) — cited: `cpm-next-progress/.claude-plugin/types/claude-code/index.d.ts:2548-2551` (`cwd` is "the directory the session runs in") and `:313-316`, `AgentInfo` (`:121-160`) with no directory
 
 **Acceptance Criteria**:

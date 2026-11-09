@@ -212,7 +212,7 @@
       <li>A first walkthrough: plan, review, do one story, status</li>
       <li>Unattended runs, checks only you can make, how it learns, story effort, the two agents, staying up to date</li>
     </ul>
-    <p class="dim small">Covers cpm-next 0.12.0, cpm-next-models 0.3.2, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
+    <p class="dim small">Covers cpm-next 0.13.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
   </div>
 </section>
@@ -488,10 +488,10 @@
 <pre><code>/cpm-next:do 1</code></pre>
     <p class="small dim">With a story number and no epic, <code>do</code> uses the lowest-numbered In Progress epic, else the lowest-numbered epic with nothing started.</p>
     <ol class="steps">
-      <li>Before the first story it restores any files a stopped red pass left, reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the suite to record a baseline. If a <code>[browser]</code> criterion cannot be checked (no connected browser, no app answering at a local <code>APP_URL</code>), it says so in its first message.</li>
+      <li>Before the first story it restores any files a stopped red pass left, reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the full suite once to record a baseline. If a <code>[browser]</code> criterion cannot be checked (no connected browser, no app answering at a local <code>APP_URL</code>), it says so in its first message.</li>
       <li>Sets the story <code>In Progress</code> and, with <code>cpm-next-models</code>, sets the story's effort.</li>
       <li>Builds it task by task, following the project's existing conventions.</li>
-      <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the full suite.</li>
+      <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the story's tests: the ones it cites and the ones that run the code it changed, or the full suite when the change is wide-reaching or closes its epic.</li>
       <li>Takes the reds in one <b>red pass</b>: copies each file it will change to <code>.git/cpm-next/scratch/</code>, undoes or mutates the code each cited test covers, runs that test and notes its failure, copies the files back and checks a manifest shows every file restored. Then it writes the <code>Evidence</code> lines.</li>
       <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes every Critical and Warning finding and audits again, scoped to those findings and the fix code. A third audit runs only when the second finds a Critical; a story still failing is marked blocked.</li>
       <li>Closes the story in the same edit as its <code>**Audit**</code> line.</li>
@@ -522,7 +522,7 @@
   <div class="slide-inner">
     <div class="tag">Unattended runs</div>
     <h2><code>/cpm-next:do all</code></h2>
-    <p>Runs every unfinished epic in dependency order; <code>/cpm-next:do all 01</code> runs only spec 01's epics. It is done when no unblocked story remains, and the full suite passes or any failures were failing before the run. Stories waiting on your check count as done; their steps wait under <b>Needs you</b>, and a <code>[user]</code> criterion is never marked met in a run with no one present.</p>
+    <p>Runs every unfinished epic in dependency order; <code>/cpm-next:do all 01</code> runs only spec 01's epics. It is done when no unblocked story remains, every story closed on a passing run and every epic closed on a passing full run. Stories waiting on your check count as done; their steps wait under <b>Needs you</b>, and a <code>[user]</code> criterion is never marked met in a run with no one present.</p>
     <div class="grid">
       <div class="card">
         <h3>What it does not stop for</h3>
@@ -617,13 +617,13 @@
         <h3><code>auditor</code> · Opus · read-only</h3>
         <p>Started by <code>do</code> before each story, or small change, is closed. It gets none of the builder's conversation and checks what is on disk.</p>
         <ul class="bullets">
-          <li>Each criterion against its evidence, reading the cited tests and their recorded reds against the full-suite result <code>do</code> gives it, rather than re-running them.</li>
+          <li>Each criterion against its evidence, reading the cited tests and their recorded reds against the test run <code>do</code> gives it, rather than re-running them.</li>
           <li>The diff for defects, security problems, data loss and queries whose memory grows with the data.</li>
           <li>Scope creep, and anything the story asked for that is missing.</li>
           <li>Departures from <code>CLAUDE.md</code>, the library and existing patterns.</li>
           <li>Tests that assert nothing, or were weakened or skipped; a missing or implausible red.</li>
         </ul>
-        <p class="small dim">Returns <code>Verdict: pass</code> or <code>fix needed</code>. Any Critical or Warning finding means <code>fix needed</code>. Severity weighs how likely a failure is: unusual use (a double click, two tabs) is a Warning at most, an unreachable input a Suggestion, except for security and lost or duplicated data. A later audit checks only the earlier findings and the fix code. It runs tests only when the suite is isolated or <code>do</code> says it is free, and never edits files.</p>
+        <p class="small dim">Returns <code>Verdict: pass</code> or <code>fix needed</code>. Any Critical or Warning finding means <code>fix needed</code>. Severity weighs how likely a failure is: unusual use (a double click, two tabs) is a Warning at most, an unreachable input a Suggestion, except for security and lost or duplicated data. A later audit checks only the earlier findings and the fix code. It runs no tests given a targeted result, and otherwise only when the suite is isolated or <code>do</code> says it is free, and never edits files.</p>
       </div>
       <div class="card">
         <h3><code>scout</code> · Haiku · read-only</h3>

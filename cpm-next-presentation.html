@@ -222,7 +222,7 @@
     <div class="label">Introduction</div>
     <h1>cpm-next</h1>
     <p class="lead">A planning and building method for Claude Code. It turns an idea into working, tested code through a short chain of documents kept in the repository.</p>
-    <p class="dim small" style="margin-top:28px">Describes cpm-next 0.12.0, with the mods cpm-next-models 0.3.2, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
+    <p class="dim small" style="margin-top:28px">Describes cpm-next 0.13.0, with the mods cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. On a touch screen, swipe or use the buttons below.</p>
   </div>
 </section>
@@ -298,7 +298,7 @@
       <div class="card ok">
         <h3><code>do</code></h3>
         <p>Builds stories, verifies each acceptance criterion with evidence, and has each story audited.</p>
-        <p class="done"><strong>Finished when</strong> every story in scope is Complete or waiting on you, and the test suite is no worse than its baseline.</p>
+        <p class="done"><strong>Finished when</strong> every story in scope is Complete or waiting on you, and every story it closed passed its run and every epic it closed passed a full run.</p>
       </div>
       <div class="card">
         <h3><code>library</code></h3>
@@ -446,7 +446,7 @@
     <div class="label">Building</div>
     <h2>How do builds one story</h2>
     <div class="two-col">
-      <svg class="diagram" viewBox="0 0 420 552" role="img" aria-label="Story loop: start, build, evidence, full suite and red pass, audit, then close, or fix and audit the fixes">
+      <svg class="diagram" viewBox="0 0 420 552" role="img" aria-label="Story loop: start, build, evidence, test run and red pass, audit, then close, or fix and audit the fixes">
         <defs>
           <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" class="ah"/>
@@ -465,7 +465,7 @@
         <text class="tx-d" x="24" y="218">write an Evidence line under it</text>
 
         <rect class="box-acc" x="10" y="256" width="240" height="56" rx="8"/>
-        <text class="tx-b" x="24" y="280">4. Suite, then red pass</text>
+        <text class="tx-b" x="24" y="280">4. Run, then red pass</text>
         <text class="tx-d" x="24" y="300">each cited test seen to fail</text>
 
         <rect class="box-warn" x="10" y="338" width="240" height="56" rx="8"/>
@@ -501,11 +501,11 @@
       <div>
         <ul class="plain">
           <li>A criterion without its own Evidence line is not met.</li>
-          <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the full suite, then the reds.</li>
+          <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the tests (targeted unless the change is wide-reaching), then the reds.</li>
           <li>Critical and Warning findings are fixed wherever the mistake occurs, each with a test; suggestions are not.</li>
           <li>A later audit checks only the earlier findings and the fix code. A story still failing the last audit is blocked, with each unresolved finding recorded.</li>
           <li>Stories that share no files or runtime state are built in parallel. <code>--parallel</code> gives stories that share files their own git worktrees.</li>
-          <li>At the end of the run the full suite must pass, or any failures must have been failing before the run started.</li>
+          <li>The baseline is one full run. A story runs the tests that reach its change; a wide change or a closing epic runs the full suite, and there is no full run at the end.</li>
         </ul>
       </div>
     </div>
@@ -532,7 +532,7 @@
     app/Exports/LoanExport.php:27)</span></pre>
       <div>
         <ul class="plain">
-          <li>Once the suite passes, do takes all of a story's reds in one pass: undo the lines a test covers, or mutate one, and run that test.</li>
+          <li>Once the tests pass, do takes all of a story's reds in one pass: undo the lines a test covers, or mutate one, and run that test.</li>
           <li>The failure must come from the cited assertion. A missing class or route is an error, not a red.</li>
           <li>Files are copied to <code>.git/cpm-next/scratch/</code> first and copied back, never reset with git. A manifest checked before and after shows every file came back, so nothing is re-run.</li>
           <li>Behaviour the code already had, proved by an unchanged test, records <code>existing</code> instead.</li>
@@ -564,7 +564,7 @@
         <h3>How it is limited</h3>
         <ul class="plain">
           <li>Read-only. It never edits files.</li>
-          <li>It runs tests or probes only when the suite is isolated or do says it is free, and nothing that changes state outside them.</li>
+          <li>It runs no tests given a targeted result, and otherwise only when the suite is isolated or do says it is free, and nothing that changes state outside them.</li>
           <li>It reports what it can show, not what might be true.</li>
           <li>The result is recorded on the story, for example <code>**Audit**: pass ({date}), 2 findings fixed</code>.</li>
         </ul>
@@ -665,7 +665,7 @@
         <p>From the <code>cpm-next-progress</code> mod. A private claude.ai page showing a spec's stories as a table grouped by phase, with a story waiting on your check shown as Waiting on input. The mod keeps it in step with the epic docs. Anyone it is shared with can read it.</p>
       </div>
     </div>
-    <div class="note"><strong>Every do run ends with three headings:</strong> Needs you (what waits on your action or decision), Changed (stories completed, files touched, test result against the baseline) and Found (anything surprising).</div>
+    <div class="note"><strong>Every do run ends with three headings:</strong> Needs you (what waits on your action or decision), Changed (stories completed, files touched, full and targeted runs, test result against the baseline) and Found (anything surprising).</div>
   </div>
 </section>
 
