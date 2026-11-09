@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/48-spec-learning-at-recurrence.md  
 **Date**: 2026-10-30  
-**Status**: Pending  
+**Status**: Withdrawn — the user runs these releases in production and withdrew the remaining checks (2026-11-09)  
 **Blocked by**: Epic 48-02-epic-signals-in-do, Epic 48-05-epic-library-sweep, Epic 48-07-epic-release  
 **Lessons**: docs/library/01-library-lessons-learned.md → "A must-NOT stated as an equality is a change detector, and a set comparison needs a floor" (Story 1)  
 **Amended**: 2026-10-30 — rewritten after review 06 (docs/reviews/06-review-learning-at-recurrence.md)

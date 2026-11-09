@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/51-spec-full-suite-when-justified.md  
 **Date**: 2026-11-09  
-**Status**: Pending  
+**Status**: Withdrawn — the user withdrew the checks as not worth their setup (2026-11-09)  
 **Blocked by**: Epic 51-02-epic-release  
 **Amended**: review 08 (docs/reviews/08-review-targeted-runs.md) — rewritten with an exact fixture, a fixed story order, controls and exact expected counts (2026-11-09)
 

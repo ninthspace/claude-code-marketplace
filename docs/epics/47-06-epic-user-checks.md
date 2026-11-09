@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/47-spec-checks-that-can-fail.md  
 **Date**: 2026-10-30  
-**Status**: Pending  
+**Status**: Withdrawn — the user runs these releases in production and withdrew the remaining checks (2026-11-09)  
 **Blocked by**: Epic 47-05-epic-release, Epic 47-07-epic-after-release-fixes  
 **Amended**: 2026-10-30 — also blocked by 47-07, whose fixes the release carries
 

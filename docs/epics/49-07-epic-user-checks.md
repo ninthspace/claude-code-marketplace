@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/49-spec-cheaper-red-first-evidence.md  
 **Date**: 2026-10-31  
-**Status**: Pending  
+**Status**: Withdrawn — the user runs these releases in production and withdrew the remaining checks (2026-11-09)  
 **Blocked by**: Epic 49-06-epic-release
 
 These checks are carried out by the user after release; `do` writes each `Evidence` line only from the user's answer.
