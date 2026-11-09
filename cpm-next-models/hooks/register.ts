@@ -69,9 +69,10 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // A skill the model starts belongs to the run it started in, such as a do run loading a skill to publish
+  // its tracker, so only a cpm-next skill changes the hold; a skill the person types releases it above.
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
-    if (isHeldSkill(skillName(e.skill))) await capture($, e.skill, e.args ?? '')
-    else await release($)
+    await capture($, e.skill, e.args ?? '')
 
     return next(e)
   })
