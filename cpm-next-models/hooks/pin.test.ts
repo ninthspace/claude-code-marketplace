@@ -1,8 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
 import {
-  effortFor, effortStep, familyOf, floorFor, isHeldSkill, isPersonsSwitch, isStoryEffort, overrideFor, parseFrontmatter,
-  pickInstall, resolveModel, skillName, skillFiles, slashCommand, statusText, storyStep,
+  effortFor, effortStep, familyOf, floorFor, isHeldSkill, isStoryEffort, overrideFor, parseFrontmatter,
+  pickInstall, resolveModel, skillName, skillFiles, slashCommand, statusText, storyStep, switchStep,
 } from './pin'
 
 test('every cpm-next skill is held, others are not', () => {
@@ -54,11 +54,13 @@ test('no held effort leaves the request alone', () => {
   expect(effortStep(modelOnly, 't2', 'low')).toEqual({ effort: 'low', pin: modelOnly })
 })
 
-test("only the person's own switch releases the hold", () => {
-  expect(isPersonsSwitch('command')).toBe(true)
-  expect(isPersonsSwitch('picker')).toBe(true)
-  expect(isPersonsSwitch('auto')).toBe(false)
-  expect(isPersonsSwitch('resume')).toBe(false)
+test('a change of session model releases the hold', () => {
+  const held = { skill: 'cpm-next:do', model: 'claude-sonnet-5-5', turnId: 't1', sessionModel: 'opus' }
+  expect(switchStep(held, 'opus')).toBe(held)
+  expect(switchStep(held, 'haiku')).toBeNull()
+  expect(switchStep(null, 'opus')).toBeNull()
+  const older = { skill: 'cpm-next:do', model: 'claude-sonnet-5-5', turnId: 't1' }
+  expect(switchStep(older, 'opus')).toEqual({ ...older, sessionModel: 'opus' })
 })
 
 test('footer label', () => {

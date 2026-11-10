@@ -5,6 +5,8 @@ export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max' | number
  * The cpm-next skill whose model and effort are held; null when nothing is held.
  * `turnId` is the turn the skill started in. `baseline` is the session's effort as first seen after that
  * turn, so a later `/effort` shows up as a difference from it and releases the held effort.
+ * `sessionModel` is the session model, as `/model` shows it, when the hold began; a different one later means
+ * the person switched model, which releases the hold.
  * `floor` is the lowest effort a story may set (`high` in a `do all` run); `story` is the story `do` is building.
  */
 export type ModelPin = {
@@ -13,6 +15,7 @@ export type ModelPin = {
   effort?: Effort
   turnId: string
   baseline?: Effort
+  sessionModel?: string
   floor?: Effort
   story?: string
 } | null

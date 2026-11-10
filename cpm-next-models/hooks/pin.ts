@@ -68,9 +68,16 @@ export function effortStep(pin: ModelPin, turnId: string, stepEffort: Effort | u
   return { effort: pin.effort, pin }
 }
 
-/** Whether a model switch is the person's own choice, which releases the hold; a fallback or resume does not. */
-export function isPersonsSwitch(source: string): boolean {
-  return source === 'command' || source === 'picker' || source === 'sdk'
+/**
+ * The pin after a main-loop step reads the session model, as `/model` shows it: a model different from the
+ * one recorded when the hold began means the person switched, which releases the hold. A fallback changes the
+ * step's model, not the session's, so it leaves the hold. A pin with no model recorded records this one.
+ */
+export function switchStep(pin: ModelPin, sessionModel: string): ModelPin {
+  if (pin === null) return null
+  if (pin.sessionModel === undefined) return { ...pin, sessionModel }
+
+  return pin.sessionModel === sessionModel ? pin : null
 }
 
 /** `claude-sonnet-5-5` → `sonnet`; an id with no family name is shown whole. */

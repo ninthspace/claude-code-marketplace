@@ -3,8 +3,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { ModelPin, PendingSkill } from '../types'
 import {
-  effortFor, effortStep, floorFor, isHeldSkill, isPersonsSwitch, isStoryEffort, overrideFor, parseFrontmatter,
-  pickInstall, resolveModel, skillFiles, skillName, slashCommand, statusText, storyStep,
+  effortFor, effortStep, floorFor, isHeldSkill, isStoryEffort, overrideFor, parseFrontmatter,
+  pickInstall, resolveModel, skillFiles, skillName, slashCommand, statusText, storyStep, switchStep,
 } from './pin'
 
 const STORY_TOOL = 'set_story_effort'
@@ -88,22 +88,20 @@ export const register: Register = on => {
       const model = resolveModel(found.model, e.model)
       const effort = effortFor(waiting.skill, waiting.args, found.effort ?? e.effort)
       const floor = floorFor(waiting.skill, waiting.args)
-      await setPin($, { skill: waiting.skill, model, effort, turnId: e.turnId, ...(floor === undefined ? {} : { floor }) })
+      const sessionModel = await $.session.model()
+      await setPin($, { skill: waiting.skill, model, effort, turnId: e.turnId, sessionModel, ...(floor === undefined ? {} : { floor }) })
       return yield* next({ ...e, model, effort })
     }
 
-    const held = await read($, pin)
+    // classic.PostModelSwitch would serve here, but sec-default sends it past the user tier.
+    const current = await read($, pin)
+    const held = current === null ? null : switchStep(current, await $.session.model())
+    if (held !== current) await setPin($, held)
     const stepped = effortStep(held, e.turnId, e.effort)
     if (stepped.pin !== held) await setPin($, stepped.pin)
     const model = overrideFor(held, e.model) ?? e.model
 
     return yield* next({ ...e, model, effort: stepped.effort })
-  })
-
-  on('classic.PostModelSwitch', async ($, e, next) => {
-    if (isPersonsSwitch(e.source)) await release($)
-
-    return next(e)
   })
 
   on('session.end', async ($, e, next) => {
