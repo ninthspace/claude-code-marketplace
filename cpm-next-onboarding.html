@@ -212,7 +212,7 @@
       <li>A first walkthrough: plan, review, do one story, status</li>
       <li>Unattended runs, checks only you can make, how it learns, story effort, the two agents, staying up to date</li>
     </ul>
-    <p class="dim small">Covers cpm-next 0.13.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
+    <p class="dim small">Covers cpm-next 0.14.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
   </div>
 </section>
@@ -360,7 +360,7 @@
       <li>A <code>[user]</code> criterion's line, <code>Evidence (user, {date}): …</code>, is written only from your answer. Until then it may carry <code>- Waiting on user: {steps}</code>.</li>
       <li>A story is <code>Complete</code> only when every criterion has an <code>Evidence</code> line. A <code>Not met</code> line leaves it blocked.</li>
       <li><code>**Signal**</code> records a failure <code>do</code> found (here, an audit finding that held), so a second occurrence can be recognised.</li>
-      <li><code>**Audit**</code> is written in the same edit that closes the story. If the auditor is unavailable it reads <code>**Audit**: skipped — auditor unavailable</code>.</li>
+      <li><code>**Audit**</code> is written in the same edit that closes the story; a story that needs a deferred full run has it written when its last audit passes, with a <code> — full run due</code> suffix, until that run passes. If the auditor is unavailable it reads <code>**Audit**: skipped — auditor unavailable</code>.</li>
     </ul>
   </div>
 </section>
@@ -491,10 +491,10 @@
       <li>Before the first story it restores any files a stopped red pass left, reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the full suite once to record a baseline. If a <code>[browser]</code> criterion cannot be checked (no connected browser, no app answering at a local <code>APP_URL</code>), it says so in its first message.</li>
       <li>Sets the story <code>In Progress</code> and, with <code>cpm-next-models</code>, sets the story's effort.</li>
       <li>Builds it task by task, following the project's existing conventions.</li>
-      <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the story's tests: the ones it cites and the ones that run the code it changed, or the full suite when the change is wide-reaching or closes its epic.</li>
+      <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the story's tests: the ones it cites and the ones that run the code it changed, and, when the change is wide-reaching or closes its epic, the full suite once after the audit.</li>
       <li>Takes the reds in one <b>red pass</b>: copies each file it will change to <code>.git/cpm-next/scratch/</code>, undoes or mutates the code each cited test covers, runs that test and notes its failure, copies the files back and checks a manifest shows every file restored. Then it writes the <code>Evidence</code> lines.</li>
       <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes every Critical and Warning finding and audits again, scoped to those findings and the fix code. A third audit runs only when the second finds a Critical; a story still failing is marked blocked.</li>
-      <li>Closes the story in the same edit as its <code>**Audit**</code> line.</li>
+      <li>Closes the story in the same edit as its <code>**Audit**</code> line, or on its deferred full run's pass when the story needs one.</li>
     </ol>
     <p>Stories unblocked together that share no files or state are built in parallel, one subagent each; <code>--parallel</code> is only for stories that do share files, building each in its own git worktree and committing locally. A story whose open criteria are all <code>[user]</code> checks is skipped and listed under <b>Needs you</b>.</p>
     <p>The run ends with <b>Needs you</b> (only what waits on you, each line naming the action and what it unblocks), <b>Changed</b> and <b>Found</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation. Commits, branches and pushes are left to you; while a red pass is open, a <code>git commit</code> run through Claude is refused.</p>
@@ -617,7 +617,7 @@
         <h3><code>auditor</code> · Opus · read-only</h3>
         <p>Started by <code>do</code> before each story, or small change, is closed. It gets none of the builder's conversation and checks what is on disk.</p>
         <ul class="bullets">
-          <li>Each criterion against its evidence, reading the cited tests and their recorded reds against the test run <code>do</code> gives it, rather than re-running them.</li>
+          <li>Each criterion against its evidence, reading the cited tests and their recorded reds against the test run <code>do</code> gives it, rather than re-running them, and warning when a story the rules make full names no deferred full run.</li>
           <li>The diff for defects, security problems, data loss and queries whose memory grows with the data.</li>
           <li>Scope creep, and anything the story asked for that is missing.</li>
           <li>Departures from <code>CLAUDE.md</code>, the library and existing patterns.</li>

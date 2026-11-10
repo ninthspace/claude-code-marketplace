@@ -156,3 +156,23 @@ Before a story goes to audit, search the repository for the old wording and for 
 A story's criterion sometimes needs a fact the session cannot observe: what the engine reports for a subagent's own commit, how a local HTML page renders when the browser tool cannot open `file://`, a live service's response. Written as an ordinary build criterion it blocks the story or leaves it waiting on the user for something trivial.
 
 `plan` writes such a criterion as `[user]`, with the exact steps and the observation that proves it, in the spec's final user-checks epic, and does not make a build story's closing depend on it; where the observation is trivial or evident from the code, it is dropped or proved statically (a length comparison, a grep) instead. `review` flags a criterion in a build story that no tool in the session can check. Owned by `plan` for the criterion and `review` for the check.
+
+## A rule is stated once; every other place refers to it and carries none of its terms
+**Promoted**: 2026-11-10
+**Class**: definition-in-two-places
+**Source**: docs/epics/50-02-epic-sweep-for-everyone.md, docs/epics/51-01-epic-targeted-runs.md, docs/epics/52-01-epic-deferred-full-run.md (`definition-in-two-places` signals)
+**Scope**: plan, review, do
+
+A rule gets stated in its owner file and again, in other words, in a second file, a field template or a list beside it (the sweep's leave-out rule per group and per signal, the rule for which reruns are full in the trigger list and the rerun sentence, the scoped round's prompt in the rules file, `do` and the auditor, the story snapshot's path set against the field template). The copies drift, and the audit finds the disagreement on the next read.
+
+Name one owner file per rule. Every other place refers to it by name and holds none of its terms. `plan` writes the criterion over the rule and names a check that proves it: a grep for the rule's key phrases that hits once in the owner and nowhere else, with the referring passages read beside it, since a paraphrase passes a grep. `review` flags a criterion that has a rule stated in two files. Owned by `plan` for the criterion, `review` for the check and `do` for keeping the copy out.
+
+## A criterion's factual claim is checked against the code and its sibling criteria before the epic runs
+**Promoted**: 2026-11-10
+**Class**: spec-drift
+**Source**: docs/epics/49-02-epic-auditor-checks.md, docs/epics/49-04-epic-waiting-on-user.md, docs/epics/49-06-epic-release.md, docs/epics/52-01-epic-deferred-full-run.md (`spec-drift` signals)
+**Scope**: plan, review
+
+A criterion states a fact that is wrong, found only by an audit after the story is built: fixture directories the files do not use, "story timing unchanged" where a waiting story's timing changes by design, "every story with test-proven criteria" where stories taking `existing` take no pass, a grep that "hits only two fields" while two sibling criteria require it to hit more. The criterion reads as true because nobody looked.
+
+Every factual claim in a criterion (a path, a count, "unchanged", "only X", "every Y") is checked when the epic is written and again when it is reviewed: against the code it names, with a grep or a listing, and against the other criteria and the spec requirement it has to hold with. The check cites the line it was made against. `plan` does it as it writes and `review` as it challenges. Owned by `plan` for the claim and `review` for the challenge.

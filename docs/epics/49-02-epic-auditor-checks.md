@@ -15,7 +15,7 @@
 **Satisfies**: FR1, FR3, FR7, FR14  
 **Amended**: criterion 4 ties the manifest statement to a story that took a red pass (a story whose criteria all take `existing` takes none) and drops "the full-suite result predates it", which cannot be said after a conflicted worktree merge re-runs the suite; a matching manifest already shows the pass left the tree as it was (2026-10-31) — cited: `cpm-next/skills/do/SKILL.md` step 4 ("A story with no test-proven criterion, or only `existing` ones, takes no pass") and `cpm-next/skills/do/worktree.md:23` (the lead runs the full suite after a conflicted merge)
 **Pivot deferred**: FR7's "The audit prompt says the red pass ended with a matching manifest and that the full-suite result predates it; a story with test-proven criteria and no such statement is a Warning" → docs/specifications/49-spec-cheaper-red-first-evidence.md (Story 1, 2026-10-31) — cited: `cpm-next/skills/do/SKILL.md` step 4 (a story with no test-proven criterion, or only `existing` ones, takes no pass) and `cpm-next/skills/do/worktree.md` (the lead re-runs the suite after a conflicted merge)  
-**Signal**: spec-drift — project — FR7 required the manifest statement of every story with test-proven criteria, though stories whose criteria all take `existing` take no pass (`cpm-next/agents/auditor.md:24`, audit round 1)
+**Signal**: spec-drift — project — FR7 required the manifest statement of every story with test-proven criteria, though stories whose criteria all take `existing` take no pass (`cpm-next/agents/auditor.md:24`, audit round 1) — promoted 2026-11-10
 
 **Acceptance Criteria**:
 

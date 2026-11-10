@@ -12,7 +12,7 @@
 **Audit**: pass (2026-10-31), 2 findings fixed — the last fix was not audited, at the user's decision
 **Blocked by**: —  
 **Satisfies**: FR3  
-**Signal**: definition-in-two-places — project — the leave-out rule was stated per group in the sweep and per signal in the fixed list's opening (`cpm-next/skills/library/SKILL.md` **Sweep**, `cpm-next/shared/fixed.md`, audit round 1)
+**Signal**: definition-in-two-places — project — the leave-out rule was stated per group in the sweep and per signal in the fixed list's opening (`cpm-next/skills/library/SKILL.md` **Sweep**, `cpm-next/shared/fixed.md`, audit round 1) — promoted 2026-11-10
 
 **Acceptance Criteria**:
 

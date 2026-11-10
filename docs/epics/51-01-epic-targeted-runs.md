@@ -15,7 +15,7 @@
 **Satisfies**: FR1, FR2, FR3, FR4, NFR3  
 **Effort**: high
 **Inline change**: the closing-story definition counts a story with only `[user]` criteria left, not only a story waiting on the user, since a user-checks story is blocked by the code story and so is not yet waiting; and the reasons list gains `deleted` and `renamed` (2026-11-09)  
-**Signal**: definition-in-two-places — project — the rule for which reruns are full was stated in the trigger list and again in the rerun sentence, with different scope (`cpm-next/shared/test-runs.md`, audit round 1)  
+**Signal**: definition-in-two-places — project — the rule for which reruns are full was stated in the trigger list and again in the rerun sentence, with different scope (`cpm-next/shared/test-runs.md`, audit round 1) — promoted 2026-11-10  
 
 **Acceptance Criteria**:
 

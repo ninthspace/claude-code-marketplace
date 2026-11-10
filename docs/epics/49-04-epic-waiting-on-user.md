@@ -13,7 +13,7 @@
 **Blocked by**: —  
 **Satisfies**: FR9  
 **Inline change**: criterion 4 names the fixture files as the modules `fixtures/waiting.ts` in each mod, with the verdicts as `EXPECTED` in the module, in place of directories `fixtures/waiting/` holding a file per story (2026-10-31)  
-**Signal**: spec-drift — project — the criterion named fixture directories where the files written are one module per mod (docs/epics/49-04-epic-waiting-on-user.md, Story 1, audit round 1)  
+**Signal**: spec-drift — project — the criterion named fixture directories where the files written are one module per mod (docs/epics/49-04-epic-waiting-on-user.md, Story 1, audit round 1) — promoted 2026-11-10  
 **Signal**: fix-not-carried-through — project — the waiting rule gained the `Waiting on user:` line but the same bullet's sentence about reporting steps still named only `[user]` criteria (`cpm-next/skills/status/SKILL.md:21`, audit round 1) — promoted 2026-10-31
 
 **Acceptance Criteria**:
@@ -41,7 +41,7 @@
 **Blocked by**: Story 1  
 **Satisfies**: FR10  
 **Inline change**: criterion 4 says what "story timing is unchanged" means: timings are still recorded as before, and a story shown as waiting is not shown in progress, so it has no running time and is not in the overview's in-progress list (2026-10-31)  
-**Signal**: spec-drift — project — the criterion said story timing was unchanged where a waiting story's displayed running time and in-progress listing change by design (`cpm-next-progress/hooks/register.ts:158`, `progress.ts:570`, audit round 1)  
+**Signal**: spec-drift — project — the criterion said story timing was unchanged where a waiting story's displayed running time and in-progress listing change by design (`cpm-next-progress/hooks/register.ts:158`, `progress.ts:570`, audit round 1) — promoted 2026-11-10  
 **Signal**: check-cannot-fail — project — several rules and tests had no recorded red (the empty-criteria guard, the parser test, the no-criteria test) (`cpm-next-progress/hooks/waiting.test.ts`, audit round 1)
 
 **Acceptance Criteria**:
