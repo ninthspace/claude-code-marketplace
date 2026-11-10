@@ -101,6 +101,9 @@ Retros in `docs/retros/` are legacy: no skill writes one, and `status` counts th
 - **Review takes several epics** (0.15.0): `review` accepts several epic paths, or a spec's epic prefix (`docs/epics/53`: every epic of it that is not `Withdrawn` or `Superseded` and has a `Pending` story), as one scope with one record. The record's **Source** lists every epic path in full, comma-separated.
 - **Status reads the record** (0.15.0): `status` suggests a review before a large epic's first run only when no record in `docs/reviews/` covers the epic (its **Source** names it, its title has no `— Story N`, and it is dated on or after the epic's last `**Amended**` line).
 - **Size** (0.15.0): `wc -w` over `plan`, `review` and `status` gives 3,485 at b562bc5 (1,584, 1,048 and 853) and 3,809 now (1,789, 1,106 and 914); `plan`'s and `review`'s files are loaded in full on every run of those skills.
+- **The challenge is recorded** (0.16.0): a challenge pass writes every finding into the spec's `## Challenge` section (the personas used, each finding and whether it was folded in, rejected or did not hold), instead of noting its rejections in Assumptions. `plan` lists the rejected findings that still govern under **Needs you**, and marks one confirmed or superseded as you decide.
+- **Review does not repeat the challenge** (0.16.0): `review` picks personas the challenge did not use where the roster allows, names any it reuses on the **Reviewers** line, and gives its personas a copy of the spec without its `## Challenge` section. A finding that repeats a rejected decision is recorded as decided at challenge and left out of **Needs you**, unless it is Critical against a rejection you have not confirmed, or raises something the decision did not cover; a line after **Fixed** gives how many it decided, with the record's path.
+- **Size** (0.16.0): `wc -w` over `plan`, `review` and the contract gives 5,927 at 622d29d (1,789, 1,106 and 3,032) and 6,596 now (1,847, 1,467 and 3,282); `plan`'s and `review`'s files are loaded in full on every run of those skills.
 - **calibrate retired**: with every skill setting its own model and effort, and the `cpm-next-models` mod holding them across turns, the per-run advice `calibrate` gave for cpm-next skills is built in. The exceptions it still covered (a greenfield `plan` at `high`, a subtle `party` on Opus) are a `/effort` or `/model` away, and model advice for work outside cpm-next is not this plugin's job.
 
 ## Upgrading to 0.9.0
@@ -130,3 +133,7 @@ Stories built earlier have no `full run due` or `fix due` line, and nothing is r
 ## Upgrading to 0.15.0
 
 Nothing to migrate. A `plan` run that writes qualifying epics now spends three more Opus subagents and a longer finish on the review; say not to review in the request to skip it. Review records written earlier stay as they are: `status` reads a record's **Source** paths, so a range such as `48-01 … 48-08` names only its two ends.
+
+## Upgrading to 0.16.0
+
+Specs written earlier have no `## Challenge` section and are reviewed as before, with nothing decided at challenge. A `plan` run that challenges a spec now writes the section, and the next review of its epics picks different personas than the challenge used, where the roster allows.

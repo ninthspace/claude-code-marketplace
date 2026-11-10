@@ -212,7 +212,7 @@
       <li>A first walkthrough: plan, review, do one story, status</li>
       <li>Unattended runs, checks only you can make, how it learns, story effort, the two agents, staying up to date</li>
     </ul>
-    <p class="dim small">Covers cpm-next 0.15.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
+    <p class="dim small">Covers cpm-next 0.16.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
   </div>
 </section>
@@ -446,7 +446,7 @@
     <ol class="steps">
       <li><b>Takes stock.</b> Reads <code>docs/</code>, <code>README.md</code>, <code>CLAUDE.md</code> and, in a brownfield project, the code and test setup. It says what exists, what is missing and what this run will produce, then carries on.</li>
       <li><b>Asks once.</b> Questions only you can answer, which would change scope, cost or a hard-to-reverse choice, come in one batch of up to four, each with a recommended default. Everything else it decides and records under Assumptions.</li>
-      <li><b>Writes what is missing.</b> Brief if needed, then the spec (MoSCoW requirements with labels such as <code>FR1</code>, measurable NFRs, decisions, scope, testing strategy), then epics. A non-trivial spec goes through a challenge pass by two or three personas first.</li>
+      <li><b>Writes what is missing.</b> Brief if needed, then the spec (MoSCoW requirements with labels such as <code>FR1</code>, measurable NFRs, decisions, scope, testing strategy), then epics. A non-trivial spec goes through a challenge pass by two or three personas first, and the findings are recorded in the spec.</li>
       <li><b>Applies what the project has learned.</b> Library lessons and recurring failures that bear on an epic are written into its criteria and named in its <code>**Lessons**</code> line. Criteria are tagged by who proves them, and a spec's <code>[user]</code> checks go in one final user-checks epic, so no other work waits on you.</li>
       <li><b>Finishes</b> with three headings: <b>Needs you</b>, <b>Written</b> and <b>Next</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation, and runs <code>/cpm-next:review</code> on the epics that qualify.</li>
     </ol>
@@ -461,9 +461,9 @@
     <h2>Review the epic before building it</h2>
 <pre><code>/cpm-next:review docs/epics/01-01-epic-loans-csv-export.md</code></pre>
     <ul class="bullets">
-      <li>Three roster personas, each in its own subagent on Opus, read the epic independently. They get none of the conversation that produced the plan.</li>
+      <li>Three roster personas, each in its own subagent on Opus, read the epic independently. They get none of the conversation that produced the plan, and they are picked from outside the personas that challenged the spec where the roster allows.</li>
       <li>They look for criteria <code>do</code> could not verify, missing edge cases, work that looks simple and is not, wrong <code>**Blocked by**</code> lines, Must Have requirements no story covers, and conflicts with ADRs, the library or the code.</li>
-      <li>Critical and Warning findings with a clear fix are fixed in <code>Pending</code> stories, with an <code>**Amended**</code> line. Findings that would change scope go to <b>Needs you</b>, unfixed, and it then takes you through them one at a time, with a recommendation.</li>
+      <li>Critical and Warning findings with a clear fix are fixed in <code>Pending</code> stories, with an <code>**Amended**</code> line. Findings that would change scope go to <b>Needs you</b>, unfixed, and it then takes you through them one at a time, with a recommendation. A finding that repeats a rejection the challenge recorded is counted as decided at challenge and left out of <b>Needs you</b>, unless it is Critical against a rejection you have not confirmed or raises something new.</li>
       <li>A review record is written to <code>docs/reviews/</code>. <code>plan</code> runs this review itself for an epic that qualifies; run it by hand for any other, or for a spec's epics together with <code>/cpm-next:review docs/epics/01</code>.</li>
     </ul>
     <div class="table-wrap">

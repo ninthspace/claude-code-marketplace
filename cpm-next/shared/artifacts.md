@@ -90,7 +90,15 @@ Omit a section that would only contain filler. Keep Assumptions: it is where any
 {Test command, which tags map to which suites, integration boundaries.}
 
 ## Assumptions
+
+## Challenge
+**Personas**: {name}, … ({YYYY-MM-DD})
+- {name}[ / {name}]: {finding} → Folded in: {where}
+- {name}[ / {name}]: {finding} → Rejected: {why}
+- {name}[ / {name}]: {finding} → Does not hold: {what the files show}
 ```
+
+`## Challenge` is written by a challenge pass and only by one: a spec with no pass has no section. Its first line is `**Personas**:`, the roster `name` values of the personas used, from the roster `review` uses (the project's `docs/agents/roster.yaml`, else the plugin's); it is the only field line in the section, and every other line is a bullet, one per finding after merging duplicates and one per part of a finding partly acted on. A pass that found nothing has the bullet `- none`. A later pass adds its own `**Personas**:` line and bullets below, and the latest bullet on a point governs. A change to a point a bullet decided appends ` — superseded ({YYYY-MM-DD}): {what changed}` to it, and the user's confirmation of a `Rejected` bullet appends ` — confirmed by the user ({YYYY-MM-DD})`.
 
 `[browser]` marks a criterion proved only by a rendered page. `[manual]` marks a step `do` performs in the session outside the test suite. `[user]` marks one only the user can prove: a production run, a deploy, a sign-off, a third-party account.
 
@@ -186,7 +194,7 @@ A `process` signal ends its description with the version, a `project` signal doe
 ```
 
 - `project` means the cause is in this codebase; `process` means a cpm-next rule could have prevented it, and the parenthesis then names the cpm-next file and step. A `process` signal also carries ` — cpm-next {version}`, the `version` in the installed plugin's `.claude-plugin/plugin.json`, so a report can tell a failure a later release fixed from one still open; a `project` signal carries none.
-- A class slug is kebab-case and names the kind of failure, not the instance. Reuse a slug already in use, a library lesson's `**Class**` or a seed before making one; use a narrower slug when one class holds two distinct rules. Seeds: `check-cannot-fail`, `shared-state-collision`, `unprovable-in-session`, `instance-not-rule`, `spec-drift`, `fix-not-carried-through`, `definition-in-two-places`, `missed-regression`.
+- A class slug is kebab-case and names the kind of failure, not the instance. Reuse a slug already in use, a library lesson's `**Class**` or a seed before making one; use a narrower slug when one class holds two distinct rules. Seeds: `check-cannot-fail`, `shared-state-collision`, `unprovable-in-session`, `instance-not-rule`, `spec-drift`, `fix-not-carried-through`, `definition-in-two-places`, `missed-regression`, `decision-relitigated`.
 - A signal reference is `{epic path} → Story {N} → {slug}` or `{quick path} → {slug}`. The `recurs` reference is any lesson reference form under **Fields on the epic header**, or a signal reference.
 - `raised` marks a signal listed as a promotion candidate; `promoted` one written to the library; `declined` one the user refused. A signal matching a declined one is declined too.
 
@@ -203,8 +211,8 @@ Retros in `docs/retros/` are legacy input that no skill writes, and `library` de
 
 **Date**: {YYYY-MM-DD}
 **Source**: {epic path}{, epic path …}
-**Reviewers**: {persona display names}
-**Findings**: {n} ({critical} critical, {warning} warnings, {suggestion} suggestions)
+**Reviewers**: {persona display names}{ — reused from the challenge: {name}, …}
+**Findings**: {n} ({critical} critical, {warning} warnings, {suggestion} suggestions){; {m} decided at challenge}
 
 ## Summary
 
@@ -216,7 +224,11 @@ Retros in `docs/retros/` are legacy input that no skill writes, and `library` de
 - Fixed: {finding} → {what changed in the epic}
 - Needs you: {finding} → {the decision it waits on}
 - Not acted on: {finding} → {why}
+- Decided at challenge: {finding} → {spec path} **Challenge** ({date}): {names}: {recorded finding} → Rejected: {why}
+- Reopens challenge: {finding} → {recorded decision}; {what was done}
 ```
+
+A finding decided at challenge is listed under Findings with its persona's severity and counted in `{n}` and in `{m}`; `Reopens challenge:` is the finding's single Remediation entry, in place of `Fixed:`, `Needs you:` or `Not acted on:`.
 
 A review of several epics lists every epic path in **Source**, in full and comma-separated (a prefix expanded, never a range), and takes the spec's title with `— epics`.
 

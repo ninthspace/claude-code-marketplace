@@ -36,7 +36,7 @@
 **Audit**: pass (2026-10-31), 5 findings fixed — the last fix was not audited, at the user's decision; with several reported groups the title names only their number, which departs from FR5's "names the file, the step and the class" to keep project-derived text out
 **Blocked by**: Story 1  
 **Satisfies**: FR4, FR5, FR6  
-**Signal**: instance-not-rule — project — the draft's privacy rule banned names, paths, code and quotes but not project terms, and gave the user no way to change the draft (`cpm-next/skills/library/SKILL.md` **Sweep**, audit round 1)  
+**Signal**: instance-not-rule — project — the draft's privacy rule banned names, paths, code and quotes but not project terms, and gave the user no way to change the draft (`cpm-next/skills/library/SKILL.md` **Sweep**, audit round 1) — raised 2026-11-10  
 **Effort**: high
 
 **Acceptance Criteria**:
