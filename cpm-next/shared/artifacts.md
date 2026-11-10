@@ -199,10 +199,10 @@ Retros in `docs/retros/` are legacy input that no skill writes, and `library` de
 ## Review
 
 ```markdown
-# Review: {Epic title, or Epic title — Story N}
+# Review: {Epic title, or Epic title — Story N, or Spec title — epics}
 
 **Date**: {YYYY-MM-DD}
-**Source**: {epic path}
+**Source**: {epic path}{, epic path …}
 **Reviewers**: {persona display names}
 **Findings**: {n} ({critical} critical, {warning} warnings, {suggestion} suggestions)
 
@@ -217,6 +217,8 @@ Retros in `docs/retros/` are legacy input that no skill writes, and `library` de
 - Needs you: {finding} → {the decision it waits on}
 - Not acted on: {finding} → {why}
 ```
+
+A review of several epics lists every epic path in **Source**, in full and comma-separated (a prefix expanded, never a range), and takes the spec's title with `— epics`.
 
 Critical means the story can't be built correctly as written. Warning means it can be built but will probably go wrong. Suggestion means it would be better but won't go wrong.
 

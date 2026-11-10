@@ -97,6 +97,10 @@ Retros in `docs/retros/` are legacy: no skill writes one, and `status` counts th
 - **A failing deferred run** (0.14.0): every regression is fixed wherever its cause lies and audited once, in a scoped round with its own prompt, recorded `red: {failure text} — deferred full run, before the fix`; a second failing run, or a scoped round that fails, blocks the story. Each scoped round writes a `missed-regression` signal.
 - **One shared run for a batch** (0.14.0): the stories of a parallel batch wait for one deferred full run, taken once each has passed its audit, been blocked or is waiting on the user; `sibling Story {n}` is no longer a reason.
 - **Size** (0.14.0): `wc -w` over `do`, `worktree.md`, the auditor and the contract gives 11,074 at 5faec1b and 11,849 now (`do`'s own file, loaded in full on every run, gains 403 words, from 6,012 to 6,415), plus 1,020 words in `shared/test-runs.md` at 5faec1b and 1,951 now, and `status` 808 and 853; the 0.13.0 count above did not include `status`.
+- **Plan runs the review** (0.15.0): when a `plan` run writes or amends epics, it now runs `/cpm-next:review` itself on the ones that qualify, after its own **Needs you** items, instead of suggesting it under **Next**. It says in one line which epics it sends and why, and which it does not. A review finding that reaches the spec is settled in the same run; `plan` restates **Written** and **Next** at the end. Say not to review in the request and none runs.
+- **Review takes several epics** (0.15.0): `review` accepts several epic paths, or a spec's epic prefix (`docs/epics/53`: every epic of it that is not `Withdrawn` or `Superseded` and has a `Pending` story), as one scope with one record. The record's **Source** lists every epic path in full, comma-separated.
+- **Status reads the record** (0.15.0): `status` suggests a review before a large epic's first run only when no record in `docs/reviews/` covers the epic (its **Source** names it, its title has no `— Story N`, and it is dated on or after the epic's last `**Amended**` line).
+- **Size** (0.15.0): `wc -w` over `plan`, `review` and `status` gives 3,485 at b562bc5 (1,584, 1,048 and 853) and 3,809 now (1,789, 1,106 and 914); `plan`'s and `review`'s files are loaded in full on every run of those skills.
 - **calibrate retired**: with every skill setting its own model and effort, and the `cpm-next-models` mod holding them across turns, the per-run advice `calibrate` gave for cpm-next skills is built in. The exceptions it still covered (a greenfield `plan` at `high`, a subtle `party` on Opus) are a `/effort` or `/model` away, and model advice for work outside cpm-next is not this plugin's job.
 
 ## Upgrading to 0.9.0
@@ -122,3 +126,7 @@ Stories built earlier have no `**Test run**` line; nothing is rewritten. A proje
 ## Upgrading to 0.14.0
 
 Stories built earlier have no `full run due` or `fix due` line, and nothing is rewritten. A story already `Complete` is not touched; a story left `In Progress` with a closed audit is picked up by `/cpm-next:do` as it was. Update `status` along with `do`: an older `status` reads a story whose `**Audit**` line has findings fixed and a new form as a suspect record.
+
+## Upgrading to 0.15.0
+
+Nothing to migrate. A `plan` run that writes qualifying epics now spends three more Opus subagents and a longer finish on the review; say not to review in the request to skip it. Review records written earlier stay as they are: `status` reads a record's **Source** paths, so a range such as `48-01 … 48-08` names only its two ends.

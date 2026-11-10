@@ -340,7 +340,7 @@
   <header class="hero">
     <h1>cpm-next training guide</h1>
     <p>A reference for developers who plan and build with cpm-next in Claude Code: what to install, what each skill reads and writes, how <code>do</code> builds and audits work, how model and effort are set, and how to follow progress.</p>
-    <div class="meta">Covers cpm-next 0.14.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0, whats-next 0.3.0 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
+    <div class="meta">Covers cpm-next 0.15.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0, whats-next 0.3.0 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
   </header>
 
   <div class="note" id="changed">
@@ -381,7 +381,7 @@
     <ol class="flow">
       <li><code>/cpm-next:party</code> to talk an idea through (optional).</li>
       <li><code>/cpm-next:plan</code> to write the brief, spec and epics. It reads what exists, asks its questions in one batch, and fills only the gaps. In a brownfield project it grounds every requirement in the current code.</li>
-      <li><code>/cpm-next:review</code> before a large or risky epic (optional).</li>
+      <li><code>/cpm-next:review</code>: <code>plan</code> runs it for a qualifying epic, and you run it yourself for any other.</li>
       <li><code>/cpm-next:do</code> to build: one story (<code>/cpm-next:do 3</code>), one epic, one spec's epics (<code>all 04</code>), or <code>all</code>, which runs unattended and marks a blocked story instead of stopping. Each acceptance criterion gets an <code>Evidence</code> line, and each story is audited before it closes.</li>
       <li><code>/cpm-next:status</code> whenever you return to the project.</li>
     </ol>
@@ -722,10 +722,10 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 - {observation}: {what it means for the next piece of work}</code></pre>
     <p>An observation that has been promoted to the library, or has stopped being true, is retired in place rather than deleted, by appending <code>**Retired {YYYY-MM-DD}**: {reason, or "promoted to {library path}"}</code> to its bullet. Every skill skips a retired observation. Removing the marker restores it.</p>
     <h4>Review</h4>
-<pre><code># Review: {Epic title, or Epic title — Story N}
+<pre><code># Review: {Epic title, or Epic title — Story N, or Spec title — epics}
 
 **Date**: {YYYY-MM-DD}
-**Source**: {epic path}
+**Source**: {epic path}{, epic path …}
 **Reviewers**: {persona display names}
 **Findings**: {n} ({critical} critical, {warning} warnings, {suggestion} suggestions)
 
@@ -816,7 +816,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
         <li>A change of direction is an amendment in place with an <code>**Amended**</code> line, carried down to every affected <code>Pending</code> story. A <code>Complete</code> story is never rewritten; a new one is added. Every <code>**Pivot deferred**</code> line pointing at a file it amends is resolved and removed.</li>
         <li>Conflicts between documents, or between documents and code, are reported with both sources cited.</li>
       </ul>
-      <p>The run ends with three headings: <strong>Needs you</strong> (open decisions and the assumptions most worth checking), <strong>Written</strong> (each path, one line each) and <strong>Next</strong> (normally <code>/cpm-next:do {first epic}</code>, or <code>/cpm-next:do all {spec}</code> when the spec's epics are ready to run unattended, with <code>/cpm-next:review {epic}</code> first when an epic is large, touches unfamiliar code, or is about to run unattended). It then takes you through each <strong>Needs you</strong> item one at a time, as described under <a href="#do-finish">Finishing a run</a>, and amends the document it concerns before raising the next.</p>
+      <p>The run ends with three headings: <strong>Needs you</strong> (open decisions and the assumptions most worth checking), <strong>Written</strong> (each path, one line each) and <strong>Next</strong> (normally <code>/cpm-next:do {first epic}</code>, or <code>/cpm-next:do all {spec}</code> when the spec's epics are ready to run unattended). It then takes you through each <strong>Needs you</strong> item one at a time, as described under <a href="#do-finish">Finishing a run</a>, and amends the document it concerns before raising the next. After the last item it runs <code>/cpm-next:review</code> itself on the epics that qualify, naming in a line which it sends and why, settles any review finding that reaches the spec in the same run, and restates <strong>Written</strong> and <strong>Next</strong>.</p>
       <h4>Typical invocations</h4>
 <pre><code>/cpm-next:plan a CSV export for the loans report
 /cpm-next:plan docs/discussions/05-discussion-export-queueing.md
@@ -832,9 +832,9 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
       <div class="facts"><span>model: opus</span><span>effort: medium</span><span>writes: docs/reviews/, Pending stories</span></div>
       <dl class="fields">
         <dt>When to use it</dt>
-        <dd>Before running a large or risky epic, after a pivot, or whenever you want a second opinion on a plan. It finds what would make the epics fail when <code>do</code> runs them, while that is still cheap to fix.</dd>
+        <dd><code>plan</code> runs it for a qualifying epic. Run it yourself for any other, or whenever you want a second opinion on a plan. It finds what would make the epics fail when <code>do</code> runs them, while that is still cheap to fix.</dd>
         <dt>Scope</dt>
-        <dd>An epic path (that epic); an epic path and a story number (that story, in its epic's context); <code>all</code> (every epic with no story started); nothing (the lowest-numbered epic with no story started, and it says which).</dd>
+        <dd>An epic path (that epic); an epic path and a story number (that story, in its epic's context); several epic paths, or a spec's epic prefix such as <code>docs/epics/04</code> (the spec's epics that are not <code>Withdrawn</code> or <code>Superseded</code> and have a <code>Pending</code> story, as one scope with one record); <code>all</code> (every epic with no story started); nothing (the lowest-numbered epic with no story started, and it says which).</dd>
         <dt>What it reads</dt>
         <dd>The epics, each epic's source spec, the ADRs, <code>docs/library/</code>, recurring signals, legacy retro observations not marked retired, and in a brownfield project the code the stories touch.</dd>
         <dt>How it reviews</dt>
@@ -844,11 +844,12 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
         <dt>Finish line</dt>
         <dd>A review record exists for the scope, every Critical and Warning finding is fixed or listed under <strong>Needs you</strong>, and each epic with Pending stories is at least as ready for <code>do</code> as before.</dd>
         <dt>What it asks you</dt>
-        <dd>Nothing during the run. It ends with <strong>Needs you</strong> (Critical first, or "Nothing"), <strong>Fixed</strong> (one line per change) and <strong>Next</strong> (<code>/cpm-next:do {epic}</code>, or <code>/cpm-next:plan {spec}</code> when a finding reaches back into the spec). It then takes you through each <strong>Needs you</strong> finding one at a time, Critical first, with a recommendation, fixing the <code>Pending</code> story (or adding one) and updating the Remediation entry before the next. A finding that reaches back into the spec is left to <code>/cpm-next:plan</code>.</dd>
+        <dd>Nothing during the run. It ends with <strong>Needs you</strong> (Critical first, or "Nothing"), <strong>Fixed</strong> (one line per change) and <strong>Next</strong> (<code>/cpm-next:do {epic}</code>, or <code>/cpm-next:plan {spec}</code> when a finding reaches back into the spec). It then takes you through each <strong>Needs you</strong> finding one at a time, Critical first, with a recommendation, fixing the <code>Pending</code> story (or adding one) and updating the Remediation entry before the next. A finding that reaches back into the spec is left to <code>/cpm-next:plan</code>, which settles it in the same run when <code>plan</code> started the review.</dd>
       </dl>
       <h4>Typical invocations</h4>
 <pre><code>/cpm-next:review docs/epics/04-01-epic-loans-csv-export.md
 /cpm-next:review docs/epics/04-01-epic-loans-csv-export.md 2
+/cpm-next:review docs/epics/04
 /cpm-next:review all
 /cpm-next:review</code></pre>
     </div>
@@ -1342,7 +1343,7 @@ summary: &gt;
     <p>With no code and no documents, start from an idea:</p>
 <pre><code>/cpm-next:party a reading-room reservation system for Starling Library      # optional: hear the trade-offs first
 /cpm-next:plan docs/discussions/01-discussion-reading-rooms.md
-/cpm-next:review                                         # optional, for a large or risky epic
+/cpm-next:review docs/epics/01                           # plan runs it for a qualifying epic; run it yourself for any other
 /cpm-next:do all 01</code></pre>
     <p><code>plan</code> writes a brief when the problem, users or value aren't written down anywhere, then the spec, then the epics. In a greenfield project it has no code to ground requirements in, so its Assumptions section carries more of the decisions; read it before running <code>do</code>.</p>
 
@@ -1357,7 +1358,7 @@ summary: &gt;
       <li>Run <code>/cpm-next:plan</code> with the change described. It amends the existing brief, spec or epic in place with an <code>**Amended**</code> line and carries the change down to every affected <code>Pending</code> story in the same pass.</li>
       <li><code>Complete</code> stories are never rewritten; new work becomes a new story.</li>
       <li>Any <code>**Pivot deferred**</code> lines left by an unattended <code>do</code> run, pointing at a file <code>plan</code> amends, are resolved and removed. <code>/cpm-next:status</code> lists outstanding ones under <strong>Needs you</strong>.</li>
-      <li>After a pivot, <code>/cpm-next:review</code> is worth running before the next build.</li>
+      <li>After a pivot, <code>plan</code> runs <code>/cpm-next:review</code> on the amended epics that qualify; run it yourself for any other before the next build.</li>
       <li>Marking an epic <code>Superseded</code> or <code>Withdrawn</code> is your decision; the skills never set those values. Such an epic never satisfies a dependency.</li>
     </ul>
 
@@ -1496,6 +1497,7 @@ summary: &gt;
         <tr><td><code>/cpm-next:plan just the brief</code> / <code>up to spec</code></td><td>Stops at a nearer target</td></tr>
         <tr><td><code>/cpm-next:review {epic} [story]</code></td><td>Persona review of an epic or one story</td></tr>
         <tr><td><code>/cpm-next:review all</code></td><td>Reviews every epic with no story started</td></tr>
+        <tr><td><code>/cpm-next:review docs/epics/{nn}</code></td><td>Reviews a spec's open epics as one scope with one record</td></tr>
         <tr><td><code>/cpm-next:do</code></td><td>Builds the lowest-numbered In Progress epic, else the next unstarted one</td></tr>
         <tr><td><code>/cpm-next:do {story | task}</code></td><td>Builds one story (<code>3</code>) or task (<code>2.1</code>)</td></tr>
         <tr><td><code>/cpm-next:do {epic path}</code></td><td>Builds one epic</td></tr>

@@ -212,7 +212,7 @@
       <li>A first walkthrough: plan, review, do one story, status</li>
       <li>Unattended runs, checks only you can make, how it learns, story effort, the two agents, staying up to date</li>
     </ul>
-    <p class="dim small">Covers cpm-next 0.14.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
+    <p class="dim small">Covers cpm-next 0.15.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
   </div>
 </section>
@@ -250,7 +250,7 @@
         </tbody>
       </table>
     </div>
-    <p class="dim small"><code>party</code> and <code>review</code> are optional. The minimum path is <code>plan</code> then <code>do</code>.</p>
+    <p class="dim small"><code>party</code> is optional, and <code>review</code> is run by <code>plan</code> for a qualifying epic (run it yourself for any other). The minimum path is <code>plan</code> then <code>do</code>.</p>
   </div>
 </section>
 
@@ -448,7 +448,7 @@
       <li><b>Asks once.</b> Questions only you can answer, which would change scope, cost or a hard-to-reverse choice, come in one batch of up to four, each with a recommended default. Everything else it decides and records under Assumptions.</li>
       <li><b>Writes what is missing.</b> Brief if needed, then the spec (MoSCoW requirements with labels such as <code>FR1</code>, measurable NFRs, decisions, scope, testing strategy), then epics. A non-trivial spec goes through a challenge pass by two or three personas first.</li>
       <li><b>Applies what the project has learned.</b> Library lessons and recurring failures that bear on an epic are written into its criteria and named in its <code>**Lessons**</code> line. Criteria are tagged by who proves them, and a spec's <code>[user]</code> checks go in one final user-checks epic, so no other work waits on you.</li>
-      <li><b>Finishes</b> with three headings: <b>Needs you</b>, <b>Written</b> and <b>Next</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation.</li>
+      <li><b>Finishes</b> with three headings: <b>Needs you</b>, <b>Written</b> and <b>Next</b>, then takes you through each <b>Needs you</b> item one at a time, with a recommendation, and runs <code>/cpm-next:review</code> on the epics that qualify.</li>
     </ol>
     <p class="small dim">To talk an idea through first, run <code>/cpm-next:party {topic}</code>, type <b>wrap up</b> when done, then <code>/cpm-next:plan {record path}</code>. Do not type "exit" or "quit": those close Claude Code itself.</p>
   </div>
@@ -464,7 +464,7 @@
       <li>Three roster personas, each in its own subagent on Opus, read the epic independently. They get none of the conversation that produced the plan.</li>
       <li>They look for criteria <code>do</code> could not verify, missing edge cases, work that looks simple and is not, wrong <code>**Blocked by**</code> lines, Must Have requirements no story covers, and conflicts with ADRs, the library or the code.</li>
       <li>Critical and Warning findings with a clear fix are fixed in <code>Pending</code> stories, with an <code>**Amended**</code> line. Findings that would change scope go to <b>Needs you</b>, unfixed, and it then takes you through them one at a time, with a recommendation.</li>
-      <li>A review record is written to <code>docs/reviews/</code>.</li>
+      <li>A review record is written to <code>docs/reviews/</code>. <code>plan</code> runs this review itself for an epic that qualifies; run it by hand for any other, or for a spec's epics together with <code>/cpm-next:review docs/epics/01</code>.</li>
     </ul>
     <div class="table-wrap">
       <table>
@@ -665,7 +665,7 @@ claude plugin update cpm-next@ninthspace-marketplace   <span class="c"># and eac
 <pre><code><span class="c"># Plan</span>
 /cpm-next:party {topic}           <span class="c"># or a persona's name for a one-to-one</span>
 /cpm-next:plan {description|path}
-/cpm-next:review {epic} | all
+/cpm-next:review {epic} | docs/epics/{nn} | all
 
 <span class="c"># Build</span>
 /cpm-next:do                      <span class="c"># next epic</span>

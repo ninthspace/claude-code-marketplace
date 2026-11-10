@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/53-spec-plan-runs-the-review.md  
 **Date**: 2026-11-10  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Epic 53-01-epic-plan-runs-the-review  
 **Amended**: review 10 (docs/reviews/10-review-plan-runs-the-review.md) — a named base commit, the onboarding and command-table passages in the floor, a rule grep over the docs, the maintenance record for the review record `status` reads, the tag check described (2026-11-10)  
 **Lessons**: docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (Story 1), docs/library/01-library-lessons-learned.md → "A check that passes may be passing for a reason other than the one you want" (Story 1), docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 1), docs/library/01-library-lessons-learned.md → "A criterion's factual claim is checked against the code and its sibling criteria before the epic runs" (Story 1)
@@ -11,26 +11,39 @@
 
 ## Release with the docs
 **Story**: 1  
-**Status**: Pending  
+**Status**: Complete  
+**Audit**: pass (2026-11-10), 5 findings fixed  
 **Blocked by**: —  
-**Satisfies**: FR8, NFR2, NFR3
+**Satisfies**: FR8, NFR2, NFR3  
+**Signal**: fix-not-carried-through — project — the first pass over the guides left the training guide's pivot line (1361) and the "(optional)" label in README 92, guide 384 and the presentation card on the old flow, and the maintenance record named a status test that does not exist (audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (the same class, a library lesson)  
+**Test run**: 1 (1 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 124 passed, 0 failed — tree 3403352584fc86c16eb1063f2969ce5bad187156 — closes epic; untested: the three guides, plugin.json, marketplace.json — cpm-next-training-guide.html → deferred full run; cpm-next-onboarding.html → deferred full run; cpm-next-presentation.html → deferred full run; cpm-next/.claude-plugin/plugin.json → deferred full run; .claude-plugin/marketplace.json → deferred full run
 
 **Acceptance Criteria**:
 
 - `cpm-next/README.md` gains `(0.15.0)` bullets after the 0.14.0 bullets and an **Upgrading to 0.15.0** section, saying `plan` runs the review for a qualifying epic and `review` takes several epics or a spec's prefix; its skills table rows for `plan` and `review` (lines 8 and 11) are read and changed only where the finish line changes; `git diff {base} -U0 -- cpm-next/README.md` removes no line of an earlier entry `[manual]`
+  - Evidence: `cpm-next/README.md` holds four `(0.15.0)` bullets (**Plan runs the review**, **Review takes several epics**, **Status reads the record**, **Size**) after the 0.14.0 bullets and **Upgrading to 0.15.0** as the last section; the skills table rows for `plan` (line 8, "Artefacts down to the target exist and trace upward") and `review` (line 11, "Critical and Warning findings fixed in Pending stories or waiting on the user; review record written") read and left unchanged, their finish lines not changing; `git diff b562bc5 -U0 -- cpm-next/README.md | grep -c '^-[^-]'` gives 0 — red: n/a — manual
 - Every passage that calls the review optional, tells the user to run it after `plan`, or gives its scope is updated to one phrasing: `plan` runs it for a qualifying epic, and you run it yourself for any other. `grep -n -i "review" README.md cpm-next/README.md cpm-next-training-guide.html cpm-next-onboarding.html cpm-next-presentation.html`, each hit read and accounted for. Floor: root `README.md` 13 and 92; the training guide's quick start (384), plan finishing passage (819), review section (831-853, including 835 and 851), review-record template (725), worked example (1345), pivot line (1360) and command table (1497-1498); onboarding 212, 253, 461-467 and 668; the presentation's review card (269) `[manual]`
+  - Evidence: `grep -n -i "review"` over the five files hits README.md 7, cpm-next/README.md 21, training guide 40, onboarding 9, presentation 11. Read each. Changed to the one phrasing (plan runs it for a qualifying epic, you run it yourself for any other): README.md 92; training guide 384, 725 (the template: `Spec title — epics`, `{epic path}{, epic path …}`), 819 (plan's finishing paragraph, the rule left out), 835 (when to use; "after a pivot" dropped), 837 (scope), 847 (spec-reaching finding settled in the same run), 852 (the prefix invocation), 1346 (the worked example, with an epic path), 1361 (the pivot line: plan runs it on amended epics that qualify), 1500 (the command table row); onboarding 253, 451 (the plan slide), 467 and 668; presentation 269 (the tag now reads `by plan`). "optional" no longer sits beside the review in any of the five files (`grep -n -i optional … | grep -i review` hits only onboarding 253, which says `party` is optional). Read and unchanged because they hold no claim about who runs the review or its scope: README.md 13, 18, 86, 88, 369, 489; training guide 290, 297, 354, 368, 378, 425, 456, 651, 655, 719, 724, 729-732, 798, 830-832, 840-845, 850-851, 853-854, 927-968, 1184, 1196, 1498-1499, 1543; onboarding 212, 229, 246, 276, 461-466; presentation 246, 260, 294-296, 334, 586-587, 639, 686, 715 — red: n/a — manual
 - The docs restate no part of `plan`'s rule: `grep -n -i "unfamiliar" README.md cpm-next/README.md cpm-next-training-guide.html cpm-next-onboarding.html cpm-next-presentation.html` gives no hit (training guide 819 gives one at `{base}`), and the passages that name the review read beside it `[manual]`
+  - Evidence: `grep -n -i "unfamiliar" README.md cpm-next/README.md cpm-next-training-guide.html cpm-next-onboarding.html cpm-next-presentation.html` gives no hit (it gave one, training guide 819, at b562bc5); the passages that name the review (README.md 92, training guide 384, 819, 835, onboarding 253, presentation 269) read beside it say that `plan` runs it for a qualifying epic and none gives the rule's terms — red: n/a — manual
 - Each of the three HTML files passes a tag-balance check: a Python `html.parser` script in the scratchpad that pushes each start tag on a stack and pops it on the matching end tag, skipping void elements and counting a mismatch, gives 0 mismatches and 0 unclosed tags; control: the same script over `git show {base}:cpm-next-training-guide.html` gives 0 and 0 `[manual]`
+  - Evidence: a Python `html.parser` script in the scratchpad (a stack: push on a start tag, pop on the matching end tag, void elements skipped, a mismatch counted) over the three files after the last edit: training guide 0 mismatches 0 unclosed, onboarding 0 and 0, presentation 0 and 0; control: the same script over `git show b562bc5:cpm-next-training-guide.html` gives 0 and 0 — red: n/a — manual
 - The three HTML files' version lines read cpm-next 0.15.0 and the current mod versions in `.claude-plugin/marketplace.json` `[manual]`
+  - Evidence: `grep -n "Covers cpm-next\|Describes cpm-next" cpm-next-*.html` reads cpm-next 0.15.0 with cpm-next-models 0.3.3, cpm-next-progress 0.8.0 and whats-next 0.3.0 (the training guide also plugin-sync 0.1.0), matching `.claude-plugin/marketplace.json` — red: n/a — manual
 - `cpm-next/.claude-plugin/plugin.json` and its marketplace entry read `0.15.0`, the marketplace `4.0.11`; `git diff {base} -- .claude-plugin/marketplace.json` changes no other plugin's version line `[manual]`
+  - Evidence: `git diff b562bc5 -U0 -- .claude-plugin/marketplace.json cpm-next/.claude-plugin/plugin.json` changes only the marketplace `4.0.10` → `4.0.11`, the cpm-next entry `0.14.0` → `0.15.0` and `plugin.json` `0.14.0` → `0.15.0`; no other version line changed — red: n/a — manual
 - `cpm-next/README.md` gains a **Size** (0.15.0) bullet: `wc -w` over `plan`, `review` and `status` at `{base}` and after `[manual]`
+  - Evidence: `cpm-next/README.md` **Size** (0.15.0): `wc -w` over `plan`, `review` and `status` gives 3,485 at b562bc5 (1,584, 1,048, 853) and 3,809 now (1,789, 1,106, 914), matching `git show b562bc5:{file} | wc -w` and `wc -w` — red: n/a — manual
 - `docs/maintenance/README.md` gains a record that `status` reads the review record's **Source** and date, which `review` writes in the contract's form, so a change to either breaks the other; `shared/fixed.md` is unchanged (`git diff {base} --stat -- cpm-next/shared/fixed.md` is empty) `[manual]`
+  - Evidence: `docs/maintenance/README.md` gains **The review record's Source and date** (writer `review` and the contract, reader `status` **Next**, which also compares the date with the epic's last `**Amended**` line; a range such as `48-01 … 48-08` names only its two ends; no mod reads the records) before **Unknown fields in the mods**; `git diff b562bc5 --stat -- cpm-next/shared/fixed.md` is empty (0 lines) — red: n/a — manual
 - `claude plugin validate cpm-next` and `claude plugin validate .` pass `[manual]`
+  - Evidence: `claude plugin validate cpm-next` — Validation passed; `claude plugin validate .` — Validation passed — red: n/a — manual
 - `claude plugin test` passes for cpm-next, cpm-next-models, cpm-next-progress and whats-next `[manual]`
+  - Evidence: `claude plugin test`: cpm-next 15 pass, cpm-next-models 19 pass, cpm-next-progress 56 pass, whats-next 34 pass, 0 failed, the deferred full run taken after the last audit with the story snapshot unchanged since it (baseline before the run: 15, 19, 56, 34) — red: n/a — manual
 
 ### Write the docs and versions; run the checks
 **Task**: 1.1  
 **Description**: Edit the READMEs, the three HTML guides, the maintenance record and the JSON files, and run the commands.  
-**Status**: Pending
+**Status**: Complete
 
 ---
