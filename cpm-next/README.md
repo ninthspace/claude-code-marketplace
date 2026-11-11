@@ -104,6 +104,7 @@ Retros in `docs/retros/` are legacy: no skill writes one, and `status` counts th
 - **The challenge is recorded** (0.16.0): a challenge pass writes every finding into the spec's `## Challenge` section (the personas used, each finding and whether it was folded in, rejected or did not hold), instead of noting its rejections in Assumptions. `plan` lists the rejected findings that still govern under **Needs you**, and marks one confirmed or superseded as you decide.
 - **Review does not repeat the challenge** (0.16.0): `review` picks personas the challenge did not use where the roster allows, names any it reuses on the **Reviewers** line, and gives its personas a copy of the spec without its `## Challenge` section. A finding that repeats a rejected decision is recorded as decided at challenge and left out of **Needs you**, unless it is Critical against a rejection you have not confirmed, or raises something the decision did not cover; a line after **Fixed** gives how many it decided, with the record's path.
 - **Size** (0.16.0): `wc -w` over `plan`, `review` and the contract gives 5,927 at 622d29d (1,789, 1,106 and 3,032) and 6,596 now (1,847, 1,467 and 3,282); `plan`'s and `review`'s files are loaded in full on every run of those skills.
+- **Opus builds** (0.17.0): `do` declares `model: opus` at `medium` and starts its parallel and red-pass subagents on `opus`. On Sonnet at `high`, stories were too often built wrong and took several audit rounds to close; the audit rounds cost more than the build. With `cpm-next-models` 0.4.0, `do all` is held at `medium` with a `medium` floor (it was `high`, to stop Sonnet checking in); `high` stories and fix rounds still raise it.
 - **calibrate retired**: with every skill setting its own model and effort, and the `cpm-next-models` mod holding them across turns, the per-run advice `calibrate` gave for cpm-next skills is built in. The exceptions it still covered (a greenfield `plan` at `high`, a subtle `party` on Opus) are a `/effort` or `/model` away, and model advice for work outside cpm-next is not this plugin's job.
 
 ## Upgrading to 0.9.0
@@ -137,3 +138,7 @@ Nothing to migrate. A `plan` run that writes qualifying epics now spends three m
 ## Upgrading to 0.16.0
 
 Specs written earlier have no `## Challenge` section and are reviewed as before, with nothing decided at challenge. A `plan` run that challenges a spec now writes the section, and the next review of its epics picks different personas than the challenge used, where the roster allows.
+
+## Upgrading to 0.17.0
+
+Update `cpm-next-models` to 0.4.0 with it, or `do all` stays held at `high` on Opus. Builds now spend Opus tokens; run `/model sonnet` during a `do` run to go back for that run.

@@ -176,3 +176,14 @@ Name one owner file per rule. Every other place refers to it by name and holds n
 A criterion states a fact that is wrong, found only by an audit after the story is built: fixture directories the files do not use, "story timing unchanged" where a waiting story's timing changes by design, "every story with test-proven criteria" where stories taking `existing` take no pass, a grep that "hits only two fields" while two sibling criteria require it to hit more. The criterion reads as true because nobody looked.
 
 Every factual claim in a criterion (a path, a count, "unchanged", "only X", "every Y") is checked when the epic is written and again when it is reviewed: against the code it names, with a grep or a listing, and against the other criteria and the spec requirement it has to hold with. The check cites the line it was made against. `plan` does it as it writes and `review` as it challenges. Owned by `plan` for the claim and `review` for the challenge.
+
+## A rule is checked over every case its requirement covers, not the one in front of you
+**Promoted**: 2026-11-10
+**Class**: instance-not-rule
+**Source**: docs/epics/50-02-epic-sweep-for-everyone.md, docs/epics/54-01-epic-challenge-record.md (`instance-not-rule` signals)
+**Scope**: plan, review, do
+
+A rule is written for the case in view and stops short of what its requirement covers: a privacy rule that banned names, paths, code and quotes but not project terms; "every `Rejected` finding" where only the undecided ones should be asked, since a confirmed or replaced bullet stays in the section; a reused persona named on the **Reviewers** line only in the required-role fallback, where every persona drawn from the challenge's set had to be named. Each read as complete and was found by an audit.
+
+Before a rule is written, list the cases its requirement covers, the ones that are not the cited case included, and state the rule over all of them. The criterion names at least one case beyond the cited one that the rule must hold for, so a rule that covers only the cited case fails it. `plan` does this as it writes the criterion, `review` checks the cases, and `do` reads the rule against them before closing. Owned by `plan` for the criterion, `review` for the check and `do` for the build.
+

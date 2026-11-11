@@ -14,8 +14,8 @@ test('every cpm-next skill is held, others are not', () => {
 })
 
 test('do all runs at high effort; everything else keeps the frontmatter effort', () => {
-  expect(effortFor('cpm-next:do', 'all', 'medium')).toBe('high')
-  expect(effortFor('/cpm-next:do', '  ALL epics', 'medium')).toBe('high')
+  expect(effortFor('cpm-next:do', 'all', 'high')).toBe('medium')
+  expect(effortFor('/cpm-next:do', '  ALL epics', 'low')).toBe('medium')
   expect(effortFor('cpm-next:do', 'docs/epics/03-epic-auth.md', 'medium')).toBe('medium')
   expect(effortFor('cpm-next:do', 'allow guests to book', 'medium')).toBe('medium')
   expect(effortFor('cpm-next:plan', 'all', 'medium')).toBe('medium')
@@ -106,11 +106,11 @@ test('the project install wins over the user install', () => {
 
 const DO = { skill: 'cpm-next:do', model: 'claude-sonnet-5-5', effort: 'medium' as const, turnId: 't1' }
 
-test('do all keeps high as its floor; other runs have none', () => {
-  expect(floorFor('cpm-next:do', 'all')).toBe('high')
-  expect(floorFor('/cpm-next:do', ' ALL epics')).toBe('high')
-  expect(floorFor('cpm-next:do', 'all 43')).toBe('high')
-  expect(floorFor('cpm-next:do', 'all 43 --parallel')).toBe('high')
+test('do all keeps medium as its floor; other runs have none', () => {
+  expect(floorFor('cpm-next:do', 'all')).toBe('medium')
+  expect(floorFor('/cpm-next:do', ' ALL epics')).toBe('medium')
+  expect(floorFor('cpm-next:do', 'all 43')).toBe('medium')
+  expect(floorFor('cpm-next:do', 'all 43 --parallel')).toBe('medium')
   expect(floorFor('cpm-next:do', '3')).toBeUndefined()
   expect(floorFor('cpm-next:plan', 'all')).toBeUndefined()
 })

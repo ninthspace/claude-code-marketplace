@@ -13,16 +13,16 @@ export function isHeldSkill(skill: string): boolean {
 }
 
 /**
- * The effort to hold for a skill: `high` for an unattended `do all` run, where Sonnet tends to stop and
- * check in at `medium`; otherwise the frontmatter's, as the engine resolved it for the skill's first request.
+ * The effort to hold for a skill: `medium` for an unattended `do all` run, whatever the frontmatter says;
+ * otherwise the frontmatter's, as the engine resolved it for the skill's first request.
  */
 export function effortFor(skill: string, args: string, resolved: Effort | undefined): Effort | undefined {
   return floorFor(skill, args) ?? resolved
 }
 
-/** The lowest effort a story may set in this run: `high` for `do all`, so a `low` story can't bring back the check-ins. */
+/** The lowest effort a story may set in this run: `medium` for `do all`, so a `low` story isn't built unattended at `low`. */
 export function floorFor(skill: string, args: string): Effort | undefined {
-  return skillName(skill) === 'cpm-next:do' && /^\s*all\b/i.test(args) ? 'high' : undefined
+  return skillName(skill) === 'cpm-next:do' && /^\s*all\b/i.test(args) ? 'medium' : undefined
 }
 
 const STORY_LEVELS = ['low', 'medium', 'high', 'xhigh'] as const
@@ -85,7 +85,7 @@ export function familyOf(model: string): string {
   return /opus|sonnet|haiku|fable/.exec(model)?.[0] ?? model
 }
 
-/** The footer label, e.g. "cpm-next:do · story 3 · sonnet · high"; undefined when nothing is held. */
+/** The footer label, e.g. "cpm-next:do · story 3 · opus · high"; undefined when nothing is held. */
 export function statusText(pin: ModelPin): string | undefined {
   if (pin === null) return undefined
   const story = pin.story === undefined ? '' : ` · story ${pin.story}`

@@ -46,7 +46,7 @@
 **Satisfies**: FR2, NFR1, NFR3  
 **Inline change**: criterion 2 lists the `Rejected` findings that govern and are not yet marked confirmed or superseded, since a marked or replaced bullet stays in the section and would be asked again at every later run (2026-11-10)  
 **Pivot deferred**: spec 54 FR2 and the spec's Challenge section say "every `Rejected` challenge finding"; the narrowing to unmarked, governing bullets is to be written there → docs/specifications/54-spec-review-settles-the-challenge.md (Story 2, 2026-11-10) — cited: the audit of this story, `cpm-next/shared/artifacts.md:101` (a bullet stays and is only appended to)  
-**Signal**: instance-not-rule — project — criterion 2 and FR2 said "every Rejected finding" where the rule needs the findings still undecided, since a confirmed, superseded or replaced bullet stays in the section (audit round 1, `plan/SKILL.md:64,68`) — recurs: docs/epics/50-02-epic-sweep-for-everyone.md → Story 2 → instance-not-rule (a rule stated narrower than the requirement it serves, found by an audit) — raised 2026-11-10  
+**Signal**: instance-not-rule — project — criterion 2 and FR2 said "every Rejected finding" where the rule needs the findings still undecided, since a confirmed, superseded or replaced bullet stays in the section (audit round 1, `plan/SKILL.md:64,68`) — recurs: docs/epics/50-02-epic-sweep-for-everyone.md → Story 2 → instance-not-rule (a rule stated narrower than the requirement it serves, found by an audit) — promoted 2026-11-10  
 **Test run**: 1 (1 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 124 passed, 0 failed — tree a5ccd7b53d7590ad91a48c05570b8d200e1a4dbe — untested: cpm-next/skills/plan/SKILL.md — cpm-next/skills/plan/SKILL.md → deferred full run
 
 **Acceptance Criteria**:
@@ -77,7 +77,7 @@
 **Audit**: pass (2026-11-10), 4 findings fixed  
 **Blocked by**: Story 1, Story 2 (it reads `plan`'s review paragraph as Story 2 leaves it)  
 **Satisfies**: FR3, FR4, FR5, FR6, NFR1, NFR3  
-**Signal**: instance-not-rule — project — step 2 named a reused persona on the **Reviewers** line only for the required-role fallback, where the rule covers every persona picked from the challenge's union, an added QA included (audit round 1, `review/SKILL.md:32`) — recurs: docs/epics/50-02-epic-sweep-for-everyone.md → Story 2 → instance-not-rule (a rule stated narrower than the requirement it serves, found by an audit) — raised 2026-11-10  
+**Signal**: instance-not-rule — project — step 2 named a reused persona on the **Reviewers** line only for the required-role fallback, where the rule covers every persona picked from the challenge's union, an added QA included (audit round 1, `review/SKILL.md:32`) — recurs: docs/epics/50-02-epic-sweep-for-everyone.md → Story 2 → instance-not-rule (a rule stated narrower than the requirement it serves, found by an audit) — promoted 2026-11-10  
 **Effort**: high  
 **Test run**: 1 (1 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 124 passed, 0 failed — tree 1c2d056f5d97bcb4841f5f4db9ae8fc2927f76e6 — closes epic; untested: cpm-next/skills/review/SKILL.md — cpm-next/skills/review/SKILL.md → deferred full run
 

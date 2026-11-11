@@ -375,7 +375,7 @@
     <ul>
       <li><strong>The artefacts are the only state.</strong> The discussion record and the epic doc hold everything a later session needs. There are no progress files to clean up.</li>
       <li><strong>Each skill states a finish line.</strong> Every skill says what "done" means and when to stop; how to get there is left to the model.</li>
-      <li><strong>Different models for different jobs.</strong> Opus plans and reviews, Sonnet builds, an Opus <code>auditor</code> agent checks every story before it closes, a Haiku <code>scout</code> agent answers lookups, and <code>status</code> runs on Haiku.</li>
+      <li><strong>Different models for different jobs.</strong> Opus plans, reviews and builds, an Opus <code>auditor</code> agent checks every story before it closes, a Haiku <code>scout</code> agent answers lookups, and <code>status</code> runs on Haiku.</li>
     </ul>
     <p>A typical path through a piece of work:</p>
     <ol class="flow">
@@ -865,7 +865,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 
     <div class="skill-card" id="skill-do">
       <h3>/cpm-next:do</h3>
-      <div class="facts"><span>model: sonnet</span><span>effort: medium (high for all, with cpm-next-models)</span><span>writes: code, epics, quick, lessons-learned</span></div>
+      <div class="facts"><span>model: opus</span><span>effort: medium</span><span>writes: code, epics, quick, lessons-learned</span></div>
       <dl class="fields">
         <dt>When to use it</dt>
         <dd>Whenever planned work should be built, continued or finished, or a small well-defined change made.</dd>
@@ -1076,7 +1076,7 @@ summary: &gt;
     <p>While a pass is open its source files are mutated, and a <code>git add -A</code> would commit them. The <code>cpm-next</code> plugin's hooks module therefore refuses a <code>git commit</code> run through the Bash tool, by the session or a subagent, while a directory under <code>{git common dir}/cpm-next/scratch/</code> has a <code>tree</code> file naming the session's checkout. The refusal names each open pass; resume <code>/cpm-next:do</code> on that story, or copy the directory's files back to their repository paths, then commit. Commands that are not a <code>git commit</code> pass straight through, and if the guard can't read the directory it lets the commit through.</p>
 
     <h3 id="do-audit">The audit and fix pass</h3>
-    <p><code>do</code> builds on Sonnet; the <code>auditor</code> agent checks each story on Opus before it closes. It is started with the Agent tool (<code>subagent_type</code> <code>cpm-next:auditor</code>), one auditor per story, and given the epic path and story number (or the <code>docs/quick/</code> record), the files changed (or a worktree story's merge commit), the test command, the story's <code>**Test run**</code> line and the result of the run after the story's last change, that the red pass ended with a matching manifest, the contract's path, its own scratch directory, whether the suite is isolated or free, and the resources it must leave alone. It receives none of the conversation, so it checks what is on disk rather than what the builder says is there.</p>
+    <p><code>do</code> builds on Opus; the <code>auditor</code> agent, a separate Opus agent, checks each story before it closes. It is started with the Agent tool (<code>subagent_type</code> <code>cpm-next:auditor</code>), one auditor per story, and given the epic path and story number (or the <code>docs/quick/</code> record), the files changed (or a worktree story's merge commit), the test command, the story's <code>**Test run**</code> line and the result of the run after the story's last change, that the red pass ended with a matching manifest, the contract's path, its own scratch directory, whether the suite is isolated or free, and the resources it must leave alone. It receives none of the conversation, so it checks what is on disk rather than what the builder says is there.</p>
     <p>The run already ran every test the <code>Evidence</code> lines cite, so the auditor reads the tests and their recorded reds rather than re-running them, and runs no tests given a targeted result. It raises a Warning for a cited test missing from the run, a test that runs a changed file but was left out, a story the rules make full whose prompt names no deferred full run, or no run where one is required; a Warning that the run was too narrow is settled by making the run. Given a full result it runs tests or probes only when the suite is <strong>isolated</strong> (every test process gets its own database and its own copy of every file tests write, and no test binds a fixed port) or <strong>free</strong> (the lead waits for this audit in the foreground and runs nothing else that uses the suite until it reports).</p>
     <p>The auditor checks:</p>
     <ol>
@@ -1114,9 +1114,9 @@ summary: &gt;
       <li>A subagent runs only its own story's tests, and only when the suite is isolated (every test process, even a single run, gets its own database and its own copy of every file tests write, and no test binds a fixed port; <code>do</code> checks this once per run). Otherwise the subagent writes code only and the lead runs its tests after it reports.</li>
       <li>A subagent leaves <code>[browser]</code> criteria to the lead, who checks them after the batch.</li>
       <li>Each subagent's prompt names the resources it must leave alone.</li>
-      <li>Parallel subagents start on <code>sonnet</code>, the model <code>do</code> builds on.</li>
+      <li>Parallel subagents start on <code>opus</code>, the model <code>do</code> builds on.</li>
       <li>After a parallel batch the lead makes one run, the union of the stories' targeted sets, then, once each story's audit has passed, is blocked or waits on you, one shared deferred full run when any story in the batch needs one; every story of the batch waits for it.</li>
-      <li>Once the batch has finished and nothing else is running, the lead hands each story's red pass to a fresh <code>sonnet</code> subagent, one at a time, so the red tool calls stay out of its own context. It creates the pass directory first, then compares the manifest, removes the directory and writes the <code>Evidence</code> lines itself. No pass runs while batch siblings run, since a sibling's tests would run the code a red has mutated.</li>
+      <li>Once the batch has finished and nothing else is running, the lead hands each story's red pass to a fresh <code>opus</code> subagent, one at a time, so the red tool calls stay out of its own context. It creates the pass directory first, then compares the manifest, removes the directory and writes the <code>Evidence</code> lines itself. No pass runs while batch siblings run, since a sibling's tests would run the code a red has mutated.</li>
       <li>The lead checks each report against the files and test output before the story goes to audit, and makes every audit fix in its own checkout.</li>
       <li>Two test runs (full or targeted), or a test run and a red pass, never overlap in one checkout.</li>
       <li>A story isn't finished while a subagent or background command it started is still running.</li>
@@ -1154,7 +1154,7 @@ summary: &gt;
 
     <h3 id="do-all">Unattended <code>all</code> runs and blocked stories</h3>
     <p>In an <code>all</code> run (with or without a spec: <code>all 04</code> covers only spec 04's epics), or whenever you have said you won't be watching, <code>do</code> does not stop for the first two reasons above. It marks the story blocked with the reason (and a signal) and moves on to other unblocked work. The third reason, a destructive action or one outside the repository, always stops the run.</p>
-    <p>With <code>cpm-next-models</code> installed, an <code>all</code> run, spec-scoped or not, is held at <code>high</code> effort, and no story in it is built below <code>high</code>, because Sonnet tends to stop and check in during long runs at <code>medium</code>. See <a href="#models">section 6</a>.</p>
+    <p>With <code>cpm-next-models</code> installed, an <code>all</code> run, spec-scoped or not, is held at <code>medium</code> effort, and no story in it is built below <code>medium</code>, since nobody is there to catch a slip in a <code>low</code> story. See <a href="#models">section 6</a>.</p>
     <p>A blocked story keeps its status with the note <code> — blocked: {reason}</code>, and a <code>Not met</code> line under any criterion concerned. <code>do</code> neither picks nor resumes it, and every story that depends on it stays blocked. Blocked stories, <code>**Pivot deferred**</code> items and anything held back appear under <strong>Needs you</strong> at the end of the run, and <code>/cpm-next:status</code> lists them under the same heading.</p>
 
     <h3 id="do-waiting">Stories waiting on you</h3>
@@ -1203,7 +1203,7 @@ summary: &gt;
         <tr><td><code>party</code></td><td>sonnet</td><td>medium</td><td>—</td></tr>
         <tr><td><code>plan</code></td><td>opus</td><td>medium</td><td>Opus for code areas and the challenge pass; <code>scout</code> for lookups</td></tr>
         <tr><td><code>review</code></td><td>opus</td><td>medium</td><td>One Opus subagent per persona</td></tr>
-        <tr><td><code>do</code></td><td>sonnet</td><td>medium; per story with the mod; <code>high</code> floor for <code>all</code></td><td>Sonnet for parallel stories and handed-off red passes; Haiku for <code>**Model**: haiku</code> stories; <code>auditor</code>; <code>scout</code></td></tr>
+        <tr><td><code>do</code></td><td>opus</td><td>medium; per story with the mod; <code>medium</code> floor for <code>all</code></td><td>Opus for parallel stories and handed-off red passes; Haiku for <code>**Model**: haiku</code> stories; <code>auditor</code>; <code>scout</code></td></tr>
         <tr><td><code>library</code></td><td>sonnet</td><td>medium</td><td>—</td></tr>
         <tr><td><code>status</code></td><td>haiku</td><td>low</td><td>—</td></tr>
         <tr><td><code>auditor</code> agent</td><td>opus</td><td>not set per story</td><td>—</td></tr>
@@ -1219,7 +1219,7 @@ summary: &gt;
       <li>When a cpm-next skill starts, typed as a slash command or invoked through the Skill tool, the mod reads the <code>model</code> and <code>effort</code> lines from the installed skill's <code>SKILL.md</code> and holds them for every later turn of the run.</li>
       <li>A bare family name in the frontmatter (<code>sonnet</code>) takes the session model's version.</li>
       <li>Only the main conversation is affected. Subagents keep the model and effort they were started with.</li>
-      <li>The footer shows what is held as one of its mode labels, for example <code>cpm-next:do · story 3 · sonnet · low</code>.</li>
+      <li>The footer shows what is held as one of its mode labels, for example <code>cpm-next:do · story 3 · opus · low</code>.</li>
     </ul>
     <p>The hold ends when:</p>
     <ul>
@@ -1236,15 +1236,15 @@ summary: &gt;
     <ul>
       <li>changes nothing outside a <code>do</code> run, and replies that the session effort applies;</li>
       <li>leaves an effort you set with <code>/effort</code> alone, and replies that your effort applies;</li>
-      <li>never goes below the run's floor; when it raises a request it says so, for example "Effort high (raised from low: this run's floor is high) for story 3."</li>
+      <li>never goes below the run's floor; when it raises a request it says so, for example "Effort medium (raised from low: this run's floor is medium) for story 3."</li>
     </ul>
-    <p>The model stays Sonnet throughout, so the prompt cache survives a change of effort.</p>
+    <p>The model stays Opus throughout, so the prompt cache survives a change of effort.</p>
 
     <h3 id="models-all">The <code>do all</code> floor</h3>
-    <p>When <code>/cpm-next:do all</code> or <code>/cpm-next:do all {spec}</code> starts (the mod tests for a leading <code>all</code>), it holds <code>high</code> effort instead of the frontmatter's <code>medium</code>, and sets <code>high</code> as the floor for the run, so a <code>low</code> story cannot bring the effort back down. <code>do all</code> stays on Sonnet; the per-story Opus audit covers the quality risk, and <code>high</code> effort covers Sonnet stopping early.</p>
+    <p>When <code>/cpm-next:do all</code> or <code>/cpm-next:do all {spec}</code> starts (the mod tests for a leading <code>all</code>), it holds <code>medium</code> effort and sets <code>medium</code> as the floor for the run, so a <code>low</code> story is not built unattended at <code>low</code>. A <code>high</code> story, and a fix after a failed audit, still raise it.</p>
 
     <h3 id="models-commands">Commands</h3>
-<pre><code>/cpm-models        # shows what is held, e.g. "Holding claude-sonnet-… at high effort for cpm-next:do."
+<pre><code>/cpm-models        # shows what is held, e.g. "Holding claude-opus-… at medium effort for cpm-next:do."
 /cpm-models off    # releases the hold: turns run on the session model
 /effort high       # your own effort; wins over the held effort for the rest of the run
 /model opus        # your own model switch; releases the hold</code></pre>
@@ -1404,7 +1404,7 @@ summary: &gt;
       <p>A session open before the install needs <code>/reload-plugins</code> to load the mod. This includes <code>plugin-sync</code> itself; after that one manual reload it reloads the session on later updates.</p>
     </div></details>
 
-    <details class="faq"><summary>Later turns of a <code>do</code> run are on my session model, not Sonnet.</summary><div>
+    <details class="faq"><summary>Later turns of a <code>do</code> run are on my session model, not Opus.</summary><div>
       <p>Frontmatter model and effort last only for the turn that invoked the skill. Install <code>cpm-next-models</code> to hold them for the whole run. If it is installed, check whether the hold was released: a model switch of your own, <code>/clear</code>, <code>/cpm-models off</code>, or a skill from outside cpm-next all release it. <code>/cpm-models</code> shows what is held.</p>
     </div></details>
 

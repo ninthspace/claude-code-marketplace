@@ -548,7 +548,7 @@
   <div class="slide-inner">
     <div class="label">Independent audit</div>
     <h2>A second model checks every story before it closes</h2>
-    <p class="lead" style="margin-bottom:20px">Sonnet builds the story. The <code>auditor</code> agent, on Opus, checks it. It gets none of the builder's conversation, so it checks what is on disk, not what the builder says is there.</p>
+    <p class="lead" style="margin-bottom:20px">Opus builds the story. The <code>auditor</code> agent, a separate Opus agent, checks it. It gets none of the builder's conversation, so it checks what is on disk, not what the builder says is there.</p>
     <div class="grid g2">
       <div class="card">
         <h3>What it checks</h3>
@@ -583,13 +583,13 @@
     <div class="grid g3">
       <div class="card acc">
         <h3>Opus</h3>
-        <p><span class="tag">plans</span><span class="tag">reviews</span><span class="tag">audits</span></p>
-        <p><code>plan</code>, <code>review</code> and their subagents, including the review personas. The <code>auditor</code> agent.</p>
+        <p><span class="tag">plans</span><span class="tag">builds</span><span class="tag">audits</span></p>
+        <p><code>plan</code>, <code>review</code>, <code>do</code> and their subagents, including the review personas. The <code>auditor</code> agent.</p>
       </div>
       <div class="card ok">
         <h3>Sonnet</h3>
-        <p><span class="tag ok">builds</span><span class="tag ok">discusses</span></p>
-        <p><code>do</code> and its parallel subagents. Also <code>party</code> and <code>library</code>.</p>
+        <p><span class="tag ok">discusses</span><span class="tag ok">curates</span></p>
+        <p><code>party</code> and <code>library</code>.</p>
       </div>
       <div class="card warn">
         <h3>Haiku</h3>
@@ -712,7 +712,7 @@
     <ul class="plain">
       <li>The plan is written down in <code>docs/</code>, and those files are the only state.</li>
       <li>Every story has acceptance criteria, and every criterion gets its own evidence. A test counts only once it has been seen to fail.</li>
-      <li>Opus plans, reviews and audits; Sonnet builds; Haiku looks things up and reports status.</li>
+      <li>Opus plans, reviews, builds and audits; Sonnet discusses; Haiku looks things up and reports status.</li>
       <li>do stops for unexplained failures, scope changes and destructive actions, and otherwise keeps going. What waits on you is taken one item at a time.</li>
       <li>A failure seen twice can become a lesson that the next plan applies.</li>
     </ul>

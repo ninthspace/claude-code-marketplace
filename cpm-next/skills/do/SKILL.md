@@ -1,7 +1,7 @@
 ---
 name: do
 description: Build from CPM epic documents until every story in scope is Complete and the tests pass — one story, one epic, one spec's epics or all remaining epics unattended — or carry out a small change directly when there is no epic. Picks the next unblocked work, implements it, verifies each acceptance criterion with evidence, and keeps the epic doc as the live task list. Use whenever the user wants planned work built, continued or finished, or a small well-defined change made. Triggers on "/cpm-next:do".
-model: sonnet
+model: opus
 effort: medium
 ---
 
@@ -65,11 +65,11 @@ Stories unblocked together are built in parallel, one subagent each, when they s
 - It runs migrations, dependency installs and every test run after a batch: the union of the stories' targeted sets, and one shared deferred full run when any story in the batch needs one, that every story of the batch waits for (`test-runs.md` gives the rules; a story's line reads `closes epic` where the batch leaves no story of its epic open outside it). A story that needs a schema or dependency change goes first, run by the lead, before any fan-out.
 - A subagent runs only its own story's tests (its targeted run), and only when the suite is isolated (see **Scratch directories and isolation**); otherwise it writes code only, and the lead runs its tests after it reports. A red pass handed to it, below, is the one exception.
 - A subagent leaves `[browser]` criteria to the lead, who checks them after the batch.
-- Once the batch has finished and nothing else is running, the lead hands each story's red pass (step 4) to a fresh `sonnet` subagent, one at a time, giving it the story, the cited tests, the pass directory's absolute path, the absolute path of the contract and the absolute path of this file for step 4's rules on taking each red. The lead creates the pass directory, the `**Scratch**` line, the `manifest` and the `tree` file before the hand-off; the subagent copies files into the directory, takes and restores each red, and reports each failure with its `{file:lines}` or mutation, and does not create, compare or delete the directory or touch the epic doc. The lead then compares the manifest itself, deletes the directory, removes the line, and writes the `Evidence` lines from the reported failures after checking each against the test file. No pass runs while batch siblings run, since a sibling's tests would run the code a red has mutated.
+- Once the batch has finished and nothing else is running, the lead hands each story's red pass (step 4) to a fresh `opus` subagent, one at a time, giving it the story, the cited tests, the pass directory's absolute path, the absolute path of the contract and the absolute path of this file for step 4's rules on taking each red. The lead creates the pass directory, the `**Scratch**` line, the `manifest` and the `tree` file before the hand-off; the subagent copies files into the directory, takes and restores each red, and reports each failure with its `{file:lines}` or mutation, and does not create, compare or delete the directory or touch the epic doc. The lead then compares the manifest itself, deletes the directory, removes the line, and writes the `Evidence` lines from the reported failures after checking each against the test file. No pass runs while batch siblings run, since a sibling's tests would run the code a red has mutated.
 - A subagent has none of this conversation, so its prompt names the resources it must leave alone.
 - The lead checks each report against the files and test output before the story goes to audit, and makes every audit fix, in its own checkout.
 
-Start each parallel subagent on `sonnet`, and a `**Model**: haiku` story on a `haiku` subagent even when nothing runs beside it.
+Start each parallel subagent on `opus`, and a `**Model**: haiku` story on a `haiku` subagent even when nothing runs beside it.
 
 Hand plain lookups (where something is defined or used, which files a change touches, what a read-only query returns) to the `cpm-next:scout` agent, which keeps search output out of this conversation; read the code yourself when the answer depends on understanding it.
 
