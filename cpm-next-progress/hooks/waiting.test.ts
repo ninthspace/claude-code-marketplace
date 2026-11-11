@@ -2,7 +2,8 @@ import { expect, test } from 'claude-code/testing'
 
 import { ARCHIVED, EPICS, EXPECTED } from './fixtures/waiting'
 import type { BuildOrder, EpicFile } from './progress'
-import { buildItems, criterionTag, indexEntry, isWaitingOnUser, parseEpic } from './progress'
+import { buildItems, criterionTag, isWaitingOnUser, parseEpic } from './progress'
+import { indexEntry } from './timing'
 
 const TODAY = '2026-10-31'
 const short = (name: string) => name.split('-epic-')[0] as string

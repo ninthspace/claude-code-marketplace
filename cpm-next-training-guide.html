@@ -340,7 +340,7 @@
   <header class="hero">
     <h1>cpm-next training guide</h1>
     <p>A reference for developers who plan and build with cpm-next in Claude Code: what to install, what each skill reads and writes, how <code>do</code> builds and audits work, how model and effort are set, and how to follow progress.</p>
-    <div class="meta">Covers cpm-next 0.16.0, cpm-next-models 0.3.3, cpm-next-progress 0.8.0, whats-next 0.3.0 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
+    <div class="meta">Covers cpm-next 0.16.0, cpm-next-models 0.3.3, cpm-next-progress 0.9.0, whats-next 0.3.0 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
   </header>
 
   <div class="note" id="changed">
@@ -1262,7 +1262,7 @@ summary: &gt;
     <h4>Setting one up</h4>
     <ol class="flow">
       <li>Plan the spec's epics first; they must exist in <code>docs/epics/</code>.</li>
-      <li>Run <code>/progress-tracker 01</code> (the spec's number; a spec file or a build-order file also works, and <code>init</code> before the name still works). The mod writes <code>docs/specifications/01-build-order.json</code> from the spec's epics if it doesn't exist yet, writes the page to <code>.claude/cpm-next-progress/01-build-order.html</code>, and adds <code>/.claude/cpm-next-progress</code> to the project's <code>.gitignore</code>. For a spec that already has a tracker, it rewrites the page from the current template and republishes it to the same link, keeping the rows.</li>
+      <li>Run <code>/progress-tracker 01</code> (the spec's number; a spec file or a build-order file also works, and <code>init</code> before the name still works). The mod writes <code>docs/specifications/01-build-order.json</code> from the spec's epics if it doesn't exist yet, writes the page to <code>.claude/cpm-next-progress/01-build-order.html</code>, and adds <code>/.claude/cpm-next-progress</code> to the project's <code>.gitignore</code>. For a spec that already has a tracker, it rewrites the page from the current template and republishes it to the same link, and the republish brings its rows up to date.</li>
       <li>The mod then submits a prompt asking Claude to publish the page. Asking in words ("publish the progress tracker") works too: Claude has a <code>publish_tracker</code> tool that does the same, so you get the plugin's page rather than one written by hand.</li>
       <li>When Claude publishes it, the mod saves the link into the build-order file's <code>artifact</code> field and gives Claude the first rows to write.</li>
     </ol>
@@ -1272,7 +1272,10 @@ summary: &gt;
 <pre><code>{
   "title": "01-Series Build Order",
   "spec": "docs/specifications/01-spec-requirements-matrix-todos.md",
-  "decisions": ["Questions still open, shown in a box above the table"],
+  "decisions": [
+    "[01-05 S2, input] New name from the client",
+    "Questions for no one story, shown in a strip above the table"
+  ],
   "phases": [
     { "label": "No visible change", "items": [
       { "epic": "01-05", "story": 1, "note": "Default value keeps today's text" },
@@ -1290,24 +1293,28 @@ summary: &gt;
       <li><code>waitingOn</code> shows the item as <strong>Waiting on input</strong> until it is removed from the file.</li>
       <li><code>artifact</code> holds the tracker's link. The mod adds it when Claude publishes the page, and refuses anything other than a claude.ai artifact link.</li>
       <li>Items naming an epic, story or task that doesn't exist are skipped and reported as "not found in the epics".</li>
+      <li>A decision that starts with <code>[{epic} {S|T}{id}, {kind}]</code> (<code>[01-05 S2, input]</code>) belongs to that row and shows under its Needs you; any other decision shows in a strip above the table headed "Not matched to a row".</li>
     </ul>
     <p><strong>The first build order</strong> is written from the spec's epics (those whose number starts with the spec's): one phase per epic, epics ordered by their <code>**Blocked by**</code> epics, each epic's stories ordered by their <code>**Blocked by**</code> stories and then by number. Superseded and withdrawn epics and stories are left out. Edit the file afterwards to reorder, regroup, split a story into tasks or add <code>waitingOn</code>. Epics planned with no spec (<code>00-01</code> and so on) get a tracker too: <code>/progress-tracker 00</code> writes <code>docs/specifications/00-build-order.json</code> from the <code>00-</code> epics.</p>
 
-    <h4>What a row shows</h4>
+    <h4>What the page shows</h4>
+    <p>A split view: the table on the left, the selected row's detail on the right, staying in view as the table scrolls (above the table on a narrow screen).</p>
     <ul>
-      <li><strong>Status</strong>: Complete; Waiting on input (a <code>waitingOn</code> item, or a <a href="#do-waiting">story waiting on you</a>, whether Pending or In Progress); In progress (the story says so, or one of its tasks has started); Pending. The page shows a Pending row with no blockers as Ready; the stored status stays Pending.</li>
-      <li><strong>Blocked by</strong>: the story's and epic's <code>**Blocked by**</code> items not yet Complete (archived epics count), earlier unfinished tasks of the same story, and any <code>waitingOn</code>. Empty once the item is Complete.</li>
-      <li><strong>Date</strong>: moves only when the row's status changes.</li>
-      <li><strong>Time in</strong>: for a story in progress, how long it has run, and the typical range once the project's timings are steady (see <a href="#prog-overview">Overview and timings</a>).</li>
+      <li><strong>#</strong> and <strong>Title</strong>: the row's <code>{epic} {story}</code> and title, with the first line of its note under the title.</li>
+      <li><strong>Status</strong>: Complete; Waiting on input (a <code>waitingOn</code> item, or a <a href="#do-waiting">story waiting on you</a>, whether Pending or In Progress); In progress (the story says so, or one of its tasks has started); Pending, shown as Ready when nothing blocks it. Under it, the story's and epic's <code>**Blocked by**</code> items not yet Complete, earlier unfinished tasks of the same story and any <code>waitingOn</code>.</li>
+      <li><strong>Model</strong> and <strong>Effort</strong>: the model the story was built on (its <code>**Model**</code> field, else the model the mod saw start it, else <code>do</code>'s planned model, shown muted) and its <code>**Effort**</code>.</li>
+      <li><strong>Time</strong>: how long a finished story took, how long one in progress has run, and the typical range for its effort once the project's timings are steady (see <a href="#prog-overview">Overview and timings</a>).</li>
+      <li><strong>Needs you</strong>: how many decisions name the row. The summary gives the total, with a button that selects the next row holding any.</li>
+      <li><strong>Detail</strong>: the row's start and expected-by window, running time, typical range, time taken, blockers, full note, decisions with their kind, and how many of its criteria are met.</li>
     </ul>
-    <p>Data layout in the artifact's database: collection <code>items</code>, one document per row (<code>01-05-s1</code> for a story, <code>01-05-t3.1</code> for a task), a timed story in progress carrying <code>started</code> and, when steady, <code>typical</code>; document <code>meta/tracker</code> with the title, spec, last update and decisions. Anyone the artifact is shared with can read it; editors can write.</p>
+    <p>The fields each row and the <code>meta/tracker</code> document hold are listed under <strong>Data layout</strong> in the repository's README. Anyone the artifact is shared with can read it; editors can write.</p>
 
     <h4>How rows sync</h4>
     <ol class="flow">
       <li>After any tool call that writes (Edit, Write, MultiEdit, NotebookEdit, Bash), the mod checks whether an epic doc or build-order file changed since the last check. If none did, it does nothing more. It also checks when a session starts.</li>
       <li>If one did, it reads the tracker through <code>ArtifactData</code> and works out the writes that would bring it in line. If there are none, it says nothing.</li>
       <li>If there are some, it saves them to <code>.claude/cpm-next-progress/NN-build-order.pending.json</code> as ready-made batches of at most 50, shows a one-line notice, and gives Claude a note with the artifact link and the writes.</li>
-      <li>Claude applies up to eight writes itself with one <code>ArtifactData</code> batch.</li>
+      <li>Claude applies up to eight writes itself with one <code>ArtifactData</code> batch. Writes that only change rows' criteria counts get no note: they wait for the turn's end.</li>
       <li><strong>Large updates</strong>: more than eight writes stay in the pending file, and Claude hands them to a Haiku subagent, which reads the file and applies each batch, so the writes never enter the main conversation.</li>
       <li>When Claude's turn ends with a tracker still behind, the mod submits a prompt of its own asking for the same writes. After two such prompts in a row it stops and shows you a notice instead.</li>
     </ol>

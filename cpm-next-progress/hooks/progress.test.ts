@@ -1,9 +1,12 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { OVERVIEW } from './overview'
-import type { BuildOrder, IndexEntry, LiveDoc } from './progress'
+import type { BuildOrder, IndexEntry, LiveDoc, TimeRecord } from './progress'
+import { indexEntry, typicalRanges } from './timing'
+import * as FIXTURE from './fixtures/tracker-epics'
+import { TRACKER_DATA } from './fixtures/tracker-data'
 import {
-  artifactUrlIn, bar, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewGroups, overviewNote, overviewRows, overviewWrites, shortTitle,
+  artifactUrlIn, bar, buildItems, chunk, defaultBuildOrder, describeDrift, diff, fillTemplate, modelNote, overviewGroups, overviewNote, overviewRows, overviewWrites, shortTitle,
   parseBuildOrder, parseDocs, pendingJson, publishNote, isMissingArtifact, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
 
@@ -89,7 +92,7 @@ test('rows follow the build order, with status and titles from the epic docs', (
   expect(missing).toEqual(['01-09 story 1'])
   expect(items.get('01-05-t3.1')).toEqual({
     seq: 1, phase: 1, phaseLabel: 'No visible change', epic: '01-05', story: 'T3.1', title: 'Move to a partial',
-    status: 'Pending', blockedBy: '', note: 'No text change', updated: TODAY,
+    status: 'Pending', blockedBy: '', note: 'No text change', updated: TODAY, effort: 'medium',
   })
   expect(items.get('01-01-s1')?.status).toBe('Complete')
   expect(items.get('01-01-s2')?.phaseNote).toBe('Existing groups can fail')
@@ -396,4 +399,297 @@ test('a short title drops the build-order tail and a repeated spec number', () =
   expect(shortTitle('01 Spec 01: Slate, the film system: build order')).toBe('01 Slate, the film system')
   expect(shortTitle('03 Comments on review pages: build order')).toBe('03 Comments on review pages')
   expect(overviewGroups([{ ...ENTRY, title: '01 Spec 01: Slate: build order' }])[0]?.entries[0]?.title).toBe('01 Slate')
+})
+
+const ROWS_EPIC = {
+  name: '02-01-epic-rows.md',
+  text: `# Rows
+
+**Status**: In Progress
+**Blocked by**: —
+
+## Fixed to Haiku, not started
+**Story**: 1
+**Status**: Pending
+**Blocked by**: —
+**Effort**: low
+**Model**: Haiku
+
+**Acceptance Criteria**:
+
+- one \`[unit]\`
+  - Evidence: a test — red: x
+- two, with evidence and not met \`[unit]\`
+  - Evidence: a test — red: x
+  - Not met: it fell short
+- three, by the user \`[user]\`
+  - Evidence (user, 2026-11-11): it worked — red: n/a — user
+- four, with nothing \`[unit]\`
+
+## Fixed to Sonnet, started before timing
+**Story**: 2
+**Status**: In Progress
+**Blocked by**: —
+**Model**: sonnet
+
+## Recorded on Opus
+**Story**: 3
+**Status**: In Progress
+**Blocked by**: —
+**Effort**: High
+
+## Planned
+**Story**: 4
+**Status**: Pending
+**Blocked by**: —
+**Effort**: xhigh
+
+### A task of it
+**Task**: 4.1
+**Status**: Pending
+
+## Waiting on the user
+**Story**: 5
+**Status**: Pending
+**Blocked by**: —
+
+**Acceptance Criteria**:
+
+- see it \`[user]\`
+
+## Finished, timed
+**Story**: 6
+**Status**: Complete
+**Blocked by**: —
+
+### Done task
+**Task**: 6.1
+**Status**: Complete
+
+## Finished, first seen finished
+**Story**: 7
+**Status**: Complete
+**Blocked by**: —
+**Evidence**: the whole story, legacy
+
+**Acceptance Criteria**:
+
+- a \`[unit]\`
+- b \`[unit]\`
+
+## Started, no record
+**Story**: 8
+**Status**: In Progress
+**Blocked by**: —
+`,
+}
+
+const ROWS_ORDER: BuildOrder = {
+  title: '02 rows',
+  phases: [{ label: 'p', items: [1, 2, 3, 4, 5, 6, 7, 8].map(story => ({ epic: '02-01', story })).concat([{ epic: '02-01', task: '4.1' } as never, { epic: '02-01', task: '6.1' } as never]) }],
+}
+
+const H = 3_600_000
+const ROW_TIMES = {
+  '02-01 S1': { status: 'Pending' as const, effort: 'low' },
+  '02-01 S2': { status: 'In Progress' as const, effort: 'medium' },
+  '02-01 S3': { status: 'In Progress' as const, effort: 'high', started: 5 * H, model: 'opus' },
+  '02-01 S6': { status: 'Complete' as const, effort: 'medium', started: H, finished: H + 44.6 * 60_000, model: 'haiku' },
+  '02-01 S7': { status: 'Complete' as const, effort: 'medium' },
+  '02-01 S8': { status: 'In Progress' as const, effort: 'medium' },
+}
+
+const rows = (planned?: string, files = [ROWS_EPIC], times: Record<string, never> | typeof ROW_TIMES = ROW_TIMES) => buildItems(ROWS_ORDER, files, TODAY, times, planned).items
+
+test('a row\'s model: the Model field at any status, else the recorded model, else for a story not started the planned model', () => {
+  const items = rows('opus')
+  // Control: a Pending story with a Model field carries it, not the planned one.
+  expect(items.get('02-01-s1')?.model).toBe('haiku')
+  expect('modelPlanned' in (items.get('02-01-s1') ?? {})).toBe(false)
+  expect(items.get('02-01-s2')?.model).toBe('sonnet')
+  expect(items.get('02-01-s3')?.model).toBe('opus')
+  expect(items.get('02-01-s3')?.modelPlanned).toBeUndefined()
+  expect(items.get('02-01-s4')).toMatchObject({ model: 'opus', modelPlanned: true })
+  expect(items.get('02-01-s5')).toMatchObject({ status: 'Waiting on input', model: 'opus', modelPlanned: true })
+  expect(items.get('02-01-s6')?.model).toBe('haiku')
+  // A story started or first seen Complete with no recorded model, and any story when the SKILL.md could not be read, has none.
+  expect('model' in (items.get('02-01-s7') ?? {})).toBe(false)
+  expect('model' in (items.get('02-01-s8') ?? {})).toBe(false)
+  expect('model' in (rows(undefined).get('02-01-s4') ?? {})).toBe(false)
+  expect(rows('claude-sonnet-5-5').get('02-01-s4')?.model).toBe('sonnet')
+})
+
+test('a row\'s effort is normalised as timings normalise it, medium when absent', () => {
+  const items = rows('opus')
+  expect([1, 2, 3, 4].map(n => items.get(`02-01-s${n}`)?.effort)).toEqual(['low', 'medium', 'high', 'xhigh'])
+})
+
+test('a timed Complete story carries the whole minutes it took; one without a start, or with a finish not after it, carries none', () => {
+  const items = rows('opus')
+  expect(items.get('02-01-s6')?.took).toBe(45)
+  expect('took' in (items.get('02-01-s7') ?? {})).toBe(false)
+  const backwards = { ...ROW_TIMES, '02-01 S6': { ...ROW_TIMES['02-01 S6'], finished: H } }
+  expect('took' in (rows('opus', [ROWS_EPIC], backwards).get('02-01-s6') ?? {})).toBe(false)
+  // A reopened story was given no new start, so its time runs from the first.
+  const reopened = { ...ROW_TIMES, '02-01 S6': { status: 'Complete' as const, effort: 'medium', started: H, finished: 3 * H } }
+  expect(rows('opus', [ROWS_EPIC], reopened).get('02-01-s6')?.took).toBe(120)
+})
+
+test('a story row counts its criteria met: Evidence without Not met, or every one under a legacy Evidence field', () => {
+  const items = rows('opus')
+  expect(items.get('02-01-s1')?.criteria).toEqual({ met: 2, total: 4 })
+  expect(items.get('02-01-s7')?.criteria).toEqual({ met: 2, total: 2 })
+  expect(items.get('02-01-s2')?.criteria).toEqual({ met: 0, total: 0 })
+})
+
+test('a task row carries its story\'s model and effort, and no time or criteria', () => {
+  const items = rows('opus')
+  const task = items.get('02-01-t4.1')
+  expect(task).toMatchObject({ model: 'opus', modelPlanned: true, effort: 'xhigh' })
+  const done = items.get('02-01-t6.1')
+  expect(done).toMatchObject({ model: 'haiku', effort: 'medium' })
+  for (const row of [task, done]) {
+    expect(row !== undefined && ('took' in row || 'criteria' in row || 'started' in row)).toBe(false)
+  }
+})
+
+test('no row carries a typical range, at any status', () => {
+  const steady = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`09-01 S${i + 1}`, { status: 'Complete', effort: 'high', started: 0, finished: 40 * 60_000 }]))
+  const items = rows('opus', [ROWS_EPIC], { ...ROW_TIMES, ...steady } as typeof ROW_TIMES)
+  expect(items.get('02-01-s3')?.started).toBe(5 * H)
+  expect([...items.values()].filter(row => 'typical' in row)).toEqual([])
+  expect(new Set([...items.values()].map(row => row.status))).toEqual(new Set(['Pending', 'In progress', 'Waiting on input', 'Complete']))
+})
+
+test('a moved estimate writes only the meta; unchanged inputs write nothing, and one more Evidence line writes one row', () => {
+  const medium = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`09-01 S${i + 1}`, { status: 'Complete' as const, effort: 'medium', started: 0, finished: (30 + 10 * i) * 60_000 }]))
+  const running = { '02-01 S2': { status: 'In Progress' as const, effort: 'medium', started: 5 * H }, '02-01 S8': { status: 'In Progress' as const, effort: 'medium', started: 6 * H } }
+  const before = { ...ROW_TIMES, ...medium(10), ...running }
+  const after = { ...before, '09-01 S11': { status: 'Complete' as const, effort: 'medium', started: 0, finished: 300 * 60_000 } }
+  const meta = (times: Record<string, TimeRecord>) => ({ title: ROWS_ORDER.title, spec: '', decisions: [], ...typicalRanges(times) })
+  expect(typicalRanges(before).typical.medium?.range).not.toBe(typicalRanges(after).typical.medium?.range)
+
+  const first = diff(rows('opus', [ROWS_EPIC], before as never), meta(before), [], undefined)
+  const live = first.filter(w => w.collection === 'items').map((w, i) => ({ id: w.doc_id, version: i + 1, data: (w as { data: Record<string, unknown> }).data }))
+  const liveMeta = { id: 'tracker', version: 1, data: (first.at(-1) as { data: Record<string, unknown> }).data }
+
+  const moved = diff(rows('opus', [ROWS_EPIC], after as never), meta(after), live, liveMeta)
+  expect(moved.map(w => `${w.collection}/${w.doc_id}`)).toEqual(['meta/tracker'])
+  expect(diff(rows('opus', [ROWS_EPIC], before as never), meta(before), live, liveMeta)).toEqual([])
+
+  // Control: one more Evidence line in the docs gives exactly one write, that story's row.
+  const evidenced = { ...ROWS_EPIC, text: ROWS_EPIC.text.replace('- four, with nothing `[unit]`\n', '- four, with nothing `[unit]`\n  - Evidence: a test — red: y\n') }
+  const one = diff(rows('opus', [evidenced], before as never), meta(before), live, liveMeta)
+  expect(one.map(w => `${w.collection}/${w.doc_id}`)).toEqual(['items/02-01-s1'])
+})
+
+const DECISION_EPIC = {
+  name: '01-05-epic-naming.md',
+  text: `# Naming
+
+**Status**: In Progress
+**Blocked by**: —
+
+## Privacy notice
+**Story**: 3
+**Status**: In Progress
+**Blocked by**: —
+
+### Move to a partial
+**Task**: 3.1
+**Status**: Pending
+
+## Help review
+**Story**: 4
+**Status**: Pending
+**Blocked by**: —
+`,
+}
+
+const MATCHED = [
+  '[01-05 S4, review] first',
+  '[01-05 s4, review] second',
+  '[01-05 S04, review] third',
+  '[01-05 S4 , review] fourth',
+  '[01-05 S4,review] fifth',
+  '  [01-05 S4, input] sixth',
+  '[01-05 S4, Blocked on me] seventh',
+  '[01-05 T3.1, input] task one',
+  '[01-05 t3.1, input] task two',
+]
+const UNMATCHED = [
+  '[01-05 S4 review] no comma',
+  '[01-05, review] epic-wide',
+  'see [01-05 S4, review] not at the start',
+  'no prefix at all',
+  '[01-05 S9, review] no such row',
+  '[07-01 S1, review] an epic not in the build order',
+  '[01-05 S3, review] only the task is listed',
+  '[01-09 S1, review] an entry buildItems reports missing',
+]
+const DECISION_ORDER: BuildOrder = {
+  title: '01 decisions',
+  decisions: [MATCHED[0], UNMATCHED[0], MATCHED[1], UNMATCHED[1], MATCHED[2], UNMATCHED[2], MATCHED[3], UNMATCHED[3], MATCHED[4], UNMATCHED[4], MATCHED[5], UNMATCHED[5], MATCHED[6], UNMATCHED[6], MATCHED[7], UNMATCHED[7], MATCHED[8]] as string[],
+  phases: [{ label: 'p', items: [{ epic: '01-05', task: '3.1' }, { epic: '01-05', story: 4 }, { epic: '01-09', story: 1 }] }],
+}
+
+test('a decision prefixed with a row of the tracker is attached to that row, in each form the prefix is written', () => {
+  const { items, unmatched, missing } = buildItems(DECISION_ORDER, [DECISION_EPIC], TODAY)
+  expect(missing).toEqual(['01-09 story 1'])
+  // Floor: each row holds every decision naming it, in file order, with the kind and the text after the prefix.
+  expect(items.get('01-05-s4')?.needs).toEqual([
+    { kind: 'review', text: 'first' }, { kind: 'review', text: 'second' }, { kind: 'review', text: 'third' }, { kind: 'review', text: 'fourth' },
+    { kind: 'review', text: 'fifth' }, { kind: 'input', text: 'sixth' }, { kind: 'Blocked on me', text: 'seventh' },
+  ])
+  expect(items.get('01-05-t3.1')?.needs).toEqual([{ kind: 'input', text: 'task one' }, { kind: 'input', text: 'task two' }])
+  // Control: no matched form is also left unmatched.
+  for (const decision of MATCHED) expect(unmatched.includes(decision)).toBe(false)
+})
+
+test('a decision with no prefix, or naming no row of the tracker, is kept whole as unmatched', () => {
+  const { unmatched } = buildItems(DECISION_ORDER, [DECISION_EPIC], TODAY)
+  expect(unmatched).toEqual(UNMATCHED)
+})
+
+test('every decision matched leaves an empty unmatched list, and a row with no decision has no needs', () => {
+  const order = { ...DECISION_ORDER, decisions: ['[01-05 S4, review] only'] }
+  const { items, unmatched } = buildItems(order, [DECISION_EPIC], TODAY)
+  expect(unmatched).toEqual([])
+  expect('needs' in (items.get('01-05-t3.1') ?? {})).toBe(false)
+  const meta = { title: order.title, spec: '', decisions: order.decisions, unmatched }
+  const writes = diff(items, meta, [], undefined)
+  expect((writes.at(-1) as { data: Record<string, unknown> }).data.unmatched).toEqual([])
+})
+
+test('the meta keeps every decision as the build-order file lists it', () => {
+  const { items, unmatched } = buildItems(DECISION_ORDER, [DECISION_EPIC], TODAY)
+  const writes = diff(items, { title: DECISION_ORDER.title, spec: '', decisions: DECISION_ORDER.decisions ?? [], unmatched }, [], undefined)
+  const meta = (writes.at(-1) as { data: Record<string, unknown> }).data
+  expect(meta.decisions).toEqual(DECISION_ORDER.decisions)
+  expect(meta.unmatched).toEqual(UNMATCHED)
+})
+
+test('a changed unmatched decision writes only the meta; a changed matched one writes its row and the meta', () => {
+  const build = (decisions: string[]) => {
+    const order = { ...DECISION_ORDER, decisions }
+    const { items, unmatched } = buildItems(order, [DECISION_EPIC], TODAY)
+
+    return { items, meta: { title: order.title, spec: '', decisions, unmatched } }
+  }
+  const before = build(DECISION_ORDER.decisions ?? [])
+  const first = diff(before.items, before.meta, [], undefined)
+  const live = first.filter(w => w.collection === 'items').map((w, i) => ({ id: w.doc_id, version: i + 1, data: (w as { data: Record<string, unknown> }).data }))
+  const liveMeta = { id: 'tracker', version: 1, data: (first.at(-1) as { data: Record<string, unknown> }).data }
+  const ids = (decisions: string[]) => { const after = build(decisions); return diff(after.items, after.meta, live, liveMeta).map(w => `${w.collection}/${w.doc_id}`) }
+
+  expect(ids((DECISION_ORDER.decisions ?? []).map(d => (d === 'no prefix at all' ? 'no prefix, reworded' : d)))).toEqual(['meta/tracker'])
+  expect(ids((DECISION_ORDER.decisions ?? []).map(d => (d === '[01-05 T3.1, input] task one' ? '[01-05 T3.1, input] task one, reworded' : d)))).toEqual(['items/01-05-t3.1', 'meta/tracker'])
+})
+
+test('the data the page harness renders is the rows and meta the mod builds from the fixture epics', () => {
+  const { items, unmatched } = buildItems(FIXTURE.ORDER, FIXTURE.EPICS, FIXTURE.TODAY, FIXTURE.TIMES, FIXTURE.PLANNED)
+  const writes = diff(items, { title: FIXTURE.ORDER.title, spec: FIXTURE.ORDER.spec ?? '', decisions: FIXTURE.ORDER.decisions ?? [], ...typicalRanges(FIXTURE.TIMES), unmatched }, [], undefined)
+  expect({ items: Object.fromEntries(items), meta: (writes.at(-1) as { data: unknown }).data }).toEqual(TRACKER_DATA)
+  // Floor: the file holds a row of each kind the harness checks.
+  expect(Object.keys(TRACKER_DATA.items)).toEqual(['55-01-s1', '55-01-s2', '55-01-s3', '55-01-s4', '55-01-t4.1'])
 })

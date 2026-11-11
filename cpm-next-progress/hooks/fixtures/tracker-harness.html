@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tracker harness</title>
+<!--
+  Local harness for page/tracker.html. Serve the repository root with `python3 -m http.server` and open
+  /cpm-next-progress/hooks/fixtures/tracker-harness.html?w=1280&f=five
+    w: iframe width, 1280 (default), 900 or 390 (any number of px is accepted)
+    f: five (default), sixty, legacy, zero, nullmeta, nometa-fields, noclaude,
+       times, times-untimed, times-spread, times-nullmeta (the Time column and detail cases),
+       needs, needs-3, needs-unmatched-only, needs-legacy (the Needs you badge, total and strip),
+       sel-needs, sel-progress, sel-open, sel-complete (one per step of the default selection rule),
+       data (the 5 rows and meta in tracker-data.ts, which progress.test.ts checks the mod builds)
+    h: iframe height in px (default: the window's height less the toolbar)
+    emit=0: do not emit the fixture on load
+  Helpers on the iframe's window, proxied on this window: __setNow(ms), __getNow(), __tick(),
+  __emitItems(items), __emitMeta(meta), __emit(items, meta); this window also has __frame() and __fixtures.
+  Not published; nothing in hooks/*.ts reads it.
+-->
+<style>
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif; background: #ddd; }
+  .bar { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 10px; background: #222; color: #eee; }
+  .bar a { color: #9cf; }
+  .bar a.on { color: #fff; font-weight: 700; }
+  iframe { display: block; border: 0; background: #fff; }
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+<iframe id="frame" title="Tracker page"></iframe>
+<script>
+const params = new URLSearchParams(location.search);
+const WIDTH = Number(params.get("w")) || 1280;
+const FIXTURE = params.get("f") || "five";
+const EMIT = params.get("emit") !== "0";
+const LOADED = Date.now();
+const MIN = 60000;
+
+// As fillTemplate in hooks/progress.ts.
+const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeHtml = text => text.replace(/[&<>"']/g, c => ESCAPES[c] ?? c);
+const fillTemplate = (template, order, repo) => template
+  .replaceAll("{{TITLE}}", escapeHtml(order.title))
+  .replaceAll("{{REPO}}", escapeHtml(repo))
+  .replaceAll("{{SPEC}}", escapeHtml(order.spec ?? ""));
+
+// ---- Fixtures ----
+
+const id = row => row.epic + "-" + row.story.toLowerCase();
+const withIds = rows => rows.map(r => ({ id: id(r), ...r }));
+
+const META = {
+  title: "Tracker split view <harness> & \"fixtures\"",
+  spec: "docs/specifications/55-spec-tracker-split-view.md",
+  updated: "2026-11-11",
+  decisions: ["[55-02 S5, review] Approve the contrast fixes", "[55-03 S1, input] Release date"],
+  timed: 14,
+  typical: { medium: { range: "15–45 min", low: 15, high: 45 } },
+  unmatched: ["[55-03 S1, input] Release date"],
+};
+
+function five() {
+  const p1 = { phase: 1, phaseLabel: "55-01 Rows and meta", phaseNote: "Data first" };
+  const p2 = { phase: 2, phaseLabel: "55-02 The split-view tracker page" };
+  return withIds([
+    { seq: 1, ...p1, epic: "55-01", story: "S1", title: "The model each story was built on", status: "Complete", blockedBy: "", note: "", updated: "2026-11-10",
+      model: "opus", effort: "high", took: 38, criteria: { met: 10, total: 10 } },
+    { seq: 2, ...p1, epic: "55-01", story: "S2", title: "Rows carry model, effort and needs", status: "In progress", blockedBy: "", note: "Runs on Sonnet\nSecond line of the note", updated: "2026-11-11",
+      started: LOADED - 20 * MIN, model: "sonnet", effort: "medium", criteria: { met: 2, total: 6 } },
+    { seq: 3, ...p2, epic: "55-02", story: "S1", title: "Harness and the split layout", status: "Pending", blockedBy: "55-01 S2; Epic 01-03; Epic 99-99-epic-gone; epic 99-98", note: "", updated: "2026-11-11",
+      model: "opus", modelPlanned: true, effort: "medium", criteria: { met: 0, total: 7 } },
+    { seq: 4, ...p2, epic: "55-02", story: "T2.1", title: "Time and detail", status: "Pending", blockedBy: "55-02 T1.2", note: "", updated: "2026-11-11" },
+    { seq: 5, ...p2, epic: "55-02", story: "S3", title: "Needs you: badge, total and strip", status: "Waiting on input", blockedBy: "Chris to approve the <b>mockup</b>", note: "A note holding <i>markup</i> shows as text, and runs on long enough to need cutting with an ellipsis at every width", updated: "2026-11-11",
+      model: "haiku", effort: "low", criteria: { met: 1, total: 5 },
+      needs: [{ kind: "review", text: "Walk through the strip at 390 px" }, { kind: "input", text: "Which colour for the badge <b>?</b>" }] },
+  ]);
+}
+
+function sixty() {
+  const statuses = ["Complete", "Complete", "In progress", "Pending", "Pending", "Waiting on input"];
+  const models = ["opus", "sonnet", "haiku", "fable"];
+  const efforts = ["low", "medium", "high", "xhigh"];
+  const phases = [
+    { phase: 1, phaseLabel: "60-01 Foundations", phaseNote: "Risky first" },
+    { phase: 2, phaseLabel: "60-02 The middle of the work" },
+    { phase: 3, phaseLabel: "60-03 Release and checks", phaseNote: "Last" },
+  ];
+  const rows = [];
+  for (let i = 0; i < 60; i++) {
+    const ph = phases[Math.floor(i / 20)];
+    const n = (i % 20) + 1;
+    const epic = "60-0" + ph.phase;
+    const status = statuses[i % statuses.length];
+    const row = {
+      seq: i + 1, ...ph, epic, story: i % 7 === 6 ? "T" + n + ".1" : "S" + n,
+      title: i % 5 === 0 ? "A long story title that wraps over several lines in the title column at narrow widths, number " + (i + 1) : "Story number " + (i + 1),
+      status, blockedBy: "", note: i % 4 === 0 ? "Note for row " + (i + 1) + ", long enough to be cut with an ellipsis in the title column\nnot shown" : "",
+      updated: "2026-11-11",
+    };
+    if (i % 9 !== 8) { row.model = models[i % 4]; row.effort = efforts[i % 4]; }
+    if (status === "Pending" && i % 2 === 0) { row.modelPlanned = true; }
+    if (status === "Pending" && i % 3 !== 0) { row.blockedBy = epic + " S" + Math.max(1, n - 1); }
+    if (status === "Complete") { row.took = 10 + i * 3; }
+    if (status === "In progress") { row.started = LOADED - (5 + i) * MIN; }
+    if (status === "Waiting on input") {
+      row.blockedBy = "review of row " + (i + 1);
+      row.needs = [{ kind: "review", text: "Review row " + (i + 1) }, { kind: "input", text: "Answer for row " + (i + 1) }];
+    }
+    rows.push(row);
+  }
+  // A two-digit badge.
+  rows[37].status = "Waiting on input";
+  rows[37].needs = Array.from({ length: 12 }, (_, k) => ({ kind: k % 2 ? "input" : "review", text: "Item " + (k + 1) }));
+  // A shuffled array: the page orders by seq.
+  return withIds(rows).reverse();
+}
+
+function legacy() {
+  const p = { phase: 1, phaseLabel: "01-05 Before the new fields" };
+  return withIds([
+    { seq: 1, ...p, epic: "01-05", story: "S1", title: "A finished story", status: "Complete", blockedBy: "", note: "", updated: "2026-10-01" },
+    { seq: 2, ...p, epic: "01-05", story: "S2", title: "A story in progress", status: "In progress", blockedBy: "", note: "", updated: "2026-10-02", started: LOADED - 30 * MIN, typical: "15–45 min" },
+    { seq: 3, ...p, epic: "01-05", story: "S3", title: "A story waiting on another", status: "Pending", blockedBy: "01-05 S2", note: "Old note", updated: "2026-10-02" },
+    { seq: 4, ...p, epic: "01-05", story: "S4", title: "A story waiting on input", status: "Waiting on input", blockedBy: "sign-off from legal", note: "", updated: "2026-10-02" },
+    { seq: 5, ...p, epic: "01-05", story: "S5", title: "A ready story", status: "Pending", blockedBy: "", note: "", updated: "2026-10-02" },
+  ]);
+}
+
+// Time column and detail: each shown status with and without a range for its effort (META has one for medium only).
+function times() {
+  const p1 = { phase: 1, phaseLabel: "70-01 Time cases" };
+  const p2 = { phase: 2, phaseLabel: "70-02 Detail cases" };
+  const base = { blockedBy: "", note: "", updated: "2026-11-11" };
+  return withIds([
+    { seq: 1, ...p1, ...base, epic: "70-01", story: "S1", title: "Complete, timed", status: "Complete", model: "opus", effort: "medium", took: 80, criteria: { met: 4, total: 4 } },
+    { seq: 2, ...p1, ...base, epic: "70-01", story: "S2", title: "Complete, not timed", status: "Complete", model: "opus", effort: "medium", criteria: { met: 3, total: 3 } },
+    { seq: 3, ...p1, ...base, epic: "70-01", story: "S3", title: "In progress 20 min, medium (in range)", status: "In progress", model: "sonnet", effort: "medium", started: LOADED - 20 * MIN, criteria: { met: 1, total: 4 } },
+    { seq: 4, ...p1, ...base, epic: "70-01", story: "S4", title: "In progress 20 min, high (no range)", status: "In progress", model: "opus", effort: "high", started: LOADED - 20 * MIN, criteria: { met: 0, total: 2 } },
+    { seq: 5, ...p1, ...base, epic: "70-01", story: "S5", title: "In progress 60 min, medium (past the range)", status: "In progress", model: "opus", effort: "medium", started: LOADED - 60 * MIN },
+    { seq: 6, ...p1, ...base, epic: "70-01", story: "S6", title: "In progress since the previous day, high", status: "In progress", model: "opus", effort: "high", started: LOADED - 24 * 60 * MIN },
+    { seq: 7, ...p1, ...base, epic: "70-01", story: "S7", title: "In progress, not timed, medium", status: "In progress", model: "opus", effort: "medium" },
+    { seq: 8, ...p1, ...base, epic: "70-01", story: "S8", title: "Pending, medium", status: "Pending", blockedBy: "70-01 S3", model: "opus", modelPlanned: true, effort: "medium" },
+    { seq: 9, ...p1, ...base, epic: "70-01", story: "S9", title: "Pending, high", status: "Pending", blockedBy: "70-01 S4", model: "opus", modelPlanned: true, effort: "high" },
+    { seq: 10, ...p1, ...base, epic: "70-01", story: "S10", title: "Ready, medium", status: "Pending", model: "sonnet", modelPlanned: true, effort: "medium" },
+    { seq: 11, ...p1, ...base, epic: "70-01", story: "S11", title: "Ready, low", status: "Pending", model: "haiku", modelPlanned: true, effort: "low" },
+    { seq: 12, ...p1, ...base, epic: "70-01", story: "S12", title: "Waiting on input, medium", status: "Waiting on input", blockedBy: "the budget", model: "opus", effort: "medium" },
+    { seq: 13, ...p1, ...base, epic: "70-01", story: "S13", title: "Waiting on input, xhigh", status: "Waiting on input", blockedBy: "the budget", model: "opus", effort: "xhigh" },
+    { seq: 14, ...p2, ...base, epic: "70-02", story: "S1", title: "Blockers, a note of three lines, needs and criteria", status: "Pending", blockedBy: "70-01 S3; Epic 01-03; legal sign-off", note: "First line of the note\nSecond line\nThird line with <b>markup</b>", model: "opus", effort: "medium", criteria: { met: 2, total: 5 },
+      needs: [{ kind: "review", text: "Walk through the detail at 390 px" }, { kind: "input", text: "Pick a <i>date</i>" }] },
+    { seq: 15, ...p2, ...base, epic: "70-02", story: "S2", title: "No needs and no criteria", status: "Pending", model: "opus", effort: "medium", criteria: { met: 0, total: 0 } },
+    { seq: 16, ...p2, ...base, epic: "70-02", story: "T2.1", title: "A task with a blocker, a note and needs", status: "Pending", blockedBy: "70-02 S1", note: "Task note\nline two", model: "sonnet", effort: "low",
+      needs: [{ kind: "approval", text: "Approve the task" }] },
+  ]);
+}
+
+// Needs you: rows with and without needs items, spread so the next control passes over rows without and wraps.
+function needs() {
+  const p = { phase: 1, phaseLabel: "80-01 Needs you cases" };
+  const base = { blockedBy: "", note: "", updated: "2026-11-11", model: "opus", effort: "medium" };
+  return withIds([
+    { seq: 1, ...p, ...base, epic: "80-01", story: "S1", title: "No needs, complete", status: "Complete", took: 30 },
+    { seq: 2, ...p, ...base, epic: "80-01", story: "S2", title: "Two needs items", status: "Waiting on input", blockedBy: "the review",
+      needs: [{ kind: "review", text: "Walk through the strip" }, { kind: "input", text: "Pick the badge colour" }] },
+    { seq: 3, ...p, ...base, epic: "80-01", story: "S3", title: "No needs, in progress", status: "In progress", started: LOADED - 10 * MIN },
+    { seq: 4, ...p, ...base, epic: "80-01", story: "S4", title: "One needs item", status: "Pending",
+      needs: [{ kind: "approval", text: "Approve the copy" }] },
+    { seq: 5, ...p, ...base, epic: "80-01", story: "S5", title: "No needs, pending", status: "Pending", blockedBy: "80-01 S4" },
+    { seq: 6, ...p, ...base, epic: "80-01", story: "T6.1", title: "A task with three needs items", status: "Pending",
+      needs: [{ kind: "input", text: "First" }, { kind: "input", text: "Second" }, { kind: "review", text: "Third" }] },
+    { seq: 7, ...p, ...base, epic: "80-01", story: "S7", title: "No needs, last row", status: "Pending" },
+  ]);
+}
+// The same rows with no needs items: only `unmatched` holds items.
+const noNeeds = () => needs().map(({ needs: _, ...row }) => row);
+
+// The default selection rule, one fixture per step. Each fixture's expected row is named in its title.
+function selRows(epic, rows) {
+  const p = { phase: 1, phaseLabel: epic + " Default selection" };
+  const base = { blockedBy: "", note: "", updated: "2026-11-11", model: "opus", effort: "medium" };
+  return withIds(rows.map((r, i) => ({ seq: i + 1, ...p, ...base, epic, story: "S" + (i + 1), ...r })));
+}
+// Needs items win over an earlier In progress row: the control for the first step.
+const selNeeds = () => selRows("90-01", [
+  { title: "Complete", status: "Complete", took: 20 },
+  { title: "In progress, before the needs row", status: "In progress", started: LOADED - 10 * MIN },
+  { title: "Pending, no needs", status: "Pending" },
+  { title: "Needs items: selected", status: "Waiting on input", blockedBy: "the review", needs: [{ kind: "review", text: "Review the selection rule" }] },
+  { title: "Pending, after", status: "Pending" },
+]);
+// No needs: the first In progress row, after a Pending one.
+const selProgress = () => selRows("90-02", [
+  { title: "Complete", status: "Complete", took: 20 },
+  { title: "Pending, before the In progress row", status: "Pending" },
+  { title: "In progress: selected", status: "In progress", started: LOADED - 10 * MIN },
+  { title: "In progress, later", status: "In progress", started: LOADED - 5 * MIN },
+]);
+// No needs and nothing in progress: the first row not Complete.
+const selOpen = () => selRows("90-03", [
+  { title: "Complete", status: "Complete", took: 20 },
+  { title: "Complete", status: "Complete", took: 25 },
+  { title: "Waiting on input, no needs: selected", status: "Waiting on input", blockedBy: "the budget" },
+  { title: "Complete", status: "Complete", took: 30 },
+]);
+// Every row Complete: the first row.
+const selComplete = () => selRows("90-04", [
+  { title: "Complete: selected", status: "Complete", took: 20 },
+  { title: "Complete", status: "Complete", took: 25 },
+  { title: "Complete", status: "Complete", took: 30 },
+]);
+
+const UNMATCHED_4 = [
+  "[80-09 S1, input] A decision for an epic not in this tracker",
+  "Choose between <b>bold</b> and plain wording",
+  "[80-09 S2, review] Walk through the release notes before they are published, a long decision that wraps over more than one line at narrow widths",
+  "[80-09 S3, input] The fourth decision, behind the more button",
+];
+const NEEDS_META = { ...META, decisions: [...UNMATCHED_4, "[80-01 S2, review] Walk through the strip"], unmatched: UNMATCHED_4 };
+const NEEDS_3_META = { ...META, decisions: UNMATCHED_4.slice(0, 3), unmatched: UNMATCHED_4.slice(0, 3) };
+const NEEDS_ONLY_META = { ...META, decisions: UNMATCHED_4.slice(0, 2), unmatched: UNMATCHED_4.slice(0, 2) };
+// Written before `unmatched` existed: the strip and the total use `decisions`.
+const NEEDS_LEGACY_META = { title: META.title, spec: META.spec, updated: META.updated, decisions: ["[80-01 S2, review] Walk through the strip", "Legacy <b>decision</b> with no row"], timed: 14, typical: META.typical };
+
+const LEGACY_META = { title: META.title, spec: META.spec, updated: "2026-10-02", decisions: ["[01-05 S4, input] Legal sign-off"] };
+const NOMETA_FIELDS = { title: META.title, spec: META.spec, updated: META.updated, decisions: META.decisions, timed: 4 };
+// Ten or more timed stories and still no range: too spread out to predict.
+const STEADY_META = { ...META, timed: 12, typical: {} };
+
+const FIXTURES = {
+  five: { items: five(), meta: META },
+  sixty: { items: sixty(), meta: META },
+  legacy: { items: legacy(), meta: LEGACY_META },
+  zero: { items: [], meta: META },
+  nullmeta: { items: five(), meta: null },
+  "nometa-fields": { items: five(), meta: NOMETA_FIELDS },
+  noclaude: { items: five(), meta: META, noClaude: true },
+  times: { items: times(), meta: META },
+  "times-untimed": { items: times(), meta: NOMETA_FIELDS },
+  "times-spread": { items: times(), meta: STEADY_META },
+  "times-nullmeta": { items: times(), meta: null },
+  needs: { items: needs(), meta: NEEDS_META },
+  "needs-3": { items: needs(), meta: NEEDS_3_META },
+  "needs-unmatched-only": { items: noNeeds(), meta: NEEDS_ONLY_META },
+  "needs-legacy": { items: needs(), meta: NEEDS_LEGACY_META },
+  "sel-needs": { items: selNeeds(), meta: META },
+  "sel-progress": { items: selProgress(), meta: META },
+  "sel-open": { items: selOpen(), meta: META },
+  "sel-complete": { items: selComplete(), meta: META },
+  // Read from tracker-data.ts on load: its first line is the export, the rest plain JSON.
+  data: { items: [], meta: null, file: "tracker-data.ts" },
+};
+window.__fixtures = FIXTURES;
+
+// ---- The stub, run inside the iframe before the page script ----
+
+function install(win, config) {
+  // Clock: Date.now and new Date() read a settable value.
+  const RealDate = win.Date;
+  let now = config.now;
+  class FakeDate extends RealDate {
+    constructor(...args) { if (args.length === 0) { super(now); } else { super(...args); } }
+    static now() { return now; }
+  }
+  win.Date = FakeDate;
+  win.__setNow = ms => { now = ms; };
+  win.__getNow = () => now;
+
+  // setInterval callbacks are kept and fired on demand by __tick.
+  const intervals = [];
+  win.setInterval = (fn, _ms, ...args) => { intervals.push(() => fn(...args)); return intervals.length; };
+  win.clearInterval = handle => { intervals[handle - 1] = () => {}; };
+  win.__tick = () => { for (const fire of intervals) { fire(); } };
+
+  if (config.noClaude) { return; }
+
+  const later = fn => win.setTimeout(fn, 0);
+  const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
+  const state = { collections: {}, docs: {} };
+  const listeners = { collections: {}, docs: {} };
+
+  const querySnap = (rows, field) => {
+    const sorted = field ? [...rows].sort((a, b) => (a[field] ?? 0) - (b[field] ?? 0)) : rows;
+    const docs = sorted.map(row => {
+      const { id, ...data } = row;
+      return { id, exists: true, data: () => clone(data) };
+    });
+    return { docs, size: docs.length, empty: docs.length === 0, forEach: fn => docs.forEach(fn) };
+  };
+  const docSnap = (path, value) => ({ id: path.split("/").pop(), exists: value != null, data: () => value == null ? undefined : clone(value) });
+
+  const query = (name, field) => ({
+    orderBy: f => query(name, f),
+    onSnapshot(cb) {
+      const entry = { cb, field };
+      (listeners.collections[name] ||= []).push(entry);
+      if (state.collections[name] !== undefined) { later(() => cb(querySnap(state.collections[name], field))); }
+      return () => { listeners.collections[name] = listeners.collections[name].filter(e => e !== entry); };
+    },
+  });
+  const db = {
+    collection: name => query(name, null),
+    doc(path) {
+      return {
+        onSnapshot(cb) {
+          (listeners.docs[path] ||= []).push(cb);
+          if (path in state.docs) { later(() => cb(docSnap(path, state.docs[path]))); }
+          return () => { listeners.docs[path] = listeners.docs[path].filter(e => e !== cb); };
+        },
+      };
+    },
+  };
+
+  win.__emitItems = items => {
+    state.collections.items = clone(items);
+    for (const { cb, field } of listeners.collections.items || []) { cb(querySnap(state.collections.items, field)); }
+  };
+  win.__emitMeta = meta => {
+    state.docs["meta/tracker"] = clone(meta);
+    for (const cb of listeners.docs["meta/tracker"] || []) { cb(docSnap("meta/tracker", state.docs["meta/tracker"])); }
+  };
+  win.__emit = (items, meta) => { win.__emitItems(items); win.__emitMeta(meta); };
+
+  if (config.emit) {
+    state.collections.items = clone(config.items);
+    state.docs["meta/tracker"] = clone(config.meta);
+  }
+  win.claude = { use: name => Promise.resolve(name === "db" ? db : undefined) };
+}
+
+// ---- Load ----
+
+const frame = document.getElementById("frame");
+window.__frame = () => frame.contentWindow;
+for (const name of ["__setNow", "__getNow", "__tick", "__emitItems", "__emitMeta", "__emit"]) {
+  window[name] = (...args) => frame.contentWindow[name](...args);
+}
+
+function toolbar() {
+  const bar = document.getElementById("bar");
+  const link = (key, value, label) => {
+    const next = new URLSearchParams(location.search);
+    next.set(key, value);
+    const a = document.createElement("a");
+    a.href = "?" + next.toString();
+    a.textContent = label;
+    if (String(params.get(key) ?? (key === "w" ? 1280 : "five")) === String(value)) { a.className = "on"; }
+    return a;
+  };
+  for (const w of [1280, 900, 390]) { bar.append(link("w", w, w + " px")); }
+  for (const f of Object.keys(FIXTURES)) { bar.append(link("f", f, f)); }
+}
+
+async function load() {
+  toolbar();
+  const fixture = FIXTURES[FIXTURE];
+  if (!fixture) { throw new Error("Unknown fixture: " + FIXTURE); }
+  if (fixture.file) {
+    const source = await (await fetch(fixture.file, { cache: "no-store" })).text();
+    const data = JSON.parse(source.slice(source.indexOf("\n") + 1));
+    fixture.items = Object.entries(data.items).map(([id, row]) => ({ id, ...row }));
+    fixture.meta = data.meta;
+  }
+  const template = await (await fetch("/cpm-next-progress/page/tracker.html", { cache: "no-store" })).text();
+  const page = fillTemplate(template, { title: META.title, spec: META.spec }, "example-repo");
+  window.__HARNESS = { now: LOADED, emit: EMIT, noClaude: fixture.noClaude === true, items: fixture.items, meta: fixture.meta };
+  const stub = "<script>(" + install.toString() + ")(window, parent.__HARNESS);<\/script>";
+  frame.style.width = WIDTH + "px";
+  frame.style.height = (Number(params.get("h")) || window.innerHeight - document.getElementById("bar").offsetHeight) + "px";
+  frame.srcdoc = "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\">"
+    + stub + "</head><body>" + page + "</body></html>";
+}
+
+load();
+</script>
+</body>
+</html>

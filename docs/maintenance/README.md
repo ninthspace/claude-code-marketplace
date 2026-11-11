@@ -50,6 +50,38 @@ grep -i 'hooks module cpm-next-progress@inline' /tmp/d.txt   # "loaded", or "fai
 `artifactUrlIn` against the formats above; nothing asserts the harness still prints them. Nothing
 automated covers older engines.
 
+**What else the mod reads, and the copies it keeps** (from 0.9.0):
+
+- **`turn.step`.** The input's `agentId` (absent on the main loop) and `model` (what the step asked for),
+  and the result's `usage.model` (what answered), kept in memory per loop and dropped at that loop's
+  `turn.complete`. A change to either field, or to `usage` arriving as null, leaves a loop with no model
+  or the asked-for one, and a started story is then recorded with no model or the wrong one.
+- **`tool.call` writers.** `agentId` on each `tool.call`, and which epic doc a call writes: the basename at
+  the end of an `Edit`, `Write` or `MultiEdit` `file_path`, or any `…-epic-….md` name in a `Bash` command
+  (`writtenEpics` in `hooks/timing.ts`). A script that writes an epic doc without naming it is credited
+  to no one.
+- **`do`'s planned model.** `~/.claude/plugins/installed_plugins.json`, the `cpm-next@` entry, the install
+  for this project before the user's, and the `model:` line of that install's `skills/do/SKILL.md`
+  frontmatter. A rename of the plugin key, the skill folder or the frontmatter key leaves Pending rows
+  with no planned model.
+- **Copies from cpm-next-models.** `familyOf` (`cpm-next-models/hooks/pin.ts`) is copied into
+  `cpm-next-progress/hooks/progress.ts`, and `pickInstall` and the `model:` reading of `parseFrontmatter`
+  (`frontmatterOf` in `cpm-next-models/hooks/register.ts`) as `pickInstall` and `frontmatterModel`; the
+  mods import nothing from each other. Change both copies together.
+- **The decision prefix.** `[{epic} {S|T}{id}, {kind}]` at the start of a build-order decision attaches it
+  to that row (`DECISION_PREFIX` in `hooks/progress.ts`). The form is not part of the cpm-next contract;
+  decisions are written in it by the user's own instructions to `do`. A change to the form leaves every
+  decision in the page's "Not matched to a row" strip.
+- **The row-schema version.** `ROW_SCHEMA` in `hooks/progress.ts` is part of the `checked:` signature and
+  the `settled:` mark. Raise it whenever a release adds, removes or changes a field of a row or of
+  `meta/tracker`, so the first check after the upgrade reads every tracker, settled ones included, and
+  rewrites the rows; and update `hooks/fixtures/tracker-data.ts` (checked by `progress.test.ts` against
+  `fixtures/tracker-epics.ts`), which the page harness `hooks/fixtures/tracker-harness.html` renders.
+- **The turn-end prompt's context.** `nudge` sets `nudgeContext` and the mod's own `prompt.submit` hook
+  attaches it to the prompt `nudge` submits; `PromptSubmitArgs` has no `context`. Under
+  `claude plugin test` that hook does not run for the mod's own prompt, so no test sees the context;
+  the engine's types say a plugin's other hooks do see its submission. Unverified in a live session.
+
 ---
 
 ## `cpm-next` ↔ claude-in-chrome, project files and the mods — what `do` reads and what reads it
@@ -67,7 +99,7 @@ automated covers older engines.
 - **The test-run rules.** `cpm-next/shared/test-runs.md` holds the targeted set, the wide-reach list, the exempt kinds and the snapshot; only `do` and the auditor read it, so the contract (read by every skill) holds only the `**Test run**` field. The wide-reach list names Laravel's convention-wired code; a project on another stack relies on the "anything the framework wires by convention or by a string" entry, so extend the list there when a framework hides coupling the list does not name.
 - **The review record's Source and date.** `review` writes a record's **Source** (every epic path in the scope, in full and comma-separated), its title (`— Story N` for one story) and its **Date**, in the form `cpm-next/shared/artifacts.md` gives; `cpm-next/skills/status` reads them to decide whether an epic has been reviewed (its **Next** suggestion). `status` also compares the date with the epic's last `**Amended**` line, so a change to the field form, the title form, the date or the `**Amended**` line breaks `status`'s **Next** check; a record written before the form (a range such as `48-01 … 48-08`) names only its two ends. No mod reads the records.
 - **The spec's Challenge section.** `plan` writes a spec's `## Challenge` section and `review` reads it, in the forms `cpm-next/shared/artifacts.md` gives (the `**Personas**:` line and the bullets with their marks); a change to a form breaks the other skill's reading of it. The **Reviewers** reuse form and the `Decided at challenge:` and `Reopens challenge:` entries are written for the reader and parsed by nothing. `status` reads neither, and no mod does: the section's only field line is `**Personas**:` and every other line is a bullet, which keeps `whats-next/hooks/plan.ts:201,204` (header fields matched at the start of any line) from reading it as a header.
-- **Unknown fields in the mods.** `whats-next/hooks/plan.ts` reads `**Story**`, `**Task**`, `**Status**`, `**Blocked by**` and `**Source spec**` (and `**Withdrawn**` and `**Superseded by**` in specs); `cpm-next-progress/hooks/progress.ts` reads `**Story**`, `**Task**`, `**Status**`, `**Blocked by**` and `**Effort**`, and `register.ts` reads `**Source spec**`. Both drop every other `**Field**:` line and read neither `docs/library/` nor `docs/quick/`, so `**Signal**`, `**Class**`, `**Audit**` and `**Test run**` are safe to add (the `**Audit**` suffix ` — full run due` and the `fix due` form included, since neither parser reads the field), provided `**Test run**` stays one line in the header block before `**Acceptance Criteria**`, since both parsers count `- ` lines after that heading as criteria; `hooks/testrun.test.ts` in both mods holds this, with a control that a `- ` bullet under the criteria is read as one; the line is rewritten on every run, so a story's epic doc changes more often and the `whats-next` note goes stale more often; a change to the format of any field listed here breaks a mod.
+- **Unknown fields in the mods.** `whats-next/hooks/plan.ts` reads `**Story**`, `**Task**`, `**Status**`, `**Blocked by**` and `**Source spec**` (and `**Withdrawn**` and `**Superseded by**` in specs); `cpm-next-progress/hooks/progress.ts` reads `**Story**`, `**Task**`, `**Status**`, `**Blocked by**`, `**Effort**` and `**Model**`, and `register.ts` reads `**Source spec**`. Both drop every other `**Field**:` line and read neither `docs/library/` nor `docs/quick/`, so `**Signal**`, `**Class**`, `**Audit**` and `**Test run**` are safe to add (the `**Audit**` suffix ` — full run due` and the `fix due` form included, since neither parser reads the field), provided `**Test run**` stays one line in the header block before `**Acceptance Criteria**`, since both parsers count `- ` lines after that heading as criteria; `hooks/testrun.test.ts` in both mods holds this, with a control that a `- ` bullet under the criteria is read as one; the line is rewritten on every run, so a story's epic doc changes more often and the `whats-next` note goes stale more often; a change to the format of any field listed here breaks a mod.
 - **Contract strings a mod may later parse.** `red:` in `Evidence` lines, `red: n/a — existing (reaches …)`, the indented `- Waiting on user:` line under a criterion, `Evidence (user,`, `**Lessons**`, `**Scratch**`, `**Test run**`, `**Audit**` with its ` — full run due: …` suffix and `fix due (…) — full run failed: …` form (and `story tree {hash}`), the red form `red: {failure text} — deferred full run, before the fix`, and `**Signal**` (with ` — cpm-next {version}` on a `process` signal, ` — recurs:`, ` — raised`, ` — promoted`, ` — declined`) in epics, stories and quick records, and `**Class**` in library lessons and amendments.
 - **cpm-next ships a hooks module.** `cpm-next/hooks` (`hooks.json`, `register.ts`, `guard.ts`, `guard.test.ts`) and `cpm-next/tsconfig.json` make cpm-next a mod as well as a skill plugin, so the load failures recorded above can now reach the required plugin; load it headless under every installed engine before a release. Its laid types are ignored (`cpm-next/.claude-plugin/types/`).
 

@@ -27,6 +27,9 @@ export type BuildOrder = {
 
 export type TrackerStatus = 'Pending' | 'In progress' | 'Complete' | 'Waiting on input'
 
+/** A story's criteria counted: met when it has an `Evidence` line and no `Not met:` line. */
+export type CriteriaCount = { met: number; total: number }
+
 /** One row of the `items` collection the page renders. */
 export type TrackerItem = {
   seq: number
@@ -40,13 +43,52 @@ export type TrackerItem = {
   blockedBy: string
   note: string
   updated: string
-  /** For a story in progress that was timed: when it started (epoch ms), and its typical range if it has one. */
+  /** For a story in progress that was timed: when it started (epoch ms). */
   started?: number
-  typical?: string
+  /** The model's family, lowercase: the story's `**Model**` field, else the recorded model, else `do`'s planned model. */
+  model?: string
+  /** Only on a model taken from `do`'s planned model. */
+  modelPlanned?: true
+  /** `low`, `medium`, `high` or `xhigh`. */
+  effort?: string
+  /** Whole minutes from start to finish, for a timed Complete story. */
+  took?: number
+  /** Story rows only. */
+  criteria?: CriteriaCount
+  /** The build order's decisions that name this row, in file order; present only when there is one. */
+  needs?: Need[]
 }
 
+/** A decision matched to a row by its `[{epic} {S|T}{id}, {kind}]` prefix: the kind, and the text after the prefix. */
+export type Need = { kind: string; text: string }
+
+/** A steady estimate for one effort level: `range()`'s text and its bounds in minutes, unrounded. */
+export type TypicalRange = { range: string; low: number; high: number }
+
 /** The `meta/tracker` document. */
-export type TrackerMeta = { title: string; spec: string; updated: string; decisions: string[] }
+export type TrackerMeta = {
+  title: string
+  spec: string
+  updated: string
+  decisions: string[]
+  /** How many stories have been timed from start to finish. */
+  timed?: number
+  /** Each effort level with a steady estimate. */
+  typical?: Record<string, TypicalRange>
+  /** The decisions no row holds, whole. */
+  unmatched?: string[]
+}
+
+/** One story's timing record, as `timing.ts` keeps it in the mod's store. */
+export type TimeRecord = { status: WorkStatus; effort: string; started?: number; finished?: number; model?: string }
+
+/** `claude-opus-5-5` → `opus`; an id with no family name is kept whole. */
+export function familyOf(model: string): string {
+  return /opus|sonnet|haiku|fable/.exec(model)?.[0] ?? model
+}
+
+/** A story's `**Effort**` as timings read it: `low`, `high` or `xhigh`, else `medium`. */
+export const effortOf = (raw: string) => (raw === 'low' || raw === 'high' || raw === 'xhigh' ? raw : 'medium')
 
 /** An epic doc; `archived` marks one read from `docs/archive/epics`, which only satisfies other epics' blockers. */
 export type EpicFile = { name: string; text: string; archived?: boolean }
@@ -61,6 +103,8 @@ export type ParsedStory = {
   title: string
   status: WorkStatus
   effort: string
+  /** The `**Model**` field, lowercase; empty when absent. */
+  model: string
   blockedBy: string[]
   tasks: ParsedTask[]
   /** The status carries a ` — blocked:` note. */
@@ -119,7 +163,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       task = null
       criterion = null
       criteria = false
-      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', effort: '', blockedBy: [], tasks: [], isBlockedNote: false, criteria: [], hasLegacyEvidence: false, hasNumber: false }
+      story = { number: 0, title: line.slice(3).trim(), status: 'Pending', effort: '', model: '', blockedBy: [], tasks: [], isBlockedNote: false, criteria: [], hasLegacyEvidence: false, hasNumber: false }
       stories.push(story)
       tasks.set(story, [])
       continue
@@ -167,6 +211,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       if (name === 'status') { story.status = normaliseStatus(value); story.isBlockedNote = /—\s*blocked:/i.test(value) }
       if (name === 'blocked by') story.blockedBy = parseBlockers(value)
       if (name === 'effort') story.effort = value.trim().toLowerCase()
+      if (name === 'model') story.model = value.trim().toLowerCase()
       if (name === 'evidence') story.hasLegacyEvidence = true
     } else {
       if (name === 'status') epic.status = normaliseStatus(value)
@@ -182,6 +227,7 @@ export function parseEpic(file: EpicFile): ParsedEpic {
       title: s.title,
       status: s.status,
       effort: s.effort,
+      model: s.model,
       blockedBy: s.blockedBy,
       isBlockedNote: s.isBlockedNote,
       criteria: s.criteria,
@@ -238,8 +284,82 @@ function outstanding(epics: ParsedEpic[], epic: ParsedEpic, tokens: string[]): s
   return left
 }
 
-/** The tracker rows for a build order, in build order. Items naming an epic, story or task that does not exist are skipped and reported. */
-export function buildItems(order: BuildOrder, files: EpicFile[], today: string): { items: Map<string, TrackerItem>; missing: string[] } {
+/** A story's criteria counted; a legacy story-level `**Evidence**:` field meets every one. */
+export function countCriteria(story: ParsedStory): CriteriaCount {
+  const total = story.criteria.length
+  if (story.hasLegacyEvidence) return { met: total, total }
+
+  return { met: story.criteria.filter(c => c.hasEvidence && !c.hasNotMet).length, total }
+}
+
+/**
+ * What a row takes from the timing records and the planned model: its model (the story's `**Model**`
+ * field, else the recorded model, else for a story not yet started `do`'s planned model, marked as such),
+ * its start while it is in progress, and for a finished story the minutes it took. No typical range:
+ * that is kept once per effort in `meta/tracker`, so a moving estimate rewrites no row.
+ */
+export function rowTiming(
+  key: string, work: WorkStatus, shown: TrackerStatus, fieldModel: string, times: Record<string, TimeRecord>, planned?: string,
+): Pick<TrackerItem, 'model' | 'modelPlanned' | 'started' | 'took'> {
+  const record = times[key]
+  const out: Pick<TrackerItem, 'model' | 'modelPlanned' | 'started' | 'took'> = {}
+  if (fieldModel !== '') out.model = fieldModel
+  else if (record?.model !== undefined && record.model !== '') out.model = record.model
+  else if (work === 'Pending' && planned !== undefined && planned !== '') {
+    out.model = familyOf(planned)
+    out.modelPlanned = true
+  }
+  if (shown === 'In progress' && record?.status === 'In Progress' && record.started !== undefined) out.started = record.started
+  if (work === 'Complete' && record?.started !== undefined && record.finished !== undefined && record.finished > record.started) {
+    out.took = Math.round((record.finished - record.started) / 60_000)
+  }
+
+  return out
+}
+
+const DECISION_PREFIX = /^\s*\[\s*(\d+(?:-\d+)*)\s+([ST])(\d+(?:\.\d+)*)\s*,\s*([^\]]*?\S)\s*\]([\s\S]*)$/i
+
+/**
+ * The row id a decision's prefix names, with its kind and text: `[01-05 S4, review] …` names `01-05-s4`.
+ * Read tolerantly: `s` or `S`, a zero-padded number, spaces around the comma, a kind of several words.
+ */
+export function decisionTarget(decision: string): { id: string; need: Need } | undefined {
+  const found = DECISION_PREFIX.exec(decision)
+  if (found === null) return undefined
+  const [, epic = '', letter = '', number = '', kind = '', rest = ''] = found
+  const [head = '', ...tail] = number.split('.')
+  const id = [String(Number.parseInt(head, 10)), ...tail].join('.')
+
+  return { id: `${epic}-${letter.toLowerCase()}${id}`, need: { kind: kind.trim(), text: rest.trim() } }
+}
+
+/**
+ * Attaches each decision to the row its prefix names, in file order. A decision with no prefix, or whose
+ * prefix names no row of this tracker, is returned whole as unmatched.
+ */
+export function matchDecisions(items: Map<string, TrackerItem>, decisions: string[]): string[] {
+  const unmatched: string[] = []
+  for (const decision of decisions) {
+    const target = typeof decision === 'string' ? decisionTarget(decision) : undefined
+    const row = target === undefined ? undefined : items.get(target.id)
+    if (target === undefined || row === undefined) {
+      unmatched.push(decision)
+      continue
+    }
+    row.needs = [...(row.needs ?? []), target.need]
+  }
+
+  return unmatched
+}
+
+/**
+ * The tracker rows for a build order, in build order, with what the timing records and `do`'s planned
+ * model add to each, and each decision attached to the row it names. Items naming an epic, story or task
+ * that does not exist are skipped and reported, and decisions naming no row are returned as unmatched.
+ */
+export function buildItems(
+  order: BuildOrder, files: EpicFile[], today: string, times: Record<string, TimeRecord> = {}, planned?: string,
+): { items: Map<string, TrackerItem>; missing: string[]; unmatched: string[] } {
   const epics = files.filter(f => f.archived !== true).map(parseEpic)
   // An epic finished and archived still satisfies the blockers of the epics that name it.
   const known = [...epics, ...files.filter(f => f.archived === true).map(parseEpic)]
@@ -274,6 +394,10 @@ export function buildItems(order: BuildOrder, files: EpicFile[], today: string):
 
       seq += 1
       const id = task === undefined ? `${epic.short}-s${story.number}` : `${epic.short}-t${task.id}`
+      const shown = trackerStatus(status, entry.waitingOn !== undefined || isUserWait)
+      // A task row takes its story's model and effort, and neither the story's time nor its criteria.
+      const timing = rowTiming(`${epic.short} S${story.number}`, storyStatus(story, epic), task === undefined ? shown : 'Pending', story.model, times, planned)
+      const { model, modelPlanned } = timing
       items.set(id, {
         seq,
         phase: index + 1,
@@ -282,15 +406,18 @@ export function buildItems(order: BuildOrder, files: EpicFile[], today: string):
         epic: epic.short,
         story: task === undefined ? `S${story.number}` : `T${task.id}`,
         title: task === undefined ? story.title : task.title,
-        status: trackerStatus(status, entry.waitingOn !== undefined || isUserWait),
+        status: shown,
         blockedBy: status === 'Complete' ? '' : blockers.join('; '),
         note: entry.note ?? '',
         updated: today,
+        ...(task === undefined ? timing : { ...(model === undefined ? {} : { model }), ...(modelPlanned === undefined ? {} : { modelPlanned }) }),
+        effort: effortOf(story.effort),
+        ...(task === undefined ? { criteria: countCriteria(story) } : {}),
       })
     }
   })
 
-  return { items, missing }
+  return { items, missing, unmatched: matchDecisions(items, order.decisions ?? []) }
 }
 
 const isDropped = (status: WorkStatus) => status === 'Superseded' || status === 'Withdrawn'
@@ -483,6 +610,18 @@ export function fillTemplate(template: string, order: BuildOrder, repo: string):
     .replaceAll('{{SPEC}}', escapeHtml(order.spec ?? ''))
 }
 
+/**
+ * The version of the row and meta shape. It is part of the check signature and of a settled tracker's
+ * mark, so a release that changes the shape makes the next check read every tracker, settled ones too.
+ */
+export const ROW_SCHEMA = 2
+
+/** What a project's last finished check is stored under: its root, the row-shape version and its file listings. */
+export const checkSignature = (root: string, listings: string) => `${root}|rows:${ROW_SCHEMA}|${listings}`
+
+/** A settled tracker's mark: its build-order file as listed, and the row-shape version. */
+export const settledMark = (file: { mtimeMs: number; size: number }) => `${file.mtimeMs}:${file.size}:rows:${ROW_SCHEMA}`
+
 /** Splits writes into batches of at most 50, the ArtifactData limit. */
 export function chunk<T>(list: T[], size = 50): T[][] {
   const out: T[][] = []
@@ -491,8 +630,25 @@ export function chunk<T>(list: T[], size = 50): T[][] {
   return out
 }
 
-/** One build-order file whose tracker differs from the epic docs. */
-export type Drift = { name: string; url: string; file: string; writes: Write[] }
+/**
+ * One build-order file whose tracker differs from the epic docs. `isQuiet` marks a drift whose writes
+ * only move rows' criteria counts: it is asked for at the turn's end, not on the tool result that caused it.
+ */
+export type Drift = { name: string; url: string; file: string; writes: Write[]; isQuiet?: boolean }
+
+/**
+ * Whether every write only changes the `criteria` of a row that already exists, so the drift can wait
+ * for the turn's end. Each `Evidence` line `do` writes would otherwise put a note on that tool's result.
+ */
+export function isCriteriaOnly(writes: Write[], live: LiveDoc[]): boolean {
+  const byId = new Map(live.map(d => [d.id, d]))
+
+  return writes.length > 0 && writes.every(w => {
+    const current = w.collection === 'items' && w.op === 'set' ? byId.get(w.doc_id) : undefined
+
+    return current !== undefined && w.op === 'set' && !sameFields(current.data, w.data, '') && sameFields(current.data, w.data, 'criteria')
+  })
+}
 
 /** The file a drift's writes are saved to: ready-made `ArtifactData` batches of at most 50. */
 export function pendingJson(drift: Pick<Drift, 'url' | 'writes'>): string {
@@ -556,27 +712,19 @@ export type Timing = { story: string; started: number; typical: string }
 export const shortTitle = (title: string) =>
   title.replace(/:\s*build order$/i, '').replace(/^(\d+)\s+Spec\s+\1\s*:\s*/i, '$1 ')
 
-/** A tracker's entry from its rows, keeping the date the counts last moved from the entry before. */
-export function indexEntry(
-  base: Pick<IndexEntry, 'root' | 'name' | 'title' | 'state' | 'artifact'>,
-  items: Map<string, TrackerItem>,
-  today: string,
-  before: IndexEntry | undefined,
-): IndexEntry {
-  const rows = [...items.values()]
-  const counts = {
-    done: rows.filter(r => r.status === 'Complete').length,
-    total: rows.length,
-    active: rows.filter(r => r.status === 'In progress').map(r => `${r.epic} ${r.story}`),
-    waiting: rows.filter(r => r.status === 'Waiting on input').length,
-  }
-  const timings: Timing[] = rows
-    .filter(r => r.status === 'In progress' && r.started !== undefined)
-    .map(r => ({ story: `${r.epic} ${r.story}`, started: r.started ?? 0, typical: r.typical ?? '' }))
-  const isSame = before !== undefined && before.done === counts.done && before.total === counts.total
-    && JSON.stringify(before.active) === JSON.stringify(counts.active) && before.waiting === counts.waiting
+/**
+ * Which install of a plugin to read: the one scoped to this project, else the user's, else the first.
+ * A copy of cpm-next-models' `pickInstall` (`cpm-next-models/hooks/pin.ts`); the mods import nothing from each other.
+ */
+export function pickInstall(installs: { scope?: string; projectPath?: string; installPath: string }[], root: string): string | undefined {
+  return (installs.find(i => i.projectPath === root) ?? installs.find(i => i.scope === 'user') ?? installs[0])?.installPath
+}
 
-  return { ...base, ...counts, ...(timings.length === 0 ? {} : { timings }), changed: isSame ? before.changed : today, checked: today }
+/** The `model:` line of a SKILL.md's frontmatter, as cpm-next-models' `parseFrontmatter` reads it. */
+export function frontmatterModel(text: string): string | undefined {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1]
+
+  return block === undefined ? undefined : /^model:\s*(\S+)\s*$/m.exec(block)?.[1]
 }
 
 /** Whether a tracker has no work left: every row complete, or its artifact deleted. */

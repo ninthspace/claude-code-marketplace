@@ -1,0 +1,45 @@
+# Release cpm-next-progress 0.9.0
+
+**Source spec**: docs/specifications/55-spec-tracker-split-view.md  
+**Date**: 2026-11-11  
+**Status**: Complete  
+**Blocked by**: Epic 55-01-epic-rows-and-meta, Epic 55-02-epic-split-view-page  
+**Amended**: review 12 (docs/reviews/12-review-tracker-split-view.md) — the data layout stated in README only; the upgrade's cost and old pages stated; the maintenance record's full list of formats read; onboarding and presentation read (2026-11-11)  
+**Lessons**: docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 1), docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (Story 1), docs/library/01-library-lessons-learned.md → "A criterion's factual claim is checked against the code and its sibling criteria before the epic runs" (build)
+
+**Base.** `{base}` is the commit before the first 55-01 story's work; every diff below is `git diff {base} --`.
+
+## Release with the docs
+**Story**: 1  
+**Status**: Complete  
+**Blocked by**: —  
+**Satisfies**: NFR2  
+**Test run**: 2 (2 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 175 passed, 0 failed — tree 95dd84d7e793babb39ba4b3d38d30f365af8aafe — closes epic; wide reach: cpm-next-progress/.claude-plugin/plugin.json, .claude-plugin/marketplace.json (config); untested: cpm-next-training-guide.html, cpm-next-onboarding.html, cpm-next-presentation.html — each → deferred full run  
+**Audit**: pass (2026-11-11), 1 finding fixed  
+**Signal**: fix-not-carried-through — project — the README gave 760 px as the width that hides Model and Effort, where 55-02 Story 1's audit fix had moved it to 900 px (README.md CPM Next Progress, 55-03 S1 audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (a fixed fact left in its old form in a second place)
+
+**Acceptance Criteria**:
+
+- `README.md`'s CPM Next Progress section describes the split view (columns, detail panel, Needs you badge, total and strip, the decision prefix that matches a row), the model capture and the planned model, the `times` line's model, and the data layout: row fields `model`, `modelPlanned`, `effort`, `took`, `criteria`, `needs`, no row `typical`, meta `timed`, `typical`, `unmatched`; and the mod store's per-story `model`. Every passage on the page, its columns, decisions, data layout, the store or the `times` report is read and kept or changed: `grep -n -i "decisions\|Risk / notes\|Blocked by\|typical\|data layout\|mod store\|progress-tracker times"` over `README.md`, `cpm-next-training-guide.html`, `cpm-next-onboarding.html` and `cpm-next-presentation.html` `[manual]`
+  - Evidence: README.md CPM Next Progress section: the build-order example's `decisions` and a **Decisions** paragraph (the `[{epic} {S|T}{id}, {kind}]` prefix and the "Not matched to a row" strip), a **The page** passage (the seven columns, Model and Effort hidden below 900 px and the detail above the table below 760 px after the round-1 fix, the detail panel, the Needs you badge, total and next control, the planned model), the model capture under **Model**, step 3's criteria-only note, the `/progress-tracker 01` command (republish brings rows up to date), **Story timings** (Time column and detail; ranges in meta; the `times` line's model, `04-01 S5 (medium, opus)`), **Data layout** (row `model`, `modelPlanned`, `effort`, `took`, `criteria`, `needs`, no row typical range; meta `timed`, `typical`, `unmatched`), **Mod store** (per-story `model`; the row-shape version in `checked:` and `settled:`); the grep's other hits in README.md (:88 docs folders, :133, :161, :163 statuses and blockers, :200 `story_times`) read and kept; cpm-next-training-guide.html: the republish line, the decisions example and prefix bullet, "What the page shows" in place of "What a row shows", the data-layout paragraph replaced by a pointer to README's **Data layout**, and the criteria-only note in "How rows sync"; its other hits (generic `**Blocked by**`, decisions, "Typical invocations") read and kept; cpm-next-onboarding.html (:275, :304-345, :449, :465) read and kept; cpm-next-presentation.html: the `/progress-tracker` card names the per-row decisions and the detail; its other hits (:265, :361, :382, :401) read and kept — red: n/a — manual
+- The row and meta field names are stated in `README.md` only: `grep -c "modelPlanned\|unmatched"` gives at least 1 in `README.md` and 0 in each of the three guides, which refer to the README for the layout `[manual]`
+  - Evidence: `grep -c "modelPlanned\|unmatched"`: README.md 2, cpm-next-training-guide.html 0, cpm-next-onboarding.html 0, cpm-next-presentation.html 0; the training guide's "What the page shows" ends with a pointer to **Data layout** in the README — red: n/a — static
+- `README.md` says how an existing tracker gets the new page (`/progress-tracker {nn}`), that the first check after the upgrade rewrites every row of every tracker in the project, settled ones included, and that a page not yet republished loses its "typically" text until it is; the 0.7.0 paragraph on older pages keeps its sentences `[manual]`
+  - Evidence: README.md **Upgrading to 0.9.0**: `/progress-tracker {nn}` rewrites and republishes the page; the first check after the upgrade rewrites every row of every tracker, settled ones included; a page not yet republished loses its "typically" text until it is; the **Story timings** paragraph keeps "Pages published before 0.7.0 need their template again: `/progress-tracker 04` for a tracker and `/progress-tracker all publish` for the overview republish to the same links." — red: n/a — manual
+- `docs/maintenance/README.md`'s cpm-next-progress record adds what the mod now reads and the copies it keeps: `turn.step` input `agentId` and `model` and result `usage.model`, `agentId` on `tool.call`, a `Bash` command matched by an epic file's basename, `~/.claude/plugins/installed_plugins.json` and the `model:` frontmatter of cpm-next `do`'s SKILL.md, the copies of `familyOf` and of `frontmatterOf`/`pickInstall` from cpm-next-models, the `[{epic} {S|T}{id}, {kind}]` decision prefix, and the row-schema version constant with what a change to the row shape requires `[manual]`
+  - Evidence: docs/maintenance/README.md, cpm-next-progress record, "What else the mod reads, and the copies it keeps": `turn.step` input `agentId` and `model` and result `usage.model`; `agentId` on `tool.call` and the `Bash` command matched by an epic doc's name; `installed_plugins.json` and the `model:` frontmatter of `do`'s SKILL.md; the copies of `familyOf` and of `pickInstall`/`frontmatterOf` (as `pickInstall`, `frontmatterModel`); the `[{epic} {S|T}{id}, {kind}]` prefix; `ROW_SCHEMA` and what a row-shape change requires (raise it, update `tracker-data.ts`); the cpm-next record's "Unknown fields" bullet now lists `**Model**` — red: n/a — manual
+- `cpm-next-progress/.claude-plugin/plugin.json` and its marketplace entry read `0.9.0`, the marketplace `version` moves one patch from its value at `{base}`; `git diff {base} -- .claude-plugin/marketplace.json` changes no other plugin's version line `[manual]`
+  - Evidence: cpm-next-progress/.claude-plugin/plugin.json `"version": "0.9.0"`; `git diff 0a4e609 -- .claude-plugin/marketplace.json` changes two lines: the marketplace `version` 4.0.13 → 4.0.14 and cpm-next-progress's `version` 0.8.0 → 0.9.0 — red: n/a — static
+- The guides' version lines (`grep -n "cpm-next-progress 0.8.0" cpm-next-*.html`) read `0.9.0`, and `grep -c "cpm-next-progress 0.8.0"` over them gives 0 `[manual]`
+  - Evidence: cpm-next-training-guide.html:343, cpm-next-onboarding.html:215 and cpm-next-presentation.html:225 read `cpm-next-progress 0.9.0`; `grep -c "cpm-next-progress 0.8.0"` gives 0 in each — red: n/a — static
+- `claude plugin validate cpm-next-progress` and `claude plugin validate .` pass; `claude plugin test` passes for cpm-next-progress, cpm-next-models and whats-next `[manual]`
+  - Evidence: `claude plugin validate cpm-next-progress` and `claude plugin validate .` print "✔ Validation passed"; `claude plugin test`: cpm-next-progress 106 passed, 0 failed; cpm-next-models 20 passed, 0 failed; whats-next 34 passed, 0 failed (and cpm-next 15 passed) — red: n/a — manual
+- The mod loads headless under each version in `~/.local/share/claude/versions/`, by the commands in `docs/maintenance/README.md` (`hooks module cpm-next-progress@inline` … `loaded`) `[manual]`
+  - Evidence: `~/.local/share/claude/versions/{2.1.319,2.1.321,2.1.322} -p "reply ok" --debug-file … --plugin-dir cpm-next-progress`: each debug file has `hooks module cpm-next-progress@inline loaded (worker, environment 2, tier user); events: session.start,prompt.submit,command.run,ui.render,ui.close,tool.call,turn.step,turn.complete` — red: n/a — manual
+
+### Docs, versions and checks
+**Task**: 1.1  
+**Description**: README, maintenance record, versions, validate, test, headless loads.  
+**Status**: Complete
+
+---

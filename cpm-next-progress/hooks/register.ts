@@ -3,11 +3,11 @@ import type { EngineInterface, Register } from 'claude-code'
 import { OVERVIEW, renderOverview } from './overview'
 import type { Drift, EpicFile, IndexEntry, LiveDoc } from './progress'
 import {
-  MAX_NUDGES, artifactUrlIn, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, indexEntry, modelNote, overviewRows, shortTitle, overviewWrites,
-  parseBuildOrder, parseDocs, pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
+  MAX_NUDGES, artifactUrlIn, checkSignature, isCriteriaOnly, settledMark, buildItems, dateOf, defaultBuildOrder, describeDrift, diff, fillTemplate, frontmatterModel, modelNote, overviewRows, pickInstall, shortTitle,
+  overviewWrites, parseBuildOrder, parseDocs, pendingJson, isMissingArtifact, publishNote, turnEndNote, withArtifact, withoutArtifact,
 } from './progress'
-import type { Times } from './timing'
-import { activeNote, observe, recordTimes, timesReport, timingOf } from './timing'
+import type { LoopModels, Times, Writers } from './timing'
+import { activeNote, forgetLoop, indexEntry, modelOf, observe, recordStep, recordTimes, timesReport, typicalRanges, writtenEpics } from './timing'
 
 const ORDER_FILE = /^\d+-build-order\.json$/
 const SPEC_FILE = /^(\d+)-spec-.*\.md$/
@@ -104,11 +104,16 @@ async function isGone($: EngineInterface, url: string): Promise<boolean> {
 
 const INDEX = 'index:'
 
+/** The model each live agent loop is answered by, from its `turn.step`s. */
+let loopModels: LoopModels = new Map()
+/** The model of the last loop to write each epic doc, by file name, from write tool calls. */
+const writers: Writers = {}
+
 /** Records the stories that started or finished since the last check of this project's epic docs. */
 async function saveTimes($: EngineInterface, root: string, listing: Listing[], files: EpicFile[]) {
   const stamped = files.filter(file => file.archived !== true).map(file => ({ ...file, mtimeMs: listing.find(e => e.name === file.name)?.mtimeMs ?? 0 }))
   const before = (await $.store.get(`${TIMES}${root}`) ?? {}) as Times
-  await $.store.set(`${TIMES}${root}`, recordTimes(before, observe(stamped)))
+  await $.store.set(`${TIMES}${root}`, recordTimes(before, observe(stamped), writers))
 }
 
 async function timesReportHere($: EngineInterface): Promise<string> {
@@ -131,8 +136,30 @@ async function indexEntries($: EngineInterface): Promise<IndexEntry[]> {
   return (await Promise.all(keys.map(key => $.store.get(key)))) as IndexEntry[]
 }
 
+/**
+ * The `model:` of the installed cpm-next `do` skill's frontmatter: the model a story not yet started is
+ * planned to be built on. The install is picked as cpm-next-models picks it, this project's before the
+ * user's. Undefined when it cannot be read.
+ */
+async function plannedModel($: EngineInterface, root: string): Promise<string | undefined> {
+  try {
+    const home = await $.env.get('HOME')
+    const installed = JSON.parse(await $.fs.read(`${home}/.claude/plugins/installed_plugins.json`)) as {
+      plugins?: Record<string, { scope?: string; projectPath?: string; installPath: string }[]>
+    }
+    const key = Object.keys(installed.plugins ?? {}).find(k => k.startsWith('cpm-next@'))
+    const path = pickInstall(installed.plugins?.[key ?? ''] ?? [], root)
+
+    return path === undefined ? undefined : frontmatterModel(await $.fs.read(`${path}/skills/do/SKILL.md`))
+  } catch {
+    return undefined
+  }
+}
+
 /** Compares one build-order file with the epic docs and the live artifact, and saves the writes that would bring them in line. */
-async function checkOne($: EngineInterface, root: string, file: Listing, epics: () => Promise<EpicFile[]>, times: Times, when: When): Promise<{ line: string; drift?: Drift }> {
+async function checkOne(
+  $: EngineInterface, root: string, file: Listing, epics: () => Promise<EpicFile[]>, times: Times, planned: () => Promise<string | undefined>, when: When,
+): Promise<{ line: string; drift?: Drift }> {
   const { name } = file
   const indexKey = `${INDEX}${root}/${name}`
   const indexed = await $.store.get(indexKey) as IndexEntry | undefined
@@ -140,7 +167,7 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
   // again until that file changes, so completed work costs nothing. A check asked for reads it anyway,
   // as does one for a tracker not yet in the index.
   const settledKey = `settled:${root}/${name}`
-  const mark = `${file.mtimeMs}:${file.size}`
+  const mark = settledMark(file)
   const settled = await $.store.get(settledKey) as { mark?: unknown; line?: unknown } | undefined
   if (when !== 'now' && indexed !== undefined && settled?.mark === mark && typeof settled.line === 'string') return { line: settled.line }
   const settle = async (line: string) => {
@@ -152,20 +179,14 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
   const order = parseBuildOrder(await $.fs.read(`${docs(root)}/specifications/${name}`))
   const today = dateOf(await $.clock.now())
   const base = { root, name, title: shortTitle(order.title) }
-  const { items, missing } = buildItems(order, await epics(), today)
-  // A timed story in progress carries its start and typical range; the pages work out the time in themselves.
-  for (const item of items.values()) {
-    const timing = item.status === 'In progress' && item.story.startsWith('S') ? timingOf(times, `${item.epic} ${item.story}`) : undefined
-    if (timing === undefined) continue
-    item.started = timing.started
-    if (timing.typical !== '') item.typical = timing.typical
-  }
+  // The pages work out the time in themselves from each row's start and the meta's typical ranges.
+  const { items, missing, unmatched } = buildItems(order, await epics(), today, times, await planned())
   if (order.artifact === undefined) {
-    await saveIndex($, indexEntry({ ...base, state: 'untracked' }, items, today, indexed))
+    await saveIndex($, indexEntry({ ...base, state: 'untracked' }, items, today, indexed, times))
 
     return { line: `${name}: no tracker yet; run /${COMMAND} init ${name}` }
   }
-  const tracked = indexEntry({ ...base, state: 'tracked', artifact: order.artifact }, items, today, indexed)
+  const tracked = indexEntry({ ...base, state: 'tracked', artifact: order.artifact }, items, today, indexed, times)
 
   // A tracker deleted once its work was done is not an error.
   const goneLine = `${name}: its tracker ${order.artifact} no longer exists, so it is not checked; /${COMMAND} ${name.slice(0, name.indexOf('-'))} publishes a new one`
@@ -187,7 +208,7 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
   }
   await saveIndex($, tracked)
   const liveMeta = (await readLive($, order.artifact, 'meta')).find(d => d.id === 'tracker')
-  const writes = diff(items, { title: order.title, spec: order.spec ?? '', decisions: order.decisions ?? [] }, live, liveMeta)
+  const writes = diff(items, { title: order.title, spec: order.spec ?? '', decisions: order.decisions ?? [], ...typicalRanges(times), unmatched }, live, liveMeta)
   const skipped = missing.length === 0 ? '' : `; not found in the epics: ${missing.join(', ')}`
   const pending = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.pending.json`
   if (writes.length === 0) {
@@ -200,7 +221,7 @@ async function checkOne($: EngineInterface, root: string, file: Listing, epics: 
     return { line: `${name}: up to date${skipped}` }
   }
 
-  const drift: Drift = { name, url: order.artifact, file: pending, writes }
+  const drift: Drift = { name, url: order.artifact, file: pending, writes, ...(isCriteriaOnly(writes, live) ? { isQuiet: true } : {}) }
   await $.fs.write(pending, pendingJson(drift))
 
   return { line: `${describeDrift(drift)}${skipped}`, drift }
@@ -263,7 +284,7 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
       return overview === undefined ? { lines: [none], drift: [] } : { lines: [none, describeDrift(overview)], drift: [overview] }
     }
     const epicList = await listDocs($, `${docs(root)}/epics`, EPIC_FILE)
-    const signature = `${root}|${signatureOf(orders, epicList)}`
+    const signature = checkSignature(root, signatureOf(orders, epicList))
     const isBehind = when === 'ifChangedOrBehind' && (await $.store.get(`behind:${root}`)) === true
     if (when !== 'now' && !isBehind && signature === (await $.store.get(`checked:${root}`))) return { lines: [], drift: [] }
 
@@ -280,9 +301,12 @@ async function checkAll($: EngineInterface, when: When): Promise<Check> {
       // A failed timing record costs one story's time, never the check.
     }
     const times = (await $.store.get(`${TIMES}${root}`) ?? {}) as Times
+    // The planned model is read once per check, and only when a tracker needs it.
+    let planned: Promise<string | undefined> | undefined
+    const plannedOnce = () => (planned ??= plannedModel($, root))
     for (const order of orders) {
       try {
-        const found = await checkOne($, root, order, epics, times, when)
+        const found = await checkOne($, root, order, epics, times, plannedOnce, when)
         lines.push(found.line)
         if (found.drift !== undefined) drift.push(found.drift)
       } catch (error) {
@@ -383,8 +407,10 @@ async function prepare($: EngineInterface, arg: string): Promise<{ text: string;
   const page = `${root}/${WORK_DIR}/${name.replace(/\.json$/, '')}.html`
   await $.fs.write(page, fillTemplate(await $.fs.read(`${$.plugin.root}/page/tracker.html`), order, repo))
   const isIgnored = await ignoreWorkDir($, root)
-  // A tracker that exists gets the page again, so a newer template reaches it; its rows are untouched.
-  if (order.artifact !== undefined) return { text: `${name} already has a tracker, ${order.artifact}; its page was rewritten from the current template to ${page}.`, page, url: order.artifact }
+  // A tracker that exists gets the page again, so a newer template reaches it; the republish then checks its rows.
+  if (order.artifact !== undefined) {
+    return { text: `${name} already has a tracker, ${order.artifact}; its page was rewritten from the current template to ${page}. Its rows are brought up to date once it is republished.`, page, url: order.artifact }
+  }
 
   const text = [
     ...(gone === undefined ? [] : [`Its tracker ${gone} no longer exists; its link was removed from ${rel(root)}/specifications/${name}.`]),
@@ -453,7 +479,8 @@ async function prepareForModel($: EngineInterface, spec: unknown): Promise<strin
 
 /**
  * After the model publishes a tracker page, saves the link to its build-order file and returns the
- * note for the first rows. A republish of a page that already has a link changes nothing.
+ * note for the first rows. A republish of a page that already has a link checks its rows now, so a page
+ * from a newer template gets the fields it reads without waiting for a doc to change.
  */
 async function savePublished($: EngineInterface, filePath: unknown, resultText: string): Promise<string | null> {
   if (typeof filePath !== 'string') return null
@@ -465,7 +492,11 @@ async function savePublished($: EngineInterface, filePath: unknown, resultText: 
   const path = `${docs(root)}/specifications/${base}.json`
   if (!(await $.fs.exists(path))) return null
   const text = await $.fs.read(path)
-  if (parseBuildOrder(text).artifact !== undefined) return null
+  if (parseBuildOrder(text).artifact !== undefined) {
+    const { drift } = await checkAll($, 'now')
+
+    return drift.length > 0 ? modelNote(drift) : null
+  }
   await $.fs.write(path, withArtifact(text, url))
 
   const { drift } = await checkAll($, 'now')
@@ -637,8 +668,18 @@ export const register: Register = on => {
     return { ...result, context: [...(result.context ?? []), note] }
   })
 
+  // The model each loop is answered by: the one it asked for while the step runs, then the one that answered.
+  on('turn.step', async function* ($, e, next) {
+    loopModels = recordStep(loopModels, e.agentId, { usage: { model: e.model } })
+    const result = yield* next(e)
+    loopModels = recordStep(loopModels, e.agentId, result)
+
+    return result
+  })
+
   // When the main loop's turn ends with a tracker behind, start a turn that brings it in line.
   on('turn.complete', async ($, e, next) => {
+    loopModels = forgetLoop(loopModels, e.agentId)
     const result = await next(e)
     if (e.agentId === undefined && e.reason === 'answer') void nudge($).catch(() => undefined)
 
@@ -665,9 +706,13 @@ export const register: Register = on => {
     }
     const result = await next(e)
     if (!WRITING_TOOLS.has(String(e.tool)) || result.deny !== undefined || result.isError === true) return result
+    // The writer is recorded before the check, so a start this call made is credited to its loop.
+    const model = modelOf(loopModels, e.agentId)
+    if (model !== undefined) for (const name of writtenEpics(String(e.tool), e as { file_path?: unknown; command?: unknown })) writers[name] = model
 
     const found = await checkAll($, 'ifChanged').catch(() => null)
-    if (found === null || found.drift.length === 0) return result
+    // A drift that only moves criteria counts is left to the turn's end, where `nudge` asks for it.
+    if (found === null || found.drift.every(d => d.isQuiet === true)) return result
     $.ui.toast(`Progress tracker out of date: ${found.lines.join(' · ')}`)
 
     return { ...result, context: [...(result.context ?? []), modelNote(found.drift)] }

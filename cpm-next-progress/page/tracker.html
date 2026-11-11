@@ -2,7 +2,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one column register — header, status summary, then the ordered table grouped by risk phase. */
+/* Layout: header and status summary, then a split view — the build-order table grouped by phase, and beside it the selected row's detail, which stays in view while the table scrolls. Below 760 px the detail sits above the table. */
 :root {
   --bg: #f6f7f5;
   --surface: #ffffff;
@@ -10,9 +10,9 @@
   --muted: #5d6b64;
   --rule: #d9dfdb;
   --accent: #2f5d4e;
-  --ok: #2e7d4f;
+  --ok: #2a7349;
   --ok-bg: #e3f2e8;
-  --work: #9a6400;
+  --work: #8f5d00;
   --work-bg: #fbf0d9;
   --wait: #6b4fa3;
   --wait-bg: #eee8f8;
@@ -34,41 +34,109 @@
   --ok: #7fd09f; --ok-bg: #1d3327; --work: #e5b45a; --work-bg: #3a2e14; --wait: #b9a2ea; --wait-bg: #2c2440; --pend: #a9b4ae; --pend-bg: #262e2b;
   color-scheme: dark;
 }
-body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
-.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 48px; display: grid; gap: 24px; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); margin: 0; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 48px; display: grid; gap: 24px; min-width: 0; }
 header { display: grid; gap: 6px; }
 .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
-h1 { font: 600 30px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font: 600 30px/1.15 var(--font-display); margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
 .sub { color: var(--muted); margin: 0; max-width: 68ch; }
-.sub code, td code { font: 13px var(--font-mono); }
+.sub code { font: 13px var(--font-mono); overflow-wrap: anywhere; }
 .summary { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
 .bar { flex: 1 1 260px; height: 10px; border-radius: 5px; background: var(--pend-bg); display: flex; overflow: hidden; }
 .bar span { display: block; height: 100%; }
 .counts { display: flex; flex-wrap: wrap; gap: 8px 18px; font-variant-numeric: tabular-nums; }
 .counts b { font-weight: 700; }
-.decisions { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--wait); padding: 12px 16px; border-radius: 4px; }
-.decisions h2 { font: 600 13px/1.3 var(--font-body); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 6px; color: var(--wait); }
-.decisions ul { margin: 0; padding-left: 18px; }
-.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
-table { border-collapse: collapse; width: 100%; min-width: 760px; }
-th, td { text-align: left; vertical-align: baseline; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
-thead th { font: 600 12px/1.2 var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface); position: sticky; top: 0; }
+.needs-total { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-variant-numeric: tabular-nums; }
+.needs-total b { font-weight: 700; }
+.needs-next { font: 600 13px/1 var(--font-body); color: var(--accent); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+.needs-next:focus-visible, .unmatched-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.unmatched { color: var(--wait); background: var(--wait-bg); border-left: 3px solid var(--wait); padding: 12px 16px; border-radius: 4px; }
+.unmatched h2 { font: 600 13px/1.3 var(--font-body); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 6px; color: inherit; }
+.unmatched ul { margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
+.unmatched li:focus { outline: none; }
+.unmatched-more { all: unset; margin-top: 6px; font-weight: 600; text-decoration: underline; cursor: pointer; color: inherit; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) clamp(220px, 26%, 360px); gap: 24px; align-items: start; }
+.table-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; min-width: 0; }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+th, td { text-align: left; vertical-align: top; padding: 9px 8px; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+thead th { font: 600 12px/1.2 var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface); position: sticky; top: 0; z-index: 1; overflow-wrap: normal; }
+.c-ref { width: 92px; }
+.c-status { width: 120px; }
+.c-model { width: 68px; }
+.c-effort { width: 68px; }
+.c-time { width: 100px; }
+.c-needs { width: 60px; }
 tr.phase td { background: var(--bg); font-weight: 600; color: var(--accent); padding-top: 14px; }
 tr.phase td small { font-weight: 400; color: var(--muted); margin-left: 8px; }
-td.num { font: 13px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; width: 2.5em; }
-td.ref { font: 13px var(--font-mono); white-space: nowrap; }
-td.note { color: var(--muted); font-size: 14px; }
-.timing { margin-top: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; }
-td.date { font: 13px var(--font-mono); color: var(--muted); white-space: nowrap; }
+td.c-ref { font: 12px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+td.c-model, td.c-effort, td.c-time { font-size: 13px; }
+/* Cells align to the top, and each smaller cell's first line sits on the title's first line (15px at 1.5). */
+td.c-ref, td.c-model, td.c-effort { line-height: 22.5px; }
+td.c-time { line-height: 1.5; padding-top: 10.5px; }
+td.c-model.planned { color: var(--muted); }
+td.c-time { color: var(--muted); }
+.row-title { all: unset; cursor: pointer; overflow-wrap: anywhere; }
+.row-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.note-line { display: block; width: 0; min-width: 100%; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blockers { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; color: var(--muted); }
+tbody tr:not(.phase) { cursor: pointer; }
+tr.is-selected td { background: var(--bg); }
+tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .pill { display: inline-block; font: 600 12px/1 var(--font-body); padding: 4px 8px; border-radius: 10px; white-space: nowrap; }
 .s-complete { color: var(--ok); background: var(--ok-bg); }
 .s-progress { color: var(--work); background: var(--work-bg); }
 .s-waiting { color: var(--wait); background: var(--wait-bg); }
 .s-pending { color: var(--pend); background: var(--pend-bg); }
 .s-ready { color: var(--ok); background: transparent; box-shadow: inset 0 0 0 1px var(--ok); }
-tr.is-complete td:not(.status) { opacity: .62; }
+.needs-badge { display: inline-block; min-width: 1.5em; box-sizing: border-box; text-align: center; font: 700 12px/1 var(--font-body); font-variant-numeric: tabular-nums; padding: 4px 6px; border-radius: 10px; color: var(--wait); background: var(--wait-bg); }
+tr.is-complete td:not(.c-status):not(.c-model) { color: var(--muted); }
 .empty { padding: 28px 16px; color: var(--muted); text-align: center; }
+
+.detail { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 16px; min-width: 0; }
+.detail h2 { font: 600 19px/1.25 var(--font-display); margin: 0 0 12px; overflow-wrap: anywhere; }
+.detail h2 .ref { display: block; font: 500 12px/1.4 var(--font-mono); color: var(--accent); margin-bottom: 4px; }
+.detail dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 12px; margin: 0; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; overflow-wrap: anywhere; }
+.detail .detail-note { white-space: pre-line; }
+.detail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.needs-kind { display: inline-block; font: 600 11px/1 var(--font-body); letter-spacing: .04em; text-transform: uppercase; padding: 3px 6px; border-radius: 8px; color: var(--wait); background: var(--wait-bg); vertical-align: 1px; }
 footer { color: var(--muted); font-size: 13px; }
+
+@media (max-width: 1099.98px) {
+  .split { grid-template-columns: minmax(0, 1fr) 220px; gap: 16px; }
+  th, td { padding-inline: 6px; }
+  thead th { letter-spacing: 0; }
+  .c-ref { width: 64px; }
+  td.c-ref { font-size: 11px; white-space: normal; }
+  .c-status { width: 96px; }
+  .pill { white-space: normal; }
+  .c-model, .c-effort { width: 54px; }
+  td.c-model, td.c-effort { font-size: 12px; }
+  .c-time { width: 72px; }
+  td.c-time { font-size: 12px; }
+  .c-needs { width: 44px; }
+}
+/* Beside a detail, a table this narrow leaves Title no room with Model and Effort shown; the detail shows both. */
+@media (max-width: 899.98px) {
+  .c-model, .c-effort { display: none; }
+  /* A fixed layout keeps the hidden columns' widths; the automatic one gives them to the title. */
+  table { table-layout: auto; }
+}
+@media (max-width: 759.98px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .detail { order: -1; position: static; max-height: none; overflow: visible; }
+  th, td { padding-inline: 4px; }
+  thead th { font-size: 11px; }
+  .c-ref { width: 44px; }
+  td.c-ref { font-size: 10px; }
+  .c-status { width: 76px; }
+  .c-time { width: 52px; }
+  td.c-time { font-size: 11px; }
+  .c-needs { width: 36px; }
+  .needs-badge { padding-inline: 4px; }
+}
 </style>
 
 <div class="wrap">
@@ -81,22 +149,34 @@ footer { color: var(--muted); font-size: 13px; }
   <section class="summary" aria-label="Progress">
     <div class="bar" id="bar" role="img" aria-label="Progress bar"></div>
     <div class="counts" id="counts"></div>
+    <div class="needs-total" id="needs-total">
+      <span id="needs-total-text"></span>
+      <button type="button" class="needs-next" id="needs-next" hidden>Next that needs you</button>
+    </div>
   </section>
 
-  <section class="decisions" id="decisions" hidden>
-    <h2>Decisions needed</h2>
-    <ul id="decision-list"></ul>
+  <section class="unmatched" id="unmatched" aria-labelledby="unmatched-heading" hidden>
+    <h2 id="unmatched-heading">Not matched to a row</h2>
+    <ul id="unmatched-list"></ul>
+    <button type="button" class="unmatched-more" id="unmatched-more" hidden></button>
   </section>
 
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr><th>#</th><th>Item</th><th>Title</th><th>Status</th><th>Blocked by</th><th>Risk / notes</th><th>Updated</th></tr>
-      </thead>
-      <tbody id="rows">
-        <tr><td colspan="7" class="empty">Loading progress. Items appear here once the tracker data has loaded.</td></tr>
-      </tbody>
-    </table>
+  <div class="split">
+    <div class="table-box">
+      <table id="table">
+        <thead>
+          <tr><th class="c-ref">#</th><th class="c-title">Title</th><th class="c-status">Status</th><th class="c-model">Model</th><th class="c-effort">Effort</th><th class="c-time">Time</th><th class="c-needs">Needs you</th></tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="7" class="empty">Loading progress. Items appear here once the tracker data has loaded.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <section class="detail" id="detail" aria-labelledby="detail-heading">
+      <h2 id="detail-heading" tabindex="-1">Loading</h2>
+      <div id="detail-body"></div>
+    </section>
   </div>
 
   <footer id="footer">Last updated: —</footer>
@@ -112,6 +192,8 @@ const STATUS = {
 };
 const ORDER = ["Complete", "In progress", "Ready", "Pending", "Waiting on input"];
 const BAR_COLOR = { "Complete": "var(--ok)", "In progress": "var(--work)", "Waiting on input": "var(--wait)", "Ready": "transparent", "Pending": "transparent" };
+const DASH = "—";
+const COLUMNS = 7;
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -120,64 +202,311 @@ function el(tag, cls, text) {
   return node;
 }
 
-// How long a timed story in progress has run, worked out here so the rows need no rewrite each minute.
-function timingText(started, typical) {
-  if (typeof started !== "number" || !isFinite(started) || started <= 0) { return ""; }
-  const m = Math.max(0, Math.round((Date.now() - started) / 60000));
-  const span = m < 60 ? m + " min" : (m % 60 === 0 ? m / 60 + " h" : Math.floor(m / 60) + " h " + (m % 60) + " min");
-  return span + " in" + (typeof typical === "string" && typical ? ", typically " + typical : "");
+const refOf = row => row.epic + " " + row.story;
+const needsOf = row => Array.isArray(row.needs) ? row.needs : [];
+const isText = v => typeof v === "string" && v !== "";
+const capitalise = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function span(minutes) {
+  const m = Math.max(0, Math.round(minutes));
+  if (m < 60) { return m + " min"; }
+  return m % 60 === 0 ? m / 60 + " h" : Math.floor(m / 60) + " h " + (m % 60) + " min";
 }
 
 // A pending item with nothing left to wait for can be started now; the stored status stays "Pending".
-function shownStatus(item) {
-  const status = item.status || "Pending";
-  return status === "Pending" && !item.blockedBy ? "Ready" : status;
+function shownStatus(row) {
+  const status = row.status || "Pending";
+  return status === "Pending" && !row.blockedBy ? "Ready" : status;
+}
+
+const isTimed = row => typeof row.started === "number" && isFinite(row.started) && row.started > 0;
+const isStory = row => typeof row.story === "string" && row.story.startsWith("S");
+
+// The typical range for the row's effort, or null when meta holds none.
+function typicalFor(row, meta) {
+  const t = meta && meta.typical && typeof meta.typical === "object" && isText(row.effort) && Object.hasOwn(meta.typical, row.effort) ? meta.typical[row.effort] : null;
+  return t && isText(t.range) ? t : null;
+}
+
+// The Time cell's text. Elapsed time is worked out here, so the rows need no rewrite each minute.
+function timeText(row, meta, now) {
+  if (!meta) { return DASH; }
+  const shown = shownStatus(row);
+  const typical = typicalFor(row, meta);
+  if (shown === "Complete") { return typeof row.took === "number" ? "took " + span(row.took) : DASH; }
+  if (shown === "In progress") {
+    if (!isTimed(row)) { return DASH; }
+    const running = span((now - row.started) / 60000) + " in";
+    return typical ? running + " · typically " + typical.range : running;
+  }
+  if (typical && (shown === "Pending" || shown === "Ready" || shown === "Waiting on input")) { return "typically " + typical.range; }
+  return DASH;
+}
+
+const pad2 = n => String(n).padStart(2, "0");
+// Local HH:MM, with the date before it when the moment is not on now's day.
+function clockText(ms, now) {
+  const d = new Date(ms);
+  const today = new Date(now);
+  const hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  return sameDay ? hm : d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + " " + hm;
+}
+
+// Blockers as the reader should take them: a row of a tracker or an epic comes after; anything else is waited on.
+const ROW_REF = /^\d+(?:-\d+)* (?:S\d+|T\d+(?:\.\d+)*)$/;
+// The mod writes a resolved epic as "Epic {short}"; a full id or any other text after "Epic" is one it could not resolve.
+const EPIC_REF = /^Epic \d+(?:-\d+)*$/;
+function blockerTexts(row, refs) {
+  if (!isText(row.blockedBy)) { return []; }
+  return row.blockedBy.split("; ").filter(Boolean).map(token =>
+    refs.has(token) || ROW_REF.test(token) || EPIC_REF.test(token) ? "after " + token : "waiting on " + token);
 }
 
 let lastItems = null;
+let lastMeta = null;
+let selectedKey = null;
+let stripOpen = false;
+const STRIP_SHOWN = 3;
 
-function renderItems(items) {
-  lastItems = items;
-  const body = document.getElementById("rows");
+// Decisions the mod could not match to a row. A meta written before `unmatched` existed lists them all in `decisions`.
+function unmatchedOf(meta) {
+  if (!meta) { return []; }
+  const list = Array.isArray(meta.unmatched) ? meta.unmatched : Array.isArray(meta.decisions) ? meta.decisions : [];
+  return list.map(d => String(d));
+}
+
+// The row after the selection, in table order, that holds needs items; wraps from the last to the first.
+function nextNeedsKey(items) {
+  const start = items.findIndex(r => refOf(r) === selectedKey);
+  for (let step = 1; step <= items.length; step++) {
+    const row = items[(start + step + items.length) % items.length];
+    if (needsOf(row).length > 0) { return refOf(row); }
+  }
+  return null;
+}
+
+function renderNeedsTotal() {
+  const items = lastItems || [];
+  const total = items.reduce((n, r) => n + needsOf(r).length, 0) + unmatchedOf(lastMeta).length;
+  const text = document.getElementById("needs-total-text");
+  text.replaceChildren();
+  if (total === 0) {
+    text.textContent = "Nothing needs you";
+  } else {
+    text.append(el("b", null, String(total)), document.createTextNode(total === 1 ? " needs you" : " need you"));
+  }
+  document.getElementById("needs-next").hidden = !items.some(r => needsOf(r).length > 0);
+}
+
+function renderStrip() {
+  const decisions = unmatchedOf(lastMeta);
+  const box = document.getElementById("unmatched");
+  const list = document.getElementById("unmatched-list");
+  const more = document.getElementById("unmatched-more");
+  const focusedAt = [...list.children].indexOf(document.activeElement);
+  list.replaceChildren();
+  if (decisions.length <= STRIP_SHOWN) { stripOpen = false; }
+  decisions.forEach((text, i) => {
+    const li = el("li", null, text);
+    li.tabIndex = -1;
+    if (i >= STRIP_SHOWN && !stripOpen) { li.hidden = true; }
+    list.append(li);
+  });
+  const rest = decisions.length - STRIP_SHOWN;
+  more.hidden = stripOpen || rest <= 0;
+  more.textContent = rest > 0 ? rest + " more" : "";
+  box.hidden = decisions.length === 0;
+  // A meta redraw replaces the items; focus on one stays on the item in the same place.
+  const refocus = focusedAt >= 0 ? list.children[focusedAt] : null;
+  if (refocus && !refocus.hidden && !box.hidden) { refocus.focus({ preventScroll: true }); }
+}
+
+function defaultSelection(items) {
+  const pick = items.find(r => needsOf(r).length > 0)
+    || items.find(r => r.status === "In progress")
+    || items.find(r => r.status !== "Complete")
+    || items[0];
+  return pick ? refOf(pick) : null;
+}
+
+function select(key) {
+  selectedKey = key;
+  redraw();
+}
+
+// Below 760 px the detail sits above the table, so a selection the reader makes takes focus to it.
+const NARROW = window.matchMedia("(max-width: 759.98px)");
+function chooseRow(key) {
+  select(key);
+  if (NARROW.matches) { document.getElementById("detail-heading").focus(); }
+}
+
+function emptyRow(text) {
+  const tr = el("tr");
+  const td = el("td", "empty", text);
+  td.colSpan = COLUMNS;
+  tr.append(td);
+  return tr;
+}
+
+// Each line is a dt/dd pair; the dd carries the id detail-{name}. Not a live region: it redraws each minute.
+function renderDetail(row, meta, refs) {
+  const heading = document.getElementById("detail-heading");
+  const body = document.getElementById("detail-body");
+  heading.replaceChildren();
   body.replaceChildren();
-  if (items.length === 0) {
-    const tr = el("tr");
-    const td = el("td", "empty", "No items yet. Claude adds the build order here.");
-    td.colSpan = 7;
-    tr.append(td);
-    body.append(tr);
+  if (!row) {
+    heading.textContent = "No rows yet";
     return;
   }
+  heading.append(el("span", "ref", refOf(row)), document.createTextNode(row.title || DASH));
+  const now = Date.now();
+  const dl = el("dl");
+  const line = (name, label, value) => {
+    const dd = el("dd", null);
+    dd.id = "detail-" + name;
+    if (typeof value === "string") { dd.textContent = value; } else { dd.append(value); }
+    dl.append(el("dt", null, label), dd);
+    return dd;
+  };
+  line("model", "Model", isText(row.model) ? capitalise(row.model) + (row.modelPlanned ? " (planned)" : "") : DASH);
+  line("effort", "Effort", isText(row.effort) ? row.effort : DASH);
+
+  if (isStory(row)) {
+    const typical = typicalFor(row, meta);
+    const shown = shownStatus(row);
+    if (shown === "In progress" && isTimed(row)) {
+      const elapsed = (now - row.started) / 60000;
+      line("started", "Started", clockText(row.started, now));
+      if (typical && typeof typical.low === "number" && typeof typical.high === "number") {
+        if (elapsed > typical.high) {
+          line("past", "Running over", span(elapsed - typical.high) + " past the typical range");
+        } else {
+          line("expected", "Expected by", clockText(row.started + typical.low * 60000, now) + "–" + clockText(row.started + typical.high * 60000, now));
+        }
+      }
+      line("running", "Running", span(elapsed) + " in");
+    }
+    if (meta) {
+      const timed = typeof meta.timed === "number" ? meta.timed : 0;
+      line("typical", "Typical range", typical ? typical.range
+        : timed < 10 ? "after 10 timed stories (" + timed + " so far)" : "too spread out to predict (" + timed + " timed)");
+    }
+    if (shown === "Complete") { line("took", "Took", typeof row.took === "number" ? "took " + span(row.took) : "not timed"); }
+  }
+
+  const blockers = blockerTexts(row, refs || new Set());
+  if (blockers.length > 0) {
+    const list = el("ul", "detail-list");
+    for (const text of blockers) { list.append(el("li", null, text)); }
+    line("blockers", "Blockers", list);
+  }
+  if (isText(row.note)) { line("note", "Note", row.note).className = "detail-note"; }
+
+  const needs = needsOf(row);
+  if (needs.length > 0) {
+    const list = el("ul", "detail-list detail-needs");
+    for (const item of needs) {
+      const li = el("li");
+      if (isText(item?.kind)) { li.append(el("span", "needs-kind", item.kind), document.createTextNode(" ")); }
+      li.append(document.createTextNode(String(item?.text ?? "")));
+      list.append(li);
+    }
+    line("needs", "Needs you", list);
+  } else {
+    line("needs", "Needs you", "Nothing needs you");
+  }
+
+  if (isStory(row)) {
+    const c = row.criteria;
+    line("criteria", "Criteria", c && typeof c.total === "number" && c.total > 0 ? (c.met ?? 0) + " of " + c.total + " met" : "No criteria");
+  }
+  body.append(dl);
+}
+
+function renderItems(items) {
+  const body = document.getElementById("rows");
+  // A redraw replaces the row buttons; focus on one returns to the same row's new button. Focus elsewhere is left alone.
+  const active = document.activeElement;
+  const focused = active && body.contains(active) ? active.dataset.key : undefined;
+  body.replaceChildren();
+  if (items.length === 0) {
+    body.append(emptyRow("No items yet. Claude adds the build order here."));
+    selectedKey = null;
+    renderDetail(null, lastMeta, null);
+    renderSummary(items);
+    return;
+  }
+  if (selectedKey === null || !items.some(r => refOf(r) === selectedKey)) { selectedKey = defaultSelection(items); }
+  const refs = new Set(items.map(refOf));
+  const now = Date.now();
   let lastPhase = null;
-  for (const item of items) {
-    if (item.phase !== lastPhase) {
-      lastPhase = item.phase;
+  let selectedRow = null;
+  let refocus = null;
+  for (const row of items) {
+    if (row.phase !== lastPhase) {
+      lastPhase = row.phase;
       const tr = el("tr", "phase");
       const td = el("td");
-      td.colSpan = 7;
-      td.append(document.createTextNode("Phase " + item.phase + " · " + (item.phaseLabel || "")));
-      if (item.phaseNote) { td.append(el("small", null, item.phaseNote)); }
+      td.colSpan = COLUMNS;
+      td.append(document.createTextNode("Phase " + row.phase + " · " + (row.phaseLabel || "")));
+      if (row.phaseNote) { td.append(el("small", null, row.phaseNote)); }
       tr.append(td);
       body.append(tr);
     }
-    const tr = el("tr", item.status === "Complete" ? "is-complete" : "");
-    tr.append(el("td", "num", String(item.seq)));
-    tr.append(el("td", "ref", item.epic + " " + item.story));
-    tr.append(el("td", null, item.title || ""));
-    const st = el("td", "status");
-    const shown = shownStatus(item);
-    st.append(el("span", "pill " + (STATUS[shown] || "s-pending"), shown));
-    const timing = item.status === "In progress" ? timingText(item.started, item.typical) : "";
-    if (timing) { st.append(el("div", "timing", timing)); }
-    tr.append(st);
-    tr.append(el("td", "note", item.blockedBy || "—"));
-    tr.append(el("td", "note", item.note || ""));
-    tr.append(el("td", "date", item.updated || ""));
+    const key = refOf(row);
+    const isSelected = key === selectedKey;
+    if (isSelected) { selectedRow = row; }
+    const tr = el("tr", [row.status === "Complete" ? "is-complete" : "", isSelected ? "is-selected" : ""].join(" ").trim());
+    tr.dataset.key = key;
+    tr.addEventListener("click", () => chooseRow(key));
+
+    tr.append(el("td", "c-ref", key));
+
+    const title = el("td", "c-title");
+    const button = el("button", "row-title", row.title || DASH);
+    button.type = "button";
+    button.dataset.key = key;
+    button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    if (key === focused) { refocus = button; }
+    title.append(button);
+    if (isText(row.note)) { title.append(el("span", "note-line", row.note.split("\n")[0])); }
+    tr.append(title);
+
+    const status = el("td", "c-status");
+    const shown = shownStatus(row);
+    status.append(el("span", "pill " + (STATUS[shown] || "s-pending"), shown));
+    const blockers = blockerTexts(row, refs);
+    if (blockers.length > 0) {
+      const list = el("ul", "blockers");
+      for (const text of blockers) { list.append(el("li", null, text)); }
+      status.append(list);
+    }
+    tr.append(status);
+
+    tr.append(el("td", "c-model" + (row.modelPlanned ? " planned" : ""), isText(row.model) ? capitalise(row.model) : DASH));
+    tr.append(el("td", "c-effort", isText(row.effort) ? row.effort : DASH));
+    tr.append(el("td", "c-time", timeText(row, lastMeta, now)));
+
+    const needs = el("td", "c-needs");
+    const count = needsOf(row).length;
+    if (count > 0) {
+      const badge = el("span", "needs-badge", String(count));
+      badge.title = count === 1 ? "1 item needs you" : count + " items need you";
+      needs.append(badge);
+    }
+    tr.append(needs);
     body.append(tr);
   }
+  renderDetail(selectedRow, lastMeta, refs);
+  renderSummary(items);
+  if (refocus) { refocus.focus({ preventScroll: true }); }
+}
 
+function renderSummary(items) {
   const counts = {};
-  for (const item of items) { const shown = shownStatus(item); counts[shown] = (counts[shown] || 0) + 1; }
+  for (const row of items) { const shown = shownStatus(row); counts[shown] = (counts[shown] || 0) + 1; }
   const bar = document.getElementById("bar");
   bar.replaceChildren();
   const countBox = document.getElementById("counts");
@@ -195,35 +524,47 @@ function renderItems(items) {
     countBox.append(c);
   }
   bar.setAttribute("aria-label", (counts["Complete"] || 0) + " of " + items.length + " complete");
+  renderNeedsTotal();
 }
 
 function renderMeta(meta) {
-  const box = document.getElementById("decisions");
-  const list = document.getElementById("decision-list");
-  list.replaceChildren();
-  const decisions = Array.isArray(meta?.decisions) ? meta.decisions : [];
-  for (const d of decisions) { list.append(el("li", null, String(d))); }
-  box.hidden = decisions.length === 0;
-  document.getElementById("footer").textContent = "Last updated: " + (meta?.updated || "—");
+  lastMeta = meta;
+  renderStrip();
+  renderNeedsTotal();
+  document.getElementById("footer").textContent = "Last updated: " + (meta?.updated || DASH);
+  redraw();
 }
+
+function redraw() {
+  if (lastItems) { renderItems(lastItems); }
+}
+
+document.getElementById("needs-next").addEventListener("click", () => {
+  const key = lastItems ? nextNeedsKey(lastItems) : null;
+  if (key !== null) { chooseRow(key); }
+});
+document.getElementById("unmatched-more").addEventListener("click", () => {
+  stripOpen = true;
+  renderStrip();
+  document.getElementById("unmatched-list").children[STRIP_SHOWN]?.focus();
+});
 
 (async () => {
   const db = await window.claude?.use?.("db");
   if (!db) {
     const body = document.getElementById("rows");
-    body.replaceChildren();
-    const tr = el("tr");
-    const td = el("td", "empty", "Progress data is not available in this view. Sign in to claude.ai to see it.");
-    td.colSpan = 7;
-    tr.append(td);
-    body.append(tr);
+    body.replaceChildren(emptyRow("Progress data is not available in this view. Sign in to claude.ai to see it."));
+    document.getElementById("detail-heading").textContent = "No row selected";
     return;
   }
   db.collection("items").orderBy("seq").onSnapshot(
-    snap => renderItems(snap.docs.map(d => d.data())),
+    snap => {
+      lastItems = snap.docs.map(d => d.data()).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+      renderItems(lastItems);
+    },
     () => {}
   );
-  setInterval(() => { if (lastItems) { renderItems(lastItems); } }, 60000);
+  setInterval(redraw, 60000);
   db.doc("meta/tracker").onSnapshot(snap => renderMeta(snap.exists ? snap.data() : null), () => {});
 })();
 </script>
