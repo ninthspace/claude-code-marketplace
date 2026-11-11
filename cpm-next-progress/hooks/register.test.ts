@@ -413,6 +413,8 @@ test('a change to a row\'s criteria alone puts no note on the tool result; the w
   expect(w.prompts.length).toBe(1)
   expect(w.prompts[0]?.text).toMatch(/01-01-s1/)
   expect(w.prompts[0]?.text).toMatch(/\.claude\/cpm-next-progress\/01-build-order\.pending\.json/)
+  expect(w.prompts[0]?.text).toContain('url https://claude.ai/artifact/abc')
+  expect(w.prompts[0]?.text).not.toContain('given with this message')
 })
 
 test('control: the same story moving to Complete puts the note on the tool result and toasts', async ($, on) => {
@@ -525,3 +527,4 @@ test('preparing an existing tracker says its rows are brought up to date after t
   expect(result.text).toMatch(/rows are brought up to date once it is republished/)
   expect(result.text).not.toMatch(/untouched/)
 })
+

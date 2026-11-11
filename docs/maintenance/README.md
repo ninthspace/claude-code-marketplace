@@ -80,7 +80,9 @@ automated covers older engines.
 - **The turn-end prompt's context.** `nudge` sets `nudgeContext` and the mod's own `prompt.submit` hook
   attaches it to the prompt `nudge` submits; `PromptSubmitArgs` has no `context`. Under
   `claude plugin test` that hook does not run for the mod's own prompt, so no test sees the context;
-  the engine's types say a plugin's other hooks do see its submission. Unverified in a live session.
+  the engine's types say a plugin's other hooks do see its submission. Unverified in a live session. From
+  0.9.1 the prompt's text names each pending file and how to apply it (`applyFromFile` in
+  `hooks/progress.ts`), so a missing context no longer leaves Claude without the writes.
 
 ---
 

@@ -340,7 +340,7 @@
   <header class="hero">
     <h1>cpm-next training guide</h1>
     <p>A reference for developers who plan and build with cpm-next in Claude Code: what to install, what each skill reads and writes, how <code>do</code> builds and audits work, how model and effort are set, and how to follow progress.</p>
-    <div class="meta">Covers cpm-next 0.16.0, cpm-next-models 0.3.3, cpm-next-progress 0.9.0, whats-next 0.3.0 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
+    <div class="meta">Covers cpm-next 0.16.0, cpm-next-models 0.3.3, cpm-next-progress 0.9.1, whats-next 0.3.0 and plugin-sync 0.1.0. The artefact formats are defined in <code>cpm-next/shared/artifacts.md</code>.</div>
   </header>
 
   <div class="note" id="changed">
@@ -1316,7 +1316,7 @@ summary: &gt;
       <li>If there are some, it saves them to <code>.claude/cpm-next-progress/NN-build-order.pending.json</code> as ready-made batches of at most 50, shows a one-line notice, and gives Claude a note with the artifact link and the writes.</li>
       <li>Claude applies up to eight writes itself with one <code>ArtifactData</code> batch. Writes that only change rows' criteria counts get no note: they wait for the turn's end.</li>
       <li><strong>Large updates</strong>: more than eight writes stay in the pending file, and Claude hands them to a Haiku subagent, which reads the file and applies each batch, so the writes never enter the main conversation.</li>
-      <li>When Claude's turn ends with a tracker still behind, the mod submits a prompt of its own asking for the same writes. After two such prompts in a row it stops and shows you a notice instead.</li>
+      <li>When Claude's turn ends with a tracker still behind, the mod submits a prompt of its own asking for the same writes; it names the pending file and how to apply it, so Claude applies the writes from the file. After two such prompts in a row it stops and shows you a notice instead.</li>
     </ol>
     <p>A tracker whose rows are all Complete and in step, or whose artifact you deleted, is settled: later checks skip it until its build-order file changes, though a bare <code>/progress-tracker</code> still checks it. A deleted tracker is reported once; <code>/progress-tracker 01</code> removes the dead link and publishes a new one.</p>
     <div class="note"><p><span class="label">The mod only reads.</span> It lists the artifact's rows through <code>ArtifactData</code>, which auto mode does not ask about, and never writes to the artifact. Claude's own <code>ArtifactData</code> calls do the writing, so no permission rule is needed.</p></div>

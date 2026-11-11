@@ -213,7 +213,7 @@ test('the note for the model names the tool, the link and the writes', () => {
   expect(big).not.toContain('"doc_id":"r0"')
 })
 
-test('the prompt at a turn\'s end is short, and carries the writes as context', () => {
+test('the prompt at a turn\'s end names the rows, and carries the writes as context', () => {
   const note = turnEndNote([DRIFT])
 
   expect(note.text).toContain('The turn ended with a progress tracker still behind the epic docs.')
@@ -222,6 +222,30 @@ test('the prompt at a turn\'s end is short, and carries the writes as context', 
   expect(note.text).toContain(describeDrift(DRIFT))
   expect(note.text).not.toContain('"doc_id"')
   expect(note.context).toBe(modelNote([DRIFT]))
+})
+
+test('the prompt at a turn\'s end says where the writes are and how to apply them, by size', () => {
+  const many = Array.from({ length: 12 }, (_, i) => ({ op: 'set' as const, collection: 'items', doc_id: `r${i}`, data: {}, if_version: 1 }))
+  const big = { ...DRIFT, name: '02-build-order.json', url: 'https://claude.ai/artifact/big', file: '/repo/.claude/cpm-next-progress/02-build-order.pending.json', writes: many }
+  const small = turnEndNote([DRIFT]).text
+  const large = turnEndNote([big]).text
+  const both = turnEndNote([DRIFT, big]).text
+
+  expect(small).toContain(`Read ${DRIFT.file} and, for each array in its "batches", call the ArtifactData tool with action "batch", url ${DRIFT.url}`)
+  expect(small).not.toContain('Agent tool')
+  expect(large).toContain(`Start a subagent with the Agent tool, model "haiku", and tell it: read ${big.file}`)
+  expect(large).toContain(`url ${big.url}`)
+  for (const part of [DRIFT.file, DRIFT.url, big.file, big.url]) expect(both).toContain(part)
+  for (const text of [small, large, both]) expect(text).not.toContain('given with this message')
+  expect(turnEndNote([big]).context).toBe(modelNote([big]))
+})
+
+test('the prompt the bare /progress-tracker submits after a check says where the writes are and how to apply them', () => {
+  // register.ts submits turnEndNote(drift, this lead) from a timer once the command has answered.
+  const text = turnEndNote([DRIFT], '/progress-tracker found writes the trackers lack.').text
+  expect(text).toMatch(/^\/progress-tracker found writes the trackers lack\. /)
+  expect(text).toContain(`Read ${DRIFT.file} and, for each array in its "batches", call the ArtifactData tool with action "batch", url ${DRIFT.url}`)
+  expect(text).not.toContain('given with this message')
 })
 
 test('the publish prompt names the page, the icon and the database rules', () => {

@@ -1,7 +1,8 @@
 # Spec: The progress tracker in split view, with model, time and what needs you
 
 **Date**: 2026-11-11  
-**Source**: docs/discussions/24-discussion-amend-progress-tracker-command.md; reference mockup https://claude.ai/artifact/39M6y3ST9AzL3PFt8VDJQg (board D, `project/D.dc.html`)
+**Source**: docs/discussions/24-discussion-amend-progress-tracker-command.md; reference mockup https://claude.ai/artifact/39M6y3ST9AzL3PFt8VDJQg (board D, `project/D.dc.html`)  
+**Amended**: 2026-11-11 — FR13: the prompt submitted at a turn's end names each pending file and tells Claude to apply the writes from it, in place of "the writes given with this message" (from 55-01 Story 4's Pivot deferred; the user's choice)
 
 ## Problem Summary
 
@@ -24,6 +25,8 @@ The change extends the existing page and the mod's rows; it adds no second page.
 - **FR9**: A row is selected by click, or by keyboard: each row's title is a button in tab order, Enter or Space selects, and the selected button has `aria-pressed="true"`. Below 760 px a selection moves focus to the detail's heading. The selection is the previously selected row while it exists, else the first row with needs items, else the first In progress row, else the first row not Complete, else the first row. A redraw (a snapshot or the minute tick) keeps the selection and keeps keyboard focus on the same row's button. — AC: in the harness, one fixture per step of the rule, including a control with both a needs row and an In progress row where the needs row is chosen; a selection survives an emitted snapshot that changes another row; focus on a row's button survives the minute redraw and a snapshot; Tab then Enter selects a row `[browser]`
 - **FR10**: An existing tracker reaches the new page and rows with `/progress-tracker {nn}` and no other step: the page is rewritten from the new template and republished to its link, and the republish runs a check now whose writes are handed to Claude, as a first publish does. A row-schema version is part of the check signature and the settled mark, so the first check after the upgrade reads every tracker, settled ones included, even with no doc changed. — AC: the page `prepare` writes for a build order with an `artifact` contains the detail panel's id, which the old template lacks; after a republish of an existing tracker over unchanged docs, the `Artifact` hook's result carries writes for the rows lacking the new fields; control: live rows and meta that already hold every new field give zero writes `[unit]`
 - **FR11**: A row change that touches only `criteria` adds no write note to the tool result that caused it; the project is marked behind and the writes are asked for at the turn's end, as an outstanding drift is today. A change to any other field adds the note as today. — AC: one `Evidence` line added to a story gives exactly one row write, carried by the turn-end prompt and not by the tool result; control: the same story's status moving to Complete adds the note to the tool result `[unit]`
+
+- **FR13**: The prompt the mod submits when a turn ends with a tracker behind, and the one `/progress-tracker` submits after a check, tells Claude where the writes are: for each drift, its pending file and the artifact link, with the instruction to apply that file's batches with the `ArtifactData` tool (`action` `batch`), or, for a drift of more than eight writes, to hand the file to a Haiku subagent as the tool-result note does. It no longer says the writes are given with the message. The writes still go as context, which the model may or may not receive. — AC: `turnEndNote`'s text for a drift of up to eight writes and one of more than eight names the pending file and the link and gives the matching instruction, and holds no "given with this message"; through the hooks, the prompt `nudge` submits names the pending file and the link; control: the old text fails the same assertions `[unit]`
 
 ### Should Have
 
@@ -104,6 +107,7 @@ Command: `claude plugin test cpm-next-progress` (runs `hooks/*.test.ts` with `cl
 - Rows gain fields, so every row of an existing tracker is rewritten once at the first check after the upgrade; above eight writes this goes through the existing Haiku subagent path.
 - Selection is kept in memory for the page's life; it is not stored.
 - The `Bash` attribution matches the epic file's name in the command text; a write by a script that names no file is credited to no one.
+- The turn-end prompt points to the pending file because, under `claude plugin test`, the mod's own `prompt.submit` hook does not run for the prompt it submits, so the context that hook attaches never arrived there, and `$.prompt.submit` takes no `context` (`cpm-next-progress/.claude-plugin/types/claude-code/index.d.ts:8356`); the engine's types say a live session runs that hook (`:2720-2721`). Pointing to the file works either way; the context is kept (user's choice, 2026-11-11).
 
 ## Challenge
 **Personas**: architect, qa, ux (2026-11-11)
