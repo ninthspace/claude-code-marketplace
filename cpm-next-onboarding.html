@@ -494,7 +494,7 @@
       <li>Builds it task by task, following the project's existing conventions.</li>
       <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the story's tests: the ones it cites and the ones that run the code it changed, and, when the change is wide-reaching or closes its epic, the full suite once after the audit.</li>
       <li>Takes the reds in one <b>red pass</b>: copies each file it will change to <code>.git/cpm-next/scratch/</code>, undoes or mutates the code each cited test covers, runs that test and notes its failure, copies the files back and checks a manifest shows every file restored. Then it writes the <code>Evidence</code> lines.</li>
-      <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes every Critical and Warning finding and audits again, scoped to those findings and the fix code. A third audit runs only when the second finds a Critical; a story still failing is marked blocked.</li>
+      <li>Hands the story to the <code>auditor</code>. On <code>fix needed</code> it fixes every Critical and Warning finding and audits again, scoped to those findings and the fix code. When you are watching, a third audit runs only when the second finds a Critical; in an unattended run a story gets up to five, stopping early when a finding comes back after being fixed twice or the findings grow. A story still failing is marked blocked.</li>
       <li>Closes the story in the same edit as its <code>**Audit**</code> line, or on its deferred full run's pass when the story needs one.</li>
     </ol>
     <p>Stories unblocked together that share no files or state are built in parallel, one subagent each; <code>--parallel</code> is only for stories that do share files, building each in its own git worktree and committing locally. A story whose open criteria are all <code>[user]</code> checks is skipped and listed under <b>Needs you</b>.</p>
@@ -532,6 +532,7 @@
           <li>A criterion that contradicts reality, where fixing it would change scope.</li>
         </ul>
         <p>For these it marks the story blocked with the reason and a <code>**Signal**</code>, and moves on to other unblocked work.</p>
+        <p>Audits run up to five rounds per story when unattended, so a story whose fixes converge closes without you.</p>
         <h3 style="margin-top:12px">What always stops it</h3>
         <p>A destructive action, or one that reaches outside the repository: deleting data, rewriting history, touching shared infrastructure.</p>
       </div>

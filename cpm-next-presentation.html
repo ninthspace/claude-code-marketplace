@@ -495,7 +495,7 @@
         <line class="ln" x1="250" y1="360" x2="274" y2="360" marker-end="url(#ah)"/>
         <path class="ln" d="M343,412 L343,438" marker-end="url(#ah)"/>
         <path class="ln" d="M276,390 L253,390" marker-end="url(#ah)"/>
-        <text class="tx-d" x="10" y="526">A Critical in the second audit gets a third; never a fourth.</text>
+        <text class="tx-d" x="10" y="526">Attended: third after a Critical. Unattended: five.</text>
         <text class="tx-d" x="10" y="546">After closing, do re-reads the story before the next one.</text>
       </svg>
       <div>
@@ -504,7 +504,7 @@
           <li>A criterion without its own Evidence line is not met.</li>
           <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the tests (a targeted run; a wide-reaching change takes its full run after the audit), then the reds.</li>
           <li>Critical and Warning findings are fixed wherever the mistake occurs, each with a test; suggestions are not.</li>
-          <li>A later audit checks only the earlier findings and the fix code. A story still failing the last audit is blocked, with each unresolved finding recorded.</li>
+          <li>A later audit checks only the earlier findings and the fix code. Attended runs allow a third audit after a Critical; unattended runs allow five, stopping early if fixes do not converge. A story still failing the last audit is blocked, with each unresolved finding recorded.</li>
           <li>Stories that share no files or runtime state are built in parallel. <code>--parallel</code> gives stories that share files their own git worktrees.</li>
           <li>The baseline is one full run. A story runs the tests that reach its change; a wide change or a closing epic runs the full suite once, after its audit, and there is no full run at the end.</li>
         </ul>
@@ -630,7 +630,7 @@
         <h3>Otherwise it keeps going</h3>
         <ul class="plain">
           <li>No pauses to summarise progress, offer to carry on, or report that a story finished.</li>
-          <li>In an unattended <code>do all</code> or <code>do all {spec}</code> run, the first two cases mark the story blocked and work moves on. A destructive action always stops the run.</li>
+          <li>In an unattended <code>do all</code> or <code>do all {spec}</code> run, the first two cases mark the story blocked and work moves on, and a story gets up to five audits. A destructive action always stops the run.</li>
           <li>Commits, branches and pushes are left to you. Only <code>--parallel</code> commits and merges, locally, and never pushes.</li>
         </ul>
       </div>
@@ -667,7 +667,7 @@
         <p>From the <code>cpm-next-progress</code> mod. A private claude.ai page showing a spec's stories as a table grouped by phase, with a story waiting on your check shown as Waiting on input, the decisions that need you counted on each row, and the selected row's detail beside the table. The mod keeps it in step with the epic docs. Anyone it is shared with can read it.</p>
       </div>
     </div>
-    <div class="note"><strong>Every do run ends with three headings:</strong> Needs you (what waits on your action or decision), Changed (stories completed, files touched, full and targeted runs, test result against the baseline) and Found (anything surprising).</div>
+    <div class="note"><strong>Every do run ends with three headings:</strong> Needs you (what waits on your action or decision), Changed (stories completed, files touched, full and targeted runs, each story's audit count, test result against the baseline) and Found (anything surprising, and stories that passed at their fourth or fifth audit or were stopped early).</div>
   </div>
 </section>
 
