@@ -187,3 +187,23 @@ A rule is written for the case in view and stops short of what its requirement c
 
 Before a rule is written, list the cases its requirement covers, the ones that are not the cited case included, and state the rule over all of them. The criterion names at least one case beyond the cited one that the rule must hold for, so a rule that covers only the cited case fails it. `plan` does this as it writes the criterion, `review` checks the cases, and `do` reads the rule against them before closing. Owned by `plan` for the criterion, `review` for the check and `do` for the build.
 
+
+## A procedure names every route that calls it and every input each caller gives
+**Promoted**: 2026-11-12
+**Class**: procedure-gap
+**Source**: docs/epics/49-01-epic-red-passes.md, docs/epics/56-02-epic-test-writer-do-and-audit.md (`procedure-gap` signals)
+**Scope**: plan, review, do
+
+A procedure that a skill or an agent follows was written for the call in view, and the first real use met a route or an input it did not have: a rewritten red pass that took its suite result before a fix and broke on a deleted path; a test-writer agent with no instructions for the two ways `do` sends a test back to it, whose own limits refused one of them, and no input naming the epic file stem it had to name its files by. Each read as complete and was found by an audit.
+
+Before a procedure is written or changed, list every route by which it is called (a first call, a resume, a retry, a return with a failure, a dispute) and every input each caller hands it, read from the caller's own steps, and give the procedure a step for each route and a use for each input. The criterion names the routes and inputs, and checks them against the caller's text, so a procedure missing one fails it. `plan` lists them as it writes the criterion, `review` checks them against the callers, and `do` reads the procedure against them before closing. Owned by `plan` for the criterion, `review` for the check and `do` for the build.
+
+## An audit fix is checked against the requirement it serves, not only the finding it answers
+**Promoted**: 2026-11-12
+**Class**: fix-introduced-defect
+**Source**: docs/epics/49-03-epic-commit-guard.md, docs/epics/56-02-epic-test-writer-do-and-audit.md (`fix-introduced-defect` signals)
+**Scope**: do
+
+A fix written to answer one finding brought a new defect that the next audit found, and with only one round left, it blocked the story: a pattern rewritten to accept quoted commit options that backtracked exponentially on about twenty of them; a dispute route added to an agent that gave it leave to delete a test, an outcome the spec's requirement and the contract's field do not have. Each fix answered its finding and departed from the requirement around it.
+
+Before a fix goes to the next audit, read it against the requirement it serves (the spec's requirement, the contract's forms, and the sibling criteria it must hold with), and put its new code through the inputs step 4 lists, not only the case the finding cites. The fix's own check names the requirement it was read against. Owned by `do`, at step 5.

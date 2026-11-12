@@ -39,7 +39,7 @@
 **Blocked by**: Story 1  
 **Satisfies**: FR1, FR2, FR3  
 **Effort**: high  
-**Signal**: procedure-gap — project — the rewritten step 4 left three gaps a first reading met in normal use: a suite result taken before a fix, a deleted path breaking the manifest, and a mismatch restore that skipped unlisted paths (`cpm-next/skills/do/SKILL.md:51-55`, audit round 1)
+**Signal**: procedure-gap — project — the rewritten step 4 left three gaps a first reading met in normal use: a suite result taken before a fix, a deleted path breaking the manifest, and a mismatch restore that skipped unlisted paths (`cpm-next/skills/do/SKILL.md:51-55`, audit round 1) — promoted 2026-11-12
 
 **Acceptance Criteria**:
 
@@ -74,7 +74,7 @@
 **Blocked by**: Story 2  
 **Satisfies**: FR4, FR16  
 **Effort**: high  
-**Signal**: procedure-gap — project — the resume restore was not first in **Before the first story**, the delegated pass left the subagent steps it must not do, and the worktree pass bullet applied where subagents write code only (`cpm-next/skills/do/SKILL.md:35-39,67`, `worktree.md:20`, audit round 1)
+**Signal**: procedure-gap — project — the resume restore was not first in **Before the first story**, the delegated pass left the subagent steps it must not do, and the worktree pass bullet applied where subagents write code only (`cpm-next/skills/do/SKILL.md:35-39,67`, `worktree.md:20`, audit round 1) — promoted 2026-11-12
 
 **Acceptance Criteria**:
 

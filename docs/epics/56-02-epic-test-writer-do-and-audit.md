@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/56-spec-independent-acceptance-tests.md  
 **Date**: 2026-11-11  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Epic 56-01-epic-contract-and-plan  
 **Amended**: review 13 (docs/reviews/13-review-independent-tests.md) — the writer runs no tests, gets `plan`'s path, writes from the documentation when a sample is due, names its files by the story and freezes the clock; `do` gives the writer its prompt and directory, runs a marked schema-first story's writer before its code, caps the returns, rewrites the blobs after the last return and after a worktree commit, and names the field's files to the auditor; a revision rewrites the blob and excuses nothing else; `test-runs.md` covers every rule that reads a failure as someone else's; the auditor checks against the story's diff when there is no commit; greps that already hit at base replaced; Story 3 after Stories 2 and 4; the pre-build red held in the run directory until step 3, after the spec's FR8 amendment (2026-11-11)  
 **Lessons**: docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 1), docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 2), docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 3), docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 4), docs/library/01-library-lessons-learned.md → "A must-NOT stated as an equality is a change detector, and a set comparison needs a floor" (Story 2), docs/library/01-library-lessons-learned.md → "A must-NOT stated as an equality is a change detector, and a set comparison needs a floor" (Story 3), docs/library/01-library-lessons-learned.md → "A must-NOT stated as an equality is a change detector, and a set comparison needs a floor" (Story 4), docs/library/01-library-lessons-learned.md → "A rule is checked over every case its requirement covers, not the one in front of you" (Story 3), docs/library/01-library-lessons-learned.md → "A control is only a control once you have watched it fail, and read why" (Story 1), docs/library/02-library-planning-time-lessons.md → "Read what iterates a set before adding a member to it" (Story 3), docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (build), docs/library/01-library-lessons-learned.md → "A criterion's factual claim is checked against the code and its sibling criteria before the epic runs" (build)
@@ -11,95 +11,141 @@
 
 ## The test-writer agent
 **Story**: 1  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: —  
-**Satisfies**: FR5, NFR1, NFR3
+**Satisfies**: FR5, NFR1, NFR3  
+**Amended**: the user settled the round-2 audit Warning: a sent-back test is kept or revised, never deleted, as FR7 says, with a third audit of the fix (2026-11-12) — cited: FR7, `artifacts.md:144`  
+**Signal**: procedure-gap — project — the agent file left out the two ways `do` calls it again (a test returned after the pre-build run, and a dispute, which its own limits refused) and the epic file stem it names its files by (`cpm-next/agents/test-writer.md` **What you are given**, **Your limits**, audit round 1) — recurs: docs/epics/49-01-epic-red-passes.md (a rewritten procedure left gaps that a first reading met in normal use) — raised 2026-11-12 — promoted 2026-11-12  
+**Signal**: definition-in-two-places — project — the agent restated `plan/SKILL.md`'s boundary parts, control and floor rules and collision rule beside its references to them (`cpm-next/agents/test-writer.md` **What you write**, audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (a rule copied in its owner's terms beside the reference)  
+**Signal**: fix-introduced-defect — project — the round-1 fix for the dispute route gave the writer leave to delete a sent-back test, an outcome FR7 and the contract's field do not have (`cpm-next/agents/test-writer.md:40,46,50`, second audit, Warning) — recurs: docs/epics/49-03-epic-commit-guard.md (an audit fix brought a new defect the second audit found) — raised 2026-11-12 — promoted 2026-11-12  
+**Test run**: 3 (3 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 177 passed, 0 failed — tree d776f1aaf13990547db6dc48421e45f65e22e724 — untested: cpm-next/agents/test-writer.md — cpm-next/agents/test-writer.md → deferred full run  
+**Audit**: pass (2026-11-12), 4 findings fixed
 
 **Acceptance Criteria**:
 
 - `cpm-next/agents/test-writer.md` exists with frontmatter `name: test-writer`, `model: opus`, a `description` saying `/cpm-next:do` starts it, and tools `Read, Grep, Glob, Bash, Write, Edit`; `claude plugin validate cpm-next` passes `[manual]`
+  - Evidence: `test-writer.md:1-6` frontmatter: `name: test-writer`, `model: opus`, description ending "Started by /cpm-next:do.", `tools: Read, Grep, Glob, Bash, Write, Edit`; `claude plugin validate cpm-next` prints "✔ Validation passed" — red: n/a — static
 - The agent file states its inputs (the story, the spec with **Data Sources**, the sample paths, the absolute paths of the contract and of `plan/SKILL.md` for its Epics paragraph's control and floor rules, the test command and formatter, its scratch directory, a stopped writer's files) and that it has none of the conversation `[manual]`
+  - Evidence: **What you are given** (`test-writer.md:12-25`): the story with the epic doc's path, the spec with **Data Sources** and each sample's path, the contract's absolute path, `plan/SKILL.md`'s absolute path for its **Epics** paragraph's control and floor rules, the test command and formatter, its own directory, a stopped writer's files, and for a test sent back its file, cause, failure text or citation and the build's changed files; the opening paragraph (`test-writer.md:10`) says it has none of the conversation — red: n/a — static
 - It states what it writes, over every criterion a test proves: tests only through the boundary the story names (entry point, outbound seam, stored state), asserting only what the criteria, spec and samples state; at least one test per test-proven criterion; a check that each sample's identity values are unique; the identity and conservation criteria built from the sample, with colliding records added where it has none; the clock frozen at the sample's date where the sample holds dates; with a source whose bullet reads `sample due`, fixtures from the documentation's examples, with colliding records added; `plan`'s control and floor rules applied to its own tests, by reference to that paragraph `[manual]`
+  - Evidence: **What you write** (`test-writer.md:27-36`): through the boundary only (entry point, outbound seam, stored state, defined by reference to `plan/SKILL.md`'s **Story fields**); only what the criteria, spec and samples state; at least one test per test-proven criterion; a uniqueness test of each sample's identity values; identity and conservation criteria from the sample, with the colliding records the **Epics** paragraph calls for added in a fixture file of its own, never in the sample; the clock frozen at the sample's date; a `sample due` source's fixtures from the documentation's examples with colliding records; `plan/SKILL.md`'s **Epics** control and floor rules applied by reference — red: n/a — static
 - It states its limits: it writes only new files (tests and fixtures), each with `{epic file stem}-{story}` in its path, in a directory the project's full run covers, checked against the test-runner config; it may replace or delete a stopped writer's files it was given; it edits no file it did not create; it runs the project's formatter on its files; it runs no tests. Positive greps in the file: `{epic file stem}-{story}` 1, `runs no tests` 1. Control: a sentence giving it leave to edit an existing test, factory, base test case or config, planted in a copy of the file, is found by reading the limits paragraph, and the shipped file holds none `[manual]`
+  - Evidence: **Your limits** (`test-writer.md:38-42`): only new test and fixture files with `{epic file stem}-{story}` in the path, in a directory the full run covers, checked against the test-runner config; may replace or delete a stopped writer's files it was given, and revise a test sent back to it (**A test sent back**, `test-writer.md:44-46`, which reads none of the build's changed files); edits no file it did not create (existing tests, base test case, shared setup, factories, seeders, test-runner config, environment, code); formats its own files; "This agent runs no tests". `grep -cF`: `{epic file stem}-{story}` 1, `runs no tests` 1. Control: "You may edit an existing factory or the base test case where a test needs it." planted in a scratch copy is found by reading the limits paragraph (`grep -i "may edit"` over it: 1 hit in the copy, 0 in the shipped file, whose only leaves are for a stopped writer's files and a test sent back) — red: n/a — static
 - It states its report: each file written, and for each test the criterion it proves `[manual]`
+  - Evidence: **Your report** (`test-writer.md:48-50`): each file, each test under it with the criterion it proves, quoted from the story; then untestable criteria, missing inputs, documentation-built sources and changes needed outside its files; for a test sent back, kept or revised, and why — red: n/a — static
 - It names the contract's forms without restating them: `grep -cF "{path} {blob}"` and `grep -cF "sample due: {"` over the file give 0 `[manual]`
+  - Evidence: `grep -cF "{path} {blob}"` 0 and `grep -cF "sample due: {"` 0 over `test-writer.md`; it names "the contract's `sample due` form" and the **Data Sources** section by name — red: n/a — static
 - The file is read with the history check, and none of it records history `[manual]`
+  - Evidence: the history grep over `test-writer.md` gives no hit; the whole file read, none of it records history — red: n/a — static
 
 ### Write the agent
 **Task**: 1.1  
 **Description**: Write `cpm-next/agents/test-writer.md`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Do runs the writer before the build and holds the builder to its tests
 **Story**: 2  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
 **Satisfies**: FR6, FR7, FR8, FR11, FR12, NFR1, NFR3  
-**Effort**: high
+**Effort**: high  
+**Signal**: procedure-gap — project — `do`'s independent-test rules reached neither a parallel subagent's prompt nor an audit finding against an independent test, two routes by which the rules are met (`cpm-next/skills/do/SKILL.md` parallel rules and **Independent tests**, audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A procedure names every route that calls it and every input each caller gives" (a procedure missing routes its callers take)  
+**Test run**: 2 (2 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 177 passed, 0 failed — tree dd3b751273b329cbd339ba6c83d4e79206c2e004 — untested: cpm-next/skills/do/SKILL.md (`register.test.ts` reads a fake copy); untested: cpm-next/agents/test-writer.md (out-of-story fix) — cpm-next/skills/do/SKILL.md → deferred full run; cpm-next/agents/test-writer.md → deferred full run  
+**Audit**: pass (2026-11-12), 2 findings fixed
 
 **Acceptance Criteria**:
 
 - `do/SKILL.md` states the order for every story whose field reads `due`: the test-writer (`subagent_type` `cpm-next:test-writer`) is started before any of the story's code is written; in a batch, one per marked story, in parallel, after any schema-first story and before fan-out, and a schema-first story that is itself marked has its writer run before the lead builds it `[manual]`
+  - Evidence: step 1 (`do/SKILL.md:46`) sends a `due` story to **Independent tests** before any of its code; **Independent tests** (`do/SKILL.md:80-91`) names `subagent_type` `cpm-next:test-writer` (`:82`), and **Order** (`:84`): after step 1 and before step 2 in a single build; in a batch one writer per marked story, in parallel, after any schema-first story the lead runs and before fan-out; a marked schema-first story's writer before the lead builds it — red: n/a — static
 - It states the writer's prompt, as **Audit** lists the auditor's: the story, the spec, the sample paths, the absolute paths of the contract and of `plan/SKILL.md`, the test command and formatter, a fresh writer directory under the run directory (**Scratch directories and isolation** names it beside the auditor's), and on a resumed story the files a stopped writer left, found by the story's `{epic file stem}-{story}` in their paths `[manual]`
+  - Evidence: **The prompt** (`do/SKILL.md:85`): the story and the epic doc's path, the spec, the sample paths, the absolute paths of the contract and `skills/plan/SKILL.md`, the test command and formatter, a fresh writer directory, a resumed story's stopped-writer files found by `{epic file stem}-{story}`, and for a test sent back its file, cause, failure text, citation or audit finding and the build's changed files; **Scratch directories and isolation** (`:101`) names `writer-{epic}-{story}-{n}` beside the auditor's directory — red: n/a — static
 - It states the pre-build run: the lead checks the writer's report against the files and runs each story's independent tests, one story at a time and never beside another test run; the run does not rewrite `**Test run**`; a test that errors for a cause other than the boundary not existing goes back to the writer; a passing test is kept when it is a must-not or never criterion's or asserts behaviour the code already has, and otherwise goes back to the writer; each test goes back at most once for each cause, after which an error marks the story blocked with a signal and a pass raises its criterion through **When a criterion looks wrong**. Floor: the rule that two test runs never overlap in one checkout (`{base}` `do/SKILL.md:90`) is unchanged `[manual]`
+  - Evidence: **The pre-build run** (`do/SKILL.md:86`): report checked against the files; each story's independent tests run one story at a time, never beside another test run; `**Test run**` not rewritten; an error other than the boundary's absence goes back; a pass kept for a must-not or never criterion or behaviour the code has, else back; at most once per cause, then an error blocks the story with a signal and a pass goes through **When a criterion looks wrong**. Floor: the overlap rule (`:105`, "two test runs, full or targeted, or a test run and a red pass, never overlap in one checkout") is verbatim as at `0a4e609` — red: n/a — static
 - It states the field's rewrite in the contract's form, over every file the writer wrote, after the last return to the writer and, in worktree mode, after the commit before fan-out `[manual]`
+  - Evidence: **The field** (`do/SKILL.md:88`): rewritten in the contract's form over every file the writer wrote, after the last return to the writer and, in worktree mode, after the commit before fan-out; **A dispute** (`:90`) rewrites a revised file's blob and appends the ` — revised` note — red: n/a — static
 - It states the `before the build` red by reference to the contract: when it applies; that the lead holds each in the run directory until step 3 writes it into the criterion's `Evidence` line, and writes no `Evidence` line before the build; and that every other independent test, and one whose red was lost when a run stopped, takes its red in the red pass. Floor: step 4's red pass rules at `{base}` are all still there; `grep -cF "red: {message} — before the build"` over `do/SKILL.md` gives 0 `[manual]`
+  - Evidence: **The red before the build** (`do/SKILL.md:87`): a failure meeting the contract's conditions is the red; the lead holds it in the run directory and writes no `Evidence` line before the build; step 3 writes it (`:50`); every other independent test, and a held red lost when a run stopped, takes the red pass; step 4 (`:55`) exempts only a test whose red came from the pre-build run. Floor: every sentence of `do/SKILL.md` at `0a4e609` is present verbatim except three this story extended (step 4's input list, the scratch directory sentence and "No two auditors share one"), so step 4's red pass rules are all there; `grep -cF "red: {message} — before the build"` 0 — red: n/a — static
 - It states the builder's limits over every file on the field: none is edited, the simplifier and the project's formatters are not run over them, and each criterion an independent test proves cites it in `Evidence`. It states the dispute route: a citation may not be a `file:line` the story wrote; the lead, never a parallel subagent, starts a fresh writer with the inputs above, the test and the citation; a revision rewrites that file's blob on the field and appends the ` — revised` note, and takes the red pass; one dispute per test, after which the story builds to it or is marked blocked with a signal `[manual]`
+  - Evidence: **The builder's limits** (`do/SKILL.md:89`): no file on the line edited, neither the simplifier nor the formatters run over them, each criterion an independent test proves cites it in `Evidence`. **A dispute** (`:90`): the citation is a requirement, another criterion or a `file:line` the story did not write; the lead, never a parallel subagent, starts a fresh writer with the prompt, the test and the citation; a revision rewrites the blob, appends ` — revised` and takes the red pass; an audit finding against an independent test is a dispute too, with no fix editing the test and a kept test's finding dismissed with the writer's reason; one dispute per test, then build to it or blocked with a signal. A parallel subagent, in either build mode, is given the builder's limits, the dispute route and the line's files in its prompt, carries a dispute to the lead, and the lead writes its held reds (`do/SKILL.md:71`) — red: n/a — static
 - **Audit**'s list of what the auditor is given adds the files on the story's `**Independent tests**` line, in every build mode `[manual]`
+  - Evidence: **Audit** (`do/SKILL.md:113`): "the files on the story's `**Independent tests**` line, in every build mode;" — red: n/a — static
 - Step 4's list of unexpected inputs adds records colliding on an attribute that is not their key and the same identity twice in one delivery. Floor: `empty, missing, null, non-numeric, boundary` is still there `[manual]`
+  - Evidence: step 4 (`do/SKILL.md:53`): "(empty, missing, null, non-numeric, boundary, records that collide on an attribute that is not their key, the same identity twice in one delivery)"; floor: `empty, missing, null, non-numeric, boundary` counted 1 — red: n/a — static
 - It states the unavailable case: the field is rewritten `skipped — test-writer unavailable`, the story is built as unmarked, and **Found** says so `[manual]`
+  - Evidence: **No writer** (`do/SKILL.md:91`): the line rewritten `skipped — test-writer unavailable`, the story built as unmarked, said under **Found** — red: n/a — static
 - The added lines of `git diff {base} -U0 -- cpm-next/skills/do/SKILL.md` are read with the history check, and none records history `[manual]`
+  - Evidence: the history grep over the added lines gives no hit; every added line read, none records history — red: n/a — static
 
 ### Edit do's loop, parallel rules, audit prompt, scratch directories and criterion route
 **Task**: 2.1  
 **Description**: Edit **The loop** steps 1 to 5, the parallel rules, **Scratch directories and isolation**, **Audit** and **When a criterion looks wrong** in `cpm-next/skills/do/SKILL.md`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## The runs know whose tests these are
 **Story**: 3  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 2, Story 4  
 **Satisfies**: FR10, NFR1, NFR3  
-**Effort**: high
+**Effort**: high  
+**Amended**: the user settled the round-2 audit Warning: a batch's shared deferred run holds only the batch stories it closes, with a third audit of the fix (2026-11-12) — cited: FR10, `test-runs.md:81`  
+**Signal**: fix-not-carried-through — project — the rule's exception was written into the first sentence of **A pass** and left out of its later sentence, of **A failure**'s run-alone path and of the batch's shared run (`cpm-next/shared/test-runs.md:73,75,81`, audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (a change made in one sentence and not its neighbours)  
+**Signal**: fix-introduced-defect — project — the round-1 fix's "a batch's shared deferred run that holds it" left open which stories a shared run holds, letting a blocked story's tests block its siblings (`cpm-next/shared/test-runs.md:56,81`, second audit, Warning) — recurs: docs/library/01-library-lessons-learned.md → "An audit fix is checked against the requirement it serves, not only the finding it answers" (a fix that answered its finding and departed from FR10 around it)  
+**Test run**: 3 (3 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 177 passed, 0 failed — tree 44d9ac8e6f59b8f5280f259ab155637dd3470722 — closes epic; untested: cpm-next/skills/do/SKILL.md — cpm-next/skills/do/SKILL.md → deferred full run (`cpm-next/shared/test-runs.md` is prose no code reads)  
+**Audit**: pass (2026-11-12), 3 findings fixed
 
 **Acceptance Criteria**:
 
 - `shared/test-runs.md`'s targeted set adds the files on the story's `**Independent tests**` line, for every story with that line, in either build mode. Floor: the three bullets at `{base}` are all still there `[manual]`
+  - Evidence: **The targeted set** (`test-runs.md:11`): "the files on the story's `**Independent tests**` line, in either build mode;". Floor: the three bullets at `0a4e609` are verbatim at `:9`, `:10`, `:12` — red: n/a — static
 - It states once that a failing test in a file on the line of a story not yet Complete belongs to that story, and every rule that reads a failure as another story's or as pre-existing follows it: the baseline (`do/SKILL.md` **Before the first story**, and the finish line's "failing at the baseline"), **A failing targeted run** (a test the story did not add), and **The deferred full run**'s **A pass**, **A failure** and **Every regression**; the story closes only when its own independent tests pass. Each of those six places names the rule or refers to it, found by reading; in the added lines, `belongs to that story` 1 `[manual]`
+  - Evidence: **An open story's independent tests** (`test-runs.md:54-56`) states the rule once, as a sorting every failure-reading rule applies first: in a run covering the story (its own, or a batch's shared deferred run, which holds only the batch stories it closes) the test is a failure of that run, and a blocked or waiting batch story's tests are set aside in the shared run; in any other run it is set aside, with no run alone by path and no flaky check; the story closes only when its own independent tests pass. The six places refer to it by name: `do/SKILL.md:38` (baseline: "unless `test-runs.md` (**An open story's independent tests**) gives it to an open story"), `do/SKILL.md:29` (finish line), `test-runs.md:64` and `:67` (**A failing targeted run**: the full run's failures sorted first; a test on the story's own line is its own, another open story's is left to it), `:73` (**A pass**: "The run's failures are first sorted as **An open story's independent tests** says"), `:75` (**A failure**: "After that sorting"), `:77` (**Every regression**: "(after that sorting)"). In the added lines of both files, `belongs to that story` 1 — red: n/a — static
 - Wide reach's shared-test-setup bullet adds that a fixture or factory file a story's writer or builder added, read only by that story's tests, is not wide reach, the writer's files committed before fan-out included. Floor: the seven wide-reach bullets at `{base}` are all still there `[manual]`
+  - Evidence: `test-runs.md:39`: "a fixture or factory file a story's test-writer or builder added that only that story's tests read is not wide reach, the writer's files committed before fan-out included". Floor: the seven wide-reach bullets at `0a4e609` are all there, every sentence of `test-runs.md` at `0a4e609` being present verbatim except the five this story extended (`:64`, `:67`, `:73`, `:75`, `:77`) — red: n/a — static
 - The rule is stated in `test-runs.md` only: `grep -n -i "independent test" cpm-next/skills/do/SKILL.md cpm-next/agents/auditor.md` hits are read, and none states the baseline or regression rule; a sentence restating it, planted in a copy of `do/SKILL.md`, is found by the same grep `[manual]`
+  - Evidence: the grep's hits in `do/SKILL.md` (`:29`, `:38`, `:46`, `:50`, `:55`, `:71`, `:80`, `:82`, `:86`, `:87`, `:89`, `:90`, `:113`) and `auditor.md:24` read: `:29` and `:38` refer to the section by name, the rest are Story 2's and Story 4's build and audit rules; none states the baseline or regression rule. Control: "A failing independent test of a story not yet Complete is never pre-existing at the baseline and never another story's regression." appended to a scratch copy of `do/SKILL.md` is found by the same grep (its last hit) — red: n/a — static
 - The added lines of `git diff {base} -U0 -- cpm-next/shared/test-runs.md cpm-next/skills/do/SKILL.md` from this story are read with the history check, and none records history `[manual]`
+  - Evidence: the history grep over this story's added lines hits `test-runs.md:77` on "an earlier story", text at `0a4e609` in **Every regression**; none in `do/SKILL.md`'s two edited lines; every added line read, none records history — red: n/a — static
 
 ### Edit test-runs.md
 **Task**: 3.1  
 **Description**: Edit **The targeted set**, **Wide reach**, **A failing targeted run** and **The deferred full run** in `cpm-next/shared/test-runs.md`, and the baseline bullet and finish line in `do/SKILL.md` by reference.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## The auditor checks the independent tests
 **Story**: 4  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: —  
-**Satisfies**: FR9, FR11, FR12, NFR1, NFR3
+**Satisfies**: FR9, FR11, FR12, NFR1, NFR3  
+**Signal**: definition-in-two-places — project — check 5 restated the contract's definition of a field blob (12 characters of `git hash-object`) beside its reference to the contract (`cpm-next/agents/auditor.md:24`, audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (a definition reworded in a second place)  
+**Test run**: 2 (2 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 177 passed, 0 failed — tree 65ddba25ad825dff78c907aa8f386536eca712dc — untested: cpm-next/agents/auditor.md — cpm-next/agents/auditor.md → deferred full run  
+**Audit**: pass (2026-11-12), 1 findings fixed
 
 **Acceptance Criteria**:
 
 - `auditor.md`'s allowed git commands add `git hash-object`. Floor: `git diff`, `git status`, `git log` and `git show` are still listed `[manual]`
+  - Evidence: `auditor.md:12` reads "git operations other than `git diff`, `git status`, `git log`, `git show` and `git hash-object`"; floor: all four earlier commands still listed in that sentence — red: n/a — static
 - Check 5 states each Critical: a file on the field whose blob differs from the one recorded on the field (a revision having rewritten it); a marked story whose field still reads `due`; a criterion an independent test proves whose `Evidence` line does not cite that test; a change the story made to shared test setup, test-runner config, factories or environment, or code that branches on the test environment or names a sample's values, that changes what an independent test checks. In check 5's added lines: `hash-object` 1, `still reads \`due\`` 1, `does not cite that test` 1, `test environment` 1 `[manual]`
+  - Evidence: check 5 (`auditor.md:24`) adds: a file on the line whose blob, recomputed with `git hash-object` as the contract defines it, differs from the recorded one, a revision having rewritten it there; a marked story whose line still reads `due`; a criterion an independent test proves whose `Evidence` line does not cite that test; a change to shared test setup, test-runner config, factories or environment, or code branching on the test environment or naming a sample's values, that changes what an independent test checks — each a Critical. In check 5's added line: `hash-object` 1, ``still reads `due` `` 1, `does not cite that test` 1, `test environment` 1 — red: n/a — static
 - Check 5 states when a `before the build` red is accepted: the file still matches its blob; the boundary existed at the story's start, read from the commit before the story where there is one and otherwise from the story's diff (the entry point not added by it); and the failure text is what the cited assertion prints; and that the undo and mutation Warning does not apply to it. Floor: the red-pass Warnings at `{base}` (`auditor.md:24`) are all still there `[manual]`
+  - Evidence: check 5 (`auditor.md:24`): accepted when the file still matches its blob, the boundary existed at the story's start (the commit before the story where there is one, otherwise the story's diff, which must not add the entry point) and the failure text is what the cited assertion prints; "the Warning above on an undo or mutation the assertion doesn't depend on does not apply to it". Floor: every sentence of `auditor.md` at `0a4e609` is present verbatim except the two this story extended (allowed commands, check 6), so check 5's red-pass Warnings are all there — red: n/a — static
 - Check 6's list of unexpected inputs adds records colliding on an attribute that is not their key and the same identity twice in one delivery. Floor: `Empty, missing, null, non-numeric, NaN and boundary` is still there `[manual]`
+  - Evidence: check 6 (`auditor.md:25`): "Empty, missing, null, non-numeric, NaN and boundary values reaching the new code, records that collide on an attribute that is not their key, and the same identity twice in one delivery." Floor: `Empty, missing, null, non-numeric, NaN and boundary` counted 1 — red: n/a — static
 - The auditor states that `skipped — test-writer unavailable` is not a finding `[manual]`
+  - Evidence: check 5 (`auditor.md:24`) ends "The line's `skipped — test-writer unavailable` form is not a finding." — red: n/a — static
 - It names the contract's forms without restating them: `grep -cF "{path} {blob}"` and `grep -cF "red: {message} — before the build"` over `auditor.md` give 0 `[manual]`
+  - Evidence: both greps give 0; check 5 says the line's forms are in the contract, refers to the blob "as the contract defines it" without its length or derivation (`grep -c "12 characters"` 0), and names `before the build` and `skipped — test-writer unavailable` only as names — red: n/a — static
 - The added lines of `git diff {base} -U0 -- cpm-next/agents/auditor.md` are read with the history check, and none records history `[manual]`
+  - Evidence: the history grep hits the check 5 line on "instead of reproducing it" and "an error rather than the cited assertion failing", both text at `0a4e609`; the three added lines read, none records history — red: n/a — static
 
 ### Edit the auditor
 **Task**: 4.1  
 **Description**: Edit the allowed commands and checks 5 and 6 in `cpm-next/agents/auditor.md`.  
-**Status**: Pending
+**Status**: Complete
 
 ---

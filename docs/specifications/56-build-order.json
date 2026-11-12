@@ -1,0 +1,51 @@
+{
+  "title": "56 Independent acceptance tests and real source samples: build order",
+  "spec": "docs/specifications/56-spec-independent-acceptance-tests.md",
+  "decisions": [],
+  "phases": [
+    {
+      "label": "56-01 Data sources, the field and plan's rules",
+      "items": [
+        {
+          "epic": "56-01",
+          "story": 1
+        },
+        {
+          "epic": "56-01",
+          "story": 2
+        }
+      ]
+    },
+    {
+      "label": "56-02 The test-writer, and how do, the runs and the auditor use it",
+      "items": [
+        {
+          "epic": "56-02",
+          "story": 1
+        },
+        {
+          "epic": "56-02",
+          "story": 2
+        },
+        {
+          "epic": "56-02",
+          "story": 4
+        },
+        {
+          "epic": "56-02",
+          "story": 3
+        }
+      ]
+    },
+    {
+      "label": "56-03 Release 0.18.0",
+      "items": [
+        {
+          "epic": "56-03",
+          "story": 1
+        }
+      ]
+    }
+  ],
+  "artifact": "https://claude.ai/artifact/5G8XiysC345c4NiFAq3d4b"
+}

@@ -210,7 +210,7 @@
       <li>The artefacts it writes in <code>docs/</code></li>
       <li>Installing the full set, and setting up a project</li>
       <li>A first walkthrough: plan, review, do one story, status</li>
-      <li>Unattended runs, checks only you can make, how it learns, story effort, the two agents, staying up to date</li>
+      <li>Unattended runs, checks only you can make, how it learns, story effort, the three agents, staying up to date</li>
     </ul>
     <p class="dim small">Covers cpm-next 0.16.0, cpm-next-models 0.3.3, cpm-next-progress 0.9.1 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. Press T to switch light and dark.</p>
@@ -226,7 +226,7 @@
       <li>cpm-next keeps a chain of Markdown artefacts in your repository's <code>docs/</code> folder: a discussion record, a product brief, a specification, and epics made of stories with acceptance criteria.</li>
       <li>Six skills cover the whole path. Each skill states what "finished" means and when to stop.</li>
       <li>The artefacts are the only state. There are no progress files to clean up. The epic doc is the task list: you read it to see where a run is, and the next session resumes from it.</li>
-      <li>Each skill declares its model and effort. Opus plans, reviews and builds. An Opus <code>auditor</code> agent checks every story before it closes. A Haiku <code>scout</code> agent answers lookups. <code>status</code> runs on Haiku.</li>
+      <li>Each skill declares its model and effort. Opus plans, reviews and builds. An Opus <code>test-writer</code> agent writes a marked story's acceptance tests before it is built, and an Opus <code>auditor</code> agent checks every story before it closes. A Haiku <code>scout</code> agent answers lookups. <code>status</code> runs on Haiku.</li>
       <li>It works for greenfield and brownfield projects. In a brownfield project, <code>plan</code> grounds every requirement in the current code.</li>
     </ul>
   </div>
@@ -393,7 +393,7 @@
       <table>
         <thead><tr><th>Plugin</th><th>Adds</th><th>Without it</th></tr></thead>
         <tbody>
-          <tr><td><code>cpm-next</code></td><td>The six skills, the auditor and scout agents, and a commit guard</td><td>Required</td></tr>
+          <tr><td><code>cpm-next</code></td><td>The six skills, the auditor, test-writer and scout agents, and a commit guard</td><td>Required</td></tr>
           <tr><td><code>cpm-next-models</code></td><td>Holds each skill's model and effort for its whole run; builds each story at its own effort</td><td>A skill's model and effort last only for the turn that invoked it; later turns of a <code>do</code> run fall back to the session model</td></tr>
           <tr><td><code>cpm-next-progress</code></td><td><code>/progress-tracker</code>, a claude.ai tracker for a spec's epics, and an overview of every project's</td><td>No shareable progress page; read the epic docs or run <code>/cpm-next:status</code></td></tr>
           <tr><td><code>whats-next</code></td><td><code>/next</code>, a live pane of the work left in the repository, with stories waiting on you listed apart</td><td>No live pane; run <code>/cpm-next:status</code></td></tr>
@@ -490,6 +490,7 @@
     <ol class="steps">
       <li>Before the first story it restores any files a stopped red pass left, reads <code>CLAUDE.md</code>, the library, the epic and its spec, finds the test command, and runs the full suite once to record a baseline. If a <code>[browser]</code> criterion cannot be checked (no connected browser, no app answering at a local <code>APP_URL</code>), it says so in its first message.</li>
       <li>Sets the story <code>In Progress</code> and, with <code>cpm-next-models</code>, sets the story's effort.</li>
+      <li>For a story <code>plan</code> marked <code>**Independent tests**: due</code>, starts the <code>test-writer</code> agent, which writes the story's acceptance tests from the spec and the source's real sample before any code exists. <code>do</code> runs them first, counting a failure against a boundary that already answered as that test's red (<code>before the build</code>), and the builder makes them pass without changing them.</li>
       <li>Builds it task by task, following the project's existing conventions.</li>
       <li>Verifies every acceptance criterion, feeds the new code unexpected inputs, and runs the story's tests: the ones it cites and the ones that run the code it changed, and, when the change is wide-reaching or closes its epic, the full suite once after the audit.</li>
       <li>Takes the reds in one <b>red pass</b>: copies each file it will change to <code>.git/cpm-next/scratch/</code>, undoes or mutates the code each cited test covers, runs that test and notes its failure, copies the files back and checks a manifest shows every file restored. Then it writes the <code>Evidence</code> lines.</li>
@@ -611,7 +612,7 @@
 <section class="slide">
   <div class="slide-inner">
     <div class="tag">Agents</div>
-    <h2>The auditor and the scout</h2>
+    <h2>The auditor, the test-writer and the scout</h2>
     <div class="grid">
       <div class="card">
         <h3><code>auditor</code> · Opus · read-only</h3>
@@ -621,9 +622,17 @@
           <li>The diff for defects, security problems, data loss and queries whose memory grows with the data.</li>
           <li>Scope creep, and anything the story asked for that is missing.</li>
           <li>Departures from <code>CLAUDE.md</code>, the library and existing patterns.</li>
-          <li>Tests that assert nothing, or were weakened or skipped; a missing or implausible red.</li>
+          <li>Tests that assert nothing, or were weakened or skipped; a missing or implausible red; an independent test changed since it was written.</li>
         </ul>
         <p class="small dim">Returns <code>Verdict: pass</code> or <code>fix needed</code>. Any Critical or Warning finding means <code>fix needed</code>. Severity weighs how likely a failure is: unusual use (a double click, two tabs) is a Warning at most, an unreachable input a Suggestion, except for security and lost or duplicated data. A later audit checks only the earlier findings and the fix code. It runs no tests given a targeted result, and otherwise only when the suite is isolated or <code>do</code> says it is free, and never edits files.</p>
+      </div>
+      <div class="card">
+        <h3><code>test-writer</code> · Opus</h3>
+        <p>Started by <code>do</code> for a story marked <code>**Independent tests**: due</code>, before any of its code is written, so the tests and the code do not share one author's assumptions.</p>
+        <ul class="bullets">
+          <li>Tests only through the boundary the story names, from the spec, the story and the real sample in the spec's <code>## Data Sources</code>.</li>
+          <li>Writes new files only, and runs no tests.</li>
+        </ul>
       </div>
       <div class="card">
         <h3><code>scout</code> · Haiku · read-only</h3>

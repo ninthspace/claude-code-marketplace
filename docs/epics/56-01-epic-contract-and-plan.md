@@ -2,7 +2,7 @@
 
 **Source spec**: docs/specifications/56-spec-independent-acceptance-tests.md  
 **Date**: 2026-11-11  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: —  
 **Amended**: review 13 (docs/reviews/13-review-independent-tests.md) — the redaction rule's identity limited to one that is personal data; the pre-build run kept off the `**Test run**` line; the cross-file "stated once" control moved to 56-03, where every form is checked after the last edit; the marking rule's test-proven condition made to cover the high-effort branch; the red form written in step 3, after the spec's FR8 amendment; the `sample due` check as two stories, after its FR2 amendment (2026-11-11)  
 **Lessons**: docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 1), docs/library/01-library-lessons-learned.md → "A rule is stated once; every other place refers to it and carries none of its terms" (Story 2), docs/library/01-library-lessons-learned.md → "A must-NOT stated as an equality is a change detector, and a set comparison needs a floor" (Story 1), docs/library/01-library-lessons-learned.md → "A must-NOT stated as an equality is a change detector, and a set comparison needs a floor" (Story 2), docs/library/01-library-lessons-learned.md → "A rule is checked over every case its requirement covers, not the one in front of you" (Story 2), docs/library/01-library-lessons-learned.md → "A check that passes may be passing for a reason other than the one you want" (Story 1), docs/library/01-library-lessons-learned.md → "A criterion's factual claim is checked against the code and its sibling criteria before the epic runs" (build)
@@ -11,43 +11,58 @@
 
 ## The contract's forms
 **Story**: 1  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: —  
-**Satisfies**: FR1, FR4, FR8, FR12, NFR1, NFR3
+**Satisfies**: FR1, FR4, FR8, FR12, NFR1, NFR3  
+**Test run**: 0 (0 full, 0 targeted) — none — prose only: `cpm-next/shared/artifacts.md` is read by no code, test or config (the hooks name it only in comments)  
+**Audit**: pass (2026-11-12)
 
 **Acceptance Criteria**:
 
 - `cpm-next/shared/artifacts.md`'s Spec template gains `## Data Sources` after `## Testing Strategy`, with the bullet form `- {source}: identity {field(s)} ({where the source defines it}) — sample: {repository path} ({YYYY-MM-DD}{, version}) | sample due: {documentation path or URL}`, and a paragraph stating: the section is present only when the spec reads records from outside the codebase; the identity is the source's documented key, never inferred from field names; the sample's limits (smallest real extract holding every record shape the spec uses, two consecutive pages for a paged source, records sharing non-identity values where the source has them, under 100 KB, under the project's test fixtures); and the redaction rule (one stand-in per distinct personal value or secret across the sample, an identity that is personal data included, so shared values and references survive; no record and no criterion's field removed). Floor: every template section at `{base}` (`## Problem Summary` to `## Challenge`) is still there, in order `[manual]`
+  - Evidence: read `artifacts.md:89-96` (`## Data Sources` after `## Testing Strategy`, before `## Assumptions`, with the bullet form verbatim) and the paragraph at `artifacts.md:106` (present only for records from outside the codebase; identity from the source's documentation, never field names; smallest real extract, every record shape, two consecutive pages, shared non-identity values, under 100 KB, under the test fixtures; one stand-in per distinct value, an identity that is personal data included, no record or criterion's field removed). Floor: `grep -n '^## '` lists Problem Summary, Functional Requirements, Non-Functional Requirements, Architecture Decisions, Scope, Testing Strategy, Data Sources, Assumptions, Challenge in that order (`artifacts.md:69-97`) — red: n/a — static
 - The Epic template's story header gains `**Independent tests**: due {optional}`, and a paragraph defines its three states and its place: `due` (written by `plan`), `{path} {blob}, … ({YYYY-MM-DD})` over every file the test-writer wrote, `{blob}` the first 12 characters of `git hash-object`, with ` — revised {YYYY-MM-DD}: {path} ({citation})` appended per revision, whose blob the revision rewrites, and `skipped — test-writer unavailable`; one line in the header block before `**Acceptance Criteria**`, like `**Test run**`. The `**Test run**` field's sentence on who rewrites it adds that the pre-build run of the independent tests does not, as a red pass does not. Positive `grep -c -F` for `**Independent tests**`, `— revised`, `skipped — test-writer unavailable` each at least 1 `[manual]`
+  - Evidence: template line `**Independent tests**: due {optional}` after `**Model**` (`artifacts.md:129`); the paragraph after the `**Effort**` paragraph (`artifacts.md:144`) defines `due` (written by `plan`), `{path} {blob}, … ({YYYY-MM-DD})` with 12-character `git hash-object` blobs and the ` — revised {YYYY-MM-DD}: {path} ({citation})` note whose revision writes the file's new blob, and `skipped — test-writer unavailable`, one header-block line before `**Acceptance Criteria**` like `**Test run**`; the `**Test run**` sentence reads "not by a red pass, the pre-build run of the independent tests or an auditor probe". `grep -cF`: `**Independent tests**` 2, `— revised` 1, `skipped — test-writer unavailable` 1 — red: n/a — static
 - The Evidence forms gain `- Evidence: {test name, file:line} — red: {message} — before the build`, with a sentence saying when it applies (the boundary answered before the build and the failing assertion is the one proving the criterion) and that it is written with the rest of the `Evidence` line in step 3, never before the build. Floor: the six existing `Evidence`, `Evidence (user,`, `Not met` and `Waiting on user` lines of the template at `{base}` are all still there. `[manual]`
+  - Evidence: the form is the third line of the Evidence template block (`artifacts.md:157`); the sentence after the `— deferred full run, before the fix` one says it applies only when the boundary answered before the build and the failing assertion is the criterion's own, and is written with the rest of the `Evidence` line in `do`'s step 3, never before the build. Floor: each of the six `Evidence`/`Evidence (user,`/`Not met`/`Waiting on user` template lines at `0a4e609` matched once (`grep -cxF`) — red: n/a — static
 - The seed slugs gain `shared-assumption` and `identity-key`. Floor: the nine slugs at `{base}` are all still there `[manual]`
+  - Evidence: the Seeds sentence ends `` `decision-relitigated`, `shared-assumption`, `identity-key`. ``; each of the nine slugs at `0a4e609` counted 1 by `grep -c` — red: n/a — static
 - The added lines of `git diff {base} -U0 -- cpm-next/shared/artifacts.md` are read with the history check, and none records history `[manual]`
+  - Evidence: the history grep hits two added lines: the `before the build` sentence's "earlier status, existence or setup assertion" (an assertion's order in a test, not history) and the `**Test run**` line's "no earlier line" (text at `0a4e609`, the line changed only to name the pre-build run); every other added line read, none records history — red: n/a — static
 
 ### Write the contract's forms
 **Task**: 1.1  
 **Description**: Edit the Spec and Epic templates, the Evidence forms and the seed list in `cpm-next/shared/artifacts.md`.  
-**Status**: Pending
+**Status**: Complete
 
 ---
 
 ## Plan asks for samples, writes the criteria and marks the stories
 **Story**: 2  
-**Status**: Pending  
+**Status**: Complete  
 **Blocked by**: Story 1  
-**Satisfies**: FR2, FR3, FR4, NFR1, NFR3
+**Satisfies**: FR2, FR3, FR4, NFR1, NFR3  
+**Test run**: 1 (1 full, 0 targeted) — full — `claude plugin test` (cpm-next, cpm-next-models, cpm-next-progress, whats-next): 177 passed, 0 failed — tree 4f43b6ff9289f715be2a1c1b26b527328b2efaf9 — closes epic; untested: cpm-next/skills/plan/SKILL.md — cpm-next/skills/plan/SKILL.md → deferred full run  
+**Audit**: pass (2026-11-12)
 
 **Acceptance Criteria**:
 
 - `plan/SKILL.md` step 2 says that when a spec has a data source, the question round holds one question for every source together, asking for a real sample (a path, or leave to fetch one through access the session already has) and the source's documentation, and never for credentials; section 3's Spec paragraph says `plan` writes the **Data Sources** section, redacts a supplied sample and writes it at the bullet's path as the contract says, leaving the commit to the user. Floor: step 2's "up to four" questions rule is unchanged `[manual]`
+  - Evidence: `plan/SKILL.md:37` (step 2): one question for every source together, asking for a real sample (a path, or leave to fetch one through access the session already has) and the source's documentation; "Never ask for credentials." `plan/SKILL.md:47` (section 3, after the Spec paragraph): the contract's **Data Sources** section, a supplied sample redacted as the contract says and written at its bullet's path, the commit left to the user. Floor: step 2's "up to four" sentence (`plan/SKILL.md:35`) unchanged — every sentence of the file at `0a4e609` is present verbatim (119 of 119) — red: n/a — static
 - `plan/SKILL.md` says what happens with no sample, over every source without one: the bullet reads `sample due`, the spec's Assumptions say the tests are built from the documentation's examples, and the user-checks epic holds two stories: one whose only criterion is the `[user]` step of placing a redacted sample at the named path, and one blocked by it, marked, whose test-proven criteria are the identity and conservation criteria over that sample, written by its own test-writer in new files. Floor: the user-checks rule at `{base}` (no other epic names it in `**Blocked by**`; a story holding `[user]` criteria is blocked by nothing that holds one) is unchanged `[manual]`
+  - Evidence: `plan/SKILL.md:47`: "A source with no sample gets a `sample due` bullet, an Assumption that its tests are built from the documentation's examples, and two stories in the spec's user-checks epic": the `[user]` step of placing a redacted sample at the bullet's path, and one blocked by it, marked (**Story fields**), with the identity and conservation criteria over that sample written by its own test-writer in new files. Floor: the user-checks rule in **Epics** (`plan/SKILL.md:51`) is verbatim as at `0a4e609` (sentence check above) — red: n/a — static
 - `plan/SKILL.md`'s Epics paragraph states the three criteria for every story that stores, upserts or merges records, for each record type: (a) records distinct by identity sharing every other attribute the code could mistake for a key are all kept, with its control (a store keyed on any non-identity attribute fails it), in a fixture from the sample with such records added where it has none; (b) created, updated, unchanged and skipped sum to the records received, each skip's reason recorded where the spec says; (c) a repeat delivery, or one identity twice in one delivery, changes nothing beyond the first, with its control (a store that inserts on repeat fails it); and that the identity is the **Data Sources** bullet's or, for records the codebase defines, the requirement's. Each of (a), (b), (c) is found by its own grep (`non-identity`, `skipped`, `inserts on repeat`), floor: all three present `[manual]`
+  - Evidence: `plan/SKILL.md:51` (**Epics**): kept despite shared non-identity attributes (name, title, date, parent, position), control "a store keyed on any non-identity attribute fails it", fixture from the sample with colliding records added; created/updated/unchanged/skipped summing to the records received, each skip's reason where the spec says; repeat delivery or one identity twice changes nothing, control "a store that inserts on repeat fails it"; identity from the **Data Sources** bullet or the requirement. `grep -c`: `non-identity` 1, `skipped` 1, `inserts on repeat` 1 — red: n/a — static
 - `plan/SKILL.md`'s Story fields paragraph states the marking rule: `**Independent tests**: due` on a story that has a test-proven criterion and either reads a **Data Sources** source, upserts or merges records by an identity, imports or exports records, serves an API other systems call, or carries `**Effort**: high` (a story whose criteria are all `[manual]`, `[browser]` or `[user]` is never marked); a form saving what its user typed is not marked for that alone. It states that a marked story's criteria name the entry point, the outbound seam a test fakes and the stored state a test reads (tables or models, identity columns, where skips are recorded). Floor: the `**Blocked by**`, `**Effort**` and `**Model**` rules at `{base}` are unchanged `[manual]`
+  - Evidence: `plan/SKILL.md:53` (**Story fields**): `**Independent tests**: due` when a test-proven criterion and either a **Data Sources** source, an identity upsert or merge, import or export, an API other systems call, or `**Effort**: high` (the test-proven condition governs both branches); all-`[manual]`/`[browser]`/`[user]` stories never marked; a form saving what its user typed not marked for that alone; the boundary's entry point, outbound seam and stored state named. Floor: the `**Blocked by**`, `**Effort**` and `**Model**` sentences are verbatim as at `0a4e609` — red: n/a — static
 - `plan/SKILL.md` names the field and the **Data Sources** section by name and repeats neither form: `grep -cF "sample due: {" cpm-next/skills/plan/SKILL.md` and `grep -cF "{path} {blob}" cpm-next/skills/plan/SKILL.md` give 0, while the same greps over the contract give 1 each `[manual]`
+  - Evidence: `grep -cF "sample due: {"` and `grep -cF "{path} {blob}"` give 0 over `plan/SKILL.md` and 1 each over `artifacts.md` — red: n/a — static
 - The added lines of `git diff {base} -U0 -- cpm-next/skills/plan/SKILL.md` are read with the history check, and none records history `[manual]`
+  - Evidence: the history grep hits one added line, the **Epics** paragraph, on "not instead of it" — text at `0a4e609`, the line changed only by the inserted three criteria; every other added line read, none records history — red: n/a — static
 
 ### Edit plan's question round, Spec, Epics and Story fields
 **Task**: 2.1  
 **Description**: Edit step 2 and section 3 of `cpm-next/skills/plan/SKILL.md`.  
-**Status**: Pending
+**Status**: Complete
 
 ---

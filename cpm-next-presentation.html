@@ -500,6 +500,7 @@
       </svg>
       <div>
         <ul class="plain">
+          <li>A story <code>plan</code> marked <code>**Independent tests**: due</code> first gets its acceptance tests from the <code>test-writer</code> agent, written from the spec and the real sample in its <code>## Data Sources</code> before any code; <code>do</code> runs them first, a failure against a boundary that already answered being that test's red (<code>before the build</code>), and the builder makes them pass without changing them.</li>
           <li>A criterion without its own Evidence line is not met.</li>
           <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the tests (a targeted run; a wide-reaching change takes its full run after the audit), then the reds.</li>
           <li>Critical and Warning findings are fixed wherever the mistake occurs, each with a test; suggestions are not.</li>
@@ -558,6 +559,7 @@
           <li>Scope: changes nobody asked for, and anything missing</li>
           <li>Departures from the project's conventions</li>
           <li>Tests that could not fail, a missing or wrong red, or tests weakened or skipped</li>
+          <li>Independent tests unchanged since the <code>test-writer</code> wrote them, checked by their blobs</li>
         </ul>
       </div>
       <div class="card">
@@ -584,7 +586,7 @@
       <div class="card acc">
         <h3>Opus</h3>
         <p><span class="tag">plans</span><span class="tag">builds</span><span class="tag">audits</span></p>
-        <p><code>plan</code>, <code>review</code>, <code>do</code> and their subagents, including the review personas. The <code>auditor</code> agent.</p>
+        <p><code>plan</code>, <code>review</code>, <code>do</code> and their subagents, including the review personas. The <code>test-writer</code> and <code>auditor</code> agents.</p>
       </div>
       <div class="card ok">
         <h3>Sonnet</h3>
