@@ -16,8 +16,8 @@ Find what would make these epics fail when `do` runs them, while it is still che
 | epic path | that epic |
 | epic path and story number | that story, in its epic's context |
 | several epic paths, or a spec's epic prefix (`docs/epics/53`) | those epics, or every `docs/epics/53-*.md` that is not `Withdrawn` or `Superseded` and has a `Pending` story, as one scope with one record |
-| `all` | every epic with no story started |
-| nothing | the lowest-numbered epic with no story started; say which one you picked |
+| `all` | every epic with no story started that is not `Withdrawn` or `Superseded` |
+| nothing | the lowest-numbered epic with no story started that is not `Withdrawn` or `Superseded`; say which one you picked |
 
 Done when a review record exists for the scope, every Critical and Warning finding is fixed in the epic, listed under **Needs you** or decided at challenge, and each epic with Pending stories is at least as ready for `do` as before.
 

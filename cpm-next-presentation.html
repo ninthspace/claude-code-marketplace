@@ -502,11 +502,11 @@
         <ul class="plain">
           <li>A story <code>plan</code> marked <code>**Independent tests**: due</code> first gets its acceptance tests from the <code>test-writer</code> agent, written from the spec and the real sample in its <code>## Data Sources</code> before any code; <code>do</code> runs them first, a failure against a boundary that already answered being that test's red (<code>before the build</code>), and the builder makes them pass without changing them.</li>
           <li>A criterion without its own Evidence line is not met.</li>
-          <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the tests (a targeted run; a wide-reaching change takes its full run after the audit), then the reds.</li>
+          <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the tests (a targeted run; a wide-reaching change takes its full run after the audit, or before it when every changed file calls for one), then the reds.</li>
           <li>Critical and Warning findings are fixed wherever the mistake occurs, each with a test; suggestions are not.</li>
           <li>A later audit checks only the earlier findings and the fix code. Attended runs allow a third audit after a Critical; unattended runs allow five, stopping early if fixes do not converge. A story still failing the last audit is blocked, with each unresolved finding recorded.</li>
           <li>Stories that share no files or runtime state are built in parallel. <code>--parallel</code> gives stories that share files their own git worktrees.</li>
-          <li>The baseline is one full run. A story runs the tests that reach its change; a wide change or a closing epic runs the full suite once, after its audit, and there is no full run at the end.</li>
+          <li>The baseline is one full run. A story runs the tests that reach its change; a wide change or a closing epic runs the full suite once, after its audit (before it when every changed file calls for one), and there is no full run at the end.</li>
         </ul>
       </div>
     </div>

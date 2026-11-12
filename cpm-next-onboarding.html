@@ -329,7 +329,7 @@
 **Satisfies**: FR3
 **Effort**: low
 **Model**: haiku</code></pre>
-    <p class="small dim">Status values: <code>Pending</code>, <code>In Progress</code>, <code>Complete</code>. Epics may also be <code>Superseded</code> or <code>Withdrawn</code>, which only you set. A story is unblocked when everything its own and its epic's <code>**Blocked by**</code> name is <code>Complete</code> (or the field is <code>—</code>); <code>do</code> also waits until each blocking story has its <code>**Audit**</code> line. A dependency on another epic names it by filename prefix, for example <code>Epic 28-01-epic-setup</code>.</p>
+    <p class="small dim">Status values: <code>Pending</code>, <code>In Progress</code>, <code>Complete</code>. Epics may also be <code>Superseded</code> or <code>Withdrawn</code>, which only you set. A story is unblocked when everything its own and its epic's <code>**Blocked by**</code> name is <code>Complete</code> (or the field is <code>—</code>); <code>do</code> closes a story in the edit that writes its <code>**Audit**</code> line, so its audit fixes land first. A dependency on another epic names it by filename prefix, for example <code>Epic 28-01-epic-setup</code>.</p>
     <p class="small dim">Each criterion's tag says who or what proves it: <code>[unit]</code>, <code>[feature]</code> and <code>[integration]</code> a test, <code>[browser]</code> a rendered page, <code>[manual]</code> a step <code>do</code> carries out, <code>[user]</code> only you (a deploy, a production run, a sign-off). A criterion saying what must not happen names its own control, so it fails if the feature does nothing. <code>**Lessons**</code> names the library lessons and recurring failures the criteria reflect.</p>
   </div>
 </section>
