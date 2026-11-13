@@ -207,3 +207,13 @@ Before a procedure is written or changed, list every route by which it is called
 A fix written to answer one finding brought a new defect that the next audit found, and with only one round left, it blocked the story: a pattern rewritten to accept quoted commit options that backtracked exponentially on about twenty of them; a dispute route added to an agent that gave it leave to delete a test, an outcome the spec's requirement and the contract's field do not have. Each fix answered its finding and departed from the requirement around it.
 
 Before a fix goes to the next audit, read it against the requirement it serves (the spec's requirement, the contract's forms, and the sibling criteria it must hold with), and put its new code through the inputs step 4 lists, not only the case the finding cites. The fix's own check names the requirement it was read against. Owned by `do`, at step 5.
+
+## A walk-through's evidence claims only the agreement its runs show
+**Promoted**: 2026-11-13
+**Class**: evidence-overstated
+**Source**: docs/epics/58-04-epic-consolidate-shared-and-agents.md → Story 1 → evidence-overstated, docs/epics/58-04-epic-consolidate-shared-and-agents.md → Story 2 → evidence-overstated, docs/epics/58-05-epic-consolidate-skills.md → Story 1 → evidence-overstated
+**Scope**: do
+
+Three times in a row a walk-through's `Evidence` line said cases matched their reference when the runs showed otherwise: a difference that repeated across two runs was called a match, repeated differences were recorded with no `Not met`, and later reference runs that left out a settled item were said to give the same tuple. Each time an audit found it by reading the run files, and each time the fix was to the record.
+
+A walk-through's `Evidence` claims a match only where every run over the final text agrees with the reference's settled reading. It names each difference two runs share, each point the runs split on (marked unsettled in the reference, either reading then matching), and the run files that show each. When a later run, a recomputed reference or a change to the text adds to them, the line and the reference are rewritten in the same edit. The auditor checks the line against the cited run files, not against the comparison note alone. Owned by the project's walk-through records (the epic's `Evidence` lines and `{pre}/checks/cases/`).

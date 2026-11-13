@@ -3,6 +3,13 @@
 **Date**: 2026-11-12  
 **Amended**: review 15 (docs/reviews/15-review-plugin-consolidation.md) and the user's decision — FR2 retakes every red and blocks on a `fix needed`; FR3's resumed kind is a whole-story audit; FR5 drops the order-dependent Warning and passes baseline results only when the run holds them; FR4 and FR7 gain the audit-fix and story-level `**Amended**` rules; FR10 keeps the parallel clause in `do`; FR11 places a partly moved place's signal by its text; the Testing Strategy keeps its checks in `{pre}/checks/` (2026-11-12)  
 **Amended**: 2026-11-12 — FR2: a resumed `fix due` story retakes the reds taken in a red pass and the fix's red, a held `before the build` red standing on its own check, and names candidate files for the fix's files outside the story (the user's decision after 58-01 Story 2's audit 4)  
+**Amended**: 2026-11-12 — FR13 added, and FR9 named for `do`'s two sentences that disagree with their owner, from 58-03's Finishing (the user's decisions): a batch story's `closes epic` reason and the promotion item's library match refer to their owners; who sets task status in a worktree build, and when an unattended amendment writes a `**Pivot deferred**` line, are stated; W22 and W23 added  
+**Amended**: 2026-11-12 — NFR1: `do/SKILL.md`'s ceiling raised to 7,150, the 7,022 words the user accepted at 58-03 Story 2 and room for FR13's wording (the user's decision)  
+**Amended**: 2026-11-12 — NFR1: `artifacts.md`'s ceiling raised to 3,700, the count left once the template blocks, the NFR4 regions and the rules only the contract states are kept (58-04 Story 1; the user's decision)  
+**Amended**: 2026-11-13 — NFR1: `test-runs.md`'s ceiling raised to 2,350, the 1,950 having been set before 58-01 and 58-02 added to the file (58-04 Story 2; the user's decision)  
+**Amended**: 2026-11-13 — NFR1: `auditor.md`'s ceiling raised to 2,000, the count left once its independent-test checks are on demand and every rule another file owns is referred to (58-04 Story 3; the user's decision)  
+**Amended**: 2026-11-13 — NFR1: `plan`'s ceiling raised to 2,220, the count left once its contract rules are referred to and its long paragraphs are labelled bullets (58-05 Story 2; the user's decision)  
+**Amended**: 2026-11-13 — NFR1: the 1,000-word floor on words cut from a `do` run's every-run load is withdrawn; cut and moved words are reported (from `{pre}`: 284 cut, 1,194 moved), every ceiling being met and every rule kept (58-06 Story 1; the user's decision)
 **Source**: docs/discussions/25-discussion-plugin-optimisation-survey.md; the user's decisions (2026-11-12): plan the survey as one spec, correctness first; move all four rarely-needed sections into files read only when they apply
 
 ## Problem Summary
@@ -37,18 +44,19 @@ Consolidation, released as 0.21.0 (no change of behaviour):
 ### Should Have
 
 - **FR12 — Docs and releases.** 0.20.0 after FR1–FR8 and 0.21.0 after FR9–FR11 (`plugin.json`, `marketplace.json`), each bumped only in its release's last story; README `(0.20.0)` and `(0.21.0)` bullets, a Size bullet with every file's count before and after, and an **Upgrading** note for each; `docs/maintenance/README.md` records the on-demand files and what reads them, and corrects every place that named a moved section (its **The browser checks** and **Browser test tools** bullets among them); the root README and guides change where they state something FR1–FR8 changed or name a moved section. — AC: each named file states it `[manual]`
+- **FR13 — Two readings `do` leaves open, and two sentences that disagree with their owner.** In a worktree build, `do` says who sets task status, since step 2 sets each task as it is built and the worktree subagent leaves the epic doc alone (`worktree.md:20`); an unattended scope amendment writes a `**Pivot deferred**` line only for an upstream document that still disagrees with the amended criterion (**When a criterion looks wrong**). By FR9, a batch story's `closes epic` reason (`do` parallel rules) refers to `test-runs.md`'s rule, which also counts stories with only `[user]` criteria left, and **Finishing**'s promotion item skips the library write only on the contract's match (a `**Class**` that states the same rule, confirmed by reading, `artifacts.md` **Library document**). Found by 58-03's walk-throughs W9 and W15 (each reading split the same way over the 0.20.0 text) and its inventory's correctness items.
 
 ### Won't Have (this iteration)
 
 - A change to any parsed form, field name, header-block placement, status word, auditor check number, or bold label another file names.
-- New behaviour beyond FR1–FR8 and FR11.
+- New behaviour beyond FR1–FR8, FR11 and FR13.
 - A move of shared rules into the contract (the Needs-you walk, `[user]` placement, identity criteria).
 - A trim of `review`'s persona checklist, of `status`'s waiting test, or of the red-pass manifest into the snapshot.
 - A cut in `party` or `scout`, or a move of `do`'s small-change paragraph.
 
 ## Non-Functional Requirements
 
-- **NFR1**: Word ceilings after 0.21.0 (`wc -w`), from 479c406: `do/SKILL.md` 7,989 → ≤ 6,450; `worktree.md` 670 → ≤ 650; `artifacts.md` 3,669 → ≤ 3,450; `fixed.md` 774 → ≤ 400; `test-runs.md` 2,189 → ≤ 1,950; `auditor.md` 1,989 → ≤ 1,700; `test-writer.md` 989 → ≤ 950; `plan` 2,282 → ≤ 2,150; `review` 1,467 → ≤ 1,450; `library` 2,315 → ≤ 1,350; `status` 914 → ≤ 900. The words cut (not moved) from a `do` run's every-run load (`do`, the contract, `test-runs.md`) are at least 1,000, and the words moved out of it are reported separately. A ceiling that cannot be met without losing a rule is a `Not met`, never a reason to cut one.
+- **NFR1**: Word ceilings after 0.21.0 (`wc -w`), from 479c406: `do/SKILL.md` 7,989 → ≤ 7,150; `worktree.md` 670 → ≤ 650; `artifacts.md` 3,669 → ≤ 3,700; `fixed.md` 774 → ≤ 400; `test-runs.md` 2,189 → ≤ 2,350; `auditor.md` 1,989 → ≤ 2,000; `test-writer.md` 989 → ≤ 950; `plan` 2,282 → ≤ 2,220; `review` 1,467 → ≤ 1,450; `library` 2,315 → ≤ 1,350; `status` 914 → ≤ 900. The words cut (not moved) from a `do` run's every-run load (`do`, the contract, `test-runs.md`) and the words moved out of it are reported separately. A ceiling that cannot be met without losing a rule is a `Not met`, never a reason to cut one.
 - **NFR2**: `claude plugin validate cpm-next` and `claude plugin validate .` pass with no new warning, and `claude plugin test` passes for cpm-next, cpm-next-models, cpm-next-progress and whats-next, with the count at 479c406 or more.
 - **NFR3**: No added sentence records history (`CLAUDE.md`, "A SKILL.md is not a change log"); the added lines are grepped for `no longer`, `instead`, `rather than`, `used to`, `previously`, `now`, `replaced`, `in place of`, `formerly`, `earlier`, `anymore`, `moved`, `0.20`, `0.21`, `spec 58`, each hit accounted for.
 - **NFR4**: Every parsed form is unchanged, compared region by region with 479c406 by `diff` after extracting each: the contract's template code blocks; the sentences that place `**Test run**` and `**Independent tests**` in the header block; the `**Scratch**` field; the criteria-reading paragraph; the review record's **Source** and **Date**; the `**Amended**` forms; the **Challenge** section's form; the `**Signal**` form and its marks; the `**Audit**` forms; the `**Test run**` mapping; the ` — blocked:` note.
@@ -107,6 +115,8 @@ Each consolidation story is checked by:
 | W19 a `plan` of a spec with a data source and no sample, a user-checks epic and lessons (constructed) | `plan`, contract |
 | W20 a review finding decided at challenge, and one reopened (constructed) | `review`, contract |
 | W21 a `status` report: a story waiting on the user, a raised signal in an archived epic, a review covering an epic (constructed) | `status`, contract |
+| W22 a one-checkout batch whose epic's only story outside it has only `[user]` criteria left (constructed) | `do`, `test-runs.md` |
+| W23 a promotion candidate whose `**Class**` is in the library under a lesson stating a different rule (constructed) | `do`, contract, `library` |
 
 ## Assumptions
 
@@ -116,6 +126,9 @@ Each consolidation story is checked by:
 - The word ceilings are the survey's estimates less a margin for the text FR1–FR8 add.
 - The 18 `fixed.md` rows at or below 0.11.0 stay in git history and the README log.
 - The releases are built in two runs (the user's decision, 2026-11-12): 58-01 and 58-02, then commit, push and use 0.20.0, then 58-03 to 58-06.
+- FR13: in a worktree build the lead sets the tasks `Complete` in the closing edit and no task passes through `In Progress`, since the subagent leaves the epic doc alone and step 6 already sets any remaining task; the three `{pre}` readers of W9 read it so.
+- FR13: when an unattended amendment brings a criterion into line with its citation, no upstream document disagrees and no `**Pivot deferred**` line is written; the `**Amended**` line and its signal record the change, as the two `{pre}` readers of W15 read it.
+- FR13 adds wording to `do`; it counts against `do/SKILL.md`'s ceiling of 7,150.
 
 ## Challenge
 **Personas**: architect, qa (2026-11-12)

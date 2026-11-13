@@ -1,6 +1,6 @@
 # cpm-next Artefact Contract
 
-The skills in this plugin keep their procedures short and their data strict. This file is the strict part. The `whats-next` and `cpm-next-progress` mods parse these files, so the formats below are a contract: write them exactly, read them tolerantly.
+The `whats-next` and `cpm-next-progress` mods parse these files, so the formats below are a contract: write them exactly, read them tolerantly.
 
 ## Where things live
 
@@ -103,7 +103,12 @@ Omit a section that would only contain filler. Keep Assumptions: it is where any
 
 `## Challenge` is written by a challenge pass and only by one: a spec with no pass has no section. Its first line is `**Personas**:`, the roster `name` values of the personas used, from the roster `review` uses (the project's `docs/agents/roster.yaml`, else the plugin's); it is the only field line in the section, and every other line is a bullet, one per finding after merging duplicates and one per part of a finding partly acted on. A pass that found nothing has the bullet `- none`. A later pass adds its own `**Personas**:` line and bullets below, and the latest bullet on a point governs. A change to a point a bullet decided appends ` — superseded ({YYYY-MM-DD}): {what changed}` to it, and the user's confirmation of a `Rejected` bullet appends ` — confirmed by the user ({YYYY-MM-DD})`.
 
-`## Data Sources` is present only when the spec reads records from outside the codebase (an external API, a file feed, an import, a webhook), with one bullet per source. The identity is the source's own unique key for a record, taken from its documentation or contract, never inferred from field names. A sample is the smallest real extract from the source that holds every record shape the spec uses, two consecutive pages where the source pages its results, and records that share non-identity values where the source has them; it is under 100 KB and sits under the project's test fixtures. Redaction gives every personal value and secret one stand-in per distinct value across the whole sample, an identity that is personal data included, so records that shared a value still share it and references between records still resolve; it removes no record and no field a criterion names. A source with no sample yet reads `sample due`, naming the documentation its tests are built from.
+`## Data Sources` is present only when the spec reads records from outside the codebase (an external API, a file feed, an import, a webhook), with one bullet per source.
+
+- **Identity**: the source's own unique key for a record, taken from its documentation or contract, never inferred from field names.
+- **Sample**: the smallest real extract from the source that holds every record shape the spec uses, two consecutive pages where the source pages its results, and records that share non-identity values where the source has them; it is under 100 KB and sits under the project's test fixtures.
+- **Redaction**: every personal value and secret gets one stand-in per distinct value across the whole sample, an identity that is personal data included, so records that shared a value still share it and references between records still resolve; it removes no record and no field a criterion names.
+- **Sample due**: a source with no sample yet reads `sample due`, naming the documentation its tests are built from.
 
 `[browser]` marks a criterion proved only by a rendered page. `[manual]` marks a step `do` performs in the session outside the test suite. `[user]` marks one only the user can prove: a production run, a deploy, a sign-off, a third-party account.
 
@@ -139,7 +144,7 @@ Requirement labels (`FR3`, `NFR2`, `AD1`) are stable identifiers. When amending,
 ---
 ```
 
-`**Effort**` is how hard `do` thinks while building the story; a story without one is built at `medium`. `**Model**: haiku` marks a `low` story as a fixed, mechanical edit that a Haiku subagent can make. Neither field changes what the story must deliver or how it is audited.
+`**Effort**` is how hard `do` thinks while building the story, and `**Model**: haiku` marks a `low` story as one a Haiku subagent can make (`plan` **Story fields** says when each is set, `do` step 1 how a story without `**Effort**` is built). Neither field changes what the story must deliver or how it is audited.
 
 `**Independent tests**` marks a story whose acceptance tests the `test-writer` agent writes before the build; `plan` writes it as `due`, and `do` rewrites it in one of two forms: `{path} {blob}, … ({YYYY-MM-DD})` over every file the test-writer wrote, `{blob}` the first 12 characters of the file's `git hash-object`, with ` — revised {YYYY-MM-DD}: {path} ({citation})` appended for each revision, which also writes that file's new `{blob}`; or `skipped — test-writer unavailable` when the agent is not available. It is one line in the story's header block, before `**Acceptance Criteria**`, like `**Test run**`.
 
@@ -165,7 +170,17 @@ Stories are numbered from 1 within each epic. Tasks use `{story}.{seq}`. Intra-e
   - Waiting on user: {the steps the user carries out}
 ```
 
-A test-proven criterion's evidence is incomplete without its red result, or an `existing` reason. The `— deferred full run, before the fix` form records a regression a deferred full run showed (`shared/test-runs.md`). The `— before the build` form records an independent test's failure in the run `do` makes before the story's code is written, and applies only when the story's boundary already answered before the build (its route, command or component existed) and the failing assertion is the one that proves the criterion, not an earlier status, existence or setup assertion, and only while the `**Independent tests**` line has no ` — revised` note for the test's file; it is written with the rest of the `Evidence` line in `do`'s step 3, never before the build. `{message}` is the first line of the failure message, or for a multi-line diff the first line that names the expected and actual values. The command is left out when it is the project's test command run on the named test. Each `n/a` reason fits particular tags: `manual` a `[manual]` criterion, `static` a `[manual]` criterion proven by reading code or by `grep` with no test (and an untagged one proven that way), `user` a `[user]` criterion or a criterion whose `Evidence` line is in the `Evidence (user, {YYYY-MM-DD}):` form, which is the only form that carries it, `browser-observed` a `[browser]` criterion checked with claude-in-chrome, and `existing` as the next paragraph defines it. The fit is checked only on tagged criteria; `existing` is judged on every criterion, and its misuse, whatever the tag, is a Warning, not the Critical that an `n/a` reason misfitting its tag is.
+A test-proven criterion's evidence is incomplete without its red result, or an `existing` reason. The `— deferred full run, before the fix` form records a regression a deferred full run showed (`shared/test-runs.md`). The `— before the build` form records an independent test's failure in the run `do` makes before the story's code is written, and applies only when the story's boundary already answered before the build (its route, command or component existed) and the failing assertion is the one that proves the criterion, not an earlier status, existence or setup assertion, and only while the `**Independent tests**` line has no ` — revised` note for the test's file. `{message}` is the first line of the failure message, or for a multi-line diff the first line that names the expected and actual values. The command is left out when it is the project's test command run on the named test.
+
+Each `n/a` reason fits particular tags:
+
+- `manual`: a `[manual]` criterion;
+- `static`: a `[manual]` criterion proven by reading code or by `grep` with no test, and an untagged one proven that way;
+- `user`: a `[user]` criterion, or a criterion whose `Evidence` line is in the `Evidence (user, {YYYY-MM-DD}):` form, which is the only form that carries it;
+- `browser-observed`: a `[browser]` criterion checked with claude-in-chrome;
+- `existing`: as the next paragraph defines it.
+
+The fit is checked only on tagged criteria; `existing` is judged on every criterion, and its misuse, whatever the tag, is a Warning, not the Critical that an `n/a` reason misfitting its tag is.
 
 `existing`, written `red: n/a — existing (reaches {file:line})`, fits a test-proven criterion (a tag the project's Testing Strategy maps to a suite, or untagged and proved by a test) that keeps behaviour the code already had and names no control. Its test's own body must be unchanged in the story's diff and must have passed in the baseline, and `{file:line}` is a line the story changed that the test executes. A criterion names a control when it is a must-not, must-not-change or never criterion under `plan`'s rule, or its text says `control`. A criterion a test proves takes no other `n/a`. An `existing` reason on a criterion for new behaviour, on one naming a control, on a test whose body the story changed, on one whose test did not pass at the baseline, or naming a line the test does not execute is a finding.
 
@@ -180,7 +195,7 @@ The criterion line itself is never edited to record verification, so its text st
 - `**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved})`, also in a `docs/quick/` record; see **Signals**.
 - `**Test run**: {n} ({f} full, {t} targeted) — {full | targeted | none} — {command}: {passed} passed, {failed} failed — tree {hash} — {reason; …}{ — the changed file → tests that run it; …}`, also in a `docs/quick/` record (a deferred run's line gives its reasons, then the mapping). One line in the story's header block, before `**Acceptance Criteria**`, with no sub-bullets, rewritten on every test run by `do` (not by a red pass, the pre-build run of the independent tests or an auditor probe) and describing the story's last test run (the one the next audit is handed, or the deferred full run). `{n}` counts the story's runs, `{f}` and `{t}` its full and targeted runs; `{failed}` counts failures and errors; a run of zero tests is not a pass; a run over several test runners gives a command and counts for each; `none` (no non-exempt file changed) keeps `{n} ({f} full, {t} targeted)` unchanged (`0 (0 full, 0 targeted)` for a story with no earlier line) and carries no command, pass/fail counts or hash. The rules for the run, the reasons and `{hash}` are in `shared/test-runs.md`.
 - `**Scratch**: {absolute path}` while a red pass runs, naming `{absolute git common dir}/cpm-next/scratch/{epic file stem}-{story}/` (or `quick-{nn}/`), the directory that holds the copies of the files being changed, a `manifest` of the working tree's changed paths with their blob hashes, and a `tree` file naming the checkout the pass runs in; the line and the directory are removed once the files are restored and the manifest compared.
-- `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes. A story that needs a deferred full run (`shared/test-runs.md`) has the line written when its last audit passes, with ` — full run due: {reason}; … — story tree {hash}` appended (`{reason}` each reason the story is full, `{hash}` its story snapshot), and `**Audit**: fix due ({YYYY-MM-DD}) — full run failed: {test}; … — story tree {hash}` from a failing deferred run until its scoped round passes, then `full run due` again with a story snapshot taken after the fix; the `skipped — {reason}` form takes the same suffix. A story with either suffix is `In Progress`, so its dependents stay blocked, and the line is rewritten without the suffix when the story closes, the scoped round counted in `n findings fixed`. Also in a `docs/quick/` record.
+- `**Audit**: pass ({YYYY-MM-DD}){, n findings fixed}` or `**Audit**: skipped — {reason}`, written when the story closes. A story that needs a deferred full run (`shared/test-runs.md`) has the line written when its last audit passes, with ` — full run due: {reason}; … — story tree {hash}` appended (`{reason}` each reason the story is full, `{hash}` its story snapshot), and `**Audit**: fix due ({YYYY-MM-DD}) — full run failed: {test}; … — story tree {hash}` from a failing deferred run until the line reads `full run due` again (`shared/test-runs.md` **The deferred full run**); the `skipped — {reason}` form takes the same suffix. A story with either suffix is `In Progress`, so its dependents stay blocked; `do` step 6 rewrites the line without the suffix. Also in a `docs/quick/` record.
 - `**Inline change**: {one-line summary} ({YYYY-MM-DD})` for a wording fix with no scope change.
 - `**Amended**: {what changed} ({YYYY-MM-DD}) — cited: {file:line | FRn | conflicting criterion}`, also written by `review` when it edits a `Pending` story.
 - `**Pivot deferred**: {change} → {artefact path} (Story {N}, {YYYY-MM-DD}) — cited: {citation}`
@@ -191,7 +206,7 @@ The criterion line itself is never edited to record verification, so its text st
 
 ## Signals
 
-A signal records a failure `do` found, so that the second occurrence can be recognised. It sits on the story, or in the `docs/quick/` record, where the failure happened:
+A signal records a failure `do` found, on the story or in the `docs/quick/` record where it happened, so that the second occurrence can be recognised:
 
 `**Signal**: {class-slug} — {project | process} — {what failed, one line} ({file and step, rule or check involved}){ — cpm-next {version}}{ — recurs: {reference} ({why it matches})}{ — raised {YYYY-MM-DD}}{ — promoted {YYYY-MM-DD}}{ — declined {YYYY-MM-DD}}`
 
@@ -207,7 +222,7 @@ A `process` signal ends its description with the version, a `project` signal doe
 - A signal reference is `{epic path} → Story {N} → {slug}` or `{quick path} → {slug}`. The `recurs` reference is any lesson reference form under **Fields on the epic header**, or a signal reference.
 - `raised` marks a signal listed as a promotion candidate; `promoted` one written to the library; `declined` one the user refused. A signal matching a declined one is declined too.
 
-`do`, `plan` and `review` read library lessons, signals that recur and unretired legacy retro observations. A signal that never recurs is never read as context or reported.
+A signal that never recurs is never read as context or reported.
 
 ## Retro (legacy)
 
@@ -273,7 +288,7 @@ All six fields are required. Filenames are kebab-case with no number prefix.
 
 Combine rows freely; an API contract is usually `spec`, `epics`, `do`.
 
-A lesson reaches the library as an entry in `docs/library/lessons-learned.md`, written by `do` when the user accepts a recurring `project` signal, or by `library learn`; or, when it changes what an existing document says, as an amendment block appended to that document by `library learn`, which `library consolidate` later folds into the body:
+A lesson reaches the library as an entry in `docs/library/lessons-learned.md`, or, when it changes what an existing document says, as an amendment block appended to that document (`do` **Finishing** and `library` say which writes which):
 
 ```markdown
 ## Amendment — {YYYY-MM-DD}
