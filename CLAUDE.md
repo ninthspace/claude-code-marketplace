@@ -14,7 +14,7 @@ ln -sf "$(git rev-parse --show-toplevel)/bin/pre-push" .git/hooks/pre-push
 
 ## Critical: Source vs. Cache Paths
 
-This repository contains the source code for multiple plugins: `cpm-next`, `cpm-next-models`, `cpm-next-progress`, `plugin-sync`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`, `whats-next`, `generated-files`, `weather`.
+This repository contains the source code for multiple plugins: `cpm-next`, `cpm-next-models`, `cpm-next-progress`, `plugin-sync`, `noteplan`, `php-lsp`, `js-simplifier`, `filament-mockup`, `whats-next`, `generated-files`, `weather`, `commit`.
 
 **NEVER read or write files in the plugin cache directory** (`~/.claude/plugins/cache/ninthspace-marketplace/`). That directory contains installed copies of plugins and is overwritten on updates. Changes made there are lost and not tracked by git.
 
@@ -33,6 +33,7 @@ This repository contains the source code for multiple plugins: `cpm-next`, `cpm-
 | What's Next | `whats-next/` |
 | Generated Files | `generated-files/` |
 | Weather | `weather/` |
+| Commit | `commit/` |
 
 Common source locations (using cpm-next and its mods as examples — the same pattern applies to all plugins):
 

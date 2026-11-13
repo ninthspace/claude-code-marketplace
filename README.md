@@ -77,6 +77,7 @@ claude plugin update cpm-next@ninthspace-marketplace      # and each other plugi
 /plugin install filament-mockup@ninthspace-marketplace
 /plugin install generated-files@ninthspace-marketplace
 /plugin install weather@ninthspace-marketplace
+/plugin install commit@ninthspace-marketplace
 ```
 
 ## Available Plugins
@@ -465,6 +466,38 @@ A Claude Code mod (a plugin of function hooks). Shows the condition and temperat
 ```
 
 **Develop:** `claude plugin validate weather` and `claude plugin test weather`.
+
+### Commit
+
+**Stage everything, commit with a structured message, and optionally push and watch the deployment**
+
+Two skills:
+
+| Skill | What it does |
+|---|---|
+| `/commit [title]` | Runs `git add -A`, reads the staged diff, and commits with a message in four sections: Changes Made, Rationale, Outstanding Issues, Files Modified. When the branch name ends in digits (`feature/auth-123`), the title starts with `#123`. |
+| `/commitp [title]` | Does the same, pushes the branch to origin, then watches the push-to-deploy deployment the push starts on Laravel Forge (or, when no Forge site matches, Laravel Cloud) with the Monitor tool, and reports each status change and the outcome. It never starts a deployment itself. |
+
+Both stage every change: neither stages files selectively nor unstages anything.
+
+The full names are `/commit:commit` and `/commit:commitp`. Use them if another plugin or a personal command also defines `/commit` or `/commitp`.
+
+**Deployment watching** uses `skills/commitp/scripts/deploy-watch.php`. Forge needs `forge login` (it reads `~/.laravel-forge/config.json`); Cloud needs the `cloud` CLI signed in. Exit codes: 0 deployed, 1 failed or cancelled, 2 nothing deploys this repository and branch on push, 3 no deployment of the commit appeared within 90 seconds, 4 configuration or API error.
+
+**From a terminal:** `commit/scripts/commit.sh [title]` runs `/commit` through `claude -p`.
+
+**Quick Start:**
+```bash
+/plugin install commit@ninthspace-marketplace
+/reload-plugins
+
+/commit
+/commitp "Story 2.9: Implement search functionality"
+```
+
+**Requires:** git; PHP for deployment watching.
+
+**Develop:** `claude plugin validate commit`; deploy-watch tests: `php commit/skills/commitp/scripts/tests/deploy-watch-test.php`.
 
 ## Removing Plugins (when in Claude Code)
 
