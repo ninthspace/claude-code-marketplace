@@ -1,0 +1,43 @@
+# The snapshot survives a commit
+
+**Number**: 18  
+**Date**: 2026-11-15  
+**Status**: Complete  
+**Source**: the user's tracker session, where `do` began Epic 01-07 with "Its baseline is a fresh full run, since HEAD has moved to the 01-06 commit": the commit held only the code the last full run had tested, but the snapshot's first line is `git rev-parse HEAD` (`cpm-next/shared/test-runs.md:50`) and its other lines list only uncommitted paths, so a commit made the result stale and cost a full run on identical code
+
+## Story
+
+**Story**: 1  
+**Status**: Complete  
+**Satisfies**: the user's request (a commit that changes no file leaves a run's result standing)  
+**Effort**: high  
+**Audit**: skipped — three audits fixed 6 findings; round 3's last Warning (a run taken while a submodule held uncommitted content) was fixed and closed on the lead's check at the user's decision, 2026-11-15  
+**Test run**: 4 (4 full, 0 targeted) — full — claude plugin test cpm-next: 15 passed, 0 failed; claude plugin test cpm-next-models: 20 passed, 0 failed; claude plugin test cpm-next-progress: 108 passed, 0 failed; claude plugin test whats-next: 34 passed, 0 failed — tree 11d70d215dc912a800fa3806b2ee3d51fe69f451 — small change; untested: cpm-next-training-guide.html — cpm-next-training-guide.html → deferred full run; cpm-next/shared/test-runs.md, cpm-next/README.md → exempt  
+
+**Signal**: fix-not-carried-through — project — the snapshot's new meaning was not carried to the routes that tested it by "matches" or "unchanged" (cpm-next/shared/test-runs.md **The targeted set**, **A pass**, **A failure**; cpm-next-training-guide.html resume bullet; audit round 1) — recurs: docs/library/01-library-lessons-learned.md → "A fix lands at one place; the same fault stays at its neighbours" (the changed fact stayed stated in its old form beside it)  
+**Signal**: procedure-gap — project — the snapshot procedure had no step for a repository with no index, put no bound on the temporary index's place, let rename detection hide a code file moved to an exempt path, and missed a submodule's uncommitted content, at the run and at reuse (cpm-next/shared/test-runs.md **Exempt files and the snapshot**, audit rounds 1, 2 and 3) — recurs: docs/library/01-library-lessons-learned.md → "A procedure names every route that calls it and every input each caller gives" (the no-index and moved-file routes were not given steps)  
+
+**Acceptance Criteria**:
+
+- `shared/test-runs.md` **Exempt files and the snapshot** defines the snapshot as the git tree ID of the working tree: a copy of the index (`git rev-parse --git-path index`), or, with no index, a path that does not exist yet, at a temporary path outside the working tree, with `GIT_INDEX_FILE` set to it, takes `git add -A` and then `git write-tree`, leaving the real index untouched. A result stands while `git diff --no-renames --name-only {recorded} {fresh}` lists no non-exempt path; a recorded hash that `git cat-file -t` does not give as a tree never stands, nor does any while `git submodule foreach --quiet --recursive 'git status --porcelain'` prints anything (a submodule with uncommitted content), and a run taken while it does records its snapshot as `none`, which never stands, and every route that reuses a result (**The targeted set**, **A pass**, **A failure**) tests it by **Standing**. The story snapshot is unchanged. `[manual]`
+  - Evidence: `cpm-next/shared/test-runs.md:50` (**Its hash**): the snapshot is "the git tree ID of the working tree", with `GIT_INDEX_FILE` at "a path outside the working tree (in the run directory)" holding a copy of the index or, with no index, "a path that does not exist yet, which git creates" (checked in a fresh `git init` with no index: `fa7e4766…`, and no `.git/index` created), `git add -A` then `git write-tree`, "The real index is never touched"; `:53` (**Standing**): a result stands while `git diff --no-renames --name-only {recorded} {fresh}` lists no non-exempt path (in the clone, `git mv cpm-next/skills/status/SKILL.md docs/status-skill.md` listed only the docs path without `--no-renames` and both paths with it), and a `{hash}` `git cat-file -t` does not give as a `tree` never stands, nor does any while `git submodule foreach --quiet --recursive 'git status --porcelain'` prints anything (checked in the round 2 auditor's superproject `sm-app`, whose submodule edit left the tree ID unchanged: the command printed ` M lib.ts`; in this repository, with no submodules, it prints nothing); a run taken while the foreach prints anything "records its snapshot as `none`, which never stands", which closes round 3's case of a submodule edit since undone; the index path is resolved before `GIT_INDEX_FILE` is set; `:16`, `:83` and `:84` test reuse by **Standing**; `:55`, the story snapshot, is unchanged but for dropping "with no `HEAD` line" — red: n/a — static
+- The rule is stated once, in that section: `do` (the baseline bullet and the resume bullet), the auditor and the contract refer to standing without restating how the snapshot is made, and the training guide's restatement (`cpm-next-training-guide.html:1036`) is rewritten to match. `[manual]`
+  - Evidence: a search of `cpm-next/`, the three guides and `docs/maintenance/README.md` for `snapshot`, `stands`, `stale`, `matches`, `unchanged` and `HEAD` finds no restatement of how the snapshot is made outside `test-runs.md` (the red pass's manifest at `do/SKILL.md:71` is a separate list); `do/SKILL.md:48` ("noting its snapshot, unless an earlier full result stands") and `:53` ("its own `**Test run**` line still stands (`test-runs.md`, **Exempt files and the snapshot**)") refer to standing only; the contract (`shared/artifacts.md:196`) leaves `{hash}` to `test-runs.md`; `agents/auditor.md` does not mention the snapshot; the training guide's `:1038` resume bullet now reads "whose result no longer stands is not reused", and its `:1036` reads (with "and no submodule holds uncommitted changes") "the git tree ID of the working tree" … "a commit, or an edit to the epic doc or to prose only skills read, does not make it stale" — red: n/a — static
+- In a throwaway clone of this repository, with code files changed and untracked: the snapshot taken before and after `git add -A && git commit` of those changes is the same tree ID; an edit to an exempt file (an epic doc) afterwards gives a diff that lists only that path, which stands; an edit to a code file gives a diff that lists it, which does not stand; and the real index is the same file, by `git hash-object`, before and after each snapshot. Control: the 0.21.0 snapshot, computed in the same clone, differs across the commit. `[manual]`
+  - Evidence: in a clone at `{scratchpad}/q18demo`, with `cpm-next-models/hooks/pin.ts` changed and `cpm-next/newfile.ts` untracked: the new snapshot was `62a76ed3…` before and after `git add -A && git commit` (the same); an epic doc edit then gave `git diff --name-only` of only `docs/epics/58-06-epic-final-check-and-release-0-21.md` (exempt, stands); a further `pin.ts` edit listed `cpm-next-models/hooks/pin.ts` (does not stand); the real index's `git hash-object` was the same before and after each snapshot; `git cat-file -t` gave `tree` for the new hash and failed for the 0.21.0 one. Control: the 0.21.0 snapshot was `a143b765…` before the commit and `617563c8…` after it — red: n/a — manual
+- The 0.21.1 release notes in `cpm-next/README.md` gain a bullet for the snapshot and its Size counts, and **Upgrading to 0.21.1** says that a `**Test run**` or baseline hash written before 0.21.1 does not stand, so the first run after the upgrade takes its baseline afresh. `[manual]`
+  - Evidence: `cpm-next/README.md` 0.21.1 bullet "**The snapshot survives a commit**" and the Size bullet (`test-runs.md` 2,723); **Upgrading to 0.21.1** begins "A `**Test run**` or baseline hash written before 0.21.1 is not a tree ID, so it does not stand: the first `do` run after the upgrade takes its baseline afresh" — red: n/a — static
+- `claude plugin test` passes for cpm-next, cpm-next-models, cpm-next-progress and whats-next, 177 as at the baseline, and `claude plugin validate cpm-next` and `claude plugin validate .` pass. `[manual]`
+  - Evidence: `claude plugin test`: cpm-next 15, cpm-next-models 20, cpm-next-progress 108, whats-next 34 passed, 0 failed (177); `claude plugin validate cpm-next` and `claude plugin validate .` passed — red: n/a — manual
+
+**Task**: 1.1  
+**Description**: The snapshot and standing in `shared/test-runs.md`, and the places that restate it  
+**Status**: Complete
+
+**Task**: 1.2  
+**Description**: Demonstrate in a throwaway clone  
+**Status**: Complete
+
+**Task**: 1.3  
+**Description**: README notes  
+**Status**: Complete
