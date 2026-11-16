@@ -6,7 +6,7 @@ A story with an `**Independent tests**` line is held to the tests on it, and eac
 
 - a file on the line whose blob, recomputed with `git hash-object` as the contract defines it, differs from the one recorded on the line (a revision having rewritten it there);
 - a marked story whose line still reads `due`;
-- a criterion an independent test proves whose `Evidence` line does not cite that test;
+- a criterion an independent test proves none of whose `Evidence` lines cites that test;
 - a change the story made to shared test setup, test-runner config, factories or environment, or code that branches on the test environment or names a sample's values, that changes what an independent test checks.
 
-A `before the build` red is accepted when the line has no ` — revised` note for its file, the test's file still matches its blob, the boundary existed at the story's start (read from the commit before the story where there is one, and otherwise from the story's diff, which must not add the entry point) and the failure text is what the cited assertion prints; check 5's Warning on an undo or mutation the assertion doesn't depend on does not apply to it.
+A `before the build` red stands for the alternative its failing assertion proves, the criterion's other reds being taken in the red pass (the contract's **Reds a criterion takes**), and is accepted when the line has no ` — revised` note for its file, the test's file still matches its blob, the boundary existed at the story's start (read from the commit before the story where there is one, and otherwise from the story's diff, which must not add the entry point) and the failure text is what the cited assertion prints; check 5's Warning on an undo or mutation the assertion doesn't depend on does not apply to it.

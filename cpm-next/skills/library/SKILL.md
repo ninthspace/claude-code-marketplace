@@ -17,7 +17,7 @@ Read `$ARGUMENTS`:
 |---|---|---|
 | a file path or URL | import it | the document is saved in `docs/library/` with complete front-matter |
 | `learn`, optionally with a path or keyword | promote lessons | every lesson the user chose is in the library and its signals marked promoted, or its retro observation retired |
-| `sweep` | report process failures across repositories (`sweep.md` in this skill's directory; read it again if it is not in context) | each group found in two or more listed repositories is reported |
+| `sweep` | report process failures and lessons across repositories (`sweep.md` in this skill's directory; read it again if it is not in context) | each group `sweep.md`'s threshold reports is reported |
 | `sweep add {path}`, `sweep remove {path}`, `sweep list` | maintain the repository list (`sweep.md` in this skill's directory; read it again if it is not in context) | the list is changed or shown |
 | `consolidate` alone | back-fill (`consolidate.md` in this skill's directory; read it again if it is not in context) | every library document starts with complete front-matter |
 | `consolidate {path}` | consolidate (`consolidate.md` in this skill's directory; read it again if it is not in context) | that document's amendments are folded into its body and removed |
@@ -54,4 +54,4 @@ Files in `docs/retros/` are legacy input that no skill writes.
 
 ## Finishing
 
-End with the path of each file written or skipped and, for an import, the scope it was given. After a `learn`, also name each signal or retro that was marked.
+End with the path of each file written or skipped and, for an import, the scope it was given. After a `learn`, also name each signal or retro that was marked, and, when it wrote a lesson in a repository `~/.claude/cpm-next/repos.txt` does not list, suggest `/cpm-next:library sweep add {its path}` in one line.

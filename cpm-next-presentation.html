@@ -222,7 +222,7 @@
     <div class="label">Introduction</div>
     <h1>cpm-next</h1>
     <p class="lead">A planning and building method for Claude Code. It turns an idea into working, tested code through a short chain of documents kept in the repository.</p>
-    <p class="dim small" style="margin-top:28px">Describes cpm-next 0.21.1, with the mods cpm-next-models 0.4.0, cpm-next-progress 0.9.1 and whats-next 0.3.0.</p>
+    <p class="dim small" style="margin-top:28px">Describes cpm-next 0.22.0, with the mods cpm-next-models 0.4.0, cpm-next-progress 0.9.1 and whats-next 0.3.0.</p>
     <p class="dim small">Use the arrow keys or space to move between slides. On a touch screen, swipe or use the buttons below.</p>
   </div>
 </section>
@@ -454,7 +454,7 @@
         </defs>
         <rect class="box" x="10" y="10" width="240" height="56" rx="8"/>
         <text class="tx-b" x="24" y="34">1. Start</text>
-        <text class="tx-d" x="24" y="54">blockers audited; set its effort</text>
+        <text class="tx-d" x="24" y="54">effort set; outside claims probed</text>
 
         <rect class="box" x="10" y="92" width="240" height="56" rx="8"/>
         <text class="tx-b" x="24" y="116">2. Build, task by task</text>
@@ -500,6 +500,7 @@
       </svg>
       <div>
         <ul class="plain">
+          <li>A story starts only once its blockers are audited. Before any test, do tries each claim a criterion makes about something outside the repository's code (a browser API, a library, the operating system) against the real thing and records it on a <code>**Probed**</code> line; a claim the probe contradicts is settled before building.</li>
           <li>A story <code>plan</code> marked <code>**Independent tests**: due</code> first gets its acceptance tests from the <code>test-writer</code> agent, written from the spec and the real sample in its <code>## Data Sources</code> before any code; <code>do</code> runs them first, a failure against a boundary that already answered being that test's red (<code>before the build</code>), and the builder makes them pass without changing them.</li>
           <li>A criterion without its own Evidence line is not met.</li>
           <li>Before the audit, do checks the story as the auditor will: unexpected inputs, the words it wrote, the tests (a targeted run; a wide-reaching change takes its full run after the audit, or before it when every changed file calls for one), then the reds.</li>
@@ -535,6 +536,7 @@
         <ul class="plain">
           <li>Once the tests pass, do takes all of a story's reds in one pass: undo the lines a test covers, or mutate one, and run that test.</li>
           <li>The failure must come from the cited assertion. A missing class or route is an error, not a red.</li>
+          <li>A criterion offering alternatives with "or", or naming a control, takes a red for each. A red breaks the real code, not a test double in its place unless the criterion names it; a test that cannot be made to fail there is fixed before the pass starts again.</li>
           <li>Files are copied to <code>.git/cpm-next/scratch/</code> first and copied back, never reset with git. A manifest checked before and after shows every file came back, so nothing is re-run.</li>
           <li>Behaviour the code already had, proved by an unchanged test, records <code>existing</code> instead.</li>
           <li>While a pass is open, a commit guard refuses <code>git commit</code>. The next run restores a stopped pass first.</li>
@@ -559,6 +561,7 @@
           <li>Scope: changes nobody asked for, and anything missing</li>
           <li>Departures from the project's conventions</li>
           <li>Tests that could not fail, a missing or wrong red, or tests weakened or skipped</li>
+          <li>Claims about an outside runtime left unprobed, or a criterion its probe contradicted</li>
           <li>Independent tests unchanged since the <code>test-writer</code> wrote them, checked by their blobs</li>
         </ul>
       </div>
@@ -642,7 +645,7 @@
       </div>
       <div class="card">
         <h3>A hard criterion is not a wrong one</h3>
-        <p>"The tests fail" never justifies changing a criterion. It can change only when something specific contradicts it: a <code>file:line</code>, a named requirement, or another criterion.</p>
+        <p>"The tests fail" never justifies changing a criterion. It can change only when something specific contradicts it: a <code>file:line</code>, a named requirement, another criterion, or a probe of the runtime it describes.</p>
       </div>
     </div>
   </div>
@@ -690,7 +693,7 @@
     <div class="grid g3">
       <div class="card"><h3>One-offs stay quiet</h3><p>A signal that never recurs is never promoted or asked about. Nothing is written when an epic finishes.</p></div>
       <div class="card"><h3><code>library learn</code></h3><p>Promotes recurring signals, and observations in legacy retros, in one batch.</p></div>
-      <div class="card"><h3><code>library sweep</code></h3><p>Reads the repositories you list for failures a cpm-next rule could have prevented, and reports those found in two or more.</p></div>
+      <div class="card"><h3><code>library sweep</code></h3><p>Reads the signals and lessons of the repositories you list for failures a cpm-next rule could have prevented, and reports those found in two or more, or in one where a failure came back after it was recorded. do suggests it when a run finishes a spec or writes a lesson.</p></div>
     </div>
   </div>
 </section>
